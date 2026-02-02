@@ -17,4 +17,3 @@ Treasury / Growth / Gamble
 - Treasury 禁止反向救 Gamble
 - Gamble 必须券化（额度/频率/总额上限，归零即停+冷却，可冻结/重启）
 
-- !-- ci bump -->
