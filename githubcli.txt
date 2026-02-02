@@ -17,9 +17,25 @@ gh --version
 ! First copy your one-time code: A26D-2ABB
 
 
-xport http_proxy=http://127.0.0.1:7890
+export http_proxy=http://127.0.0.1:7890
 export https_proxy=http://127.0.0.1:7890
 export HTTP_PROXY=$http_proxy
 export HTTPS_PROXY=$https_proxy
 
-new
+下一步：新增 tools/doctor.sh（一键自检环境）
+
+它做的事很简单但非常值钱：以后你/AI 每次接手项目，先跑它，马上知道“缺什么”。
+
+它会检查：
+
+当前是否在 git 仓库
+
+远端是否是你这个 repo
+
+gh 是否安装 & 是否已登录
+
+GitHub Actions CI 文件是否存在（.github/workflows/ci.yml）
+
+pytest 是否能跑（有就跑，没就提示）
+
+python 版本（提示你本地 3.12，CI 3.11 也没问题）
