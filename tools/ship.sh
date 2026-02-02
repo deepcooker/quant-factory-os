@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# tools/ship.sh v1.0.4 (CN PR body + self-guard)
+# tools/ship.sh v1.0.5 (CN PR body + self-guard FIXED)
 # ------------------------------------------------------------
 # v1.0.1: 修复 stash_ref 末尾冒号导致 stash pop 失败
 # v1.0.2: 刚建 PR 会暂时 no checks reported -> 等待 checks 出现再 watch
@@ -9,9 +9,9 @@ set -euo pipefail
 #   - PR 描述自动生成（中文：diff 摘要/文件列表/验证方式/合并策略）
 #   - auto-merge 已合并时不再重复 merge（减少噪音）
 # v1.0.4:
-#   - 防误提交：默认禁止“顺带提交 tools/ship.sh”，避免工具自己被误改入库
-#     若确实要升级 ship，请显式运行：
-#       SHIP_ALLOW_SELF=1 tools/ship.sh "chore: 升级 ship 脚本 ..."
+#   - 防误提交：默认禁止“顺带提交 tools/ship.sh”
+# v1.0.5:
+#   - 修复 v1.0.4 保险丝位置：必须放在 stash pop 之后才看得到改动（必定生效）
 # ------------------------------------------------------------
 
 MSG="${1:-}"
@@ -41,18 +41,7 @@ git checkout main >/dev/null 2>&1 || git checkout -b main origin/main
 git pull --rebase origin main
 git checkout -b "$branch"
 
-# v1.0.4: 防误提交保险丝 —— 默认禁止“顺带提交 tools/ship.sh”
-# 你如果确实要修改 ship 脚本，请在命令前加：
-#   SHIP_ALLOW_SELF=1 tools/ship.sh "chore: 升级 ship 脚本 ..."
-if git diff --name-only | grep -qx "tools/ship.sh" && [[ "${SHIP_ALLOW_SELF:-0}" != "1" ]]; then
-  echo "❌ 检测到本次改动包含 tools/ship.sh（发货脚本本体）。"
-  echo "   为避免误提交，请你："
-  echo "   1) 要么撤销对 tools/ship.sh 的改动：git restore tools/ship.sh"
-  echo "   2) 要么确认这是有意升级 ship 脚本，然后用："
-  echo "      SHIP_ALLOW_SELF=1 tools/ship.sh \"$MSG\""
-  exit 1
-fi
-
+# 先把 stash 恢复到新分支上（如果有）
 if [[ -n "$STASH_NAME" ]]; then
   echo "Restoring stashed changes onto $branch ..."
   stash_ref="$(git stash list \
@@ -85,6 +74,18 @@ EOF2
   fi
 fi
 
+# v1.0.5: 防误提交保险丝（必定生效）—— 放在 stash pop 之后、git add 前
+# 若确实要升级 ship，请显式运行：
+#   SHIP_ALLOW_SELF=1 tools/ship.sh "chore: 升级 ship 脚本 ..."
+if git diff --name-only | grep -qx "tools/ship.sh" && [[ "${SHIP_ALLOW_SELF:-0}" != "1" ]]; then
+  echo "❌ 检测到本次改动包含 tools/ship.sh（发货脚本本体）。"
+  echo "   为避免误提交，请你："
+  echo "   1) 要么撤销对 tools/ship.sh 的改动：git restore tools/ship.sh"
+  echo "   2) 要么确认这是有意升级 ship 脚本，然后用："
+  echo "      SHIP_ALLOW_SELF=1 tools/ship.sh \"$MSG\""
+  exit 1
+fi
+
 git add -A
 if git diff --cached --quiet; then
   echo "No changes staged. Nothing to commit."
@@ -103,7 +104,7 @@ files_short="$(echo "$files" | head -n 120)"
 
 PR_BODY="$(cat <<EOF3
 ## 变更概述
-- 由 \`tools/ship.sh v1.0.4\` 自动生成
+- 由 \`tools/ship.sh v1.0.5\` 自动生成
 - 合并策略：Squash
 - 说明：CI 通过后自动合并（Auto-merge）
 
