@@ -1,0 +1,23 @@
+type -p curl >/dev/null || (sudo apt update && sudo apt install -y curl)
+curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+  | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+  | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+sudo apt update
+sudo apt install -y gh
+gh --version
+
+
+
+((venv) ) (base) root@autodl-container-1a4d48a0d9-a416943c:~/quant-factory-os# gh auth login -h github.com -p https
+? Authenticate Git with your GitHub credentials? Yes
+? How would you like to authenticate GitHub CLI? Login with a web browser
+
+! First copy your one-time code: A26D-2ABB
+
+
+xport http_proxy=http://127.0.0.1:7890
+export https_proxy=http://127.0.0.1:7890
+export HTTP_PROXY=$http_proxy
+export HTTPS_PROXY=$https_proxy
