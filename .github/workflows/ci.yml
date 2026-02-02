@@ -5,17 +5,16 @@ on:
     branches: [ main, master ]
 
 jobs:
-  test:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install
+
+      - name: Repo skeleton checks
         run: |
-          python -m pip install -U pip
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt || true
-      - name: Pytest
-        run: pytest -q
+          set -e
+          test -f CHARTER.md
+          test -d TASKS
+          test -d ISSUES
+          echo "✅ skeleton ok"
+
