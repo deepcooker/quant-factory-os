@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# tools/ship.sh v1.0.3
+# tools/ship.sh v1.0.3 (CN PR body)
 # ------------------------------------------------------------
 # v1.0.1: 修复 stash_ref 末尾冒号导致 stash pop 失败
 # v1.0.2: 刚建 PR 会暂时 no checks reported -> 等待 checks 出现再 watch
 # v1.0.3:
-#   - PR 描述自动生成（中文，包含 diff 摘要/文件列表/验证方式/合并策略）
+#   - PR 描述自动生成（中文：diff 摘要/文件列表/验证方式/合并策略）
 #   - auto-merge 已合并时不再重复 merge（减少噪音）
-#   - 合并后尽量清理本地/远端分支（依赖 auto-merge 配置）
 # ------------------------------------------------------------
 
 MSG="${1:-}"
@@ -140,7 +139,6 @@ fi
 git checkout main
 git pull --rebase origin main
 
-# 尽量清理本地分支
 git branch -D "$branch" >/dev/null 2>&1 || true
 
 echo "Done. (started from: $orig_branch)"
