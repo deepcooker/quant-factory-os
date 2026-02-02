@@ -89,7 +89,7 @@ $task_file
 \`\`\`
 
 ## 变更概述
-- 由 \`tools/task.sh\` 自动生成的提交信息
+- 任务：${title}
 - 合并策略：Squash
 - 说明：CI 通过后自动合并（Auto-merge）
 

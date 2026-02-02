@@ -1,17 +1,30 @@
-## 改了什么（What）
-- 
+## 任务文件路径
+\`\`\`
+${task_file_path}
+\`\`\`
 
-## 为什么要改（Why）
-- 
+## 变更概述
+- 任务：${task_title}
+- 合并策略：Squash
+- 说明：CI 通过后自动合并（Auto-merge）
 
-## 如何验证（How to verify）
-- CI：GitHub Actions 必须绿灯
-- 本地（可选）：
-  ```bash
+## 变更范围（git diff --stat）
+\`\`\`
+${stat_short}
+\`\`\`
+
+## 涉及文件
+\`\`\`
+${files_short}
+\`\`\`
+
+## 如何验证
+- 必须：GitHub Actions 绿灯（required checks）
+- 可选（本地）：
+  \`\`\`bash
   pytest -q
-  ```
+  \`\`\`
 
-## 风险与回滚（Risk & Rollback）
-
-* 风险：
-* 回滚：
+## 风险与回滚
+- 风险：
+- 回滚：
