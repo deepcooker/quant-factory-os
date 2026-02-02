@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# tools/task.sh v0.6 终极修复版
+#   tools/task.sh v0.6 终极修复版
 # - 彻底解决交互选择路径污染（分离stdout/stderr）
 # - 忽略 .ipynb_checkpoints 文件夹中的文件
 # - 加固路径清洗逻辑
