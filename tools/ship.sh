@@ -112,7 +112,17 @@ echo "PR: $pr_url"
 gh pr merge --auto --squash --delete-branch "$pr_url" || true
 
 # 11) 盯 CI（直到通过/失败）
+# v1.0.2: 有时刚建 PR 会暂时 "no checks reported"，先等待 checks 出现再 watch
+for i in {1..30}; do
+  if gh pr checks "$pr_url" >/dev/null 2>&1; then
+    break
+  fi
+  echo "Waiting for checks to appear... ($i/30)"
+  sleep 2
+done
+
 gh pr checks --watch "$pr_url"
+
 
 # 12) 如果 auto-merge 没生效，尝试手动 merge（满足门禁才会成功）
 gh pr merge --squash --delete-branch "$pr_url" || true
