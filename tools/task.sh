@@ -117,4 +117,4 @@ EOF2
 )
 
 # 提交和创建 PR
-tools/ship.sh "$msg" --body "$PR_BODY"
+tools/ship.sh "$msg"
