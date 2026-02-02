@@ -1,16 +1,12 @@
-# TASK STATE (永远更新这份文件)
+# TASK STATE
 
-## Current Focus
-- TASK ID:
-- Target Repo:
-- Branch/PR:
-- What’s done:
-- What’s next (<=5 bullets):
+## 任务概述
+任务目标是实现状态管理功能，包括状态的设置、获取、更新等操作。
 
-## Blocking / Risks
-- ...
+## 验收标准
+- 通过单元测试验证状态管理的基本操作。
+- 确保状态更新操作不影响其他业务流程。
 
-## Links
-- Issue/PR:
-- Runs:
-- Postmortems:
+## 风险与回滚
+- 风险：状态变更时可能会出现数据丢失。
+- 回滚：使用数据库备份恢复状态。
