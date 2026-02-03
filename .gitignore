@@ -51,7 +51,8 @@ venv/
 
 # Web UI 报告（可选忽略）
 web_ui/reports/
-
+project_all_files.txt
+githubcli.txt
 # 旧文件备份
 strategies/old/
 
