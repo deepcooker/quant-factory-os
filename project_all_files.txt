@@ -1,0 +1,1068 @@
+整合文件绝对路径: /root/quant-factory-os/project_all_files.txt
+项目目录结构（/root/quant-factory-os）:
+==================================================
+    CHARTER.md
+    CONTRIBUTING.md
+    .gitignore
+    README.md
+    AGENTS.md
+    Makefile
+    TASKS/
+        _TEMPLATE.md
+        QUEUE.md
+        STATE.md
+    ISSUES/
+        PLAYBOOK.md
+    .github/
+        pull_request_template.md
+        workflows/
+            ci.yml
+    tools/
+        ship.sh
+        doctor.sh
+        task.sh
+    tests/
+        test_smoke.py
+
+================================================================================
+所有目标文件内容:
+================================================================================
+
+
+############################################################
+文件路径: /root/quant-factory-os/CHARTER.md
+############################################################
+
+# CHARTER (不可变宪法)
+
+## 不可变 1：交易所规则不可改
+行情获取 / 下单撤单 / 回报 / 对账语义，以交易引擎仓库的 baseline 测试为准。
+任何改动只能“等价实现”，不得改变语义。
+
+## 不可变 2：工厂闭环不可改
+策略/执行候选 -> 极限回测电池 -> 回放一致性 -> 模拟盘采样 -> 归因 -> 数据/规则修复 -> 再迭代。
+
+## 不可变 3：证据链与错题本不可省
+每次运行必须有 run_id 并绑定：commit/config_hash/dataset_version/env。
+任何失败必须写错题本，并补 guardrail 测试，没测试不算修复。
+
+## 不可变 4：三账本永远存在
+Treasury / Growth / Gamble
+- 赢了必须回灌并锁定 Treasury（下牌桌）
+- Treasury 禁止反向救 Gamble
+- Gamble 必须券化（额度/频率/总额上限，归零即停+冷却，可冻结/重启）
+
+
+
+############################################################
+文件路径: /root/quant-factory-os/CONTRIBUTING.md
+############################################################
+
+# CONTRIBUTING（贡献指南）
+
+## 1）硬规则：禁止直接 push main
+`main` 分支受保护，任何改动必须通过 Pull Request（PR）进入 `main`。
+
+- 不允许直接 `git push origin main`
+- 不允许绕过门禁（bypass）
+
+---
+
+## 2）唯一入口：用 tools/ship.sh 发货（人 + Codex + API 都一样）
+你改完任何文件后，只执行：
+
+```bash
+tools/ship.sh "一句话说明改动"
+```
+
+脚本会自动完成：
+
+* （如有需要）stash 本地改动
+* 更新 `main` 到最新
+* 新建分支
+* 自动 `git add / commit / push`
+* 自动创建 PR
+* 等 CI 绿灯（required checks）
+* 自动合并（squash）并删除分支
+* 回到 `main` 并同步最新
+
+---
+
+## 3）标题建议（可选，但推荐）
+
+为了让提交历史清晰，建议在标题前加前缀：
+
+* `docs:` 文档
+* `chore:` 工具/杂项
+* `fix:` 修复
+* `feat:` 新功能
+
+示例：
+
+```bash
+tools/ship.sh "fix: 修复 ws 重连边界情况"
+tools/ship.sh "docs: 补充贡献指南"
+```
+
+############################################################
+文件路径: /root/quant-factory-os/.gitignore
+############################################################
+
+# Python 编译文件
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 日志文件
+logs/
+*.log
+strategies/logs/
+# 新增：忽略 strategies/log/ 文件夹（注意路径拼写，如果你实际是 log 单数也可对应修改）
+
+# 结果文件（回测、进化、实验结果）
+backtest_results/
+evolution_results/
+quant_lab_results/
+data_pipeline/
+
+
+deploy/
+dist_backup/
+
+# 缓存/临时文件
+.DS_Store
+.env
+.venv
+venv/
+*.swp
+*.swo
+*~
+
+# 配置文件（如果包含敏感信息）
+#config/config.yaml
+
+# Web UI 报告（可选忽略）
+web_ui/reports/
+
+# 旧文件备份
+strategies/old/
+
+# 静态资源（如果不需要版本控制）
+# static/assets/
+
+# 字节码/缓存
+*.pyc
+
+
+# Jupyter Notebook 检查点文件
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+*.ipynb_checkpoint
+
+**/.ipynb_checkpoints/
+
+
+############################################################
+文件路径: /root/quant-factory-os/README.md
+############################################################
+
+好，我按“现在仓库最终长什么样 + 我们到底做了什么 + 入口在哪 + 每一步怎么跑 + 进度到哪 + 下一阶段做什么”给你做一份**超细**总结（偏“交接文档”风格，方便你/AI接管）。
+
+> 说明：我这边用网页工具看 GitHub 文件正文会被 GitHub 的“你在别的窗口登录/登出”提示挡住，**正文我无法稳定拉出来**；但仓库结构（有哪些目录/文件）能确认，且你在服务器里实际跑出来的日志、脚本内容我都有上下文，所以我会以“你已经跑通的真实行为”为准来总结。仓库顶层结构我用 GitHub 页面可见的文件树来核对。 ([GitHub][1])
+
+---
+
+## 0）这个仓库到底是什么：quant-factory-os 的定位
+
+它不是交易策略引擎本体（那个是 `a9quant-strategy`），它是**让 AI/Codex 能“安全、自动、可审计”接管开发的操作系统（OS）**：
+
+* 把**改代码**这件事制度化：
+  **任何变更必须走 PR → CI 绿灯 → 才能进 main**（你已经配置并验证过“直推 main 会被拒绝”）。
+* 把“人肉点按钮”的动作自动化：
+  本地一条命令，就能**建分支、提交、推送、建 PR、盯 CI、合并、删分支、回 main 同步**。
+* 把 AI 的工作组织起来：
+  用 `TASKS/QUEUE.md`（任务队列）+ `TASKS/STATE.md`（当前状态）作为**AI 可读、可接力**的工作台。
+
+仓库当前顶层能确认存在这些：`.github/`、`ISSUES/`、`TASKS/`、`tests/`、`tools/`、`CHARTER.md`、`CONTRIBUTING.md`、`README.md`、`githubcli.txt`。 ([GitHub][1])
+
+---
+
+## 1）我们已经做成了什么（成果清单）
+
+### A. “主分支门禁”已经落地（你已经验证过）
+
+* `main` 受保护：**禁止直接 push**，必须 PR。
+  你实际 `git push` 触发过远端拒绝：`Protected branch update failed... Changes must be made through a pull request.`（这就是门禁生效）
+* CI check 作为“合并资格”：远端提示过 `Required status check "check" is expected.`
+  这说明仓库的分支保护规则里已经把某个 check（名叫 `check`）设成必需。
+
+### B. 最小 CI 已经跑通
+
+* `.github/workflows/ci.yml` 已存在并能跑（你每个 PR 都看到 `ci/check` 绿灯）。
+* 你的 `doctor.sh` 也能检测到 workflow 文件存在，并能调用 pytest（即便无测试会 rc=5，它也会解释“这不一定是坏事”）。
+
+### C. Codex/AI 的“发货入口”已经统一成脚本（核心）
+
+你现在有三个关键入口脚本（都在 `tools/`）：
+
+1. **`tools/ship.sh`（最核心）**
+   一键把“当前工作区改动”变成一个 PR，并自动合并（如果仓库允许 auto-merge）。
+
+2. **`tools/task.sh`（任务驱动入口）**
+   让你先选一个 `TASKS/*.md`，自动生成提交信息 `task: ...`，然后**内部调用 `tools/ship.sh` 发货**。
+   所以你才会感觉：
+
+   > “我怎么觉得已经做了 ship.sh 的事情？”
+   > ——对的，因为 `task.sh` 本质就是 `ship.sh` 的“前置包装”。
+
+3. **`tools/doctor.sh`（自检入口）**
+   给 Codex 接管前/每次环境漂移时跑一下，确认：在 repo 根目录、remote、gh 登录、CI 是否存在、python/pytest 是否可用。
+
+> 你已经跑通过：`tools/ship.sh` 能自动建 PR、盯 checks、合并、删分支、回 main；
+> 你也跑通过：`tools/task.sh` 选 TASK 文件后同样完整走完这一套，并生成 PR（#15/#16/#17/#18/#19/#20 等）。
+
+### D. 制度入口文件已经有了
+
+* `CONTRIBUTING.md`：告诉所有人/所有 AI **唯一入口就是 ship.sh**，禁止直推 main，标题前缀建议等。
+* `.github/pull_request_template.md`：PR 模板（你希望中文）
+* `CHARTER.md`：你这套 OS 的“宪法/章程”（至少文件已存在于仓库根目录） ([GitHub][1])
+
+---
+
+## 2）这套系统怎么“交互式工作”（你是小白版的运行流程）
+
+### 2.1 日常改动（不管是你改，还是 Codex 改）
+
+你在工作区改完任意文件后，只做这一句：
+
+```bash
+tools/ship.sh "一句话说明改动"
+```
+
+**ship.sh 会做这些动作（你日志里已经完整体现过）：**
+
+1. **检测 gh 是否登录**（没登录直接失败，避免 PR 建不起来）
+2. **检查工作区是否有未提交改动**
+
+   * 有 → 自动 stash（包括未跟踪文件）
+3. **切回 main 并更新到最新**
+4. **用“提交信息 + 时间戳”生成新分支名**
+   类似：`chore/docs-pr-20260202-204007`
+5. **切到新分支，把 stash pop 回来**
+6. `git add -A` + `git commit -m "..."` + `git push -u origin branch`
+7. `gh pr create` 自动创建 PR
+8. `gh pr merge --auto --squash --delete-branch` 尝试开启自动合并
+9. `gh pr checks --watch` 盯 CI 直到出结果
+10. 合并完成后：切回 main，同步最新，并清理本地/远端分支
+
+> 你遇到过的典型坑：
+>
+> * “刚建 PR 显示 no checks reported” → 你后来在 ship.sh 加了等待逻辑（循环等 checks 出现）
+> * “stash pop 报 stash@{0}: 冒号问题” → 你也修过（日志里有）
+
+---
+
+### 2.2 任务驱动模式（让 AI 有队列可读）
+
+你运行：
+
+```bash
+tools/task.sh
+```
+
+它会列出 `TASKS/` 下可选的任务文件（你现在是 `QUEUE.md` 和 `STATE.md`），你输入序号。
+
+然后它会：
+
+1. 打印：选中的任务文件路径
+2. 从该文件提取标题 → 自动生成提交信息：`task: ...`
+3. **直接调用 `tools/ship.sh "$msg"`** 把这次变更发货
+
+所以结论是：
+
+✅ **用 `tools/task.sh` 就不需要再手动跑 `tools/ship.sh`**
+因为 `task.sh` 就是“先选任务/生成 msg”，然后把活交给 ship 去做。
+
+---
+
+## 3）仓库里“哪些是系统工程文件”，哪些是“日常变动内容”
+
+你可以按“变动频率 + 权限门禁”把文件分两类：
+
+### 3.1 系统工程文件（低变动、要更谨慎）
+
+这些是“让 AI 能接管”的底座，改它们要更谨慎：
+
+* `.github/workflows/ci.yml`：CI 门禁（决定能不能合并）
+* `.github/pull_request_template.md`：PR 结构（AI 写 PR 的格式）
+* `tools/ship.sh`：核心发货流水线（最关键）
+* `tools/task.sh`：任务入口（会影响 AI 如何组织工作）
+* `tools/doctor.sh`：自检入口（保证环境可控）
+* `CONTRIBUTING.md` / `CHARTER.md`：制度说明与宪法
+
+> 你在 `ship.sh` 里做过“防误提交保险丝”（默认不允许顺带提交 ship.sh 本体），这就是典型的“系统工程防呆”。
+> 你现在说 `SHIP_ALLOW_SELF=1` 不加也行——可以，但我建议**保留保险丝**，否则 Codex 很容易“顺手把 ship 改坏然后一键合并”。
+
+### 3.2 日常变动内容（高变动、就是给 PR 用的）
+
+* `TASKS/QUEUE.md`：任务队列（待做清单）
+* `TASKS/STATE.md`：当前状态（正在做什么、做到哪一步、阻塞是什么）
+* `ISSUES/`：问题记录、错题本、事故复盘（如果你后面要做）
+* `tests/`：随着工程推进逐步加（先从 smoke test / guardrails 开始）
+* `README.md`：随阶段更新
+
+---
+
+## 4）系统里已经使用的“概念词典”（你提到的 PR 任务队列等）
+
+你现在这套 OS 已经落地的概念有：
+
+1. **Branch Protection（主分支保护）**
+   main 不允许直推；合并必须满足规则。
+
+2. **CI Required Check（必须绿灯的检查）**
+   你这里叫 `ci/check`（最终是否叫 `check` 取决于 workflow job 名/分支保护配置）。
+
+3. **PR 是唯一变更单元**
+   AI 不再“直接改 main”，而是“产出 PR”。
+
+4. **Auto-merge（自动合并）**
+   目标：CI 绿灯即合并。你有一次遇到过 “Auto merge is not allowed”，后来你在 Settings 打开了它，并且后续日志显示可以自动合并。
+
+5. **Task Queue / Task State（任务队列/状态机雏形）**
+
+   * QUEUE：待做
+   * STATE：在做 / 已做 / 阻塞
+     task.sh 就是把“更新任务文档”这件事也纳入 PR 流水线。
+
+6. **Doctor（环境自检）**
+   用于 Codex 接管前先跑，避免“环境不对导致 PR 垃圾化”。
+
+---
+
+## 5）当前进度到哪一步了（很明确）
+
+你现在已经完成了“让 AI 接管不翻车”的第一阶段底座：
+
+* ✅ 主分支门禁已生效（必须 PR + 必须 CI）
+* ✅ CI workflow 能跑且 PR 上能显示绿灯
+* ✅ 本地一键发货脚本（ship）已跑通（含 stash、建 PR、盯 CI、合并、删分支、回 main）
+* ✅ 任务入口（task）已跑通（并已产生多次 PR 合并）
+* ✅ 自检入口（doctor）已跑通
+* ✅ PR 模板、Contributing 已经挂上
+
+仓库语言也印证了它现在主要是“工具仓库”（Shell 为主）。 ([GitHub][1])
+
+---
+
+## 6）下一阶段做什么（按优先级给你一条清晰路线）
+
+> 你刚刚说“先不继续优化 task.sh 的‘无关改动提醒’”，我同意：先把主流程推进到“Codex 真能稳定干活”。
+
+### 阶段 2：把 quant-factory-os 变成“AI 的工作台 + 发布总闸”
+
+重点不是写更多脚本，而是把“AI 怎么接任务、怎么交付、怎么验收”固化下来。
+
+**我建议你下一步按这个顺序：**
+
+1. **把 TASKS/STATE.md 固化成“每天/每次 PR 都要更新”的格式**
+
+   * 当前正在做什么（1-3 行）
+   * 今天目标（可验收）
+   * 阻塞（如果有）
+   * 最近合并的 PR 列表（自动/手动补）
+     这样 Codex 打开仓库第一眼就知道“现在该干嘛”。
+
+2. **把 `a9quant-strategy` 的工作也纳入同一套 PR 流程**
+
+   * 你现在 quant-factory-os 是“制度与工具仓”
+   * a9quant-strategy 是“交易引擎仓”
+     下一阶段要做的是：让 Codex 在 engine 仓也必须：
+   * 走 PR
+   * 走 CI
+   * 用同样的 `ship.sh`（可以复制一份过去，或做成共享模板）
+
+3. **给 CI 加一条最低成本的“护栏测试”**
+
+   * 现在 pytest “no tests ran” CI 也会绿（或者 rc=5 你 doctor 会提示）
+   * 你至少需要一个 smoke test：保证脚本可执行、关键文件存在、格式正确
+     （这是“防止 AI 一把删掉 tools/ 还合并成功”的关键）
+
+4. （可选）**CODEOWNERS / 审核策略**
+
+   * 如果你未来要让多个 AI 角色并行（Planner/Verifier/Release Governor），这里会很有用。
+   * 但你现在资源有限，可以先不做强审核，只保留 CI 门禁。
+
+---
+
+## 7）你刚才问的那个关键点：为什么你觉得 task.sh “已经做了 ship 的事情”？
+
+因为它确实就是这么设计的：
+
+* `ship.sh` = **通用发货流水线**
+* `task.sh` = **先做一件事：选任务文件 + 生成提交信息**，然后把剩下所有流程交给 `ship.sh`
+
+所以你以后形成习惯就行：
+
+* 改代码/改文档/改工具：`tools/ship.sh "..."`
+* 更新任务队列/状态：`tools/task.sh`
+
+---
+
+如果你愿意，我们下一步就别在“脚本优化细枝末节”上打转了，直接推进到阶段 2 的第 1 步：
+
+**你把你想要的 `TASKS/STATE.md` 最终结构（你脑子里的“状态机字段”）告诉我**，我给你写一个“傻瓜模板”（中文），并告诉你：
+
+* 这个文件每个字段怎么填
+* Codex 每次 PR 必须怎么更新它
+* 以及怎么用 CI 简单检查“STATE.md 没更新就不让合并”（如果你想要更强门禁的话）
+
+[1]: https://github.com/deepcooker/quant-factory-os "GitHub - deepcooker/quant-factory-os: quant-factory-os"
+
+
+
+############################################################
+文件路径: /root/quant-factory-os/AGENTS.md
+############################################################
+
+# AGENTS.md (Hard Rules for Codex / Agents)
+
+This repo is an OS for quant engineering. Agents MUST obey these rules.
+
+## 0) Scope
+- You work ONLY inside this repository.
+- Never invent data. Never assume prod access.
+- Prefer deterministic scripts + evidence, not long chat.
+
+## 1) Entry: Tasks are syscall
+- All work MUST start from a task file under /TASKS.
+- If no task is provided, pick the next unchecked item in QUEUE.md and create a TASK file first.
+- Never change code without an active task ID and RUN_ID.
+
+## 2) Output: Evidence is memory
+For each task you MUST create/update:
+- reports/<RUN_ID>/meta.json
+- reports/<RUN_ID>/summary.md
+- reports/<RUN_ID>/decision.md
+
+Optional:
+- reports/<RUN_ID>/samples/*.csv.gz
+- MISTAKES/<RUN_ID>.md (only if failure)
+
+## 3) Constraints (Data / Size / Secrets)
+- Never write or commit secrets. Never print secrets.
+- Never commit production data. Use synthetic or reduced samples only.
+- Hard limits:
+  - Any single generated file <= 5MB
+  - Any table-like output <= 500 rows unless explicitly requested by task
+
+## 4) Allowed Commands (Default)
+Use ONLY these unless task explicitly authorizes more:
+- tools/doctor.sh
+- tools/task.sh
+- tools/ship.sh
+- make evidence RUN_ID=...
+- make verify
+- make slice RUN_ID=... DAY=... SYMBOLS=... START=... END=...
+- pytest -q
+
+## 5) Workflow (Must follow)
+1) Read TASKS/<task>.md and confirm acceptance criteria.
+2) Run `make evidence RUN_ID=<RUN_ID>` (creates evidence skeleton).
+3) Implement change in smallest diff possible.
+4) Run `make verify` until green.
+5) Write decision + update summary (what changed / why / risks / verify commands).
+6) Ship via `tools/ship.sh` or `make ship` (if defined).
+
+## 6) Failure protocol
+If stuck or tests fail:
+- Capture the failing command + minimal logs in reports/<RUN_ID>/summary.md
+- Write MISTAKES/<RUN_ID>.md with:
+  - symptom, root cause hypothesis, fix, guardrail test suggestion
+- Add/strengthen a test to prevent regression.
+
+## 7) PR discipline (Single-user but strict)
+- One task -> one branch -> one PR
+- PR title MUST include RUN_ID
+- PR body MUST include:
+  - Why / What / Verify
+  - Evidence paths
+
+############################################################
+文件路径: /root/quant-factory-os/Makefile
+############################################################
+
+SHELL := /bin/bash
+PY := python3
+RUN_ID ?= run-unknown
+
+.PHONY: help doctor evidence slice verify ship clean_reports
+
+help:
+	@echo "Targets:"
+	@echo "  make doctor"
+	@echo "  make evidence RUN_ID=..."
+	@echo "  make slice RUN_ID=... DAY=YYYY-MM-DD SYMBOLS=A,B START=HH:MM END=HH:MM"
+	@echo "  make verify"
+	@echo "  make ship MSG='...'"
+	@echo "  make clean_reports RUN_ID=..."
+
+doctor:
+	@bash tools/doctor.sh
+
+# Creates/updates evidence skeleton (no trading integration yet)
+evidence:
+	@$(PY) tools/evidence.py --run-id "$(RUN_ID)"
+
+# Market slice stub (later you will implement OSS/MySQL fetch here)
+slice:
+	@$(PY) tools/slice.py --run-id "$(RUN_ID)" --day "$(DAY)" --symbols "$(SYMBOLS)" --start "$(START)" --end "$(END)"
+
+verify:
+	@$(PY) -m pytest -q
+
+# Convenience wrapper around tools/ship.sh
+ship:
+	@if [ -z "$(MSG)" ]; then echo "MSG is required. Example: make ship MSG='$(RUN_ID): fix smoke'"; exit 2; fi
+	@bash tools/ship.sh "$(MSG)"
+
+clean_reports:
+	@if [ "$(RUN_ID)" = "run-unknown" ]; then echo "RUN_ID required"; exit 2; fi
+	@rm -rf "reports/$(RUN_ID)" || true
+
+############################################################
+文件路径: /root/quant-factory-os/TASKS/_TEMPLATE.md
+############################################################
+
+# TASK: <short-name>
+
+RUN_ID: <YYYY-MM-DD-identifier>
+OWNER: <you>
+PRIORITY: P1
+
+## Goal
+What outcome do we want? (1-3 lines)
+
+## Non-goals
+What we explicitly do NOT do.
+
+## Acceptance
+- [ ] Command(s) pass: `make verify`
+- [ ] Evidence updated: `reports/<RUN_ID>/summary.md` and `reports/<RUN_ID>/decision.md`
+- [ ] Regression guardrail added/updated if applicable
+
+## Inputs
+- Links / files / references
+- If data is needed, specify allowed sample constraints (max rows, time window)
+
+## Steps (Optional)
+Suggested approach, if you have one.
+
+## Risks / Rollback
+- Risks:
+- Rollback plan:
+
+############################################################
+文件路径: /root/quant-factory-os/TASKS/QUEUE.md
+############################################################
+
+# TASK QUEUE
+
+## 任务概述
+任务目标是实现队列管理功能，包括队列的添加、删除、查询等操作。
+
+## 验收标准
+- 通过单元测试验证队列的基本操作。
+- 队列操作的性能满足要求。
+
+## 风险与回滚
+- 风险：队列操作导致数据丢失。
+- 回滚：使用备份数据恢复队列状态。
+
+
+############################################################
+文件路径: /root/quant-factory-os/TASKS/STATE.md
+############################################################
+
+# TASK STATE
+
+## 任务概述
+任务目标是实现状态管理功能，包括状态的设置、获取、更新等操作。
+
+## 验收标准
+- 通过单元测试验证状态管理的基本操作。
+- 确保状态更新操作不影响其他业务流程。
+
+## 风险与回滚
+- 风险：状态变更时可能会出现数据丢失。
+- 回滚：使用数据库备份恢复状态。
+
+
+############################################################
+文件路径: /root/quant-factory-os/ISSUES/PLAYBOOK.md
+############################################################
+
+# POSTMORTEM PLAYBOOK (错题本)
+
+每条必须包含：
+- issue_id
+- run_id（必须）
+- symptom（现象）
+- root_cause_type: data/execution/strategy/risk/infra
+- evidence（证据：日志/回放片段/指标）
+- fix_plan（修复方案）
+- guardrail_test（防复发测试）
+- status: open/fixed/verified/regressed
+
+############################################################
+文件路径: /root/quant-factory-os/.github/pull_request_template.md
+############################################################
+
+## 任务文件路径
+\`\`\`
+${task_file_path}
+\`\`\`
+
+## 变更概述
+- 任务：${task_title}
+- 合并策略：Squash
+- 说明：CI 通过后自动合并（Auto-merge）
+
+## 变更范围（git diff --stat）
+\`\`\`
+${stat_short}
+\`\`\`
+
+## 涉及文件
+\`\`\`
+${files_short}
+\`\`\`
+
+## 如何验证
+- 必须：GitHub Actions 绿灯（required checks）
+- 可选（本地）：
+  \`\`\`bash
+  pytest -q
+  \`\`\`
+
+## 风险与回滚
+- 风险：
+- 回滚：
+
+
+############################################################
+文件路径: /root/quant-factory-os/.github/workflows/ci.yml
+############################################################
+
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Repo skeleton checks
+        run: |
+          set -e
+          test -f CHARTER.md
+          test -d TASKS
+          test -d ISSUES
+          echo "✅ skeleton ok"
+
+
+
+############################################################
+文件路径: /root/quant-factory-os/tools/ship.sh
+############################################################
+
+#!/usr/bin/env bash
+set -euo pipefail
+
+# tools/ship.sh v1.0.5 (CN PR body + self-guard FIXED)
+# ------------------------------------------------------------
+# v1.0.1: 修复 stash_ref 末尾冒号导致 stash pop 失败
+# v1.0.2: 刚建 PR 会暂时 no checks reported -> 等待 checks 出现再 watch
+# v1.0.3:
+#   - PR 描述自动生成（中文：diff 摘要/文件列表/验证方式/合并策略）
+#   - auto-merge 已合并时不再重复 merge（减少噪音）
+# v1.0.4:
+#   - 防误提交：默认禁止“顺带提交 tools/ship.sh”
+# v1.0.5:
+#   - 修复 v1.0.4 保险丝位置：必须放在 stash pop 之后才看得到改动（必定生效）
+# ------------------------------------------------------------
+
+MSG="${1:-}"
+if [[ -z "$MSG" ]]; then
+  echo "用法：tools/ship.sh \"一句话说明改动\""
+  exit 1
+fi
+
+gh auth status -h github.com >/dev/null
+git rev-parse --is-inside-work-tree >/dev/null
+
+orig_branch="$(git rev-parse --abbrev-ref HEAD)"
+
+STASH_NAME=""
+if ! git diff --quiet || ! git diff --cached --quiet || [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
+  STASH_NAME="ship-wip-$(date +%Y%m%d-%H%M%S)"
+  echo "Detected local changes. Stashing as: $STASH_NAME"
+  git stash push -u -m "$STASH_NAME" >/dev/null
+fi
+
+ts="$(date +%Y%m%d-%H%M%S)"
+slug="$(echo "$MSG" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed -E 's/^-+|-+$//g' | cut -c1-40)"
+branch="chore/${slug:-update}-${ts}"
+
+git fetch origin
+git checkout main >/dev/null 2>&1 || git checkout -b main origin/main
+git pull --rebase origin main
+git checkout -b "$branch"
+
+# 先把 stash 恢复到新分支上（如果有）
+if [[ -n "$STASH_NAME" ]]; then
+  echo "Restoring stashed changes onto $branch ..."
+  stash_ref="$(git stash list \
+    | awk -v name="$STASH_NAME" '$0 ~ name {print $1}' \
+    | head -n1 \
+    | sed 's/:$//' \
+    || true)"
+  if [[ -z "$stash_ref" ]]; then
+    echo "ERROR: Could not find stash named $STASH_NAME"
+    exit 1
+  fi
+
+  set +e
+  git stash pop --index "$stash_ref"
+  rc=$?
+  set -e
+  if [[ $rc -ne 0 ]]; then
+    cat <<EOF2
+
+⚠️ stash pop 未能自动应用（可能有冲突）。
+请你手动处理后再继续：
+
+  1) git status
+  2) 解决冲突后：git add -A
+  3) 然后再运行一次：
+     tools/ship.sh "$MSG"
+
+EOF2
+    exit 1
+  fi
+fi
+
+# v1.0.5: 防误提交保险丝（必定生效）—— 放在 stash pop 之后、git add 前
+# 若确实要升级 ship，请显式运行：
+#   SHIP_ALLOW_SELF=1 tools/ship.sh "chore: 升级 ship 脚本 ..."
+if git diff --name-only | grep -qx "tools/ship.sh" && [[ "${SHIP_ALLOW_SELF:-0}" != "1" ]]; then
+  echo "❌ 检测到本次改动包含 tools/ship.sh（发货脚本本体）。"
+  echo "   为避免误提交，请你："
+  echo "   1) 要么撤销对 tools/ship.sh 的改动：git restore tools/ship.sh"
+  echo "   2) 要么确认这是有意升级 ship 脚本，然后用："
+  echo "      SHIP_ALLOW_SELF=1 tools/ship.sh \"$MSG\""
+  exit 1
+fi
+
+git add -A
+if git diff --cached --quiet; then
+  echo "No changes staged. Nothing to commit."
+  echo "You are on branch: $branch"
+  exit 0
+fi
+
+git commit -m "$MSG"
+git push -u origin "$branch"
+
+# --- 中文 PR 描述自动生成 ---
+stat="$(git diff --stat origin/main...HEAD || true)"
+files="$(git diff --name-only origin/main...HEAD || true)"
+stat_short="$(echo "$stat" | head -n 60)"
+files_short="$(echo "$files" | head -n 120)"
+
+PR_BODY="$(cat <<EOF3
+## 变更概述
+- 由 \`tools/ship.sh v1.0.5\` 自动生成
+- 合并策略：Squash
+- 说明：CI 通过后自动合并（Auto-merge）
+
+## 变更范围（git diff --stat）
+\`\`\`
+${stat_short}
+\`\`\`
+
+## 涉及文件
+\`\`\`
+${files_short}
+\`\`\`
+
+## 如何验证
+- 必须：GitHub Actions 绿灯（required checks）
+- 可选（本地）：
+  \`\`\`bash
+  pytest -q
+  \`\`\`
+
+## 风险与回滚
+- 风险：
+- 回滚：
+EOF3
+)"
+# ----------------------------
+
+pr_url="$(gh pr create --base main --head "$branch" --title "$MSG" --body "$PR_BODY")"
+echo "PR: $pr_url"
+
+gh pr merge --auto --squash --delete-branch "$pr_url" || true
+
+# 等待 checks 出现再 watch（避免 no checks reported）
+for i in {1..30}; do
+  if gh pr checks "$pr_url" >/dev/null 2>&1; then
+    break
+  fi
+  echo "Waiting for checks to appear... ($i/30)"
+  sleep 2
+done
+gh pr checks --watch "$pr_url"
+
+# 如果 auto-merge 已经合并，就不再重复 merge
+state="$(gh pr view "$pr_url" --json state -q .state)"
+if [[ "$state" != "MERGED" ]]; then
+  gh pr merge --squash --delete-branch "$pr_url" || true
+fi
+
+git checkout main
+git pull --rebase origin main
+
+git branch -D "$branch" >/dev/null 2>&1 || true
+
+echo "Done. (started from: $orig_branch)"
+
+
+############################################################
+文件路径: /root/quant-factory-os/tools/doctor.sh
+############################################################
+
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "== doctor: repo =="
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "❌ 不在 git 仓库内"; exit 1; }
+echo "✅ git repo: $(basename "$(git rev-parse --show-toplevel)")"
+echo "branch: $(git branch --show-current)"
+
+echo
+echo "== doctor: remote =="
+remote_url="$(git remote get-url origin 2>/dev/null || true)"
+if [[ -z "$remote_url" ]]; then
+  echo "❌ 没有 origin remote"
+else
+  echo "origin: $remote_url"
+fi
+
+echo
+echo "== doctor: gh =="
+if command -v gh >/dev/null 2>&1; then
+  echo "✅ gh: $(gh --version | head -n1)"
+  if gh auth status -h github.com >/dev/null 2>&1; then
+    echo "✅ gh 已登录 github.com"
+  else
+    echo "❌ gh 未登录：运行 gh auth login -h github.com -p https"
+  fi
+else
+  echo "❌ 未安装 gh：sudo apt install -y gh"
+fi
+
+echo
+echo "== doctor: CI workflow =="
+if [[ -f ".github/workflows/ci.yml" ]]; then
+  echo "✅ found .github/workflows/ci.yml"
+else
+  echo "❌ 缺少 .github/workflows/ci.yml（CI 不会跑）"
+fi
+
+echo
+echo "== doctor: python =="
+if command -v python >/dev/null 2>&1; then
+  echo "python: $(python --version)"
+elif command -v python3 >/dev/null 2>&1; then
+  echo "python3: $(python3 --version)"
+else
+  echo "❌ 没有 python/python3"
+fi
+
+echo
+echo "== doctor: pytest =="
+if command -v pytest >/dev/null 2>&1; then
+  echo "✅ pytest: $(pytest --version)"
+  echo "running: pytest -q (may fail if deps missing)"
+  set +e
+  pytest -q
+  rc=$?
+  set -e
+  if [[ $rc -eq 0 ]]; then
+    echo "✅ pytest OK"
+  else
+    echo "⚠️ pytest failed (rc=$rc). 这不一定是坏事，可能是缺依赖/环境。"
+  fi
+else
+  echo "⚠️ 没有 pytest：如果你要跑测试，先 pip install -r requirements-dev.txt 或 pip install pytest"
+fi
+
+echo
+echo "Done."
+
+############################################################
+文件路径: /root/quant-factory-os/tools/task.sh
+############################################################
+
+#!/usr/bin/env bash
+set -euo pipefail
+
+# tools/task.sh v0.5
+# - 自动将任务路径写入 PR 描述
+# - PR 描述由 task.sh 自动生成，和 PR 模板不重复，互补
+# - 修复交互选择路径污染问题（仅改此问题，其他逻辑不变）
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+if [[ ! -d "TASKS" ]]; then
+  echo "❌ 找不到 TASKS/ 目录（请先创建或同步）"
+  exit 1
+fi
+
+pick_task_interactive() {
+  # 1. 先读取文件列表（无多余输出）
+  mapfile -t files < <(find TASKS -maxdepth 2 -type f \( -name "*.md" -o -name "*.txt" \) \
+    ! -path "*/.ipynb_checkpoints/*" \
+    | sort)
+  
+  if [[ ${#files[@]} -eq 0 ]]; then
+    echo "❌ TASKS/ 下没有 .md/.txt 文件"
+    exit 1
+  fi
+
+  # 2. 提示语和选项列表输出到终端（stderr），不被变量捕获
+  echo "请选择一个任务文件：" >&2
+  local i=1
+  for f in "${files[@]}"; do
+    echo "$i) $f" >&2
+    ((i++))
+  done
+
+  # 3. 手动读取输入，避免select的默认输出污染
+  local selected=""
+  while true; do
+    echo -n "#? " >&2
+    read -r choice
+    # 校验输入是否为有效数字
+    if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#files[@]} )); then
+      selected="${files[$((choice-1))]}"
+      break
+    fi
+    echo "请输入有效编号。" >&2
+  done
+
+  # 4. 仅输出纯路径（stdout），被变量捕获
+  echo "$selected"
+}
+
+task_file="${1:-}"
+if [[ -z "$task_file" ]]; then
+  task_file="$(pick_task_interactive)"
+fi
+
+task_file="$(echo "$task_file" | sed -E 's/^\s+|\s+$//g')" # 修复路径可能有前后空格
+
+if [[ ! -f "$task_file" ]]; then
+  echo "❌ 任务文件不存在：$task_file"
+  exit 1
+fi
+
+# 提取任务标题：取第一行非空行；去掉常见 markdown 前缀
+title="$(grep -m1 -E '\S' "$task_file" | sed -E 's/^\s*(#+|-|\*|\[ \]|\[x\])\s*//g' | sed -E 's/^\s+|\s+$//g')"
+if [[ -z "$title" ]]; then
+  title="$(basename "$task_file")"
+fi
+
+msg="task: ${title}"
+
+echo "任务文件：$task_file"
+echo "生成提交信息：$msg"
+echo
+
+# 给个小提示：避免误提 ship 本体
+if git status --porcelain | grep -q "tools/ship.sh"; then
+  echo "⚠️  你当前工作区包含 tools/ship.sh 改动，建议先：git restore tools/ship.sh"
+  echo "    否则 ship 的保险丝会拦截（除非你明确 SHIP_ALLOW_SELF=1）"
+  echo
+fi
+
+# 自动生成 PR 描述，包含任务路径
+PR_BODY=$(cat <<EOF2
+## 任务文件路径
+\`\`\`
+$task_file
+\`\`\`
+
+## 变更概述
+- 任务：${title}
+- 合并策略：Squash
+- 说明：CI 通过后自动合并（Auto-merge）
+
+## 变更范围（git diff --stat）
+\`\`\`
+$(git diff --stat origin/main...HEAD || true)
+\`\`\`
+
+## 涉及文件
+\`\`\`
+$(git diff --name-only origin/main...HEAD || true)
+\`\`\`
+
+## 如何验证
+- 必须：GitHub Actions 绿灯（required checks）
+- 可选（本地）：
+  \`\`\`bash
+  pytest -q
+  \`\`\`
+
+## 风险与回滚
+- 风险：
+- 回滚：
+EOF2
+)
+
+# 提交和创建 PR
+tools/ship.sh "$msg"
+
+############################################################
+文件路径: /root/quant-factory-os/tests/test_smoke.py
+############################################################
+
+def test_smoke():
+    # 最小哨兵测试：保证 pytest 不会出现 "no tests ran"
+    assert True
