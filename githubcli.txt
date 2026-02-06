@@ -67,3 +67,9 @@ npm install -g @openai/codex --proxy http://127.0.0.1:7890
 › Find and fix a bug in @filename
  
   ? for shortcuts            
+  
+  
+  
+  export HTTP_PROXY="http://127.0.0.1:7890"
+export HTTPS_PROXY="http://127.0.0.1:7890"
+export NO_PROXY="127.0.0.1,localhost"

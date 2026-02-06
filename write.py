@@ -13,7 +13,7 @@ EXCLUDE_FILE_PATTERNS = [
     "write.py",
     ".pyc",
     ".png",                 # 排除png图片
- "githubcli.txt","project_all_files.txt"
+ "githubcli.txt","project_all_files.txt","总纲清单（可复制）.md","codex手把手带我走.md"
 ]
 
 # 需要排除的目录规则（直接跳过这些目录的遍历）
