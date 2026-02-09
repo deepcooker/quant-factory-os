@@ -32,6 +32,7 @@ Optional:
 ## 4) Allowed Commands (Default)
 Use ONLY these unless task explicitly authorizes more:
 - tools/doctor.sh
+- tools/enter.sh
 - tools/task.sh
 - tools/ship.sh
 - tools/view.sh
