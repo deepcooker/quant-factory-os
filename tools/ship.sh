@@ -20,6 +20,43 @@ if [[ -z "$MSG" ]]; then
   exit 1
 fi
 
+guard_single_run() {
+  local files=""
+  if [[ -n "${SHIP_GUARD_FILE_LIST:-}" ]]; then
+    files="${SHIP_GUARD_FILE_LIST}"
+  else
+    files="$( (git diff --name-only; git ls-files --others --exclude-standard) | sort -u )"
+  fi
+  if [[ -z "$files" ]]; then
+    return 0
+  fi
+
+  local run_prefixes=""
+  local task_files=""
+  run_prefixes="$(echo "$files" | grep -oE '^reports/run-[^/]+/' | sort -u || true)"
+  task_files="$(echo "$files" | grep -oE '^TASKS/TASK-[^/]+\.md$' | sort -u || true)"
+  local run_count task_count
+  run_count="$(echo "$run_prefixes" | grep -c . || true)"
+  task_count="$(echo "$task_files" | grep -c . || true)"
+
+  if [[ "$run_count" -gt 1 || "$task_count" -gt 1 ]]; then
+    echo "❌ 检测到多个 RUN_ID 或多个任务文件。"
+    echo "   请先清理工作区，确保单任务单 RUN_ID。"
+    if [[ "$run_count" -gt 1 ]]; then
+      echo "   RUN_ID: $(echo "$run_prefixes" | tr '\n' ' ')"
+    fi
+    if [[ "$task_count" -gt 1 ]]; then
+      echo "   TASKS: $(echo "$task_files" | tr '\n' ' ')"
+    fi
+    return 1
+  fi
+}
+
+if [[ "${SHIP_GUARD_ONLY:-0}" == "1" ]]; then
+  guard_single_run
+  exit $?
+fi
+
 if [[ -n "${GH_TOKEN:-}" ]]; then
   if ! gh auth status -h github.com >/dev/null 2>&1; then
     echo "$GH_TOKEN" | gh auth login -h github.com --with-token >/dev/null
@@ -89,6 +126,10 @@ if git diff --name-only | grep -qx "tools/ship.sh" && [[ "${SHIP_ALLOW_SELF:-0}"
   echo "   1) 要么撤销对 tools/ship.sh 的改动：git restore tools/ship.sh"
   echo "   2) 要么确认这是有意升级 ship 脚本，然后用："
   echo "      SHIP_ALLOW_SELF=1 tools/ship.sh \"$MSG\""
+  exit 1
+fi
+
+if ! guard_single_run; then
   exit 1
 fi
 
