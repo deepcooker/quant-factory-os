@@ -18,6 +18,12 @@
 PROXY_URL=http://127.0.0.1:7890 ./tools/start.sh
 ```
 
+## Next steps
+
+1. Run a9 probe/help checks (see `docs/INTEGRATION_A9.md`).
+2. Smoke small window backtest (minimal symbols/window).
+3. Real backtest once smoke passes.
+
 ## 0）这个仓库到底是什么：quant-factory-os 的定位
 
 它不是交易策略引擎本体（那个是 `a9quant-strategy`），它是**让 AI/Codex 能“安全、自动、可审计”接管开发的操作系统（OS）**：
