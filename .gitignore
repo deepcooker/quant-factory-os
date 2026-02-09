@@ -69,3 +69,5 @@ strategies/old/
 *.ipynb_checkpoint
 
 **/.ipynb_checkpoints/
+MISTAKES/
+reports/**/pr_body_excerpt.md
