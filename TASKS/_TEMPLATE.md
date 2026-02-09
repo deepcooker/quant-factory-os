@@ -22,6 +22,10 @@ What we explicitly do NOT do.
 ## Steps (Optional)
 Suggested approach, if you have one.
 
+## Reading policy
+Use `tools/view.sh` by default. If you need to read larger ranges, specify the
+exact line range and the reason.
+
 ## Risks / Rollback
 - Risks:
 - Rollback plan:

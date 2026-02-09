@@ -79,7 +79,7 @@ guard_single_run() {
   if [[ -n "${SHIP_GUARD_FILE_LIST:-}" ]]; then
     files="${SHIP_GUARD_FILE_LIST}"
   else
-    files="$( (git diff --name-only; git ls-files --others --exclude-standard) | sort -u )"
+    files="$(git diff --cached --name-only || true)"
   fi
   if [[ -z "$files" ]]; then
     return 0
@@ -96,6 +96,11 @@ guard_single_run() {
   if [[ "$run_count" -gt 1 || "$task_count" -gt 1 ]]; then
     echo "❌ 检测到多个 RUN_ID 或多个任务文件。"
     echo "   请先清理工作区，确保单任务单 RUN_ID。"
+    echo "   Staged files:"
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      echo "   - $line"
+    done <<< "$files"
     if [[ "$run_count" -gt 1 ]]; then
       echo "   RUN_ID: $(echo "$run_prefixes" | tr '\n' ' ')"
     fi
@@ -183,11 +188,50 @@ if git diff --name-only | grep -qx "tools/ship.sh" && [[ "${SHIP_ALLOW_SELF:-0}"
   exit 1
 fi
 
+run_id=""
+if [[ -n "${SHIP_RUN_ID:-}" ]]; then
+  run_id="${SHIP_RUN_ID}"
+elif [[ -n "${RUN_ID:-}" ]]; then
+  run_id="${RUN_ID}"
+else
+  run_id="$(echo "$MSG" | grep -oE 'run-[0-9]{4}-[0-9]{2}-[0-9]{2}-[^ ]+' | head -n1 || true)"
+fi
+
+stage_changes() {
+  git add -u
+
+  if [[ -n "${SHIP_TASK_FILE:-}" ]]; then
+    git add "${SHIP_TASK_FILE}"
+  fi
+  if [[ -n "$run_id" ]]; then
+    git add "reports/${run_id}"
+  fi
+
+  local untracked=""
+  untracked="$(git ls-files --others --exclude-standard || true)"
+  if [[ -z "$untracked" ]]; then
+    return 0
+  fi
+
+  while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+    if [[ "$file" == reports/run-*/* ]]; then
+      continue
+    fi
+    case "$file" in
+      tools/*|tests/*|TASKS/*|Makefile)
+        git add "$file"
+        ;;
+    esac
+  done <<< "$untracked"
+}
+
+stage_changes
+
 if ! guard_single_run; then
   exit 1
 fi
 
-git add -A
 if git diff --cached --quiet; then
   echo "No changes staged. Nothing to commit."
   echo "You are on branch: $branch"
@@ -245,15 +289,6 @@ if [[ -n "${SHIP_TASK_FILE:-}" || -n "${SHIP_TASK_TITLE:-}" ]]; then
 - 标题：${SHIP_TASK_TITLE}"
   fi
   prefix="$task_section"
-fi
-
-run_id=""
-if [[ -n "${SHIP_RUN_ID:-}" ]]; then
-  run_id="${SHIP_RUN_ID}"
-elif [[ -n "${RUN_ID:-}" ]]; then
-  run_id="${RUN_ID}"
-else
-  run_id="$(echo "$MSG" | grep -oE 'run-[0-9]{4}-[0-9]{2}-[0-9]{2}-[^ ]+' | head -n1 || true)"
 fi
 
 if [[ -n "$run_id" ]]; then

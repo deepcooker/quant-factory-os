@@ -2,10 +2,11 @@ import os
 import subprocess
 
 
-def run_guard(file_list: str) -> subprocess.CompletedProcess:
+def run_guard(file_list: str | None = None) -> subprocess.CompletedProcess:
     env = os.environ.copy()
     env["SHIP_GUARD_ONLY"] = "1"
-    env["SHIP_GUARD_FILE_LIST"] = file_list
+    if file_list is not None:
+        env["SHIP_GUARD_FILE_LIST"] = file_list
     return subprocess.run(
         ["bash", "tools/ship.sh", "test: ship guard"],
         env=env,
@@ -31,4 +32,31 @@ def test_ship_guard_blocks_multiple_tasks():
 
 def test_ship_guard_allows_single_run_and_task():
     res = run_guard("reports/run-a/meta.json\nTASKS/TASK-a.md\n")
+    assert res.returncode == 0
+
+
+def test_ship_guard_ignores_untracked_reports_when_staged_single_run():
+    old_dir = os.path.join("reports", "run-guard-old")
+    new_dir = os.path.join("reports", "run-guard-new")
+    os.makedirs(old_dir, exist_ok=True)
+    os.makedirs(new_dir, exist_ok=True)
+    old_file = os.path.join(old_dir, "old.txt")
+    new_file = os.path.join(new_dir, "new.txt")
+    with open(old_file, "w", encoding="utf-8") as handle:
+        handle.write("old\n")
+    with open(new_file, "w", encoding="utf-8") as handle:
+        handle.write("new\n")
+
+    subprocess.run(["git", "add", new_file], check=True)
+    res = run_guard()
+    try:
+        subprocess.run(["git", "reset", "--quiet", "HEAD", "--", new_file], check=True)
+    finally:
+        os.remove(old_file)
+        os.remove(new_file)
+        try:
+            os.rmdir(old_dir)
+            os.rmdir(new_dir)
+        except OSError:
+            pass
     assert res.returncode == 0

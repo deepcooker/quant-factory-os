@@ -34,10 +34,14 @@ Use ONLY these unless task explicitly authorizes more:
 - tools/doctor.sh
 - tools/task.sh
 - tools/ship.sh
+- tools/view.sh
 - make evidence RUN_ID=...
 - make verify
 - make slice RUN_ID=... DAY=... SYMBOLS=... START=... END=...
 - pytest -q
+
+## Reading policy
+- 长文件阅读必须使用 tools/view.sh 分段查看，不得直接使用 sed/cat/rg/grep/awk。
 
 ## 5) Workflow (Must follow)
 1) Read TASKS/<task>.md and confirm acceptance criteria.
