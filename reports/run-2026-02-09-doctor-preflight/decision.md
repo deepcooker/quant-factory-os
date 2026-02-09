@@ -14,3 +14,6 @@ RUN_ID: `run-2026-02-09-doctor-preflight`
 
 ## Verify
 - `make verify`（已通过）
+
+## Ship status
+- 失败：git@github.com SSH 公钥权限不足（fetch origin 时失败）
