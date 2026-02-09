@@ -4,6 +4,20 @@
 
 ---
 
+## Quick start
+
+无代理：
+
+```bash
+./tools/start.sh
+```
+
+有代理：
+
+```bash
+PROXY_URL=http://127.0.0.1:7890 ./tools/start.sh
+```
+
 ## 0）这个仓库到底是什么：quant-factory-os 的定位
 
 它不是交易策略引擎本体（那个是 `a9quant-strategy`），它是**让 AI/Codex 能“安全、自动、可审计”接管开发的操作系统（OS）**：
@@ -250,4 +264,3 @@ tools/task.sh
 * 以及怎么用 CI 简单检查“STATE.md 没更新就不让合并”（如果你想要更强门禁的话）
 
 [1]: https://github.com/deepcooker/quant-factory-os "GitHub - deepcooker/quant-factory-os: quant-factory-os"
-
