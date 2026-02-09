@@ -6,9 +6,9 @@ import sys
 from pathlib import Path
 
 
-def build_log_header(run_id: str, a9_root: str, cmd: list[str]) -> str:
+def build_log_header(run_id: str, a9_root: str, cmd: list[str], mode: str) -> str:
     lines = [
-        "a9 dry-run",
+        f"a9 {mode}",
         f"run_id: {run_id}",
         f"cwd: {os.getcwd()}",
         f"python: {sys.executable}",
@@ -31,16 +31,75 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run a9quant dry-run check.")
     parser.add_argument("--run-id", default=os.getenv("RUN_ID", "run-unknown"))
     parser.add_argument("--a9-root", default="/root/a9quant-strategy")
+    parser.add_argument("--mode", default="dry-run", choices=["dry-run", "probe"])
     args = parser.parse_args()
 
     a9_root = args.a9_root
     if not os.path.isdir(a9_root):
         msg = f"ERROR: a9 root not found or not a directory: {a9_root}"
-        log = build_log_header(args.run_id, a9_root, [])
+        log = build_log_header(args.run_id, a9_root, [], args.mode)
         log += msg + "\n"
         write_log(args.run_id, log)
         print(msg, file=sys.stderr)
         return 1
+
+    if args.mode == "probe":
+        main_controller = Path(a9_root) / "main_controller.py"
+        if not main_controller.is_file():
+            msg = f"ERROR: main_controller.py not found under a9 root: {a9_root}"
+            log = build_log_header(args.run_id, a9_root, [], args.mode)
+            log += msg + "\n"
+            write_log(args.run_id, log)
+            print(msg, file=sys.stderr)
+            return 1
+
+        a9_repo_sha = "unknown"
+        try:
+            sha_proc = subprocess.run(
+                ["git", "-C", a9_root, "rev-parse", "HEAD"],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=5,
+            )
+            if sha_proc.returncode == 0:
+                a9_repo_sha = sha_proc.stdout.strip() or "unknown"
+        except subprocess.TimeoutExpired:
+            a9_repo_sha = "unknown"
+
+        cmd = [sys.executable, "main_controller.py", "--help"]
+        header = build_log_header(args.run_id, a9_root, cmd, args.mode)
+        header += f"a9_repo_sha: {a9_repo_sha}\n"
+        try:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=False,
+                cwd=a9_root,
+                timeout=20,
+            )
+        except subprocess.TimeoutExpired:
+            log = header
+            log += "stdout:\n"
+            log += "stderr:\n"
+            log += "exit_code: timeout\n"
+            write_log(args.run_id, log)
+            print("ERROR: a9 probe timed out. See reports/{}/a9_stdout.log".format(args.run_id), file=sys.stderr)
+            return 1
+
+        log = header
+        log += "stdout:\n" + proc.stdout
+        log += "stderr:\n" + proc.stderr
+        log += f"exit_code: {proc.returncode}\n"
+        write_log(args.run_id, log)
+
+        if proc.returncode != 0:
+            print("ERROR: a9 probe failed. See reports/{}/a9_stdout.log".format(args.run_id), file=sys.stderr)
+            return proc.returncode
+
+        print("OK: a9 probe complete. See reports/{}/a9_stdout.log".format(args.run_id))
+        return 0
 
     code = (
         "import os,sys\n"
@@ -50,7 +109,7 @@ def main() -> int:
         "print('entries', len(os.listdir(root)))\n"
     )
     cmd = [sys.executable, "-c", code, a9_root]
-    header = build_log_header(args.run_id, a9_root, cmd)
+    header = build_log_header(args.run_id, a9_root, cmd, args.mode)
 
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     log = header
