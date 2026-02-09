@@ -20,6 +20,12 @@ if [[ -z "$MSG" ]]; then
   exit 1
 fi
 
+if [[ -n "${GH_TOKEN:-}" ]]; then
+  if ! gh auth status -h github.com >/dev/null 2>&1; then
+    echo "$GH_TOKEN" | gh auth login -h github.com --with-token >/dev/null
+  fi
+fi
+
 gh auth status -h github.com >/dev/null
 git rev-parse --is-inside-work-tree >/dev/null
 
