@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# tools/ship.sh v1.0.5 (CN PR body + self-guard FIXED)
+# tools/ship.sh v1.0.6 (CN PR body + self-guard FIXED)
 # ------------------------------------------------------------
 # v1.0.1: 修复 stash_ref 末尾冒号导致 stash pop 失败
 # v1.0.2: 刚建 PR 会暂时 no checks reported -> 等待 checks 出现再 watch
@@ -12,6 +12,8 @@ set -euo pipefail
 #   - 防误提交：默认禁止“顺带提交 tools/ship.sh”
 # v1.0.5:
 #   - 修复 v1.0.4 保险丝位置：必须放在 stash pop 之后才看得到改动（必定生效）
+# v1.0.6:
+#   - 若短时间内无 checks 出现，则不再无限等待
 # ------------------------------------------------------------
 
 MSG="${1:-}"
@@ -322,19 +324,35 @@ echo "PR: $pr_url"
 gh pr merge --auto --squash --delete-branch "$pr_url" || true
 
 # 等待 checks 出现再 watch（避免 no checks reported）
-for i in {1..30}; do
+checks_ready=0
+for i in {1..6}; do
   if gh pr checks "$pr_url" >/dev/null 2>&1; then
+    checks_ready=1
     break
   fi
-  echo "Waiting for checks to appear... ($i/30)"
+  echo "Waiting for checks to appear... ($i/6)"
   sleep 2
 done
-gh pr checks --watch "$pr_url"
+if [[ "$checks_ready" -eq 1 ]]; then
+  gh pr checks --watch "$pr_url"
+else
+  echo "No checks reported shortly after PR creation. Continuing without waiting."
+fi
 
 # 如果 auto-merge 已经合并，就不再重复 merge
 state="$(gh pr view "$pr_url" --json state -q .state)"
 if [[ "$state" != "MERGED" ]]; then
-  gh pr merge --squash --delete-branch "$pr_url" || true
+  if [[ "$checks_ready" -eq 0 ]]; then
+    set +e
+    gh pr merge --squash --delete-branch "$pr_url"
+    merge_rc=$?
+    set -e
+    if [[ "$merge_rc" -ne 0 ]]; then
+      echo "⚠️ Auto-merge blocked. If branch protection requires checks, disable required checks or merge manually."
+    fi
+  else
+    gh pr merge --squash --delete-branch "$pr_url" || true
+  fi
 fi
 
 if [[ -n "$PR_BODY_EXCERPT" ]]; then

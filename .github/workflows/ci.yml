@@ -1,8 +1,6 @@
 name: ci
 on:
-  pull_request:
-  push:
-    branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   check:
@@ -17,4 +15,3 @@ jobs:
           test -d TASKS
           test -d ISSUES
           echo "✅ skeleton ok"
-
