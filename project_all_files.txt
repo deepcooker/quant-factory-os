@@ -11,6 +11,7 @@
         _TEMPLATE.md
         QUEUE.md
         STATE.md
+        TASK-prbody.md
     ISSUES/
         PLAYBOOK.md
     .github/
@@ -21,8 +22,23 @@
         ship.sh
         doctor.sh
         task.sh
+        evidence.py
+        slice.py
     tests/
         test_smoke.py
+    reports/
+        run-2026-02-07-bootstrap/
+            decision.md
+            meta.json
+            summary.md
+            samples/
+                slice_2026-02-06_0000-0010_2sym.csv.gz
+        run-2026-02-09-task-prbody/
+            meta.json
+            summary.md
+            decision.md
+    MISTAKES/
+        run-2026-02-09-task-prbody.md
 
 ================================================================================
 所有目标文件内容:
@@ -618,6 +634,47 @@ Suggested approach, if you have one.
 
 
 ############################################################
+文件路径: /root/quant-factory-os/TASKS/TASK-prbody.md
+############################################################
+
+# TASK: wire task->PR body and add evidence links
+
+RUN_ID: run-2026-02-09-task-prbody
+OWNER: codex
+PRIORITY: P1
+
+## Goal
+Fix unused PR body generation in tools/task.sh and ensure tools/ship.sh PR body
+includes task info and evidence paths per AGENTS rules.
+
+## Non-goals
+Do not change tools/ship.sh output when no related environment variables exist.
+
+## Acceptance
+- [ ] Command(s) pass: `make verify`
+- [ ] Evidence updated: `reports/run-2026-02-09-task-prbody/summary.md` and `reports/run-2026-02-09-task-prbody/decision.md`
+- [ ] Regression guardrail added/updated if applicable
+
+## Inputs
+- tools/task.sh
+- tools/ship.sh
+- TASKS/_TEMPLATE.md
+- AGENTS.md
+
+## Steps (Optional)
+- Run `make evidence RUN_ID=run-2026-02-09-task-prbody`
+- Update tools/task.sh to stop generating unused PR body and pass task info to ship
+- Update tools/ship.sh to include task info and evidence paths when available
+- Run `make verify`
+- Update evidence reports
+- Ship with SHIP_ALLOW_SELF=1
+
+## Risks / Rollback
+- Risks: PR body formatting regressions or incorrect run id parsing
+- Rollback plan: revert tools/task.sh and tools/ship.sh
+
+
+############################################################
 文件路径: /root/quant-factory-os/ISSUES/PLAYBOOK.md
 ############################################################
 
@@ -833,6 +890,51 @@ EOF3
 )"
 # ----------------------------
 
+prefix=""
+if [[ -n "${SHIP_TASK_FILE:-}" || -n "${SHIP_TASK_TITLE:-}" ]]; then
+  task_section="## 任务文件"
+  if [[ -n "${SHIP_TASK_FILE:-}" ]]; then
+    task_section="${task_section}
+- 路径：\`${SHIP_TASK_FILE}\`"
+  fi
+  if [[ -n "${SHIP_TASK_TITLE:-}" ]]; then
+    task_section="${task_section}
+- 标题：${SHIP_TASK_TITLE}"
+  fi
+  prefix="$task_section"
+fi
+
+run_id=""
+if [[ -n "${SHIP_RUN_ID:-}" ]]; then
+  run_id="${SHIP_RUN_ID}"
+elif [[ -n "${RUN_ID:-}" ]]; then
+  run_id="${RUN_ID}"
+else
+  run_id="$(echo "$MSG" | grep -oE 'run-[0-9]{4}-[0-9]{2}-[0-9]{2}-[^ ]+' | head -n1 || true)"
+fi
+
+if [[ -n "$run_id" ]]; then
+  evidence_section="## Evidence paths
+\`\`\`
+reports/${run_id}/meta.json
+reports/${run_id}/summary.md
+reports/${run_id}/decision.md
+\`\`\`"
+  if [[ -n "$prefix" ]]; then
+    prefix="${prefix}
+
+${evidence_section}"
+  else
+    prefix="${evidence_section}"
+  fi
+fi
+
+if [[ -n "$prefix" ]]; then
+  PR_BODY="${prefix}
+
+${PR_BODY}"
+fi
+
 pr_url="$(gh pr create --base main --head "$branch" --title "$MSG" --body "$PR_BODY")"
 echo "PR: $pr_url"
 
@@ -1010,6 +1112,9 @@ if [[ -z "$title" ]]; then
 fi
 
 msg="task: ${title}"
+if [[ -n "${RUN_ID:-}" ]]; then
+  msg="${RUN_ID}: ${msg}"
+fi
 
 echo "任务文件：$task_file"
 echo "生成提交信息：$msg"
@@ -1022,43 +1127,166 @@ if git status --porcelain | grep -q "tools/ship.sh"; then
   echo
 fi
 
-# 自动生成 PR 描述，包含任务路径
-PR_BODY=$(cat <<EOF2
-## 任务文件路径
-\`\`\`
-$task_file
-\`\`\`
-
-## 变更概述
-- 任务：${title}
-- 合并策略：Squash
-- 说明：CI 通过后自动合并（Auto-merge）
-
-## 变更范围（git diff --stat）
-\`\`\`
-$(git diff --stat origin/main...HEAD || true)
-\`\`\`
-
-## 涉及文件
-\`\`\`
-$(git diff --name-only origin/main...HEAD || true)
-\`\`\`
-
-## 如何验证
-- 必须：GitHub Actions 绿灯（required checks）
-- 可选（本地）：
-  \`\`\`bash
-  pytest -q
-  \`\`\`
-
-## 风险与回滚
-- 风险：
-- 回滚：
-EOF2
-)
-
 # 提交和创建 PR
-tools/ship.sh "$msg"
+SHIP_TASK_FILE="$task_file" SHIP_TASK_TITLE="$title" tools/ship.sh "$msg"
+
+
+############################################################
+文件路径: /root/quant-factory-os/tools/evidence.py
+############################################################
+
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import platform
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+def _git(cmd: list[str], cwd: Path) -> str | None:
+    try:
+        out = subprocess.check_output(cmd, cwd=str(cwd), stderr=subprocess.DEVNULL)
+        return out.decode().strip()
+    except Exception:
+        return None
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--run-id", required=True)
+    args = ap.parse_args()
+
+    repo = Path(__file__).resolve().parents[1]
+    reports_dir = repo / "reports" / args.run_id
+    reports_dir.mkdir(parents=True, exist_ok=True)
+
+    meta = {
+        "run_id": args.run_id,
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "cwd": str(repo),
+        "user": os.getenv("USER") or os.getenv("USERNAME") or "unknown",
+        "host": platform.node(),
+        "platform": platform.platform(),
+        "python": sys.version.split()[0],
+        "git_commit": _git(["git", "rev-parse", "HEAD"], repo),
+        "git_branch": _git(["git", "branch", "--show-current"], repo),
+        "note": "generated by tools/evidence.py",
+    }
+
+    (reports_dir / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    summary = reports_dir / "summary.md"
+    if not summary.exists():
+        summary.write_text(
+            f"# Summary\n\nRUN_ID: `{args.run_id}`\n\n"
+            "## What changed\n- \n\n"
+            "## Commands / Outputs\n- \n\n"
+            "## Notes\n- \n",
+            encoding="utf-8",
+        )
+
+    decision = reports_dir / "decision.md"
+    if not decision.exists():
+        decision.write_text(
+            f"# Decision\n\nRUN_ID: `{args.run_id}`\n\n"
+            "## Why\n- \n\n"
+            "## Options considered\n- \n\n"
+            "## Risks / Rollback\n- \n",
+            encoding="utf-8",
+        )
+
+    print(f"OK: wrote {reports_dir/'meta.json'}")
+    print(f"OK: ensured {summary}")
+    print(f"OK: ensured {decision}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
+
+############################################################
+文件路径: /root/quant-factory-os/tools/slice.py
+############################################################
+
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import csv
+import gzip
+import hashlib
+import random
+from datetime import datetime, timedelta
+from pathlib import Path
+
+
+def _seed(s: str) -> int:
+    h = hashlib.sha256(s.encode("utf-8")).hexdigest()
+    return int(h[:16], 16)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--run-id", required=True)
+    ap.add_argument("--day", required=True)      # YYYY-MM-DD
+    ap.add_argument("--symbols", required=True)  # A,B,C
+    ap.add_argument("--start", required=True)    # HH:MM
+    ap.add_argument("--end", required=True)      # HH:MM
+    args = ap.parse_args()
+
+    repo = Path(__file__).resolve().parents[1]
+    out_dir = repo / "reports" / args.run_id / "samples"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    syms = [s.strip() for s in args.symbols.split(",") if s.strip()]
+    if not syms:
+        raise SystemExit("symbols is empty")
+
+    start_dt = datetime.fromisoformat(f"{args.day}T{args.start}:00")
+    end_dt = datetime.fromisoformat(f"{args.day}T{args.end}:00")
+    if end_dt < start_dt:
+        raise SystemExit("end < start")
+
+    # hard limit: <=500 rows (AGENTS)
+    max_rows = 500
+    per_sym = max(1, max_rows // len(syms))
+    total_seconds = int((end_dt - start_dt).total_seconds())
+    step = max(1, total_seconds // max(1, per_sym - 1))
+
+    rng = random.Random(_seed(f"{args.run_id}|{args.day}|{args.symbols}|{args.start}|{args.end}"))
+
+    fname = f"slice_{args.day}_{args.start.replace(':','')}-{args.end.replace(':','')}_{len(syms)}sym.csv.gz"
+    out_path = out_dir / fname
+
+    rows = 0
+    with gzip.open(out_path, "wt", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["ts", "symbol", "price", "qty"])
+        for sym in syms:
+            price = rng.uniform(100, 30000)
+            t = start_dt
+            n = 0
+            while t <= end_dt and n < per_sym:
+                price = max(0.01, price * (1.0 + rng.uniform(-0.0008, 0.0008)))
+                qty = rng.uniform(0.001, 1.0)
+                w.writerow([t.isoformat(), sym, f"{price:.4f}", f"{qty:.6f}"])
+                rows += 1
+                n += 1
+                t = t + timedelta(seconds=step)
+
+    print(f"OK: wrote {out_path} rows={rows}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
 
 ############################################################
 文件路径: /root/quant-factory-os/tests/test_smoke.py
@@ -1067,3 +1295,159 @@ tools/ship.sh "$msg"
 def test_smoke():
     # 最小哨兵测试：保证 pytest 不会出现 "no tests ran"
     assert True
+
+
+############################################################
+文件路径: /root/quant-factory-os/reports/run-2026-02-07-bootstrap/decision.md
+############################################################
+
+# Decision
+
+RUN_ID: `run-2026-02-07-bootstrap`
+
+## Why
+- 
+
+## Options considered
+- 
+
+## Risks / Rollback
+- 
+
+
+############################################################
+文件路径: /root/quant-factory-os/reports/run-2026-02-07-bootstrap/meta.json
+############################################################
+
+{
+  "run_id": "run-2026-02-07-bootstrap",
+  "created_at_utc": "2026-02-06T21:10:37.784830+00:00",
+  "cwd": "/root/quant-factory-os",
+  "user": "unknown",
+  "host": "autodl-container-1a4d48a0d9-a416943c",
+  "platform": "Linux-5.15.0-94-generic-x86_64-with-glibc2.35",
+  "python": "3.12.12",
+  "git_commit": "950eb2dcd593e573077b62aff7891752faf95e20",
+  "git_branch": "main",
+  "note": "generated by tools/evidence.py"
+}
+
+
+############################################################
+文件路径: /root/quant-factory-os/reports/run-2026-02-07-bootstrap/summary.md
+############################################################
+
+# Summary
+
+RUN_ID: `run-2026-02-07-bootstrap`
+
+## What changed
+- 
+
+## Commands / Outputs
+- 
+
+## Notes
+- 
+
+
+############################################################
+文件路径: /root/quant-factory-os/reports/run-2026-02-07-bootstrap/samples/slice_2026-02-06_0000-0010_2sym.csv.gz
+############################################################
+
+蚗唅slice_2026-02-06_0000-0010_2sym.csv t\臀e籒#&鏽%躲$鶓榮y$繐鰯潁竡>楱O秢-荖轨T蟧螫愤罂鯚宸?錩HC?4ck鲎鼪鼑魁鉶覈甇醉康蠚藯1
+l虠繾舻:5膀匇1儊kw萏浪涑詘%S跷謒0#*
+s-5!8m鰴]聾蘸7f 久噀莹AuzMxsfP俇Z#嗻dN麾戴蠝p狌I:>m镳A鐅a>H峵麍崣q仡,襌湒鵬硊凑+3☉=@ 舏鯊鯸%铌hqZ3v9拑=A夢馢"鈨-諬#雔ez{["舏睆[8萄拓~锈<!法78綀佌=	84e玠5殷#絿荻*s趭樱:煞/鎯蒸A"6窖W榻75t葚Fqz"'茜yE舏橊稹橧c=与硸牟z@&}聸蕹[:h謨K*3Rc$禁冝鬪3瀫恡Sf O秺K爓d_g$b)A嶠爓C,A@' 虪8輤|S*{R瞁*鑝z蟇Z埠'T鬾喸萫]3(Nql!ˋq核g葁YjP滎
+I唉,p交}悾d不鱼cmDj鄭毑e栎/?[鎾-e懏鑽) )鉅"澗RuZ?╔塊 .b爋z-	6;[娹sY嗺F#];.V3^骚N鍯Eo 仢!f試l旺 d舘堿E&z/o葙*z頴Mn矙=瘎m殰O矏T赧OD#0*zc恰濭.&聙Ⅶ阘V恭4/3铖摔∴|汦孩稧58杜vfP滝	|报pym骠臻漃	*Gh<=斐P舶:3%kf捖VU〢qz)鑔芶徑I}涧 霋*.佗驙褲钟檎H蛏媒琥-诙鱊
+娪糢	2鋸w個$6鱼硍輵N0iz'.闃尙藘逘?辣脓1y
+Fv(s⒖a筎!A牜
+'/#;Y扤煱捀&禢3ㄨ
+*┽赐禮*z 5[羄A	楢-Y 雸q8+戒遘搆Xs噴(戽蓪MQ刭*z(=嵢Qy^蓏.豣蒰应靧趙6Ku/躲*z
+職l0+誀w4]-惠
+衐 <9翿牱m@錫dh禫鼳{44酁-kEo,kq杪z }7挴'j改3榿紞/秇霛TQ}谢o8漖("愈牱(餋C緳A恣;鈵$q衔赾}''!庡耑}奫瑨95皣鑒珈颖汤烾R显鑋漰>龝{k蠁cw鬥,鲉咏%	Z@
+摁n*;柕砏挿藲x豶汤*s孋73X曵尔梜'<栎)灆繢畋鋥衃cL監E櫽z0曹⑼惕冝x%碕IC踛濟盀
+磛矙5墎接嗅=7袦.,鶠蓧"鵵q6]_阜档rF>肞＂7貆k-p>6惤6悹S,,5船	畦稖襵4蕋r峣s砋郡魑UB&K嶑巰3生慶臻教蘔缕{JO靑lP諳;淁蝃棕3:9兞蜛X=3鉙&抩Q轍w蓱抖惒kzG郱nQ砸AZ{甾鑦洯琿mue鰊 M鉺cNW缬瀜@呔&}/@塛BGC&膂7牯X	侖緳<5特N賃g><鑝1萅褆wzwl褜CW畚怵LN,阾&烣n儕-葄6頳訞
+d/妴6媰VF柟擲i`2z(滖)H蔲賈雄VDzfB珒鏎n鸼薺o漹蛻W癙gN;#[h崰><芑ｑ!I1埳U腶o謻YE餃嗏澹固羳wsl嬗饥J舳絘 鏧G贫"]雄vMeN魩銼礢惆/~茛＂-L恣dEe読峴劀
+icE\?P靹Tp1:(J0僿-嚪　銠{c?燖'j阜蜼┧@矎S詋鯦鲙V=珊vS襽強逘{@ShXgq栾珨"犔b疶;N賃.朊奖佹9罌牙蒏C&藾[柒 ok偻
+ε拗rihW蠼X=┸踊粦1舩竪嬔U褦灯V﹔飭.K硦<恈鋻3褲>6}wr7砪G軜涌7XY偫^3愮	髅{_衃W而
+夙,;;n礒7愓诓=躱eNW鬎QD7p[旟P雄f鬇枬"輖ur #	栘T氜絞4p*圳摜FE铳 蔡%)a齄牱莬)朊闙蓸+z蹔JbSl泴孅AoG禢=揇4娪润	5碎+礌Y洂閺?鑝13-姃韻=、 秊庬2'﹣>0噴揶?9E"絚曅O郓&涕傓6z濼眙d舏$2@fX嗄濿-彟t%誀Ψ;慒璫q愼2I ((鋭+z｝c覲阜k#8舢y聛(}モ磵h歊7hjX*鳀/%罛:_窖)bi撦＿pV#
+鬪9#Yc閉雄TCs参Ki
+zＣ欤T3鏄岭炊D⒉+U糁 JGB偊.嵶闃'芕w靽q&X(r骡P裑C諕貖V
+3X+!Ys %'驛飸
+\兮誀:摸q纷X虪F`lr龃,?絬F?v賎鋎捐柔&y#s嶚牱ｑ圪y湙S僙s{T徰\2兒Я棪1鲱$5鎯蕤@X4钔柕w睗ΙK[虈娹H峲定"b※Ⅶ牢<7&繕zc荅驍f⒊f唞?儛鎷疽z^i頓
+垃U藎雄B逭O$覺zW羝矀愬L 熖噴!臄2飷:0魎茺润趆,p-鐿NC莘育P眼汔!Qk5恎漀ㄜm6禞=Dp9莒饲沤砳1-蘞耓w螌[煕韲噞#[{笥鸴疶
+竛;蜯+峸埌-[K飐音糁~椓3x7跉y!N孓階餄跃3怍z'';N[謶
++I觉瀂異浃)载黆袨S庥謘:宣Io$苀uEQ[獘痔嘷艮p'lu頼(籸艵度伵z蹀=9oEu爜鸈szf3 5b\w鹀爤*蓱央歴rem郃C3襸1v*/僪i气2[+/$	攝-炜焵萊6<[較*-)揇缶籹e齽呬箪5:@炜}@}丕N:╬ee 蜮d鹘O闶藸胉佥tqem>n绗2睹X\聂荢~!桉pe
+嚍/法牷椻tH=wNf寣+鹢,k螲鞴琈炜}@崜T*篔Z湒詢漑"
+橲匋"IbP辋儾6鹦G妯,擣Z嬘%dw*穛8-q殂7剄er廄Cg掣^Vt(囪n鄰A屶sT^\賍S}C`_袖ozＺ98闗共6 T炈
+粊^+5絎鑌%s犾V﹂i喧5炜
+P5穐堛e齁猛y虐ypeC譂殸\L夈劀k,e0+z	0}敬認鬾`3:夾剗se滽q鴷C胆\哺vz∞蔘S孍?鬾獹kr鸢W鲎H飍刧w3覆vz乃玺g6殳`<幬x爕玊谢龛Z搼	屎5炜%霚恝{><鑝q椋-S2絈憔]d4缡 狠轓蝯狛wjt%0u.炜
+星睮b衃w(鰴璁煍龝:竑院1共&X;▋~!奏漱踐艖:凃稖+鹢琮z2&╆z僇稢舟>W鲎U;:澾皑蹿2橽賍Wi鴳E綫X炋謵挂+J絚暺人檪瓝+鹢s垚栎@:W鯳嵭9勽甛賍
+9嘢殳TZ0sl殳q=彟愐+'蝉\砇浺覆6 耳8`惮se忝8菧辴6殳-崀冽wi溽辢9仜鈂(紸痊qee皞`俟dLh#鱚侒y呎u+
+\E鞺捘?h+z镄`裳kXS缡?牴孠9j	v痋剟dgs輁賍
+P苠KN驿漱麜纅$誔駘P鲞
+ 斯鳸H友癀LD鶭搅鳃褂鉶5殳1v(罫#z莔潱鏪.騇Ao	4縍薰~曼3褝{螋蒲☉禣茯蟂|=共^檨拌\h^lL1╊>~P鯻鞑R7Pi驆i4M杦tР醾"Y冂Q:辗兏r(麨V魱8睱緁鐴W鲞#N汄╲[+/O豳镻6鶺炜F7従ug殳4uZ[闶麜湎1鏡炜_)飼=A曃珦q0W鲞>L$Q?┽m,炜
+馊障1隲"-声,愉漱{?牓960崾	4e啶襟!(>共恐噏舡4+z麗鱅e經4"8怃漱娹蚪4(+颱騂#圗吮共yB隙隣稤虨
+4O/*q薷部r)Rx鉢賍煚;W	帩Z陜轅径座:雇朂w蓗	;P溛籩隲 &+鹢G元$骸蘗\飮0J?u谪-s{谢{ 椥鮎鰞=睢|咜澥+z侨K摲嗆蹟+飁磬G''孺漱爘菸朂酚o摲:W鲞O責怲!垄鴬挢 ,Y(薰~履幩W氳v嗍蔥駝:濊谒絚#鋷
+燶賍	柇寖勌xsem
+銲N諪6殳N蟯钜`徫旪蛆蟟^澽〒溮!'漖%秅r蝕m澺k掼:9賟鈼c耰缡毉硖f\寅A賍#xt唈撧7谨締0npe钮鴢Jn 4殟+儠怙t?<快珙4*z莙聶	xL+珌瀃Sq:@?Tlf瀃礰re嵀('[W鄢M殳6H'睫Sd軫;Z嚫7艜+
+l扬Qm饭覆窳; V+鹝}熬惜&旕ヱpo _?勒g\賍&;-P:oz8鱿塶|踖鼱炜鱰p飼位髌朂u潮>6共6楔@y⒉旪稟|(g
+龁5殳肕家admr【记+K＆亾w0圢#;v7試娹q_8 5cpe=鐩1T珞1B车wN碃T歭炜煱倻3槶qe濊9_0k鬦蓅j	?`躾c隈谓5>f戙A噅銠淴$纆蕰齯8违(媸	=廄蟱釺+氩偣% ~魡吔'銃'湟鸥部怔宫<@歴e}%l椋D泄~P鲎cNp嗊麌薰部f蛓F駤壾;鞫{?#鉠:e喂/=軆+哂9;n6炜鞔2G具幺蕰齯fl缛紞謻pe蟬k獚胆f娇'贸酅*凸共~B忞!笿鄨srem勼镕煸駜部"啉N*d缡蹏馳掹スＲw 8	駶7殳豭<n狕媸 *笶(q+鹝}Xg豲S罐虎w|饆9sL鰴7雄'j\猌4鄘sem逿藦淮幁闬賍雝
+<l.\3熗K吾\so孄$y茙篘魉苒萧L锷朂=扖劷韲'赜藜F\?a=C+n?t菦^Q劓戃zg'Mpou缬+)厵噞w斚u! +颳娪侒4O4铐!鹑q5+鹝K沌.,-帙r锔.咚h詜竪|]祡'(觾+麩腱e嵤+髦强f弶0W鲞M游訓筝蠭狄齧8鲅: 57s39.霚嬈:W鲎e韘zn蟔i=゛;騬v;吖w\_琬t3o\hb嵂趲鍾漿7櫹u鑵q^<?#H缡氜扉頖揙邁篒?_!A媜\賍g暙缌P
+73辥氈U旊{卤忯9M崾z滀|酚'陨╔陾B!+鹝Z?|	恭蕰55拒%陡部炓 椢鬵岏儾vz臰课笨Hw炜僰~?P宠-憡轐N矾蝬	W鯻齘~贍8=C詻琑x4鬎Ql殖瞬8嗍?犈 速*
+A嶕爓0仏{阢洸茣V^>#郙E絯mNO?(鹢l仰絑7 覆~%
+(跕7栗诚v霙+鹢兗魬4Q6W鯻q牢裂 *W鲞人oyQIf    v7h喩_  
+
+############################################################
+文件路径: /root/quant-factory-os/reports/run-2026-02-09-task-prbody/meta.json
+############################################################
+
+{
+  "run_id": "run-2026-02-09-task-prbody",
+  "created_at_utc": "2026-02-09T06:03:42.659716+00:00",
+  "cwd": "/root/quant-factory-os",
+  "user": "unknown",
+  "host": "autodl-container-1a4d48a0d9-a416943c",
+  "platform": "Linux-5.15.0-94-generic-x86_64-with-glibc2.35",
+  "python": "3.10.8",
+  "git_commit": "2ce52046898cc2932bd071e4cf7467dc2c9675c1",
+  "git_branch": "main",
+  "note": "generated by tools/evidence.py"
+}
+
+
+############################################################
+文件路径: /root/quant-factory-os/reports/run-2026-02-09-task-prbody/summary.md
+############################################################
+
+# Summary
+- Why: tools/task.sh generated an unused PR body and tools/ship.sh lacked evidence links required by AGENTS.
+- What: removed unused PR body generation, passed task info to ship, and added task/evidence sections to PR body when available.
+- Verify: `make verify` (fails: `/root/miniconda3/bin/python3: No module named pytest`).
+
+
+############################################################
+文件路径: /root/quant-factory-os/reports/run-2026-02-09-task-prbody/decision.md
+############################################################
+
+# Decision
+- tools/task.sh now prefixes the commit message with RUN_ID when present and passes task metadata via SHIP_TASK_*.
+- tools/ship.sh now prepends task info and adds Evidence paths when a run id can be detected; otherwise PR body is unchanged.
+- Verify: `make verify` (fails: `/root/miniconda3/bin/python3: No module named pytest`).
+
+
+############################################################
+文件路径: /root/quant-factory-os/MISTAKES/run-2026-02-09-task-prbody.md
+############################################################
+
+# Symptom
+`make verify` failed with `/root/miniconda3/bin/python3: No module named pytest`.
+
+# Root Cause Hypothesis
+The environment running `make verify` does not have `pytest` installed or the expected Python environment is not activated.
+
+# Fix
+Install `pytest` in the configured environment or update the verify target to use the repo's expected virtual environment.
+
+# Guardrail Test Suggestion
+Add a preflight check in `make verify` to assert `pytest` availability and fail with a clear message if missing.
