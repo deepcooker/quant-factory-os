@@ -12,6 +12,7 @@
         QUEUE.md
         STATE.md
         TASK-prbody.md
+        TASK-test.md
     ISSUES/
         PLAYBOOK.md
     .github/
@@ -19,11 +20,11 @@
         workflows/
             ci.yml
     tools/
-        ship.sh
         doctor.sh
-        task.sh
         evidence.py
         slice.py
+        ship.sh
+        task.sh
     tests/
         test_smoke.py
     reports/
@@ -34,11 +35,13 @@
             samples/
                 slice_2026-02-06_0000-0010_2sym.csv.gz
         run-2026-02-09-task-prbody/
+            decision.md
+            meta.json
+            summary.md
+        run-2026-02-09-test/
             meta.json
             summary.md
             decision.md
-    MISTAKES/
-        run-2026-02-09-task-prbody.md
 
 ================================================================================
 所有目标文件内容:
@@ -451,7 +454,7 @@ If stuck or tests fail:
 ############################################################
 
 SHELL := /bin/bash
-PY := python3
+PY := /root/policy/venv/bin/python
 RUN_ID ?= run-unknown
 
 .PHONY: help doctor evidence slice verify ship clean_reports
@@ -675,6 +678,43 @@ Do not change tools/ship.sh output when no related environment variables exist.
 
 
 ############################################################
+文件路径: /root/quant-factory-os/TASKS/TASK-test.md
+############################################################
+
+# TASK: 测试
+
+RUN_ID: run-2026-02-09-test
+OWNER: codex
+PRIORITY: P1
+
+## Goal
+Allow non-interactive GitHub auth in tools/ship.sh using GH_TOKEN for automation.
+
+## Non-goals
+Do not change tools/ship.sh behavior when GH_TOKEN is not set.
+
+## Acceptance
+- [ ] Command(s) pass: `make verify`
+- [ ] Evidence updated: `reports/run-2026-02-09-test/summary.md` and `reports/run-2026-02-09-test/decision.md`
+- [ ] Regression guardrail added/updated if applicable
+
+## Inputs
+- tools/ship.sh
+- AGENTS.md
+
+## Steps (Optional)
+- Run `make evidence RUN_ID=run-2026-02-09-test`
+- Update tools/ship.sh to use GH_TOKEN for non-interactive auth when present
+- Run `make verify`
+- Update evidence reports
+- Ship with SHIP_ALLOW_SELF=1
+
+## Risks / Rollback
+- Risks: auth flow regressions if GH_TOKEN handling is incorrect
+- Rollback plan: revert tools/ship.sh
+
+
+############################################################
 文件路径: /root/quant-factory-os/ISSUES/PLAYBOOK.md
 ############################################################
 
@@ -753,6 +793,236 @@ jobs:
 
 
 ############################################################
+文件路径: /root/quant-factory-os/tools/doctor.sh
+############################################################
+
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "== doctor: repo =="
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "❌ 不在 git 仓库内"; exit 1; }
+echo "✅ git repo: $(basename "$(git rev-parse --show-toplevel)")"
+echo "branch: $(git branch --show-current)"
+
+echo
+echo "== doctor: remote =="
+remote_url="$(git remote get-url origin 2>/dev/null || true)"
+if [[ -z "$remote_url" ]]; then
+  echo "❌ 没有 origin remote"
+else
+  echo "origin: $remote_url"
+fi
+
+echo
+echo "== doctor: gh =="
+if command -v gh >/dev/null 2>&1; then
+  echo "✅ gh: $(gh --version | head -n1)"
+  if gh auth status -h github.com >/dev/null 2>&1; then
+    echo "✅ gh 已登录 github.com"
+  else
+    echo "❌ gh 未登录：运行 gh auth login -h github.com -p https"
+  fi
+else
+  echo "❌ 未安装 gh：sudo apt install -y gh"
+fi
+
+echo
+echo "== doctor: CI workflow =="
+if [[ -f ".github/workflows/ci.yml" ]]; then
+  echo "✅ found .github/workflows/ci.yml"
+else
+  echo "❌ 缺少 .github/workflows/ci.yml（CI 不会跑）"
+fi
+
+echo
+echo "== doctor: python =="
+if command -v python >/dev/null 2>&1; then
+  echo "python: $(python --version)"
+elif command -v python3 >/dev/null 2>&1; then
+  echo "python3: $(python3 --version)"
+else
+  echo "❌ 没有 python/python3"
+fi
+
+echo
+echo "== doctor: pytest =="
+if command -v pytest >/dev/null 2>&1; then
+  echo "✅ pytest: $(pytest --version)"
+  echo "running: pytest -q (may fail if deps missing)"
+  set +e
+  pytest -q
+  rc=$?
+  set -e
+  if [[ $rc -eq 0 ]]; then
+    echo "✅ pytest OK"
+  else
+    echo "⚠️ pytest failed (rc=$rc). 这不一定是坏事，可能是缺依赖/环境。"
+  fi
+else
+  echo "⚠️ 没有 pytest：如果你要跑测试，先 pip install -r requirements-dev.txt 或 pip install pytest"
+fi
+
+echo
+echo "Done."
+
+############################################################
+文件路径: /root/quant-factory-os/tools/evidence.py
+############################################################
+
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import platform
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+def _git(cmd: list[str], cwd: Path) -> str | None:
+    try:
+        out = subprocess.check_output(cmd, cwd=str(cwd), stderr=subprocess.DEVNULL)
+        return out.decode().strip()
+    except Exception:
+        return None
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--run-id", required=True)
+    args = ap.parse_args()
+
+    repo = Path(__file__).resolve().parents[1]
+    reports_dir = repo / "reports" / args.run_id
+    reports_dir.mkdir(parents=True, exist_ok=True)
+
+    meta = {
+        "run_id": args.run_id,
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "cwd": str(repo),
+        "user": os.getenv("USER") or os.getenv("USERNAME") or "unknown",
+        "host": platform.node(),
+        "platform": platform.platform(),
+        "python": sys.version.split()[0],
+        "git_commit": _git(["git", "rev-parse", "HEAD"], repo),
+        "git_branch": _git(["git", "branch", "--show-current"], repo),
+        "note": "generated by tools/evidence.py",
+    }
+
+    (reports_dir / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    summary = reports_dir / "summary.md"
+    if not summary.exists():
+        summary.write_text(
+            f"# Summary\n\nRUN_ID: `{args.run_id}`\n\n"
+            "## What changed\n- \n\n"
+            "## Commands / Outputs\n- \n\n"
+            "## Notes\n- \n",
+            encoding="utf-8",
+        )
+
+    decision = reports_dir / "decision.md"
+    if not decision.exists():
+        decision.write_text(
+            f"# Decision\n\nRUN_ID: `{args.run_id}`\n\n"
+            "## Why\n- \n\n"
+            "## Options considered\n- \n\n"
+            "## Risks / Rollback\n- \n",
+            encoding="utf-8",
+        )
+
+    print(f"OK: wrote {reports_dir/'meta.json'}")
+    print(f"OK: ensured {summary}")
+    print(f"OK: ensured {decision}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
+
+############################################################
+文件路径: /root/quant-factory-os/tools/slice.py
+############################################################
+
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import csv
+import gzip
+import hashlib
+import random
+from datetime import datetime, timedelta
+from pathlib import Path
+
+
+def _seed(s: str) -> int:
+    h = hashlib.sha256(s.encode("utf-8")).hexdigest()
+    return int(h[:16], 16)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--run-id", required=True)
+    ap.add_argument("--day", required=True)      # YYYY-MM-DD
+    ap.add_argument("--symbols", required=True)  # A,B,C
+    ap.add_argument("--start", required=True)    # HH:MM
+    ap.add_argument("--end", required=True)      # HH:MM
+    args = ap.parse_args()
+
+    repo = Path(__file__).resolve().parents[1]
+    out_dir = repo / "reports" / args.run_id / "samples"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    syms = [s.strip() for s in args.symbols.split(",") if s.strip()]
+    if not syms:
+        raise SystemExit("symbols is empty")
+
+    start_dt = datetime.fromisoformat(f"{args.day}T{args.start}:00")
+    end_dt = datetime.fromisoformat(f"{args.day}T{args.end}:00")
+    if end_dt < start_dt:
+        raise SystemExit("end < start")
+
+    # hard limit: <=500 rows (AGENTS)
+    max_rows = 500
+    per_sym = max(1, max_rows // len(syms))
+    total_seconds = int((end_dt - start_dt).total_seconds())
+    step = max(1, total_seconds // max(1, per_sym - 1))
+
+    rng = random.Random(_seed(f"{args.run_id}|{args.day}|{args.symbols}|{args.start}|{args.end}"))
+
+    fname = f"slice_{args.day}_{args.start.replace(':','')}-{args.end.replace(':','')}_{len(syms)}sym.csv.gz"
+    out_path = out_dir / fname
+
+    rows = 0
+    with gzip.open(out_path, "wt", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["ts", "symbol", "price", "qty"])
+        for sym in syms:
+            price = rng.uniform(100, 30000)
+            t = start_dt
+            n = 0
+            while t <= end_dt and n < per_sym:
+                price = max(0.01, price * (1.0 + rng.uniform(-0.0008, 0.0008)))
+                qty = rng.uniform(0.001, 1.0)
+                w.writerow([t.isoformat(), sym, f"{price:.4f}", f"{qty:.6f}"])
+                rows += 1
+                n += 1
+                t = t + timedelta(seconds=step)
+
+    print(f"OK: wrote {out_path} rows={rows}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
+
+############################################################
 文件路径: /root/quant-factory-os/tools/ship.sh
 ############################################################
 
@@ -776,6 +1046,12 @@ MSG="${1:-}"
 if [[ -z "$MSG" ]]; then
   echo "用法：tools/ship.sh \"一句话说明改动\""
   exit 1
+fi
+
+if [[ -n "${GH_TOKEN:-}" ]]; then
+  if ! gh auth status -h github.com >/dev/null 2>&1; then
+    echo "$GH_TOKEN" | gh auth login -h github.com --with-token >/dev/null
+  fi
 fi
 
 gh auth status -h github.com >/dev/null
@@ -965,79 +1241,6 @@ echo "Done. (started from: $orig_branch)"
 
 
 ############################################################
-文件路径: /root/quant-factory-os/tools/doctor.sh
-############################################################
-
-#!/usr/bin/env bash
-set -euo pipefail
-
-echo "== doctor: repo =="
-git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "❌ 不在 git 仓库内"; exit 1; }
-echo "✅ git repo: $(basename "$(git rev-parse --show-toplevel)")"
-echo "branch: $(git branch --show-current)"
-
-echo
-echo "== doctor: remote =="
-remote_url="$(git remote get-url origin 2>/dev/null || true)"
-if [[ -z "$remote_url" ]]; then
-  echo "❌ 没有 origin remote"
-else
-  echo "origin: $remote_url"
-fi
-
-echo
-echo "== doctor: gh =="
-if command -v gh >/dev/null 2>&1; then
-  echo "✅ gh: $(gh --version | head -n1)"
-  if gh auth status -h github.com >/dev/null 2>&1; then
-    echo "✅ gh 已登录 github.com"
-  else
-    echo "❌ gh 未登录：运行 gh auth login -h github.com -p https"
-  fi
-else
-  echo "❌ 未安装 gh：sudo apt install -y gh"
-fi
-
-echo
-echo "== doctor: CI workflow =="
-if [[ -f ".github/workflows/ci.yml" ]]; then
-  echo "✅ found .github/workflows/ci.yml"
-else
-  echo "❌ 缺少 .github/workflows/ci.yml（CI 不会跑）"
-fi
-
-echo
-echo "== doctor: python =="
-if command -v python >/dev/null 2>&1; then
-  echo "python: $(python --version)"
-elif command -v python3 >/dev/null 2>&1; then
-  echo "python3: $(python3 --version)"
-else
-  echo "❌ 没有 python/python3"
-fi
-
-echo
-echo "== doctor: pytest =="
-if command -v pytest >/dev/null 2>&1; then
-  echo "✅ pytest: $(pytest --version)"
-  echo "running: pytest -q (may fail if deps missing)"
-  set +e
-  pytest -q
-  rc=$?
-  set -e
-  if [[ $rc -eq 0 ]]; then
-    echo "✅ pytest OK"
-  else
-    echo "⚠️ pytest failed (rc=$rc). 这不一定是坏事，可能是缺依赖/环境。"
-  fi
-else
-  echo "⚠️ 没有 pytest：如果你要跑测试，先 pip install -r requirements-dev.txt 或 pip install pytest"
-fi
-
-echo
-echo "Done."
-
-############################################################
 文件路径: /root/quant-factory-os/tools/task.sh
 ############################################################
 
@@ -1129,163 +1332,6 @@ fi
 
 # 提交和创建 PR
 SHIP_TASK_FILE="$task_file" SHIP_TASK_TITLE="$title" tools/ship.sh "$msg"
-
-
-############################################################
-文件路径: /root/quant-factory-os/tools/evidence.py
-############################################################
-
-#!/usr/bin/env python3
-from __future__ import annotations
-
-import argparse
-import json
-import os
-import platform
-import subprocess
-import sys
-from datetime import datetime, timezone
-from pathlib import Path
-
-
-def _git(cmd: list[str], cwd: Path) -> str | None:
-    try:
-        out = subprocess.check_output(cmd, cwd=str(cwd), stderr=subprocess.DEVNULL)
-        return out.decode().strip()
-    except Exception:
-        return None
-
-
-def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--run-id", required=True)
-    args = ap.parse_args()
-
-    repo = Path(__file__).resolve().parents[1]
-    reports_dir = repo / "reports" / args.run_id
-    reports_dir.mkdir(parents=True, exist_ok=True)
-
-    meta = {
-        "run_id": args.run_id,
-        "created_at_utc": datetime.now(timezone.utc).isoformat(),
-        "cwd": str(repo),
-        "user": os.getenv("USER") or os.getenv("USERNAME") or "unknown",
-        "host": platform.node(),
-        "platform": platform.platform(),
-        "python": sys.version.split()[0],
-        "git_commit": _git(["git", "rev-parse", "HEAD"], repo),
-        "git_branch": _git(["git", "branch", "--show-current"], repo),
-        "note": "generated by tools/evidence.py",
-    }
-
-    (reports_dir / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
-    summary = reports_dir / "summary.md"
-    if not summary.exists():
-        summary.write_text(
-            f"# Summary\n\nRUN_ID: `{args.run_id}`\n\n"
-            "## What changed\n- \n\n"
-            "## Commands / Outputs\n- \n\n"
-            "## Notes\n- \n",
-            encoding="utf-8",
-        )
-
-    decision = reports_dir / "decision.md"
-    if not decision.exists():
-        decision.write_text(
-            f"# Decision\n\nRUN_ID: `{args.run_id}`\n\n"
-            "## Why\n- \n\n"
-            "## Options considered\n- \n\n"
-            "## Risks / Rollback\n- \n",
-            encoding="utf-8",
-        )
-
-    print(f"OK: wrote {reports_dir/'meta.json'}")
-    print(f"OK: ensured {summary}")
-    print(f"OK: ensured {decision}")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-
-
-############################################################
-文件路径: /root/quant-factory-os/tools/slice.py
-############################################################
-
-#!/usr/bin/env python3
-from __future__ import annotations
-
-import argparse
-import csv
-import gzip
-import hashlib
-import random
-from datetime import datetime, timedelta
-from pathlib import Path
-
-
-def _seed(s: str) -> int:
-    h = hashlib.sha256(s.encode("utf-8")).hexdigest()
-    return int(h[:16], 16)
-
-
-def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--run-id", required=True)
-    ap.add_argument("--day", required=True)      # YYYY-MM-DD
-    ap.add_argument("--symbols", required=True)  # A,B,C
-    ap.add_argument("--start", required=True)    # HH:MM
-    ap.add_argument("--end", required=True)      # HH:MM
-    args = ap.parse_args()
-
-    repo = Path(__file__).resolve().parents[1]
-    out_dir = repo / "reports" / args.run_id / "samples"
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    syms = [s.strip() for s in args.symbols.split(",") if s.strip()]
-    if not syms:
-        raise SystemExit("symbols is empty")
-
-    start_dt = datetime.fromisoformat(f"{args.day}T{args.start}:00")
-    end_dt = datetime.fromisoformat(f"{args.day}T{args.end}:00")
-    if end_dt < start_dt:
-        raise SystemExit("end < start")
-
-    # hard limit: <=500 rows (AGENTS)
-    max_rows = 500
-    per_sym = max(1, max_rows // len(syms))
-    total_seconds = int((end_dt - start_dt).total_seconds())
-    step = max(1, total_seconds // max(1, per_sym - 1))
-
-    rng = random.Random(_seed(f"{args.run_id}|{args.day}|{args.symbols}|{args.start}|{args.end}"))
-
-    fname = f"slice_{args.day}_{args.start.replace(':','')}-{args.end.replace(':','')}_{len(syms)}sym.csv.gz"
-    out_path = out_dir / fname
-
-    rows = 0
-    with gzip.open(out_path, "wt", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
-        w.writerow(["ts", "symbol", "price", "qty"])
-        for sym in syms:
-            price = rng.uniform(100, 30000)
-            t = start_dt
-            n = 0
-            while t <= end_dt and n < per_sym:
-                price = max(0.01, price * (1.0 + rng.uniform(-0.0008, 0.0008)))
-                qty = rng.uniform(0.001, 1.0)
-                w.writerow([t.isoformat(), sym, f"{price:.4f}", f"{qty:.6f}"])
-                rows += 1
-                n += 1
-                t = t + timedelta(seconds=step)
-
-    print(f"OK: wrote {out_path} rows={rows}")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
 
 
 ############################################################
@@ -1399,6 +1445,16 @@ A嶕爓0仏{阢洸茣V^>#郙E絯mNO?(鹢l仰絑7 覆~%
 (跕7栗诚v霙+鹢兗魬4Q6W鯻q牢裂 *W鲞人oyQIf    v7h喩_  
 
 ############################################################
+文件路径: /root/quant-factory-os/reports/run-2026-02-09-task-prbody/decision.md
+############################################################
+
+# Decision
+- tools/task.sh now prefixes the commit message with RUN_ID when present and passes task metadata via SHIP_TASK_*.
+- tools/ship.sh now prepends task info and adds Evidence paths when a run id can be detected; otherwise PR body is unchanged.
+- Verify: `make verify` (after `source /root/policy/venv/bin/activate`).
+
+
+############################################################
 文件路径: /root/quant-factory-os/reports/run-2026-02-09-task-prbody/meta.json
 ############################################################
 
@@ -1423,31 +1479,66 @@ A嶕爓0仏{阢洸茣V^>#郙E絯mNO?(鹢l仰絑7 覆~%
 # Summary
 - Why: tools/task.sh generated an unused PR body and tools/ship.sh lacked evidence links required by AGENTS.
 - What: removed unused PR body generation, passed task info to ship, and added task/evidence sections to PR body when available.
-- Verify: `make verify` (fails: `/root/miniconda3/bin/python3: No module named pytest`).
+- Verify: `make verify` (after `source /root/policy/venv/bin/activate`).
 
 
 ############################################################
-文件路径: /root/quant-factory-os/reports/run-2026-02-09-task-prbody/decision.md
+文件路径: /root/quant-factory-os/reports/run-2026-02-09-test/meta.json
+############################################################
+
+{
+  "run_id": "run-2026-02-09-test",
+  "created_at_utc": "2026-02-09T06:29:00.589023+00:00",
+  "cwd": "/root/quant-factory-os",
+  "user": "unknown",
+  "host": "autodl-container-1a4d48a0d9-a416943c",
+  "platform": "Linux-5.15.0-94-generic-x86_64-with-glibc2.35",
+  "python": "3.12.12",
+  "git_commit": "d70b1b6da504807a4b9ad68918248462efee7ac8",
+  "git_branch": "main",
+  "note": "generated by tools/evidence.py"
+}
+
+
+############################################################
+文件路径: /root/quant-factory-os/reports/run-2026-02-09-test/summary.md
+############################################################
+
+# Summary
+
+RUN_ID: `run-2026-02-09-test`
+
+## What changed
+- 
+
+## Commands / Outputs
+- 
+
+## Notes
+- 
+# Summary
+- Why: automate GitHub auth for non-interactive ship flows.
+- What: tools/ship.sh now attempts GH_TOKEN-based login when provided.
+- Verify: `make verify` (after `source /root/policy/venv/bin/activate`).
+
+
+############################################################
+文件路径: /root/quant-factory-os/reports/run-2026-02-09-test/decision.md
 ############################################################
 
 # Decision
-- tools/task.sh now prefixes the commit message with RUN_ID when present and passes task metadata via SHIP_TASK_*.
-- tools/ship.sh now prepends task info and adds Evidence paths when a run id can be detected; otherwise PR body is unchanged.
-- Verify: `make verify` (fails: `/root/miniconda3/bin/python3: No module named pytest`).
 
+RUN_ID: `run-2026-02-09-test`
 
-############################################################
-文件路径: /root/quant-factory-os/MISTAKES/run-2026-02-09-task-prbody.md
-############################################################
+## Why
+- 
 
-# Symptom
-`make verify` failed with `/root/miniconda3/bin/python3: No module named pytest`.
+## Options considered
+- 
 
-# Root Cause Hypothesis
-The environment running `make verify` does not have `pytest` installed or the expected Python environment is not activated.
-
-# Fix
-Install `pytest` in the configured environment or update the verify target to use the repo's expected virtual environment.
-
-# Guardrail Test Suggestion
-Add a preflight check in `make verify` to assert `pytest` availability and fail with a clear message if missing.
+## Risks / Rollback
+- 
+# Decision
+- Prefer GH_TOKEN when present to enable non-interactive auth in tools/ship.sh.
+- Keep existing behavior unchanged when GH_TOKEN is absent.
+- Verify: `make verify` (after `source /root/policy/venv/bin/activate`).

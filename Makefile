@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-PY := python3
+PY := /root/policy/venv/bin/python
 RUN_ID ?= run-unknown
 
 .PHONY: help doctor evidence slice verify ship clean_reports
