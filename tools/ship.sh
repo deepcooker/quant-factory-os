@@ -20,6 +20,60 @@ if [[ -z "$MSG" ]]; then
   exit 1
 fi
 
+extract_pr_section() {
+  local body="$1"
+  local header="$2"
+  echo "$body" | awk -v header="$header" '
+    $0 ~ "^## " header "$" {inside=1; print; next}
+    inside && $0 ~ "^## " {exit}
+    inside {print}
+  '
+}
+
+build_pr_body_excerpt() {
+  local body="$1"
+  local task_section evidence_section excerpt=""
+  task_section="$(extract_pr_section "$body" "任务文件")"
+  evidence_section="$(extract_pr_section "$body" "Evidence paths")"
+  if [[ -n "$task_section" ]]; then
+    excerpt="$task_section"
+  fi
+  if [[ -n "$evidence_section" ]]; then
+    if [[ -n "$excerpt" ]]; then
+      excerpt="${excerpt}
+
+${evidence_section}"
+    else
+      excerpt="$evidence_section"
+    fi
+  fi
+  printf "%s" "$excerpt"
+}
+
+emit_pr_body_excerpt() {
+  local run_id="$1"
+  local excerpt="$2"
+  if [[ -z "$run_id" || -z "$excerpt" ]]; then
+    return 0
+  fi
+  mkdir -p "reports/${run_id}"
+  printf "%s\n" "$excerpt" > "reports/${run_id}/pr_body_excerpt.md"
+}
+
+if [[ "${SHIP_PR_BODY_EXCERPT_ONLY:-0}" == "1" ]]; then
+  run_id="${SHIP_PR_BODY_EXCERPT_RUN_ID:-${RUN_ID:-}}"
+  if [[ -z "${SHIP_PR_BODY_EXCERPT_INPUT:-}" ]]; then
+    echo "ERROR: SHIP_PR_BODY_EXCERPT_INPUT is required for excerpt-only mode."
+    exit 1
+  fi
+  excerpt="$(build_pr_body_excerpt "$SHIP_PR_BODY_EXCERPT_INPUT")"
+  emit_pr_body_excerpt "$run_id" "$excerpt"
+  if [[ -n "$excerpt" ]]; then
+    printf "%s\n" "$excerpt"
+  fi
+  exit 0
+fi
+
 guard_single_run() {
   local files=""
   if [[ -n "${SHIP_GUARD_FILE_LIST:-}" ]]; then
@@ -224,6 +278,9 @@ if [[ -n "$prefix" ]]; then
 ${PR_BODY}"
 fi
 
+PR_BODY_EXCERPT="$(build_pr_body_excerpt "$PR_BODY")"
+emit_pr_body_excerpt "$run_id" "$PR_BODY_EXCERPT"
+
 pr_url="$(gh pr create --base main --head "$branch" --title "$MSG" --body "$PR_BODY")"
 echo "PR: $pr_url"
 
@@ -243,6 +300,10 @@ gh pr checks --watch "$pr_url"
 state="$(gh pr view "$pr_url" --json state -q .state)"
 if [[ "$state" != "MERGED" ]]; then
   gh pr merge --squash --delete-branch "$pr_url" || true
+fi
+
+if [[ -n "$PR_BODY_EXCERPT" ]]; then
+  printf "%s\n" "$PR_BODY_EXCERPT"
 fi
 
 git checkout main
