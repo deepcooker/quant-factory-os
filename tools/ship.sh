@@ -132,6 +132,51 @@ EOF3
 )"
 # ----------------------------
 
+prefix=""
+if [[ -n "${SHIP_TASK_FILE:-}" || -n "${SHIP_TASK_TITLE:-}" ]]; then
+  task_section="## 任务文件"
+  if [[ -n "${SHIP_TASK_FILE:-}" ]]; then
+    task_section="${task_section}
+- 路径：\`${SHIP_TASK_FILE}\`"
+  fi
+  if [[ -n "${SHIP_TASK_TITLE:-}" ]]; then
+    task_section="${task_section}
+- 标题：${SHIP_TASK_TITLE}"
+  fi
+  prefix="$task_section"
+fi
+
+run_id=""
+if [[ -n "${SHIP_RUN_ID:-}" ]]; then
+  run_id="${SHIP_RUN_ID}"
+elif [[ -n "${RUN_ID:-}" ]]; then
+  run_id="${RUN_ID}"
+else
+  run_id="$(echo "$MSG" | grep -oE 'run-[0-9]{4}-[0-9]{2}-[0-9]{2}-[^ ]+' | head -n1 || true)"
+fi
+
+if [[ -n "$run_id" ]]; then
+  evidence_section="## Evidence paths
+\`\`\`
+reports/${run_id}/meta.json
+reports/${run_id}/summary.md
+reports/${run_id}/decision.md
+\`\`\`"
+  if [[ -n "$prefix" ]]; then
+    prefix="${prefix}
+
+${evidence_section}"
+  else
+    prefix="${evidence_section}"
+  fi
+fi
+
+if [[ -n "$prefix" ]]; then
+  PR_BODY="${prefix}
+
+${PR_BODY}"
+fi
+
 pr_url="$(gh pr create --base main --head "$branch" --title "$MSG" --body "$PR_BODY")"
 echo "PR: $pr_url"
 

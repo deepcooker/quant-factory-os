@@ -69,6 +69,9 @@ if [[ -z "$title" ]]; then
 fi
 
 msg="task: ${title}"
+if [[ -n "${RUN_ID:-}" ]]; then
+  msg="${RUN_ID}: ${msg}"
+fi
 
 echo "任务文件：$task_file"
 echo "生成提交信息：$msg"
@@ -81,40 +84,5 @@ if git status --porcelain | grep -q "tools/ship.sh"; then
   echo
 fi
 
-# 自动生成 PR 描述，包含任务路径
-PR_BODY=$(cat <<EOF2
-## 任务文件路径
-\`\`\`
-$task_file
-\`\`\`
-
-## 变更概述
-- 任务：${title}
-- 合并策略：Squash
-- 说明：CI 通过后自动合并（Auto-merge）
-
-## 变更范围（git diff --stat）
-\`\`\`
-$(git diff --stat origin/main...HEAD || true)
-\`\`\`
-
-## 涉及文件
-\`\`\`
-$(git diff --name-only origin/main...HEAD || true)
-\`\`\`
-
-## 如何验证
-- 必须：GitHub Actions 绿灯（required checks）
-- 可选（本地）：
-  \`\`\`bash
-  pytest -q
-  \`\`\`
-
-## 风险与回滚
-- 风险：
-- 回滚：
-EOF2
-)
-
 # 提交和创建 PR
-tools/ship.sh "$msg"
+SHIP_TASK_FILE="$task_file" SHIP_TASK_TITLE="$title" tools/ship.sh "$msg"
