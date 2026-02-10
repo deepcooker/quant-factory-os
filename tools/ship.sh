@@ -232,6 +232,15 @@ if ! guard_single_run; then
   exit 1
 fi
 
+if git diff --cached --name-only | grep -qx "project_all_files.txt" \
+  && [[ "${SHIP_ALLOW_FILELIST:-0}" != "1" ]]; then
+  echo "❌ 检测到本次提交包含 project_all_files.txt。"
+  echo "   该文件为本地生成物，默认不纳入 PR。"
+  echo "   如需更新，请设置："
+  echo "     SHIP_ALLOW_FILELIST=1 tools/ship.sh \"$MSG\""
+  exit 1
+fi
+
 if git diff --cached --quiet; then
   echo "No changes staged. Nothing to commit."
   echo "You are on branch: $branch"
