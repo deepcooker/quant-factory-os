@@ -13,7 +13,7 @@ EXCLUDE_FILE_PATTERNS = [
     "write.py",
     ".pyc",
     ".png",                 # 排除png图片
- "githubcli.txt","project_all_files.txt","总纲清单（可复制）.md"
+ "githubcli.txt","project_all_files.txt","总纲清单（可复制）.md","codex手把手带我走.md"
 ]
 
 # 需要排除的目录规则（直接跳过这些目录的遍历）
@@ -21,8 +21,7 @@ EXCLUDE_DIR_PATTERNS = [
     "__pycache__",          # 排除所有__pycache__目录
     ".ipynb_checkpoints",   # 排除所有.ipynb_checkpoints目录
     ".git" ,                 # 排除.git目录
-       ".pytest_cache"        # 新增：排除pytest缓存目录
-
+       ".pytest_cache"          # 新增：排除pytest缓存目录
 ]
 
 def get_clean_directory_structure(root_dir):
