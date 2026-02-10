@@ -27,3 +27,8 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - When sharing code with an external model, use `project_all_files.txt` as the
   context snapshot. It is ignored by default and must only be updated via a
   dedicated task with explicit approval to commit.
+- Hard rule: Uncommitted changes do not exist for other agents or cloud runs.
+- Hard rule: Handoff must be via PR or commit hash, with evidence under
+  `reports/<RUN_ID>/`.
+- Hard rule: If local-only context is needed, record it as structured evidence
+  (`summary.md`, `decision.md`, `MISTAKES/`) or in `TASKS/STATE.md`, not in chat.

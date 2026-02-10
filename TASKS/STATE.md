@@ -10,6 +10,7 @@
 - Task = requirement definition (source of truth for scope).
 - PR = delivery artifact for one task.
 - RUN_ID = evidence namespace under `reports/<RUN_ID>/`.
+- Handoff rule: `docs/WORKFLOW.md` Memory & Context.
 
 ## Next steps
 - Finish baseline hardening, then begin main project integration.
