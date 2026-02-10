@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: tools/view.sh <path> [--from N] [--to M] [--max-lines K]"
+  echo "Usage: tools/view.sh <path> [--from N] [--to M] [--max-lines K] [--find PATTERN] [--context N]"
   exit 2
 }
 
@@ -16,6 +16,8 @@ shift
 from=1
 to=200
 max_lines=260
+find_pattern=""
+context=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -29,6 +31,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --max-lines)
       max_lines="${2:-}"
+      shift 2
+      ;;
+    --find)
+      find_pattern="${2:-}"
+      shift 2
+      ;;
+    --context)
+      context="${2:-}"
       shift 2
       ;;
     -h|--help)
@@ -45,25 +55,40 @@ is_positive_int() {
   [[ "$1" =~ ^[0-9]+$ ]] && [[ "$1" -ge 1 ]]
 }
 
-if ! is_positive_int "$from" || ! is_positive_int "$to" || ! is_positive_int "$max_lines"; then
-  echo "ERROR: --from/--to/--max-lines must be positive integers."
-  exit 2
-fi
+is_non_negative_int() {
+  [[ "$1" =~ ^[0-9]+$ ]]
+}
 
-if [[ "$max_lines" -gt 260 ]]; then
-  echo "ERROR: --max-lines exceeds 260. 请分段查看"
-  exit 1
-fi
+if [[ -n "$find_pattern" ]]; then
+  if [[ -z "$find_pattern" ]]; then
+    echo "ERROR: --find requires a non-empty pattern."
+    exit 2
+  fi
+  if ! is_non_negative_int "$context"; then
+    echo "ERROR: --context must be a non-negative integer."
+    exit 2
+  fi
+else
+  if ! is_positive_int "$from" || ! is_positive_int "$to" || ! is_positive_int "$max_lines"; then
+    echo "ERROR: --from/--to/--max-lines must be positive integers."
+    exit 2
+  fi
 
-if [[ "$to" -lt "$from" ]]; then
-  echo "ERROR: --to must be >= --from."
-  exit 2
-fi
+  if [[ "$max_lines" -gt 260 ]]; then
+    echo "ERROR: --max-lines exceeds 260. 请分段查看"
+    exit 1
+  fi
 
-range_count=$((to - from + 1))
-if [[ "$range_count" -gt "$max_lines" ]]; then
-  echo "ERROR: requested range exceeds limit (${range_count} > ${max_lines}). 请分段查看"
-  exit 1
+  if [[ "$to" -lt "$from" ]]; then
+    echo "ERROR: --to must be >= --from."
+    exit 2
+  fi
+
+  range_count=$((to - from + 1))
+  if [[ "$range_count" -gt "$max_lines" ]]; then
+    echo "ERROR: requested range exceeds limit (${range_count} > ${max_lines}). 请分段查看"
+    exit 1
+  fi
 fi
 
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
@@ -102,4 +127,44 @@ if [[ ! -f "$resolved" ]]; then
   exit 1
 fi
 
-awk -v start="$from" -v end="$to" 'NR>=start && NR<=end {print}' "$resolved"
+if [[ -n "$find_pattern" ]]; then
+  if [[ "$context" -gt 0 ]]; then
+    set +e
+    matches="$(awk -v pat="$find_pattern" -v ctx="$context" '
+      $0 ~ pat {
+        start = NR - ctx
+        end = NR + ctx
+        if (start < 1) start = 1
+        for (i = start; i <= end; i++) {
+          print i
+        }
+        found = 1
+      }
+      END {
+        if (!found) exit 1
+      }
+    ' "$resolved" | awk '!seen[$0]++ {print}')"
+    rc=$?
+    set -e
+    if [[ $rc -ne 0 || -z "$matches" ]]; then
+      echo "No matches for pattern: $find_pattern"
+      exit 1
+    fi
+    printf "%s\n" "$matches"
+  else
+    set +e
+    matches="$(awk -v pat="$find_pattern" '
+      $0 ~ pat {print NR; found=1}
+      END { if (!found) exit 1 }
+    ' "$resolved")"
+    rc=$?
+    set -e
+    if [[ $rc -ne 0 || -z "$matches" ]]; then
+      echo "No matches for pattern: $find_pattern"
+      exit 1
+    fi
+    printf "%s\n" "$matches"
+  fi
+else
+  awk -v start="$from" -v end="$to" 'NR>=start && NR<=end {print}' "$resolved"
+fi
