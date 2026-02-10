@@ -1,12 +1,23 @@
-# TASK STATE
+# STATE
 
-## 任务概述
-任务目标是实现状态管理功能，包括状态的设置、获取、更新等操作。
+## Current baseline
+- Core tooling available: `tools/start.sh`, `tools/enter.sh`, `tools/doctor.sh`,
+  `tools/view.sh`, `tools/find.sh`.
+- Documentation baseline in place: `docs/WORKFLOW.md`, `docs/ENTITIES.md`,
+  `docs/README.md` (if present).
 
-## 验收标准
-- 通过单元测试验证状态管理的基本操作。
-- 确保状态更新操作不影响其他业务流程。
+## Current conventions
+- Task = requirement definition (source of truth for scope).
+- PR = delivery artifact for one task.
+- RUN_ID = evidence namespace under `reports/<RUN_ID>/`.
 
-## 风险与回滚
-- 风险：状态变更时可能会出现数据丢失。
-- 回滚：使用数据库备份恢复状态。
+## Next steps
+- Finish baseline hardening, then begin main project integration.
+- Define external data ingestion strategy and constraints (sources, format,
+  retention).
+- Define database/storage strategy and interfaces.
+- Confirm OSS dependency policy and allowlist.
+- Add minimal regression tests for core tooling and workflow enforcement.
+
+## Current blockers / risks
+- External data and database/OSS integration policies are not yet defined.

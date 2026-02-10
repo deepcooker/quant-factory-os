@@ -25,6 +25,8 @@ wheels/
 logs/
 *.log
 strategies/logs/
+# local chat transcripts
+chatlogs/
 # 新增：忽略 strategies/log/ 文件夹（注意路径拼写，如果你实际是 log 单数也可对应修改）
 
 # 结果文件（回测、进化、实验结果）
