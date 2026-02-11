@@ -1,12 +1,30 @@
-# TASK QUEUE
+# QUEUE
 
-## 任务概述
-任务目标是实现队列管理功能，包括队列的添加、删除、查询等操作。
+Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
+`TASKS/STATE.md` + `TASKS/QUEUE.md` are used to decide what to do next.
 
-## 验收标准
-- 通过单元测试验证队列的基本操作。
-- 队列操作的性能满足要求。
+## Item format (minimum)
+- Title
+- Goal (one sentence)
+- Scope (allowed files/directories)
+- Acceptance (3 checks: verify, evidence, scope)
+- Optional: RUN_ID (if omitted, generate at execution time)
 
-## 风险与回滚
-- 风险：队列操作导致数据丢失。
-- 回滚：使用备份数据恢复队列状态。
+## Queue
+- [ ] TODO Title: ship allowlist includes docs
+  Goal: update `tools/ship.sh` so untracked allowlist includes `docs/*`.
+  Scope: `tools/ship.sh`, tests/docs directly related to this rule.
+  Acceptance:
+  - `make verify` passes.
+  - Evidence recorded under `reports/<RUN_ID>/summary.md` and `reports/<RUN_ID>/decision.md`.
+  - No changes outside declared scope.
+  RUN_ID: (optional)
+
+- [ ] TODO Title: ship expected-files gate
+  Goal: add expected-files guard so ship validates task-declared allowed files.
+  Scope: ship/task tooling and related workflow docs/tests.
+  Acceptance:
+  - `make verify` passes.
+  - Evidence recorded under `reports/<RUN_ID>/summary.md` and `reports/<RUN_ID>/decision.md`.
+  - No changes outside declared scope.
+  RUN_ID: (optional)
