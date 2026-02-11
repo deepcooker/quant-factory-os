@@ -12,6 +12,10 @@ Before each ship, record `/status` output in the evidence for the active RUN_ID.
 default. Update it only with a dedicated task, and call out the change in the PR
 body.
 
+## Scope gate rule
+Task files must declare a `## Scope` section with allowed change paths. `tools/ship.sh`
+validates staged files against this declared scope by default.
+
 ## Context snapshot (for ChatGPT)
 `project_all_files.txt` is a context index snapshot for external models. It is
 not evidence and does not belong in PRs by default. If it must be updated,
