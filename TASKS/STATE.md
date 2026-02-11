@@ -13,6 +13,8 @@
 - Handoff rule: `docs/WORKFLOW.md` Memory & Context.
 - Handoff hard rules (gate): `docs/WORKFLOW.md` -> Memory & Context.
 - Boundary v0: `docs/BOUNDARY_A9.md`.
+- Queue: `TASKS/QUEUE.md`.
+- Startup checklist: `docs/WORKFLOW.md#Codex-session-startup-checklist`.
 
 ## Next steps
 - Finish baseline hardening, then begin main project integration.
