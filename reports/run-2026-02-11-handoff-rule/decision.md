@@ -1,6 +1,6 @@
 # Decision
 
-RUN_ID: `run-YYYY-MM-DD-handoff-rule`
+RUN_ID: `run-2026-02-11-handoff-rule`
 
 ## Why
 - Handoff behavior must be explicit and immutable at workflow level: local uncommitted state is non-transferable, and handoff artifacts must be PR/commit plus evidence.

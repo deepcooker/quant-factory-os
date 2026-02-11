@@ -1,6 +1,6 @@
 # TASK: solidify handoff hard rules (uncommitted changes do not exist; handoff via PR/commit + reports)
 
-RUN_ID: run-YYYY-MM-DD-handoff-rule
+RUN_ID: run-2026-02-11-handoff-rule
 OWNER: codex
 PRIORITY: P1
 
@@ -19,7 +19,7 @@ PRIORITY: P1
   - 本地上下文写入结构化证据或 `TASKS/STATE.md`，不写 chat
 - [ ] `TASKS/STATE.md` 增加入口引用：Handoff hard rules -> `docs/WORKFLOW.md` Memory & Context
 - [ ] Command(s) pass: `make verify`
-- [ ] Evidence updated: `reports/run-YYYY-MM-DD-handoff-rule/summary.md` and `reports/run-YYYY-MM-DD-handoff-rule/decision.md`
+- [ ] Evidence updated: `reports/run-2026-02-11-handoff-rule/summary.md` and `reports/run-2026-02-11-handoff-rule/decision.md`
 
 ## Inputs
 - `TASKS/_TEMPLATE.md`
@@ -28,11 +28,11 @@ PRIORITY: P1
 
 ## Steps (Optional)
 1. 创建任务文件并确认验收标准。
-2. 运行 `make evidence RUN_ID=run-YYYY-MM-DD-handoff-rule`。
+2. 运行 `make evidence RUN_ID=run-2026-02-11-handoff-rule`。
 3. 最小改动更新 `docs/WORKFLOW.md` 与 `TASKS/STATE.md`。
 4. 运行 `make verify` 并记录结果。
-5. 更新 `reports/run-YYYY-MM-DD-handoff-rule/summary.md` 与 `decision.md`。
-6. 运行 `RUN_ID=run-YYYY-MM-DD-handoff-rule tools/task.sh TASKS/TASK-handoff-rule.md` ship。
+5. 更新 `reports/run-2026-02-11-handoff-rule/summary.md` 与 `decision.md`。
+6. 运行 `RUN_ID=run-2026-02-11-handoff-rule tools/task.sh TASKS/TASK-handoff-rule.md` ship。
 
 ## Reading policy
 Use `tools/view.sh` by default. If you need to read larger ranges, specify the

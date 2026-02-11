@@ -1,6 +1,6 @@
 # Summary
 
-RUN_ID: `run-YYYY-MM-DD-handoff-rule`
+RUN_ID: `run-2026-02-11-handoff-rule`
 
 ## What changed
 - Added task file: `TASKS/TASK-handoff-rule.md`.
@@ -11,10 +11,10 @@ RUN_ID: `run-YYYY-MM-DD-handoff-rule`
 - Updated `TASKS/STATE.md` to add an explicit handoff hard-rule entry referencing `docs/WORKFLOW.md` -> `Memory & Context`.
 
 ## Commands / Outputs
-- `make evidence RUN_ID=run-YYYY-MM-DD-handoff-rule`
-  - wrote `reports/run-YYYY-MM-DD-handoff-rule/meta.json`
-  - ensured `reports/run-YYYY-MM-DD-handoff-rule/summary.md`
-  - ensured `reports/run-YYYY-MM-DD-handoff-rule/decision.md`
+- `make evidence RUN_ID=run-2026-02-11-handoff-rule`
+  - wrote `reports/run-2026-02-11-handoff-rule/meta.json`
+  - ensured `reports/run-2026-02-11-handoff-rule/summary.md`
+  - ensured `reports/run-2026-02-11-handoff-rule/decision.md`
 - `make verify`
   - `20 passed in 0.88s`
 
