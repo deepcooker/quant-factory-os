@@ -111,8 +111,192 @@ guard_single_run() {
   fi
 }
 
+extract_task_run_id() {
+  local task_file="$1"
+  if [[ -z "$task_file" || ! -f "$task_file" ]]; then
+    return 0
+  fi
+  awk '
+    {
+      line=$0
+      sub(/\r$/, "", line)
+      if (line ~ /^RUN_ID:[[:space:]]*/) {
+        sub(/^RUN_ID:[[:space:]]*/, "", line)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+        if (line != "") {
+          print line
+          exit
+        }
+      }
+    }
+  ' "$task_file"
+}
+
+extract_task_scope_paths() {
+  local task_file="$1"
+  if [[ -z "$task_file" || ! -f "$task_file" ]]; then
+    return 0
+  fi
+  awk '
+    BEGIN { in_scope = 0 }
+    {
+      line=$0
+      sub(/\r$/, "", line)
+    }
+    line ~ /^##[[:space:]]+Scope/ { in_scope = 1; next }
+    in_scope && line ~ /^##[[:space:]]+/ { exit }
+    in_scope {
+      if (line ~ /^[[:space:]]*-[[:space:]]*`[^`]+`[[:space:]]*$/) {
+        sub(/^[[:space:]]*-[[:space:]]*`/, "", line)
+        sub(/`[[:space:]]*$/, "", line)
+        print line
+        next
+      }
+      if (line ~ /^[[:space:]]*-[[:space:]]*[^[:space:]].*$/) {
+        sub(/^[[:space:]]*-[[:space:]]*/, "", line)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+        print line
+      }
+    }
+  ' "$task_file"
+}
+
+match_scope_rule() {
+  local file="$1"
+  local rule="$2"
+  [[ -z "$rule" ]] && return 1
+
+  if [[ "$rule" == */ ]]; then
+    [[ "$file" == "$rule"* ]]
+    return $?
+  fi
+
+  if [[ "$rule" == *"*"* || "$rule" == *"?"* || "$rule" == *"["* ]]; then
+    [[ "$file" == $rule ]]
+    return $?
+  fi
+
+  [[ "$file" == "$rule" || "$file" == "$rule/"* ]]
+}
+
+validate_scope_gate() {
+  local task_file="$1"
+  local current_run_id="$2"
+  local files="$3"
+
+  if [[ "${SHIP_ALLOW_OUT_OF_SCOPE:-0}" == "1" ]]; then
+    echo "⚠️  Scope gate override enabled (SHIP_ALLOW_OUT_OF_SCOPE=1)."
+    return 0
+  fi
+
+  if [[ -z "$task_file" ]]; then
+    echo "❌ Scope gate: missing task file. Use tools/task.sh or set SHIP_TASK_FILE."
+    return 1
+  fi
+  if [[ ! -f "$task_file" ]]; then
+    echo "❌ Scope gate: task file not found: $task_file"
+    return 1
+  fi
+
+  local scope_paths=""
+  scope_paths="$(extract_task_scope_paths "$task_file")"
+  if [[ -z "$scope_paths" ]]; then
+    echo "❌ Scope gate: task file has no valid '## Scope' entries: $task_file"
+    echo "   Add bullet paths under '## Scope', e.g. - \`tools/ship.sh\`"
+    return 1
+  fi
+
+  local violations=""
+  while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+
+    local allowed=0
+    if [[ "$file" == "$task_file" ]]; then
+      allowed=1
+    fi
+    if [[ "$allowed" -eq 0 && -n "$current_run_id" && "$file" == "reports/${current_run_id}/"* ]]; then
+      allowed=1
+    fi
+    if [[ "$allowed" -eq 0 ]]; then
+      case "$file" in
+        TASKS/STATE.md|TASKS/QUEUE.md|docs/WORKFLOW.md)
+          allowed=1
+          ;;
+      esac
+    fi
+
+    if [[ "$allowed" -eq 0 ]]; then
+      while IFS= read -r rule; do
+        [[ -z "$rule" ]] && continue
+        if match_scope_rule "$file" "$rule"; then
+          allowed=1
+          break
+        fi
+      done <<< "$scope_paths"
+    fi
+
+    if [[ "$allowed" -eq 0 ]]; then
+      violations="${violations}
+$file"
+    fi
+  done <<< "$files"
+
+  if [[ -n "$violations" ]]; then
+    echo "❌ Scope gate: out-of-scope staged files detected."
+    echo "   Out-of-scope files:"
+    while IFS= read -r bad; do
+      [[ -z "$bad" ]] && continue
+      echo "   - $bad"
+    done <<< "$violations"
+    echo "   Fix by editing task Scope or unstaging files."
+    echo "   Escape hatch (auditable): SHIP_ALLOW_OUT_OF_SCOPE=1"
+    return 1
+  fi
+
+  return 0
+}
+
+resolve_scope_task_file() {
+  local files="$1"
+  if [[ -n "${SHIP_TASK_FILE:-}" ]]; then
+    printf "%s" "${SHIP_TASK_FILE}"
+    return 0
+  fi
+
+  local task_candidates=""
+  task_candidates="$(echo "$files" | grep -E '^TASKS/TASK-[^/]+\.md$' || true)"
+  local count
+  count="$(echo "$task_candidates" | grep -c . || true)"
+  if [[ "$count" -eq 1 ]]; then
+    printf "%s" "$task_candidates"
+    return 0
+  fi
+  printf ""
+}
+
+run_scope_gate() {
+  local files="$1"
+  local task_file=""
+  task_file="$(resolve_scope_task_file "$files")"
+
+  local gate_run_id="$run_id"
+  if [[ -z "$gate_run_id" && -n "$task_file" ]]; then
+    gate_run_id="$(extract_task_run_id "$task_file")"
+  fi
+
+  validate_scope_gate "$task_file" "$gate_run_id" "$files"
+}
+
 if [[ "${SHIP_GUARD_ONLY:-0}" == "1" ]]; then
   guard_single_run
+  exit $?
+fi
+
+if [[ "${SHIP_SCOPE_GATE_ONLY:-0}" == "1" ]]; then
+  files="${SHIP_SCOPE_GATE_FILES:-}"
+  task_file="${SHIP_SCOPE_GATE_TASK_FILE:-}"
+  gate_run_id="${SHIP_SCOPE_GATE_RUN_ID:-$(extract_task_run_id "$task_file")}"
+  validate_scope_gate "$task_file" "$gate_run_id" "$files"
   exit $?
 fi
 
@@ -228,11 +412,16 @@ stage_changes() {
 
 stage_changes
 
+staged_files="$(git diff --cached --name-only || true)"
+if ! run_scope_gate "$staged_files"; then
+  exit 1
+fi
+
 if ! guard_single_run; then
   exit 1
 fi
 
-if git diff --cached --name-only | grep -qx "project_all_files.txt" \
+if echo "$staged_files" | grep -qx "project_all_files.txt" \
   && [[ "${SHIP_ALLOW_FILELIST:-0}" != "1" ]]; then
   echo "❌ 检测到本次提交包含 project_all_files.txt。"
   echo "   该文件为本地生成物，默认不纳入 PR。"

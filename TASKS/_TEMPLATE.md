@@ -7,6 +7,12 @@ PRIORITY: P1
 ## Goal
 What outcome do we want? (1-3 lines)
 
+## Scope (Required)
+- List allowed paths for this task using bullets and backticks, for example:
+  - `tools/ship.sh`
+  - `tests/`
+- `tools/ship.sh` uses this section as the source of truth for scope gate checks.
+
 ## Non-goals
 What we explicitly do NOT do.
 
