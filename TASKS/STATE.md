@@ -11,6 +11,7 @@
 - PR = delivery artifact for one task.
 - RUN_ID = evidence namespace under `reports/<RUN_ID>/`.
 - Handoff rule: `docs/WORKFLOW.md` Memory & Context.
+- Handoff hard rules (gate): `docs/WORKFLOW.md` -> Memory & Context.
 - Boundary v0: `docs/BOUNDARY_A9.md`.
 
 ## Next steps
