@@ -122,6 +122,41 @@ case "$resolved" in
     ;;
 esac
 
+relative_path="${resolved#"$repo_root"/}"
+if [[ "$resolved" == "$repo_root" ]]; then
+  relative_path="."
+fi
+
+denylist_file="$repo_root/.codex_read_denylist"
+if [[ -f "$denylist_file" ]]; then
+  matched_pattern=""
+  while IFS= read -r raw_line || [[ -n "$raw_line" ]]; do
+    line="${raw_line%$'\r'}"
+    if [[ "$line" =~ ^[[:space:]]*$ ]] || [[ "$line" =~ ^[[:space:]]*# ]]; then
+      continue
+    fi
+
+    pattern="${line#"${line%%[![:space:]]*}"}"
+    pattern="${pattern%"${pattern##*[![:space:]]}"}"
+    [[ -z "$pattern" ]] && continue
+
+    if [[ "$relative_path" == $pattern ]] || [[ "$resolved" == $pattern ]] || [[ "$path" == $pattern ]]; then
+      matched_pattern="$pattern"
+      break
+    fi
+  done < "$denylist_file"
+
+  if [[ -n "$matched_pattern" ]]; then
+    if [[ "${CODEX_READ_DENYLIST_ALLOW:-0}" == "1" ]]; then
+      echo "NOTICE: .codex_read_denylist override enabled (CODEX_READ_DENYLIST_ALLOW=1), matched pattern: $matched_pattern" >&2
+    else
+      echo "ERROR: blocked by .codex_read_denylist (matched pattern: $matched_pattern)." >&2
+      echo "Set CODEX_READ_DENYLIST_ALLOW=1 to override with audit trail." >&2
+      exit 1
+    fi
+  fi
+fi
+
 if [[ ! -f "$resolved" ]]; then
   echo "ERROR: path is not a regular file."
   exit 1
