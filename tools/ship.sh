@@ -219,7 +219,7 @@ stage_changes() {
       continue
     fi
     case "$file" in
-      tools/*|tests/*|TASKS/*|Makefile)
+      tools/*|tests/*|TASKS/*|docs/*|Makefile)
         git add "$file"
         ;;
     esac
