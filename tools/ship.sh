@@ -403,7 +403,7 @@ stage_changes() {
       continue
     fi
     case "$file" in
-      tools/*|tests/*|TASKS/*|docs/*|Makefile)
+      tools/*|tests/*|TASKS/*|docs/*|Makefile|.codex_read_denylist)
         git add "$file"
         ;;
     esac
