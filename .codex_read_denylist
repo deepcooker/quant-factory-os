@@ -1,0 +1,3 @@
+# Codex read denylist for this repository.
+# Temporary override: set CODEX_READ_DENYLIST_ALLOW=1 and record rationale in evidence.
+project_all_files.txt
