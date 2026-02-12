@@ -38,6 +38,12 @@ if ! bash tools/doctor.sh; then
 fi
 
 echo
+echo "Entry points:"
+echo "- TASKS/STATE.md"
+echo "- TASKS/QUEUE.md"
+echo "- docs/WORKFLOW.md#Codex-session-startup-checklist"
+echo "RUN_ID: ${RUN_ID:-"(not set)"}"
+echo
 echo "== 下一步建议 =="
 if [[ -f "TASKS/QUEUE.md" ]]; then
   echo "运行：tools/task.sh 并选择队列任务"
