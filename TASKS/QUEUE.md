@@ -1,13 +1,3 @@
-- [ ] TODO Title: queue pick lock (in-progress marker)
-  Goal: when `tools/task.sh --next` picks the top item, mark it as in-progress (`[>]`) and record RUN_ID+timestamp to avoid duplicate picks across sessions.
-  Scope: `tools/task.sh`, `TASKS/QUEUE.md`, minimal tests for queue parsing/locking.
-  Acceptance:
-  - Picking changes `[ ]` -> `[>]` and appends `Picked: <RUN_ID> <timestamp>`.
-  - Re-running `--next` does not pick the same `[>]` item again.
-  - `make verify` passes and evidence recorded under `reports/<RUN_ID>/`.
-  RUN_ID: (optional)
-
-
 # QUEUE
 
 Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
@@ -21,6 +11,16 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 - Optional: RUN_ID (if omitted, generate at execution time)
 
 ## Queue
+- [ ] TODO Title: bootstrap next: normalize Scope + validate scope bullets
+  Goal: `tools/task.sh --next` must render Scope as one-path-per-bullet and fail fast if Scope cannot be parsed into valid bullets.
+  Scope: `tools/task.sh`
+  Acceptance:
+  - Generated task Scope is multi-line bullets (each bullet is a single backticked path).
+  - No non-path explanatory bullet is appended to Scope.
+  - If Scope has no valid bullet paths, `--next` exits non-zero with a clear error.
+  - `make verify` passes and evidence recorded under `reports/<RUN_ID>/`.
+  RUN_ID: (optional)
+
 - [x] TODO Title: add minimal regression tests for workflow gates (P1)
   Goal: cover scope gate / expected-files gate / single-run guard with small
   regression tests to prevent workflow regressions.
@@ -79,4 +79,13 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   - `make verify` passes.
   - Evidence recorded under `reports/<RUN_ID>/summary.md` and `reports/<RUN_ID>/decision.md`.
   - No changes outside declared scope.
+  RUN_ID: (optional)
+  
+- [x] TODO Title: queue pick lock (in-progress marker)
+  Goal: when `tools/task.sh --next` picks the top item, mark it as in-progress (`[>]`) and record RUN_ID+timestamp to avoid duplicate picks across sessions.
+  Scope: `tools/task.sh`, `TASKS/QUEUE.md`, minimal tests for queue parsing/locking.
+  Acceptance:
+  - Picking changes `[ ]` -> `[>]` and appends `Picked: <RUN_ID> <timestamp>`.
+  - Re-running `--next` does not pick the same `[>]` item again.
+  - `make verify` passes and evidence recorded under `reports/<RUN_ID>/`.
   RUN_ID: (optional)
