@@ -11,7 +11,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 - Optional: RUN_ID (if omitted, generate at execution time)
 
 ## Queue
-- [ ] TODO Title: add minimal regression tests for workflow gates (P1)
+- [x] TODO Title: add minimal regression tests for workflow gates (P1)
   Goal: cover scope gate / expected-files gate / single-run guard with small
   regression tests to prevent workflow regressions.
   Scope: ship/task tooling tests and minimal test fixtures.
@@ -20,6 +20,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   - Evidence recorded under `reports/<RUN_ID>/summary.md` and `reports/<RUN_ID>/decision.md`.
   - No changes outside declared scope.
   RUN_ID: (optional)
+  Done: PR #81, RUN_ID=run-2026-02-21-add-minimal-regression-tests-for-workflow-gates-p1
 
 - [x] TODO Title: startup prints session entrypoints + active RUN_ID (P0)
   Goal: make `tools/start.sh` or `tools/enter.sh` print startup entrypoints
