@@ -129,15 +129,48 @@ bootstrap_next_task() {
       echo "What outcome do we want? (1-3 lines)"
     fi
     echo
+    
     echo "## Scope (Required)"
     if [[ -n "$scope_text" ]]; then
-      echo "- \`${scope_text}\`"
+      # Normalize Scope into one-path-per-bullet.
+      # Accepted input formats in QUEUE item:
+      #   1) Backticked list: `tools/task.sh`, `tests/`, `TASKS/QUEUE.md`
+      #   2) Single path without spaces: tests/
+      local bt rest found path
+      bt=$'\x60'
+      rest="$scope_text"
+      found=0
+
+      if [[ "$rest" == *"$bt"*"$bt"* ]]; then
+        # Extract all backticked segments.
+        while [[ "$rest" == *"$bt"*"$bt"* ]]; do
+          found=1
+          rest="${rest#*${bt}}"
+          path="${rest%%${bt}*}"
+          echo "- ${bt}${path}${bt}"
+          rest="${rest#*${bt}${path}${bt}}"
+        done
+      else
+        # Backward-compat: allow a simple single path like tests/ (no spaces).
+        if [[ "$rest" == *" "* ]]; then
+          echo "❌ Invalid Scope in QUEUE item. Use backticked paths like: Scope: \`tools/task.sh\`, \`tests/\` (or a single no-space path like: Scope: tests/)" >&2
+          exit 1
+        fi
+        found=1
+        echo "- ${bt}${rest}${bt}"
+      fi
+
+      # Fail fast if we couldn't extract any scope path bullets.
+      if [[ "$found" -eq 0 ]]; then
+        echo "❌ Invalid Scope in QUEUE item: could not extract any scope paths." >&2
+        exit 1
+      fi
     else
-      echo "- List allowed paths for this task using bullets and backticks, for example:"
-      echo "  - \`tools/ship.sh\`"
-      echo "  - \`tests/\`"
+      # No Scope provided in QUEUE item: provide a safe default scaffold.
+      echo "- \`tools/task.sh\`"
+      echo "- \`tests/\`"
+      echo "- \`TASKS/QUEUE.md\`"
     fi
-    echo "- \`tools/ship.sh\` uses this section as the source of truth for scope gate checks."
     echo
     echo "## Non-goals"
     echo "What we explicitly do NOT do."
