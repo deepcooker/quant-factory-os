@@ -15,6 +15,7 @@
 - Boundary v0: `docs/BOUNDARY_A9.md`.
 - Session startup entrypoints:
 - Queue: `TASKS/QUEUE.md`.
+- Entities: `docs/ENTITIES.md`.
 - Startup checklist: `docs/WORKFLOW.md#Codex-session-startup-checklist`.
 
 ## Next steps
