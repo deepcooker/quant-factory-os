@@ -11,7 +11,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 - Optional: RUN_ID (if omitted, generate at execution time)
 
 ## Queue
-- [>] TODO Title: bootstrap next: normalize Scope + validate scope bullets  Picked: run-2026-02-22-bootstrap-next-normalize-scope-validate-scope-bullets 2026-02-22T02:17:45+0800
+- [x] TODO Title: bootstrap next: normalize Scope + validate scope bullets  Picked: run-2026-02-22-bootstrap-next-normalize-scope-validate-scope-bullets 2026-02-22T02:17:45+0800
   Goal: `tools/task.sh --next` must render Scope as one-path-per-bullet and fail fast if Scope cannot be parsed into valid bullets.
   Scope: `tools/task.sh`
   Acceptance:
@@ -20,6 +20,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   - If Scope has no valid bullet paths, `--next` exits non-zero with a clear error.
   - `make verify` passes and evidence recorded under `reports/<RUN_ID>/`.
   RUN_ID: (optional)
+  Done: PR #86, RUN_ID=run-2026-02-22-bootstrap-next-normalize-scope-validate-scope-bullets
 
 - [x] TODO Title: add minimal regression tests for workflow gates (P1)
   Goal: cover scope gate / expected-files gate / single-run guard with small
