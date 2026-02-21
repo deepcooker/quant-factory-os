@@ -91,6 +91,24 @@ bootstrap_next_task() {
   slug="$(slugify "$title")"
   run_date="$(date +%Y-%m-%d)"
   run_id="run-${run_date}-${slug}"
+  # mark the picked queue item as in-progress to avoid duplicate picks across sessions
+  local picked_ts
+  picked_ts="$(date +%Y-%m-%dT%H:%M:%S%z)"
+  awk -v rid="$run_id" -v ts="$picked_ts" '
+      BEGIN { done=0 }
+      {
+        if (!done && $0 ~ /^- \[ \] /) {
+          done=1
+          sub(/^- \[ \] /, "- [>] ")
+          if ($0 !~ /Picked:/) {
+            $0 = $0 "  Picked: " rid " " ts
+          }
+        }
+        print
+      }
+    ' "$queue_file" > "${queue_file}.tmp" && mv "${queue_file}.tmp" "$queue_file"
+    
+
 
   task_file="${output_dir}/TASK-${slug}.md"
   if [[ -f "$task_file" ]]; then
