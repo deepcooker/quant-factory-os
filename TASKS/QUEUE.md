@@ -1,3 +1,13 @@
+- [ ] TODO Title: queue pick lock (in-progress marker)
+  Goal: when `tools/task.sh --next` picks the top item, mark it as in-progress (`[>]`) and record RUN_ID+timestamp to avoid duplicate picks across sessions.
+  Scope: `tools/task.sh`, `TASKS/QUEUE.md`, minimal tests for queue parsing/locking.
+  Acceptance:
+  - Picking changes `[ ]` -> `[>]` and appends `Picked: <RUN_ID> <timestamp>`.
+  - Re-running `--next` does not pick the same `[>]` item again.
+  - `make verify` passes and evidence recorded under `reports/<RUN_ID>/`.
+  RUN_ID: (optional)
+
+
 # QUEUE
 
 Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
