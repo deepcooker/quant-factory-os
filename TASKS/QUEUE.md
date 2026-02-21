@@ -11,6 +11,17 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 - Optional: RUN_ID (if omitted, generate at execution time)
 
 ## Queue
+
+- [ ] TODO Title: auto-mark queue done on successful ship
+  Goal: after a successful ship/PR open (and/or merge), automatically mark the picked `[>]` queue item as `[x]` and append `Done: PR #<n>, RUN_ID=<id>`.
+  Scope: `tools/task.sh`, `tools/ship.sh` (if needed), `TASKS/QUEUE.md`, `tests/`
+  Acceptance:
+  - When shipping a task created by `--next`, the corresponding queue item is updated from `[>]` to `[x]` with Done metadata.
+  - No effect if ship fails or no matching picked item exists.
+  - `make verify` passes and evidence recorded under `reports/<RUN_ID>/`.
+  RUN_ID: (optional)
+
+
 - [x] TODO Title: bootstrap next: normalize Scope + validate scope bullets  Picked: run-2026-02-22-bootstrap-next-normalize-scope-validate-scope-bullets 2026-02-22T02:17:45+0800
   Goal: `tools/task.sh --next` must render Scope as one-path-per-bullet and fail fast if Scope cannot be parsed into valid bullets.
   Scope: `tools/task.sh`
