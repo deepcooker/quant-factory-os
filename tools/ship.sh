@@ -615,6 +615,9 @@ if [[ -n "$PR_BODY_EXCERPT" ]]; then
   printf "%s\n" "$PR_BODY_EXCERPT"
 fi
 
+echo "== 下一枪建议 =="
+echo "如果 QUEUE 还有 [ ]：运行 tools/task.sh --next"
+
 git checkout main
 git pull --rebase origin main
 

@@ -12,7 +12,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
-- [ ] TODO Title: Session 一键初始化（onboard）+ 串行接下一枪（after-ship next）
+- [>] TODO Title: Session 一键初始化（onboard）+ 串行接下一枪（after-ship next）  Picked: run-2026-02-24-session-onboard-after-ship-next 2026-02-24T23:36:31+0800
   Goal: 新增一次-session 的自动入职/对齐脚本（同步+环境确认+必读清单+强制复述模板+最近 decision/PR 摘要），并在 ship 成功后自动提示下一枪命令（可选自动生成下一 TASK_FILE+RUN_ID，但不自动改代码）。
   Scope: `tools/`, `tests/`, `docs/`, `TASKS/`, `reports/{RUN_ID}/`
   Acceptance:
