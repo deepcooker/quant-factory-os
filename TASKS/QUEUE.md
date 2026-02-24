@@ -12,6 +12,18 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [ ] TODO Title: enter.sh 支持显式自动 stash（ENTER_AUTOSTASH=1）并打印 stash 名
+  Goal: 解决单人开发常见摩擦：工作区不干净时 enter.sh 直接失败。新增显式开关 ENTER_AUTOSTASH=1，使 enter.sh 在同步前自动 git stash push -u，并打印 stash 名与恢复指令；默认行为保持严格失败。
+  Scope: `tools/enter.sh`, `tests/`, `docs/WORKFLOW.md`, `TASKS/`, `reports/{RUN_ID}/`
+  Acceptance:
+  - 默认 enter.sh：工作区不干净仍失败（不改变安全默认）。
+  - 设置 ENTER_AUTOSTASH=1 时：
+    - 自动 stash（含 untracked），并打印：stash 名 + 如何恢复（git stash list / pop）
+    - enter 正常继续 pull/doctor
+  - make verify 全绿
+  - docs/WORKFLOW.md 补充这一用法
+
+
 - [x] TODO Title: 领取任务时自动 make evidence + 打印下一步清单（避免人肉步骤）  Picked: run-2026-02-25-make-evidence 2026-02-25T01:00:03+0800
   Done: PR #101, RUN_ID=run-2026-02-25-make-evidence
   Goal: 在 tools/task.sh --next 与 --pick queue-next 领取任务时自动生成 reports/{RUN_ID}/ 证据三件套，并打印标准下一步清单；若 evidence 失败则回滚 QUEUE 变更，避免出现 [>] 锁死需要手动修复。
