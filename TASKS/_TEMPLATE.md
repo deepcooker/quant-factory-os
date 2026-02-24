@@ -18,7 +18,7 @@ What we explicitly do NOT do.
 
 ## Acceptance
 - [ ] Command(s) pass: `make verify`
-- [ ] Evidence updated: `reports/<RUN_ID>/summary.md` and `reports/<RUN_ID>/decision.md`
+- [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
 - [ ] Regression guardrail added/updated if applicable
 
 ## Inputs

@@ -43,7 +43,9 @@ dist_backup/
 .DS_Store
 .env
 .venv
+.venv/
 venv/
+.pytest_cache/
 *.swp
 *.swo
 *~
