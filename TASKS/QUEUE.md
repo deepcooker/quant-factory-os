@@ -12,6 +12,17 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [ ] TODO Title: 领取任务时自动 make evidence + 打印下一步清单（避免人肉步骤）
+  Goal: 在 tools/task.sh --next 与 --pick queue-next 领取任务时自动生成 reports/{RUN_ID}/ 证据三件套，并打印标准下一步清单；若 evidence 失败则回滚 QUEUE 变更，避免出现 [>] 锁死需要手动修复。
+  Scope: `tools/task.sh`, `tests/`, `docs/WORKFLOW.md`, `TASKS/`, `reports/{RUN_ID}/`
+  Acceptance:
+  - `tools/task.sh --next` 领取后默认自动执行 make evidence，并输出：TASK_FILE/RUN_ID/EVIDENCE_PATH + “下一步清单”。
+  - `tools/task.sh --pick queue-next` 同样默认自动 evidence + 下一步清单。
+  - 若 evidence 失败：QUEUE 不应从 `[ ]` 变为 `[>]`（自动回滚），并给出明确错误提示。
+  - docs/WORKFLOW.md 补充：领取任务已自动生成 evidence，无需再手动 make evidence。
+  - `make verify` 全绿。
+
+
 - [x] TODO Title: ship 成功后自动同步本地 main 到最新（无需手动 enter）  Picked: run-2026-02-25-ship-main-enter 2026-02-25T00:46:47+0800
   Done: PR #99, RUN_ID=run-2026-02-25-ship-main-enter
   Goal: 解决单人开发“PR 合并后本地 main 不更新”的摩擦：在 tools/ship.sh 成功结束时强制执行 git 同步，把本地 main fast-forward/rebase 到 origin/main 最新，避免每次手动 ./tools/enter.sh 才看到最新队列与代码。
