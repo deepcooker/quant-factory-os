@@ -17,6 +17,7 @@ def run_next(tmp_dir: Path, queue_text: str):
     env["TASK_BOOTSTRAP_QUEUE_FILE"] = str(queue)
     env["TASK_BOOTSTRAP_TEMPLATE_FILE"] = str(template)
     env["TASK_BOOTSTRAP_OUTPUT_DIR"] = str(tmp_dir)
+    env["TASK_BOOTSTRAP_EVIDENCE_CMD"] = "true"
 
     res = subprocess.run(
         ["bash", "tools/task.sh", "--next"],

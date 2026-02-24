@@ -23,6 +23,7 @@ def test_bootstrap_scope_extracts_backticked_paths(tmp_path: Path):
     env["TASK_BOOTSTRAP_QUEUE_FILE"] = str(queue_file)
     env["TASK_BOOTSTRAP_TEMPLATE_FILE"] = str(template_file)
     env["TASK_BOOTSTRAP_OUTPUT_DIR"] = str(output_dir)
+    env["TASK_BOOTSTRAP_EVIDENCE_CMD"] = "true"
 
     res = subprocess.run(["bash", "tools/task.sh", "--next"], cwd=repo_root, env=env, text=True, capture_output=True)
     assert res.returncode == 0, res.stdout + res.stderr

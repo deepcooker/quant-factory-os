@@ -47,6 +47,7 @@ def test_task_bootstrap_next_generates_task_file(tmp_path):
     env["TASK_BOOTSTRAP_QUEUE_FILE"] = str(queue_file)
     env["TASK_BOOTSTRAP_TEMPLATE_FILE"] = str(template_file)
     env["TASK_BOOTSTRAP_OUTPUT_DIR"] = str(output_dir)
+    env["TASK_BOOTSTRAP_EVIDENCE_CMD"] = "true"
 
     res = subprocess.run(
         ["bash", "tools/task.sh", "--next"],
