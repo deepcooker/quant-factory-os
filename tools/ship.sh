@@ -60,6 +60,20 @@ emit_pr_body_excerpt() {
   printf "%s\n" "$excerpt" > "reports/${run_id}/pr_body_excerpt.md"
 }
 
+wait_for_pr_merged() {
+  local pr_url="$1"
+  local state=""
+  while true; do
+    state="$(gh pr view "$pr_url" --json state -q .state || true)"
+    if [[ "$state" == "MERGED" ]]; then
+      echo "merge confirmed (state=MERGED)"
+      break
+    fi
+    echo "waiting merge... (state=${state:-unknown})"
+    sleep 3
+  done
+}
+
 
 queue_mark_done_in_queue() {
   local queue_file="$1"
@@ -610,6 +624,7 @@ state="$(gh pr view "$pr_url" --json state -q .state)"
 if [[ "$state" != "MERGED" ]]; then
   gh pr merge --squash --delete-branch "$pr_url" || true
 fi
+wait_for_pr_merged "$pr_url"
 
 if [[ -n "$PR_BODY_EXCERPT" ]]; then
   printf "%s\n" "$PR_BODY_EXCERPT"
@@ -618,8 +633,17 @@ fi
 echo "== 下一枪建议 =="
 echo "如果 QUEUE 还有 [ ]：运行 tools/task.sh --next"
 
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "❌ post-ship sync aborted: working tree is not clean."
+  echo "   请先处理工作区改动后再同步 main。"
+  exit 1
+fi
+
 git checkout main
 git pull --rebase origin main
+main_sha="$(git rev-parse --short HEAD)"
+origin_sha="$(git rev-parse --short origin/main)"
+echo "post-ship synced main@${main_sha} (origin/main@${origin_sha})"
 
 git branch -D "$branch" >/dev/null 2>&1 || true
 
