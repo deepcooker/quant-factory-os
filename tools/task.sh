@@ -148,8 +148,8 @@ bootstrap_next_task() {
           rest="${rest#*${bt}}"
           path="${rest%%${bt}*}"
           echo "- ${bt}${path}${bt}"
-          rest="${rest#*${bt}${path}${bt}}"
-        done
+          rest="${rest#*${bt}}"
+        done 
       else
         # Backward-compat: allow a simple single path like tests/ (no spaces).
         if [[ "$rest" == *" "* ]]; then

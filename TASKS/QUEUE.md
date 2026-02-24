@@ -12,7 +12,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
-- [ ] TODO Title: auto-mark queue done on successful ship
+- [>] TODO Title: auto-mark queue done on successful ship  Picked: run-2026-02-22-auto-mark-queue-done-on-successful-ship 2026-02-22T03:15:24+0800
   Goal: after a successful ship/PR open (and/or merge), automatically mark the picked `[>]` queue item as `[x]` and append `Done: PR #<n>, RUN_ID=<id>`.
   Scope: `tools/task.sh`, `tools/ship.sh` (if needed), `TASKS/QUEUE.md`, `tests/`
   Acceptance:

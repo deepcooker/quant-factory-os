@@ -60,6 +60,81 @@ emit_pr_body_excerpt() {
   printf "%s\n" "$excerpt" > "reports/${run_id}/pr_body_excerpt.md"
 }
 
+
+queue_mark_done_in_queue() {
+  local queue_file="$1"
+  local rid="$2"
+  local pr_url="$3"
+
+  [[ -z "$rid" ]] && return 0
+  [[ -z "$pr_url" ]] && return 0
+  [[ -f "$queue_file" ]] || return 0
+
+  local pr_num=""
+  if [[ "$pr_url" =~ /pull/([0-9]+) ]]; then
+    pr_num="${BASH_REMATCH[1]}"
+  fi
+  local done_line="Done: PR #${pr_num:-?}, RUN_ID=${rid}"
+
+  # Replace the first matching picked in-progress item:
+  # - [>] ... Picked: <rid> ...  ->  - [x] ... Picked: <rid> ...
+  # and insert an indented Done line right after, unless already present.
+  awk -v rid="$rid" -v doneline="$done_line" '
+    BEGIN { done=0 }
+    {
+      if (!done && $0 ~ /^- \[>\] / && index($0, "Picked: " rid) > 0) {
+        done=1
+        sub(/^- \[>\] /, "- [x] ")
+        print
+
+        # Peek next line to avoid duplicating Done:
+        if ((getline nxt) > 0) {
+          if (nxt ~ /^[[:space:]]*Done:/) {
+            print nxt
+          } else {
+            print "  " doneline
+            print nxt
+          }
+        } else {
+          print "  " doneline
+        }
+        next
+      }
+      print
+    }
+  ' "$queue_file" > "${queue_file}.tmp" && mv "${queue_file}.tmp" "$queue_file"
+}
+
+queue_mark_done_commit_push() {
+  local queue_file="$1"
+  local rid="$2"
+  local pr_url="$3"
+
+  queue_mark_done_in_queue "$queue_file" "$rid" "$pr_url"
+
+  # Commit only if queue changed
+  if git diff --quiet -- "$queue_file"; then
+    return 0
+  fi
+  git add "$queue_file"
+  git commit -m "${rid}: queue done (${pr_url})" >/dev/null
+  git push >/dev/null
+}
+
+# Test-only mode (no gh / no PR):
+#   SHIP_QUEUE_MARK_DONE_ONLY=1
+#   SHIP_QUEUE_MARK_DONE_QUEUE_FILE=...
+#   SHIP_QUEUE_MARK_DONE_RUN_ID=...
+#   SHIP_QUEUE_MARK_DONE_PR_URL=...
+if [[ "${SHIP_QUEUE_MARK_DONE_ONLY:-0}" == "1" ]]; then
+  queue_file="${SHIP_QUEUE_MARK_DONE_QUEUE_FILE:-TASKS/QUEUE.md}"
+  rid="${SHIP_QUEUE_MARK_DONE_RUN_ID:-${RUN_ID:-}}"
+  pr_url="${SHIP_QUEUE_MARK_DONE_PR_URL:-}"
+  queue_mark_done_in_queue "$queue_file" "$rid" "$pr_url"
+  exit 0
+fi
+
+
 if [[ "${SHIP_PR_BODY_EXCERPT_ONLY:-0}" == "1" ]]; then
   run_id="${SHIP_PR_BODY_EXCERPT_RUN_ID:-${RUN_ID:-}}"
   if [[ -z "${SHIP_PR_BODY_EXCERPT_INPUT:-}" ]]; then
@@ -514,20 +589,21 @@ fi
 PR_BODY_EXCERPT="$(build_pr_body_excerpt "$PR_BODY")"
 emit_pr_body_excerpt "$run_id" "$PR_BODY_EXCERPT"
 
+
+
+
+
 pr_url="$(gh pr create --base main --head "$branch" --title "$MSG" --body "$PR_BODY")"
 echo "PR: $pr_url"
 
+# NEW: auto mark queue done (if a matching [>] Picked: <RUN_ID> exists)
+if [[ "${SHIP_QUEUE_AUTO_MARK_DONE:-1}" == "1" && -n "$run_id" ]]; then
+  queue_mark_done_commit_push "TASKS/QUEUE.md" "$run_id" "$pr_url" || true
+fi
+
+# enable auto-merge AFTER pushing the queue-done commit (so the PR includes it)
 gh pr merge --auto --squash --delete-branch "$pr_url" || true
 
-# 等待 checks 出现再 watch（避免 no checks reported）
-for i in {1..30}; do
-  if gh pr checks "$pr_url" >/dev/null 2>&1; then
-    break
-  fi
-  echo "Waiting for checks to appear... ($i/30)"
-  sleep 2
-done
-gh pr checks --watch "$pr_url"
 
 # 如果 auto-merge 已经合并，就不再重复 merge
 state="$(gh pr view "$pr_url" --json state -q .state)"
