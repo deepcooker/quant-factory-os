@@ -24,6 +24,94 @@ slugify() {
   echo "$slug"
 }
 
+task_plan_generate() {
+  local n_raw="${1:-20}"
+  local n
+  if [[ "$n_raw" =~ ^N=([0-9]+)$ ]]; then
+    n="${BASH_REMATCH[1]}"
+  elif [[ "$n_raw" =~ ^[0-9]+$ ]]; then
+    n="$n_raw"
+  else
+    n="20"
+  fi
+  if [[ -z "$n" || "$n" -le 0 ]]; then
+    n="20"
+  fi
+
+  local queue_file reports_dir proposal_file
+  queue_file="${TASK_PLAN_QUEUE_FILE:-${TASK_BOOTSTRAP_QUEUE_FILE:-TASKS/QUEUE.md}}"
+  reports_dir="${TASK_PLAN_REPORTS_DIR:-reports}"
+  proposal_file="${TASK_PLAN_OUTPUT_FILE:-TASKS/TODO_PROPOSAL.md}"
+
+  if [[ ! -f "$queue_file" ]]; then
+    echo "❌ QUEUE 文件不存在：$queue_file"
+    exit 1
+  fi
+
+  local queue_tmp decision_tmp
+  queue_tmp="$(mktemp)"
+  decision_tmp="$(mktemp)"
+  trap 'rm -f "$queue_tmp" "$decision_tmp"' RETURN
+
+  awk '
+    /^- \[ \] / {
+      line=$0
+      sub(/^- \[ \][[:space:]]*TODO Title:[[:space:]]*/, "", line)
+      sub(/^- \[ \][[:space:]]*/, "", line)
+      gsub(/[[:space:]]+$/, "", line)
+      if (line != "") print line
+    }
+  ' "$queue_file" > "$queue_tmp"
+
+  if [[ -d "$reports_dir" ]]; then
+    find "$reports_dir" -maxdepth 2 -type f -name "decision.md" \
+      | sort -r > "$decision_tmp"
+  fi
+
+  mkdir -p "$(dirname "$proposal_file")"
+  {
+    echo "# TODO Proposal"
+    echo
+    echo "Generated at: $(date -Iseconds)"
+    echo
+    echo "## Queue candidates"
+    local i=0
+    while IFS= read -r item; do
+      [[ -z "$item" ]] && continue
+      i=$((i + 1))
+      if [[ "$i" -eq 1 ]]; then
+        echo "- id=queue-next (recommended): $item"
+      else
+        echo "- id=queue-${i}: $item"
+      fi
+      if [[ "$i" -ge "$n" ]]; then
+        break
+      fi
+    done < "$queue_tmp"
+    if [[ "$i" -eq 0 ]]; then
+      echo "- (none)"
+    fi
+    echo
+    echo "## Recent decisions"
+    i=0
+    while IFS= read -r path; do
+      [[ -z "$path" ]] && continue
+      i=$((i + 1))
+      echo "- $path"
+      if [[ "$i" -ge "$n" ]]; then
+        break
+      fi
+    done < "$decision_tmp"
+    if [[ "$i" -eq 0 ]]; then
+      echo "- (none)"
+    fi
+  } > "$proposal_file"
+
+  echo "PROPOSAL_FILE: $proposal_file"
+  echo "已生成候选清单（top ${n}）。"
+  echo "下一步：tools/task.sh --pick queue-next"
+}
+
 bootstrap_next_task() {
   local queue_file template_file output_dir
   queue_file="${TASK_BOOTSTRAP_QUEUE_FILE:-TASKS/QUEUE.md}"
@@ -245,6 +333,28 @@ pick_task_interactive() {
 }
 
 task_file="${1:-}"
+
+if [[ "$task_file" == "--plan" || "$task_file" == "plan" ]]; then
+  task_plan_generate "${2:-20}"
+  exit 0
+fi
+
+if [[ "$task_file" == "--pick" || "$task_file" == "pick" ]]; then
+  pick_id="${2:-}"
+  proposal_file="${TASK_PLAN_OUTPUT_FILE:-TASKS/TODO_PROPOSAL.md}"
+  if [[ ! -f "$proposal_file" ]]; then
+    echo "❌ 未找到 proposal：$proposal_file"
+    echo "   请先运行：tools/task.sh --plan"
+    exit 1
+  fi
+  if [[ "$pick_id" == "queue-next" ]]; then
+    bootstrap_next_task
+    exit 0
+  fi
+  echo "❌ Unsupported pick id: $pick_id"
+  echo "   当前仅支持：queue-next"
+  exit 1
+fi
 
 if [[ "$task_file" == "--next" || "$task_file" == "next" ]]; then
   bootstrap_next_task
