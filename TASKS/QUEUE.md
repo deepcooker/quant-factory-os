@@ -12,8 +12,9 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
-- [ ] TODO Title: 修复 <RUN_ID> 占位符渲染 + 忽略 pytest 缓存确保工作区干净
-  Goal: 将 repo 中用于文档/队列/模板的 `<RUN_ID>` 占位符替换为 `{RUN_ID}`（或转义为 `&lt;RUN_ID&gt;`），避免 Markdown 渲染吞字符；同时把 `.pytest_cache/` 加入 `.gitignore`，避免 doctor/pytest 造成工作区“脏”。
+- [x] TODO Title: 修复 {RUN_ID} 占位符渲染 + 忽略 pytest 缓存确保工作区干净  Picked: run-2026-02-24-run-id-pytest 2026-02-24T22:27:17+0800
+  Done: PR #93, RUN_ID=run-2026-02-24-run-id-pytest
+  Goal: 将 repo 中用于文档/队列/模板的 `{RUN_ID}` 占位符替换为 `{RUN_ID}`（或转义为 `&lt;RUN_ID&gt;`），避免 Markdown 渲染吞字符；同时把 `.pytest_cache/` 加入 `.gitignore`，避免 doctor/pytest 造成工作区“脏”。
   Scope: `.gitignore`, `TASKS/QUEUE.md`, `TASKS/_TEMPLATE.md`, `docs/WORKFLOW.md`, `tests/`（如需补回归）
   Acceptance:
   - GitHub 渲染下不再出现 `reports//`、`RUN_ID=` 这种空洞显示（示例：QUEUE 与模板中的占位符可读）。
@@ -23,11 +24,11 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 - [x] TODO Title: 增加只读 Observer 周报（awareness digest）  Picked: run-2026-02-24-observer-awareness-digest 2026-02-24T21:21:37+0800
   Done: PR #91, RUN_ID=run-2026-02-24-observer-awareness-digest
-  Goal: 新增只读观察器，从 repo 证据链（reports/*、TASKS/STATE.md、可选 MISTAKES/）生成周报报告，落到 reports/<RUN_ID>/awareness.md，形成可审计“学习产物”。
-  Scope: `tools/`, `tests/`, `docs/`, `TASKS/`, `reports/<RUN_ID>/`
+  Goal: 新增只读观察器，从 repo 证据链（reports/*、TASKS/STATE.md、可选 MISTAKES/）生成周报报告，落到 reports/{RUN_ID}/awareness.md，形成可审计“学习产物”。
+  Scope: `tools/`, `tests/`, `docs/`, `TASKS/`, `reports/{RUN_ID}/`
   Acceptance:
-  - 新增入口：`make awareness RUN_ID=<RUN_ID>`（或等价 tools/observe.sh）可运行。
-  - 输出：`reports/<RUN_ID>/awareness.md`，并在 summary/decision 里引用。
+  - 新增入口：`make awareness RUN_ID={RUN_ID}`（或等价 tools/observe.sh）可运行。
+  - 输出：`reports/{RUN_ID}/awareness.md`，并在 summary/decision 里引用。
   - 周报至少包含：本周 shipped runs（扫描 reports/run-*/decision.md）、重复失败模式（可选扫描 MISTAKES/）、当前风险（读 STATE）、下一枪建议（<=5 条、task-shaped）。
   - `make verify` 全绿。
 
@@ -39,7 +40,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   Acceptance:
   - When shipping a task created by `--next`, the corresponding queue item is updated from `[>]` to `[x]` with Done metadata.
   - No effect if ship fails or no matching picked item exists.
-  - `make verify` passes and evidence recorded under `reports/<RUN_ID>/`.
+  - `make verify` passes and evidence recorded under `reports/{RUN_ID}/`.
   RUN_ID: (optional)
 
 
@@ -50,7 +51,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   - Generated task Scope is multi-line bullets (each bullet is a single backticked path).
   - No non-path explanatory bullet is appended to Scope.
   - If Scope has no valid bullet paths, `--next` exits non-zero with a clear error.
-  - `make verify` passes and evidence recorded under `reports/<RUN_ID>/`.
+  - `make verify` passes and evidence recorded under `reports/{RUN_ID}/`.
   RUN_ID: (optional)
   Done: PR #86, RUN_ID=run-2026-02-22-bootstrap-next-normalize-scope-validate-scope-bullets
 
@@ -60,7 +61,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   Scope: ship/task tooling tests and minimal test fixtures.
   Acceptance:
   - `make verify` passes.
-  - Evidence recorded under `reports/<RUN_ID>/summary.md` and `reports/<RUN_ID>/decision.md`.
+  - Evidence recorded under `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`.
   - No changes outside declared scope.
   RUN_ID: (optional)
   Done: PR #81, RUN_ID=run-2026-02-21-add-minimal-regression-tests-for-workflow-gates-p1
@@ -71,7 +72,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   Scope: `tools/start.sh`, `tools/enter.sh`, startup docs/tests only as needed.
   Acceptance:
   - `make verify` passes.
-  - Evidence recorded under `reports/<RUN_ID>/summary.md` and `reports/<RUN_ID>/decision.md`.
+  - Evidence recorded under `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`.
   - No changes outside declared scope.
   RUN_ID: (optional)
   Done: PR #78, RUN_ID=run-2026-02-21-startup-entrypoints-runid
@@ -82,7 +83,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   Scope: `docs/ENTITIES.md` and narrowly related docs references if required.
   Acceptance:
   - `make verify` passes.
-  - Evidence recorded under `reports/<RUN_ID>/summary.md` and `reports/<RUN_ID>/decision.md`.
+  - Evidence recorded under `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`.
   - No changes outside declared scope.
   RUN_ID: (optional)
   Done: PR #77, RUN_ID=run-2026-02-12-entities-min-dict
@@ -92,7 +93,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   Scope: `tools/ship.sh`, tests/docs directly related to this rule.
   Acceptance:
   - `make verify` passes.
-  - Evidence recorded under `reports/<RUN_ID>/summary.md` and `reports/<RUN_ID>/decision.md`.
+  - Evidence recorded under `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`.
   - No changes outside declared scope.
   RUN_ID: (optional)
 
@@ -101,7 +102,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   Scope: ship/task tooling and related workflow docs/tests.
   Acceptance:
   - `make verify` passes.
-  - Evidence recorded under `reports/<RUN_ID>/summary.md` and `reports/<RUN_ID>/decision.md`.
+  - Evidence recorded under `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`.
   - No changes outside declared scope.
   RUN_ID: (optional)
 
@@ -110,7 +111,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   Scope: `.codex_read_denylist` and minimal workflow docs references only.
   Acceptance:
   - `make verify` passes.
-  - Evidence recorded under `reports/<RUN_ID>/summary.md` and `reports/<RUN_ID>/decision.md`.
+  - Evidence recorded under `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`.
   - No changes outside declared scope.
   RUN_ID: (optional)
   
@@ -118,7 +119,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   Goal: when `tools/task.sh --next` picks the top item, mark it as in-progress (`[>]`) and record RUN_ID+timestamp to avoid duplicate picks across sessions.
   Scope: `tools/task.sh`, `TASKS/QUEUE.md`, minimal tests for queue parsing/locking.
   Acceptance:
-  - Picking changes `[ ]` -> `[>]` and appends `Picked: <RUN_ID> <timestamp>`.
+  - Picking changes `[ ]` -> `[>]` and appends `Picked: {RUN_ID} <timestamp>`.
   - Re-running `--next` does not pick the same `[>]` item again.
-  - `make verify` passes and evidence recorded under `reports/<RUN_ID>/`.
+  - `make verify` passes and evidence recorded under `reports/{RUN_ID}/`.
   RUN_ID: (optional)

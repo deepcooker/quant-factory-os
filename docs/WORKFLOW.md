@@ -27,27 +27,27 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - Do not store full chat transcripts or raw logs in the repo. Keep them local
   under `chatlogs/` and ensure it is listed in `.gitignore`.
 - Repo memory is limited to: `docs/` (rules), `TASKS/STATE.md` (current state),
-  `reports/<RUN_ID>/decision.md` (key decisions), and `MISTAKES/` (postmortems
+  `reports/{RUN_ID}/decision.md` (key decisions), and `MISTAKES/` (postmortems
   when enabled).
 - When sharing code with an external model, use `project_all_files.txt` as the
   context snapshot. It is ignored by default and must only be updated via a
   dedicated task with explicit approval to commit.
 - Hard rule (gate): Uncommitted changes do not exist for other agents or cloud runs.
 - Hard rule (gate): Handoff must be via PR or commit hash, with evidence under
-  `reports/<RUN_ID>/`.
+  `reports/{RUN_ID}/`.
 - Hard rule (gate): If local-only context is needed, record it as structured evidence
   (`summary.md`, `decision.md`, `MISTAKES/`) or in `TASKS/STATE.md`, not in chat.
 
 ## Codex session startup checklist
 - Do not rely on chat/session memory; rely only on repo memory:
-  `TASKS/STATE.md`, `TASKS/QUEUE.md`, `reports/<RUN_ID>/`.
+  `TASKS/STATE.md`, `TASKS/QUEUE.md`, `reports/{RUN_ID}/`.
 - 1) Read `TASKS/STATE.md` via `tools/view.sh` and treat it as the only current progress baseline.
-- 2) If STATE shows an active RUN_ID, read `reports/<RUN_ID>/summary.md` and
-  `reports/<RUN_ID>/decision.md`.
+- 2) If STATE shows an active RUN_ID, read `reports/{RUN_ID}/summary.md` and
+  `reports/{RUN_ID}/decision.md`.
 - 3) Read `TASKS/QUEUE.md` and pick the top unfinished queue item.
 - 4) Expand that item into `TASKS/TASK-*.md` (from template), then run:
   `make evidence` -> implement minimal diff -> `make verify` -> update reports ->
   `tools/task.sh` ship.
 - 5) On failure, write failure reason, repro, and next step in
-  `reports/<RUN_ID>/summary.md` + `reports/<RUN_ID>/decision.md` (and `MISTAKES/`
+  `reports/{RUN_ID}/summary.md` + `reports/{RUN_ID}/decision.md` (and `MISTAKES/`
   or `TASKS/STATE.md` when needed).
