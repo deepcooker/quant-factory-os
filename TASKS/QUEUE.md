@@ -12,6 +12,19 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [ ] TODO Title: 自动生成任务候选清单（plan）并支持确认后领取（pick）
+  Goal: 新增非交互式“计划/确认”机制：Codex 根据 repo 证据与当前 QUEUE/STATE 生成 10~20 条候选任务清单供人确认；确认后可一键领取当前队列任务（串行接力），减少人肉写 queue/拼命令。
+  Scope: `tools/`, `docs/`, `tests/`, `TASKS/`, `reports/{RUN_ID}/`
+  Acceptance:
+  - 新增命令：`tools/task.sh --plan N=20`（或默认 N=20）生成 `TASKS/TODO_PROPOSAL.md`，并在 stdout 打印摘要（top N + 如何 pick）。
+  - 清单至少包含两块信息：
+    1) 当前可执行的 QUEUE 候选（未完成项），标注“推荐下一枪”（queue-next）
+    2) 从最近 reports/*/decision.md（可选含 MISTAKES/、STATE）提取的“建议新任务”（只做建议，不直接改 QUEUE）
+  - 新增命令：`tools/task.sh --pick queue-next`：在已生成 proposal 的前提下，执行领取（等价于 `tools/task.sh --next`）并打印 TASK_FILE/RUN_ID；默认不自动写代码、不自动 ship。
+  - 更新 docs/WORKFLOW.md：补充 plan/pick 的使用方式（用于 session 内串行接力）。
+  - `make verify` 全绿，并为该 RUN_ID 写齐 evidence 三件套。
+
+
 - [x] TODO Title: Session 一键初始化（onboard）+ 串行接下一枪（after-ship next）  Picked: run-2026-02-24-session-onboard-after-ship-next 2026-02-24T23:36:31+0800
   Done: PR #95, RUN_ID=run-2026-02-24-session-onboard-after-ship-next
   Goal: 新增一次-session 的自动入职/对齐脚本（同步+环境确认+必读清单+强制复述模板+最近 decision/PR 摘要），并在 ship 成功后自动提示下一枪命令（可选自动生成下一 TASK_FILE+RUN_ID，但不自动改代码）。
