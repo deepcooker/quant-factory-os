@@ -48,13 +48,14 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   `TASKS/TODO_PROPOSAL.md`, then review candidates and recent decisions.
 - 4) Pick queue-next by running `tools/task.sh --pick queue-next`
   (equivalent to top unfinished queue pick / `--next`).
-- 5) Expand that item into `TASKS/TASK-*.md` (from template), then run:
-  `make evidence` -> implement minimal diff -> `make verify` -> update reports ->
-  `tools/task.sh` ship.
+- 5) `--next`/`--pick queue-next` now auto-runs evidence creation and prints a
+  standard next-step checklist; no manual `make evidence` is required after pick.
+- 6) Expand that item into `TASKS/TASK-*.md` (from template), then run:
+  implement minimal diff -> `make verify` -> update reports -> `tools/task.sh` ship.
 - Ship success behavior: `tools/ship.sh` now waits until PR state is `MERGED`,
   then auto-syncs local `main` to `origin/main` (`checkout main` + `pull --rebase`).
   For single-user flow, you no longer need a manual `tools/enter.sh` just to
   refresh local queue/code after ship.
-- 6) On failure, write failure reason, repro, and next step in
+- 7) On failure, write failure reason, repro, and next step in
   `reports/{RUN_ID}/summary.md` + `reports/{RUN_ID}/decision.md` (and `MISTAKES/`
   or `TASKS/STATE.md` when needed).

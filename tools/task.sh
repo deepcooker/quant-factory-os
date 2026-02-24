@@ -179,24 +179,6 @@ bootstrap_next_task() {
   slug="$(slugify "$title")"
   run_date="$(date +%Y-%m-%d)"
   run_id="run-${run_date}-${slug}"
-  # mark the picked queue item as in-progress to avoid duplicate picks across sessions
-  local picked_ts
-  picked_ts="$(date +%Y-%m-%dT%H:%M:%S%z)"
-  awk -v rid="$run_id" -v ts="$picked_ts" '
-      BEGIN { done=0 }
-      {
-        if (!done && $0 ~ /^- \[ \] /) {
-          done=1
-          sub(/^- \[ \] /, "- [>] ")
-          if ($0 !~ /Picked:/) {
-            $0 = $0 "  Picked: " rid " " ts
-          }
-        }
-        print
-      }
-    ' "$queue_file" > "${queue_file}.tmp" && mv "${queue_file}.tmp" "$queue_file"
-    
-
 
   task_file="${output_dir}/TASK-${slug}.md"
   if [[ -f "$task_file" ]]; then
@@ -268,7 +250,7 @@ bootstrap_next_task() {
       echo "$acceptance_block"
     else
       echo "- [ ] Command(s) pass: \`make verify\`"
-      echo "- [ ] Evidence updated: \`reports/<RUN_ID>/summary.md\` and \`reports/<RUN_ID>/decision.md\`"
+      echo "- [ ] Evidence updated: \`reports/{RUN_ID}/summary.md\` and \`reports/{RUN_ID}/decision.md\`"
       echo "- [ ] Regression guardrail added/updated if applicable"
     fi
     echo
@@ -288,12 +270,51 @@ bootstrap_next_task() {
     echo "- Rollback plan:"
   } > "$task_file"
 
-  if [[ "${TASK_BOOTSTRAP_EVIDENCE:-0}" == "1" ]]; then
-    make evidence RUN_ID="$run_id"
+  # mark the picked queue item as in-progress to avoid duplicate picks across sessions
+  local queue_backup picked_ts evidence_cmd
+  queue_backup="${queue_file}.bak.$$"
+  cp "$queue_file" "$queue_backup"
+  picked_ts="$(date +%Y-%m-%dT%H:%M:%S%z)"
+  awk -v rid="$run_id" -v ts="$picked_ts" '
+      BEGIN { done=0 }
+      {
+        if (!done && $0 ~ /^- \[ \] /) {
+          done=1
+          sub(/^- \[ \] /, "- [>] ")
+          if ($0 !~ /Picked:/) {
+            $0 = $0 "  Picked: " rid " " ts
+          }
+        }
+        print
+      }
+    ' "$queue_file" > "${queue_file}.tmp" && mv "${queue_file}.tmp" "$queue_file"
+
+  if [[ "${TASK_BOOTSTRAP_EVIDENCE:-1}" == "1" ]]; then
+    if [[ -n "${TASK_BOOTSTRAP_EVIDENCE_CMD:-}" ]]; then
+      evidence_cmd="${TASK_BOOTSTRAP_EVIDENCE_CMD}"
+    else
+      evidence_cmd="make evidence RUN_ID=\"$run_id\""
+    fi
+    if ! eval "$evidence_cmd"; then
+      mv "$queue_backup" "$queue_file"
+      echo "❌ Auto evidence failed; rolled back queue pick marker." >&2
+      exit 1
+    fi
+  fi
+
+  if [[ -f "$queue_backup" ]]; then
+    rm -f "$queue_backup"
   fi
 
   echo "TASK_FILE: $task_file"
   echo "RUN_ID: $run_id"
+  echo "EVIDENCE_PATH: reports/${run_id}/"
+  echo "== 下一步清单 =="
+  echo "1) tools/view.sh ${task_file}"
+  echo "2) 按 Scope 做改动"
+  echo "3) make verify"
+  echo "4) 更新 reports/${run_id}/{summary,decision}"
+  echo "5) RUN_ID=${run_id} tools/task.sh ${task_file}"
 }
 
 pick_task_interactive() {
