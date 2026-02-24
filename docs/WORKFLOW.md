@@ -44,10 +44,13 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - 1) Read `TASKS/STATE.md` via `tools/view.sh` and treat it as the only current progress baseline.
 - 2) If STATE shows an active RUN_ID, read `reports/{RUN_ID}/summary.md` and
   `reports/{RUN_ID}/decision.md`.
-- 3) Read `TASKS/QUEUE.md` and pick the top unfinished queue item.
-- 4) Expand that item into `TASKS/TASK-*.md` (from template), then run:
+- 3) (Optional plan) run `tools/task.sh --plan 20` to generate
+  `TASKS/TODO_PROPOSAL.md`, then review candidates and recent decisions.
+- 4) Pick queue-next by running `tools/task.sh --pick queue-next`
+  (equivalent to top unfinished queue pick / `--next`).
+- 5) Expand that item into `TASKS/TASK-*.md` (from template), then run:
   `make evidence` -> implement minimal diff -> `make verify` -> update reports ->
   `tools/task.sh` ship.
-- 5) On failure, write failure reason, repro, and next step in
+- 6) On failure, write failure reason, repro, and next step in
   `reports/{RUN_ID}/summary.md` + `reports/{RUN_ID}/decision.md` (and `MISTAKES/`
   or `TASKS/STATE.md` when needed).
