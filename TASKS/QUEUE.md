@@ -12,7 +12,8 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
-- [>] TODO Title: 领取任务时自动 make evidence + 打印下一步清单（避免人肉步骤）  Picked: run-2026-02-25-make-evidence 2026-02-25T01:00:03+0800
+- [x] TODO Title: 领取任务时自动 make evidence + 打印下一步清单（避免人肉步骤）  Picked: run-2026-02-25-make-evidence 2026-02-25T01:00:03+0800
+  Done: PR #101, RUN_ID=run-2026-02-25-make-evidence
   Goal: 在 tools/task.sh --next 与 --pick queue-next 领取任务时自动生成 reports/{RUN_ID}/ 证据三件套，并打印标准下一步清单；若 evidence 失败则回滚 QUEUE 变更，避免出现 [>] 锁死需要手动修复。
   Scope: `tools/task.sh`, `tests/`, `docs/WORKFLOW.md`, `TASKS/`, `reports/{RUN_ID}/`
   Acceptance:
