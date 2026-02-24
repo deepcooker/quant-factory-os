@@ -12,6 +12,16 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [ ] TODO Title: 增加只读 Observer 周报（awareness digest）
+  Goal: 新增只读观察器，从 repo 证据链（reports/*、TASKS/STATE.md、可选 MISTAKES/）生成周报报告，落到 reports/<RUN_ID>/awareness.md，形成可审计“学习产物”。
+  Scope: `tools/`, `tests/`, `docs/`, `TASKS/`, `reports/<RUN_ID>/`
+  Acceptance:
+  - 新增入口：`make awareness RUN_ID=<RUN_ID>`（或等价 tools/observe.sh）可运行。
+  - 输出：`reports/<RUN_ID>/awareness.md`，并在 summary/decision 里引用。
+  - 周报至少包含：本周 shipped runs（扫描 reports/run-*/decision.md）、重复失败模式（可选扫描 MISTAKES/）、当前风险（读 STATE）、下一枪建议（<=5 条、task-shaped）。
+  - `make verify` 全绿。
+
+
 - [x] TODO Title: auto-mark queue done on successful ship  Picked: run-2026-02-22-auto-mark-queue-done-on-successful-ship 2026-02-22T03:15:24+0800
   Done: PR #89, RUN_ID=run-2026-02-22-auto-mark-queue-done-on-successful-ship
   Goal: after a successful ship/PR open (and/or merge), automatically mark the picked `[>]` queue item as `[x]` and append `Done: PR #<n>, RUN_ID=<id>`.
