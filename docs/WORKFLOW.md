@@ -51,6 +51,10 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - 5) Expand that item into `TASKS/TASK-*.md` (from template), then run:
   `make evidence` -> implement minimal diff -> `make verify` -> update reports ->
   `tools/task.sh` ship.
+- Ship success behavior: `tools/ship.sh` now waits until PR state is `MERGED`,
+  then auto-syncs local `main` to `origin/main` (`checkout main` + `pull --rebase`).
+  For single-user flow, you no longer need a manual `tools/enter.sh` just to
+  refresh local queue/code after ship.
 - 6) On failure, write failure reason, repro, and next step in
   `reports/{RUN_ID}/summary.md` + `reports/{RUN_ID}/decision.md` (and `MISTAKES/`
   or `TASKS/STATE.md` when needed).

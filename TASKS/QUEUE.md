@@ -12,7 +12,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
-- [ ] TODO Title: ship 成功后自动同步本地 main 到最新（无需手动 enter）
+- [>] TODO Title: ship 成功后自动同步本地 main 到最新（无需手动 enter）  Picked: run-2026-02-25-ship-main-enter 2026-02-25T00:46:47+0800
   Goal: 解决单人开发“PR 合并后本地 main 不更新”的摩擦：在 tools/ship.sh 成功结束时强制执行 git 同步，把本地 main fast-forward/rebase 到 origin/main 最新，避免每次手动 ./tools/enter.sh 才看到最新队列与代码。
   Scope: `tools/`, `tests/`, `docs/`, `TASKS/`, `reports/{RUN_ID}/`
   Acceptance:
