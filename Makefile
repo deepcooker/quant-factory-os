@@ -2,12 +2,13 @@ SHELL := /bin/bash
 PY := /root/policy/venv/bin/python
 RUN_ID ?= run-unknown
 
-.PHONY: help doctor evidence slice verify ship clean_reports
+.PHONY: help doctor evidence awareness slice verify ship clean_reports
 
 help:
 	@echo "Targets:"
 	@echo "  make doctor"
 	@echo "  make evidence RUN_ID=..."
+	@echo "  make awareness RUN_ID=..."
 	@echo "  make slice RUN_ID=... DAY=YYYY-MM-DD SYMBOLS=A,B START=HH:MM END=HH:MM"
 	@echo "  make verify"
 	@echo "  make ship MSG='...'"
@@ -19,6 +20,9 @@ doctor:
 # Creates/updates evidence skeleton (no trading integration yet)
 evidence:
 	@$(PY) tools/evidence.py --run-id "$(RUN_ID)"
+
+awareness:
+	@bash tools/observe.sh "$(RUN_ID)"
 
 # Market slice stub (later you will implement OSS/MySQL fetch here)
 slice:
