@@ -12,6 +12,15 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [ ] TODO Title: Session 一键初始化（onboard）+ 串行接下一枪（after-ship next）
+  Goal: 新增一次-session 的自动入职/对齐脚本（同步+环境确认+必读清单+强制复述模板+最近 decision/PR 摘要），并在 ship 成功后自动提示下一枪命令（可选自动生成下一 TASK_FILE+RUN_ID，但不自动改代码）。
+  Scope: `tools/`, `tests/`, `docs/`, `TASKS/`, `reports/{RUN_ID}/`
+  Acceptance:
+  - 新增入口：`tools/onboard.sh`（或 `make onboard`）可运行；输出包含：宪法/背景/阶段/工作流/复述模板/最近 decision 入口。
+  - ship 成功后输出 “下一枪建议”：若 QUEUE 还有 `[ ]`，提示 `tools/task.sh --next`；可选：在开关启用时自动执行 `--next` 并打印 TASK_FILE/RUN_ID。
+  - `make verify` 全绿，并为该 RUN_ID 写齐 evidence 三件套。
+
+
 - [x] TODO Title: 修复 {RUN_ID} 占位符渲染 + 忽略 pytest 缓存确保工作区干净  Picked: run-2026-02-24-run-id-pytest 2026-02-24T22:27:17+0800
   Done: PR #93, RUN_ID=run-2026-02-24-run-id-pytest
   Goal: 将 repo 中用于文档/队列/模板的 `{RUN_ID}` 占位符替换为 `{RUN_ID}`（或转义为 `&lt;RUN_ID&gt;`），避免 Markdown 渲染吞字符；同时把 `.pytest_cache/` 加入 `.gitignore`，避免 doctor/pytest 造成工作区“脏”。
