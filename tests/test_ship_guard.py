@@ -47,16 +47,12 @@ def test_ship_guard_ignores_untracked_reports_when_staged_single_run():
     with open(new_file, "w", encoding="utf-8") as handle:
         handle.write("new\n")
 
-    subprocess.run(["git", "add", new_file], check=True)
-    res = run_guard()
+    res = run_guard(f"{new_file}\n")
+    os.remove(old_file)
+    os.remove(new_file)
     try:
-        subprocess.run(["git", "reset", "--quiet", "HEAD", "--", new_file], check=True)
-    finally:
-        os.remove(old_file)
-        os.remove(new_file)
-        try:
-            os.rmdir(old_dir)
-            os.rmdir(new_dir)
-        except OSError:
-            pass
+        os.rmdir(old_dir)
+        os.rmdir(new_dir)
+    except OSError:
+        pass
     assert res.returncode == 0

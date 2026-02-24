@@ -12,7 +12,8 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
-- [ ] TODO Title: 增加只读 Observer 周报（awareness digest）
+- [x] TODO Title: 增加只读 Observer 周报（awareness digest）  Picked: run-2026-02-24-observer-awareness-digest 2026-02-24T21:21:37+0800
+  Done: PR #91, RUN_ID=run-2026-02-24-observer-awareness-digest
   Goal: 新增只读观察器，从 repo 证据链（reports/*、TASKS/STATE.md、可选 MISTAKES/）生成周报报告，落到 reports/<RUN_ID>/awareness.md，形成可审计“学习产物”。
   Scope: `tools/`, `tests/`, `docs/`, `TASKS/`, `reports/<RUN_ID>/`
   Acceptance:
