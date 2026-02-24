@@ -12,7 +12,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
-- [ ] TODO Title: enter.sh 支持显式自动 stash（ENTER_AUTOSTASH=1）并打印 stash 名
+- [>] TODO Title: enter.sh 支持显式自动 stash（ENTER_AUTOSTASH=1）并打印 stash 名  Picked: run-2026-02-25-enter-sh-stash-enter-autostash-1-stash 2026-02-25T01:55:06+0800
   Goal: 解决单人开发常见摩擦：工作区不干净时 enter.sh 直接失败。新增显式开关 ENTER_AUTOSTASH=1，使 enter.sh 在同步前自动 git stash push -u，并打印 stash 名与恢复指令；默认行为保持严格失败。
   Scope: `tools/enter.sh`, `tests/`, `docs/WORKFLOW.md`, `TASKS/`, `reports/{RUN_ID}/`
   Acceptance:
