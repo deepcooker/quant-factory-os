@@ -12,6 +12,15 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [ ] TODO Title: 修复 <RUN_ID> 占位符渲染 + 忽略 pytest 缓存确保工作区干净
+  Goal: 将 repo 中用于文档/队列/模板的 `<RUN_ID>` 占位符替换为 `{RUN_ID}`（或转义为 `&lt;RUN_ID&gt;`），避免 Markdown 渲染吞字符；同时把 `.pytest_cache/` 加入 `.gitignore`，避免 doctor/pytest 造成工作区“脏”。
+  Scope: `.gitignore`, `TASKS/QUEUE.md`, `TASKS/_TEMPLATE.md`, `docs/WORKFLOW.md`, `tests/`（如需补回归）
+  Acceptance:
+  - GitHub 渲染下不再出现 `reports//`、`RUN_ID=` 这种空洞显示（示例：QUEUE 与模板中的占位符可读）。
+  - `tools/doctor.sh`（含 pytest）运行后，工作区保持干净（无未忽略的新增缓存文件）。
+  - `make verify` 全绿。
+
+
 - [x] TODO Title: 增加只读 Observer 周报（awareness digest）  Picked: run-2026-02-24-observer-awareness-digest 2026-02-24T21:21:37+0800
   Done: PR #91, RUN_ID=run-2026-02-24-observer-awareness-digest
   Goal: 新增只读观察器，从 repo 证据链（reports/*、TASKS/STATE.md、可选 MISTAKES/）生成周报报告，落到 reports/<RUN_ID>/awareness.md，形成可审计“学习产物”。
