@@ -56,6 +56,9 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   then auto-syncs local `main` to `origin/main` (`checkout main` + `pull --rebase`).
   For single-user flow, you no longer need a manual `tools/enter.sh` just to
   refresh local queue/code after ship.
+- If `tools/enter.sh` finds a dirty workspace and you explicitly allow stash,
+  run `ENTER_AUTOSTASH=1 tools/enter.sh`; it will stash (`git stash push -u`)
+  and continue pull/doctor while printing stash recovery commands.
 - 7) On failure, write failure reason, repro, and next step in
   `reports/{RUN_ID}/summary.md` + `reports/{RUN_ID}/decision.md` (and `MISTAKES/`
   or `TASKS/STATE.md` when needed).

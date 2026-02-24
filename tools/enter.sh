@@ -19,9 +19,25 @@ branch="$(git branch --show-current)"
 echo "branch: ${branch}"
 
 if ! git diff --quiet || ! git diff --cached --quiet || [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
-  echo "❌ 工作区不干净（有未提交改动）"
-  echo "   修复：先运行 tools/task.sh 走 ship/stash，或手工处理未提交改动"
-  exit 1
+  if [[ "${ENTER_AUTOSTASH:-0}" == "1" ]]; then
+    stash_name="enter-wip-$(date +%Y%m%d-%H%M%S)"
+    echo "⚠️  工作区不干净，ENTER_AUTOSTASH=1 已启用，自动 stash: ${stash_name}"
+    git stash push -u -m "$stash_name" >/dev/null
+    latest_stash="$(git stash list -1 | head -n1 || true)"
+    if [[ -n "$latest_stash" ]]; then
+      echo "stashed: ${latest_stash}"
+    else
+      echo "stashed: ${stash_name}"
+    fi
+    echo "恢复指令："
+    echo "  git stash list"
+    echo "  git stash pop stash@{0}"
+  else
+    echo "❌ 工作区不干净（有未提交改动）"
+    echo "   修复：先运行 tools/task.sh 走 ship/stash，或手工处理未提交改动"
+    echo "   或者：ENTER_AUTOSTASH=1 tools/enter.sh"
+    exit 1
+  fi
 fi
 
 echo "✅ 工作区干净，开始同步"
