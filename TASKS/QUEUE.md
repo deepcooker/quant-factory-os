@@ -12,7 +12,8 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
-- [>] TODO Title: 修复 {RUN_ID} 占位符渲染 + 忽略 pytest 缓存确保工作区干净  Picked: run-2026-02-24-run-id-pytest 2026-02-24T22:27:17+0800
+- [x] TODO Title: 修复 {RUN_ID} 占位符渲染 + 忽略 pytest 缓存确保工作区干净  Picked: run-2026-02-24-run-id-pytest 2026-02-24T22:27:17+0800
+  Done: PR #93, RUN_ID=run-2026-02-24-run-id-pytest
   Goal: 将 repo 中用于文档/队列/模板的 `{RUN_ID}` 占位符替换为 `{RUN_ID}`（或转义为 `&lt;RUN_ID&gt;`），避免 Markdown 渲染吞字符；同时把 `.pytest_cache/` 加入 `.gitignore`，避免 doctor/pytest 造成工作区“脏”。
   Scope: `.gitignore`, `TASKS/QUEUE.md`, `TASKS/_TEMPLATE.md`, `docs/WORKFLOW.md`, `tests/`（如需补回归）
   Acceptance:
