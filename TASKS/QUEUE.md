@@ -12,7 +12,8 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
-- [>] TODO Title: 自动生成任务候选清单（plan）并支持确认后领取（pick）  Picked: run-2026-02-25-plan-pick 2026-02-25T00:19:46+0800
+- [x] TODO Title: 自动生成任务候选清单（plan）并支持确认后领取（pick）  Picked: run-2026-02-25-plan-pick 2026-02-25T00:19:46+0800
+  Done: PR #97, RUN_ID=run-2026-02-25-plan-pick
   Goal: 新增非交互式“计划/确认”机制：Codex 根据 repo 证据与当前 QUEUE/STATE 生成 10~20 条候选任务清单供人确认；确认后可一键领取当前队列任务（串行接力），减少人肉写 queue/拼命令。
   Scope: `tools/`, `docs/`, `tests/`, `TASKS/`, `reports/{RUN_ID}/`
   Acceptance:
