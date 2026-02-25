@@ -12,6 +12,14 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [ ] TODO Title: risk guardrail: recurring risk/rollback from decisions
+  Goal: Aggregate recurring risk/rollback signals in recent decisions and add one preventive guardrail task.
+  Scope: `TASKS/STATE.md`, `tests/`, `reports/{RUN_ID}/`
+  Acceptance:
+  - Guardrail task is queue-ready
+  - make verify
+
+
 - [x] TODO Title: 强化 tools/task.sh --plan：Queue 为空时生成 Suggested tasks（可复制入队）  Picked: run-2026-02-25-tools-task-sh-plan-queue-suggested-tasks 2026-02-25T13:15:27+0800
   Done: PR #105, RUN_ID=run-2026-02-25-tools-task-sh-plan-queue-suggested-tasks
   Goal: 当 Queue candidates 为 none 时，--plan 仍应基于 repo 证据（reports/*/decision.md、TASKS/STATE.md、可选 MISTAKES/）生成 10~20 条 Suggested tasks，并输出可直接粘贴的 QUEUE item 片段（含 Title/Goal/Scope/Acceptance 骨架），把“自动拿任务”真正做成单行可用。
