@@ -45,7 +45,9 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - 2) If STATE shows an active RUN_ID, read `reports/{RUN_ID}/summary.md` and
   `reports/{RUN_ID}/decision.md`.
 - 3) (Optional plan) run `tools/task.sh --plan 20` to generate
-  `TASKS/TODO_PROPOSAL.md`, then review candidates and recent decisions.
+  `TASKS/TODO_PROPOSAL.md`, then review candidates, suggested tasks, and recent decisions.
+  If Queue is empty, pick one item from `## Suggested tasks`, paste it into
+  `TASKS/QUEUE.md` as a standard queue block, then use `--next`/`--pick queue-next`.
 - 4) Pick queue-next by running `tools/task.sh --pick queue-next`
   (equivalent to top unfinished queue pick / `--next`).
 - 5) `--next`/`--pick queue-next` now auto-runs evidence creation and prints a
