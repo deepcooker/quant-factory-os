@@ -38,20 +38,23 @@ task_plan_generate() {
     n="20"
   fi
 
-  local queue_file reports_dir proposal_file
+  local queue_file reports_dir proposal_file state_file mistakes_dir
   queue_file="${TASK_PLAN_QUEUE_FILE:-${TASK_BOOTSTRAP_QUEUE_FILE:-TASKS/QUEUE.md}}"
   reports_dir="${TASK_PLAN_REPORTS_DIR:-reports}"
   proposal_file="${TASK_PLAN_OUTPUT_FILE:-TASKS/TODO_PROPOSAL.md}"
+  state_file="${TASK_PLAN_STATE_FILE:-TASKS/STATE.md}"
+  mistakes_dir="${TASK_PLAN_MISTAKES_DIR:-MISTAKES}"
 
   if [[ ! -f "$queue_file" ]]; then
     echo "❌ QUEUE 文件不存在：$queue_file"
     exit 1
   fi
 
-  local queue_tmp decision_tmp
+  local queue_tmp decision_tmp suggestions_tmp
   queue_tmp="$(mktemp)"
   decision_tmp="$(mktemp)"
-  trap 'rm -f "$queue_tmp" "$decision_tmp"' RETURN
+  suggestions_tmp="$(mktemp)"
+  trap 'rm -f "$queue_tmp" "$decision_tmp" "$suggestions_tmp"' RETURN
 
   awk '
     /^- \[ \] / {
@@ -68,6 +71,91 @@ task_plan_generate() {
       | sort -r > "$decision_tmp"
   fi
 
+  : > "$suggestions_tmp"
+  add_suggestion() {
+    local title="$1"
+    local goal="$2"
+    local scope="$3"
+    local acceptance="$4"
+    local exists
+    title="$(echo "$title" | tr '\t' ' ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+    goal="$(echo "$goal" | tr '\t' ' ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+    scope="$(echo "$scope" | tr '\t' ' ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+    acceptance="$(echo "$acceptance" | tr '\t' ' ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+    [[ -z "$title" ]] && return
+    exists="$(awk -F '\t' -v t="$title" '$1==t {print "1"; exit}' "$suggestions_tmp")"
+    if [[ -n "$exists" ]]; then
+      return
+    fi
+    printf '%s\t%s\t%s\t%s\n' "$title" "$goal" "$scope" "$acceptance" >> "$suggestions_tmp"
+  }
+
+  while IFS= read -r decision_path; do
+    [[ -z "$decision_path" ]] && continue
+    local decision_run
+    decision_run="$(basename "$(dirname "$decision_path")")"
+    add_suggestion \
+      "follow-up: close actions from ${decision_run}" \
+      "Review ${decision_path} and convert pending actions into one concrete queue task." \
+      "\`TASKS/QUEUE.md\`, \`reports/{RUN_ID}/\`" \
+      "[ ] Queue item added from recent decision;[ ] make verify"
+
+    if awk 'BEGIN{IGNORECASE=1; found=0} /risk|rollback/ {found=1} END{exit(found?0:1)}' "$decision_path"; then
+      add_suggestion \
+        "risk guardrail: recurring risk/rollback from decisions" \
+        "Aggregate recurring risk/rollback signals in recent decisions and add one preventive guardrail task." \
+        "\`TASKS/STATE.md\`, \`tests/\`, \`reports/{RUN_ID}/\`" \
+        "[ ] Guardrail task is queue-ready;[ ] make verify"
+    fi
+  done < "$decision_tmp"
+
+  if [[ -f "$state_file" ]] && awk 'BEGIN{IGNORECASE=1; found=0} /risk|todo|next|block|pending/ {found=1} END{exit(found?0:1)}' "$state_file"; then
+    add_suggestion \
+      "state cleanup: convert open state risks into queued tasks" \
+      "Extract open risks/todos from ${state_file} and queue the top actionable item." \
+      "\`TASKS/STATE.md\`, \`TASKS/QUEUE.md\`, \`reports/{RUN_ID}/\`" \
+      "[ ] One state-driven task queued;[ ] make verify"
+  fi
+
+  if [[ -d "$mistakes_dir" ]]; then
+    local mistake_count
+    mistake_count="$(find "$mistakes_dir" -maxdepth 1 -type f -name "*.md" | wc -l | tr -d ' ')"
+    if [[ "${mistake_count:-0}" -gt 0 ]]; then
+      add_suggestion \
+        "mistake recurrence: add fix-forward guardrail task" \
+        "Scan ${mistakes_dir}/*.md for recurring failures and queue one preventative task with a test guardrail." \
+        "\`MISTAKES/\`, \`tests/\`, \`TASKS/QUEUE.md\`" \
+        "[ ] Recurring issue converted to actionable queue task;[ ] make verify"
+    fi
+  fi
+
+  # Fallback seeds so `--plan` remains actionable even when queue is empty.
+  add_suggestion \
+    "workflow polish: tighten queue item acceptance wording" \
+    "Normalize one queue item's Acceptance bullets to be testable and deterministic." \
+    "\`TASKS/QUEUE.md\`, \`TASKS/_TEMPLATE.md\`" \
+    "[ ] Acceptance bullets are machine-checkable;[ ] make verify"
+  add_suggestion \
+    "evidence hygiene: add missing verify commands to summaries" \
+    "Backfill missing verify command records in recent run summaries." \
+    "\`reports/{RUN_ID}/summary.md\`, \`reports/{RUN_ID}/decision.md\`" \
+    "[ ] Verify commands recorded;[ ] make verify"
+  add_suggestion \
+    "tests hardening: add regression test for latest workflow change" \
+    "Add one focused regression test around the newest workflow behavior." \
+    "\`tests/\`, \`tools/\`" \
+    "[ ] New regression test fails-before/passes-after;[ ] make verify"
+  add_suggestion \
+    "state snapshot: refresh TASKS/STATE.md with current blockers" \
+    "Refresh current risks/blockers and next-shot ordering in state snapshot." \
+    "\`TASKS/STATE.md\`, \`reports/{RUN_ID}/decision.md\`" \
+    "[ ] State snapshot aligns with latest decisions;[ ] make verify"
+  add_suggestion \
+    "docs sync: align WORKFLOW with current task/ship behavior" \
+    "Update workflow docs to match current task pickup and ship expectations." \
+    "\`docs/WORKFLOW.md\`, \`tests/\`" \
+    "[ ] Docs updated with matching guardrail test;[ ] make verify"
+
   mkdir -p "$(dirname "$proposal_file")"
   {
     echo "# TODO Proposal"
@@ -75,10 +163,11 @@ task_plan_generate() {
     echo "Generated at: $(date -Iseconds)"
     echo
     echo "## Queue candidates"
-    local i=0
+    local i=0 queue_count=0
     while IFS= read -r item; do
       [[ -z "$item" ]] && continue
       i=$((i + 1))
+      queue_count=$((queue_count + 1))
       if [[ "$i" -eq 1 ]]; then
         echo "- id=queue-next (recommended): $item"
       else
@@ -92,6 +181,42 @@ task_plan_generate() {
       echo "- (none)"
     fi
     echo
+
+    echo "## Suggested tasks"
+    local suggest_target suggest_count
+    suggest_target="$n"
+    if [[ "$queue_count" -eq 0 && "$suggest_target" -lt 5 ]]; then
+      suggest_target=5
+    fi
+    suggest_count=0
+    while IFS=$'\t' read -r s_title s_goal s_scope s_acceptance; do
+      [[ -z "$s_title" ]] && continue
+      suggest_count=$((suggest_count + 1))
+      echo "- id=suggested-${suggest_count}"
+      echo "  - [ ] TODO Title: ${s_title}"
+      echo "    Goal: ${s_goal}"
+      echo "    Scope: ${s_scope}"
+      echo "    Acceptance:"
+      IFS=';' read -r -a accept_items <<< "$s_acceptance"
+      local accept_printed=0
+      for accept_item in "${accept_items[@]}"; do
+        accept_item="$(echo "$accept_item" | sed -E 's/^ +| +$//g')"
+        [[ -z "$accept_item" ]] && continue
+        accept_printed=1
+        echo "    - ${accept_item}"
+      done
+      if [[ "$accept_printed" -eq 0 ]]; then
+        echo "    - [ ] make verify"
+      fi
+      if [[ "$suggest_count" -ge "$suggest_target" ]]; then
+        break
+      fi
+    done < "$suggestions_tmp"
+    if [[ "$suggest_count" -eq 0 ]]; then
+      echo "- (none)"
+    fi
+    echo
+
     echo "## Recent decisions"
     i=0
     while IFS= read -r path; do
@@ -108,7 +233,7 @@ task_plan_generate() {
   } > "$proposal_file"
 
   echo "PROPOSAL_FILE: $proposal_file"
-  echo "已生成候选清单（top ${n}）。"
+  echo "已生成候选清单（top ${n}）与 Suggested tasks。"
   echo "下一步：tools/task.sh --pick queue-next"
 }
 
