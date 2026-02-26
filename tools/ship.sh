@@ -74,6 +74,117 @@ wait_for_pr_merged() {
   done
 }
 
+json_escape() {
+  local value="${1:-}"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  value="${value//$'\r'/}"
+  printf "%s" "$value"
+}
+
+ship_state_file=""
+current_ship_step=""
+RETRY_OUTPUT=""
+RETRY_LAST_ERROR=""
+
+write_ship_state() {
+  local step="$1"
+  local last_error="${2:-}"
+  local branch_val commit_val pr_val msg_val
+
+  [[ -n "${run_id:-}" ]] || return 0
+
+  ship_state_file="reports/${run_id}/ship_state.json"
+  mkdir -p "reports/${run_id}"
+
+  branch_val="$(json_escape "${branch:-}")"
+  commit_val="$(json_escape "$(git rev-parse --short HEAD 2>/dev/null || true)")"
+  pr_val="$(json_escape "${pr_url:-}")"
+  msg_val="$(json_escape "${MSG:-}")"
+  last_error="$(json_escape "$last_error")"
+
+  cat > "$ship_state_file" <<EOF
+{"run_id":"${run_id}","branch":"${branch_val}","commit":"${commit_val}","pr_url":"${pr_val}","step":"$(json_escape "$step")","last_error":"${last_error}","msg":"${msg_val}","updated_at":"$(date -Iseconds)"}
+EOF
+}
+
+print_resume_cmd() {
+  if [[ -n "${run_id:-}" ]]; then
+    echo "恢复命令：tools/qf resume RUN_ID=${run_id}"
+  fi
+}
+
+fail_with_resume() {
+  local step="$1"
+  local err="${2:-unknown error}"
+  write_ship_state "$step" "$err"
+  echo "❌ ${step} failed: ${err}" >&2
+  print_resume_cmd >&2
+  exit 1
+}
+
+run_with_retry_capture() {
+  local step="$1"
+  shift
+  local max_attempts="${SHIP_RETRY_MAX:-3}"
+  local delay="${SHIP_RETRY_BASE_SEC:-1}"
+  local attempt=1
+  local rc=0
+  local output=""
+
+  RETRY_OUTPUT=""
+  RETRY_LAST_ERROR=""
+  current_ship_step="$step"
+  while true; do
+    set +e
+    output="$("$@" 2>&1)"
+    rc=$?
+    set -e
+    if [[ "$rc" -eq 0 ]]; then
+      RETRY_OUTPUT="$output"
+      if [[ -n "$output" ]]; then
+        printf "%s\n" "$output"
+      fi
+      write_ship_state "$step" ""
+      return 0
+    fi
+
+    RETRY_LAST_ERROR="$(printf "%s" "$output" | tail -n 3 | tr '\n' ' ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+    write_ship_state "$step" "$RETRY_LAST_ERROR"
+    if [[ "$attempt" -ge "$max_attempts" ]]; then
+      if [[ -n "$output" ]]; then
+        printf "%s\n" "$output" >&2
+      fi
+      return "$rc"
+    fi
+    echo "retry[$attempt/$max_attempts] step=$step rc=$rc: ${RETRY_LAST_ERROR:-unknown}" >&2
+    sleep "$delay"
+    attempt=$((attempt + 1))
+    delay=$((delay * 2))
+  done
+}
+
+cleanup_empty_branch() {
+  local candidate_branch="$1"
+  local base_ref="${2:-origin/main}"
+  local branch_sha base_sha
+
+  [[ -n "$candidate_branch" ]] || return 0
+  if ! git show-ref --verify --quiet "refs/heads/${candidate_branch}"; then
+    return 0
+  fi
+
+  branch_sha="$(git rev-parse "${candidate_branch}" 2>/dev/null || true)"
+  base_sha="$(git rev-parse "${base_ref}" 2>/dev/null || true)"
+  if [[ -z "$branch_sha" || -z "$base_sha" || "$branch_sha" != "$base_sha" ]]; then
+    return 0
+  fi
+
+  git checkout "${orig_branch}" >/dev/null 2>&1 || true
+  git branch -D "${candidate_branch}" >/dev/null 2>&1 || true
+}
+
 
 queue_mark_done_in_queue() {
   local queue_file="$1"
@@ -458,6 +569,7 @@ if git diff --name-only | grep -qx "tools/ship.sh" && [[ "${SHIP_ALLOW_SELF:-0}"
   echo "   1) 要么撤销对 tools/ship.sh 的改动：git restore tools/ship.sh"
   echo "   2) 要么确认这是有意升级 ship 脚本，然后用："
   echo "      SHIP_ALLOW_SELF=1 tools/ship.sh \"$MSG\""
+  cleanup_empty_branch "$branch" "origin/main"
   exit 1
 fi
 
@@ -469,6 +581,11 @@ elif [[ -n "${RUN_ID:-}" ]]; then
 else
   run_id="$(echo "$MSG" | grep -oE 'run-[0-9]{4}-[0-9]{2}-[0-9]{2}-[^ ]+' | head -n1 || true)"
 fi
+
+if [[ -n "$run_id" ]]; then
+  mkdir -p "reports/${run_id}"
+fi
+write_ship_state "branch_prepared" ""
 
 stage_changes() {
   git add -u
@@ -503,30 +620,44 @@ stage_changes
 
 staged_files="$(git diff --cached --name-only || true)"
 if ! run_scope_gate "$staged_files"; then
+  write_ship_state "scope_gate_failed" "scope gate failed"
+  cleanup_empty_branch "$branch" "origin/main"
+  print_resume_cmd
   exit 1
 fi
 
 if ! guard_single_run; then
+  write_ship_state "single_run_guard_failed" "single-run guard failed"
+  cleanup_empty_branch "$branch" "origin/main"
+  print_resume_cmd
   exit 1
 fi
 
 if echo "$staged_files" | grep -qx "project_all_files.txt" \
   && [[ "${SHIP_ALLOW_FILELIST:-0}" != "1" ]]; then
+  write_ship_state "filelist_guard_failed" "project_all_files.txt blocked"
   echo "❌ 检测到本次提交包含 project_all_files.txt。"
   echo "   该文件为本地生成物，默认不纳入 PR。"
   echo "   如需更新，请设置："
   echo "     SHIP_ALLOW_FILELIST=1 tools/ship.sh \"$MSG\""
+  cleanup_empty_branch "$branch" "origin/main"
+  print_resume_cmd
   exit 1
 fi
 
 if git diff --cached --quiet; then
+  write_ship_state "no_changes_staged" "No changes staged"
   echo "No changes staged. Nothing to commit."
   echo "You are on branch: $branch"
+  cleanup_empty_branch "$branch" "origin/main"
   exit 0
 fi
 
 git commit -m "$MSG"
-git push -u origin "$branch"
+write_ship_state "committed" ""
+if ! run_with_retry_capture "push" git push -u origin "$branch"; then
+  fail_with_resume "push" "${RETRY_LAST_ERROR:-git push failed}"
+fi
 
 # --- 中文 PR 描述自动生成 ---
 stat="$(git diff --stat origin/main...HEAD || true)"
@@ -607,7 +738,14 @@ emit_pr_body_excerpt "$run_id" "$PR_BODY_EXCERPT"
 
 
 
-pr_url="$(gh pr create --base main --head "$branch" --title "$MSG" --body "$PR_BODY")"
+if ! run_with_retry_capture "pr_create" gh pr create --base main --head "$branch" --title "$MSG" --body "$PR_BODY"; then
+  fail_with_resume "pr_create" "${RETRY_LAST_ERROR:-gh pr create failed}"
+fi
+pr_url="$(printf "%s\n" "$RETRY_OUTPUT" | awk '/^https:\/\/github\.com\/.*\/pull\/[0-9]+$/ {print; exit}')"
+if [[ -z "$pr_url" ]]; then
+  fail_with_resume "pr_create" "could not parse PR URL from gh output"
+fi
+write_ship_state "pr_created" ""
 echo "PR: $pr_url"
 
 # NEW: auto mark queue done (if a matching [>] Picked: <RUN_ID> exists)
@@ -616,15 +754,21 @@ if [[ "${SHIP_QUEUE_AUTO_MARK_DONE:-1}" == "1" && -n "$run_id" ]]; then
 fi
 
 # enable auto-merge AFTER pushing the queue-done commit (so the PR includes it)
-gh pr merge --auto --squash --delete-branch "$pr_url" || true
+run_with_retry_capture "pr_merge_auto" gh pr merge --auto --squash --delete-branch "$pr_url" || true
 
 
 # 如果 auto-merge 已经合并，就不再重复 merge
-state="$(gh pr view "$pr_url" --json state -q .state)"
+if ! run_with_retry_capture "pr_state" gh pr view "$pr_url" --json state -q .state; then
+  fail_with_resume "pr_state" "${RETRY_LAST_ERROR:-gh pr view failed}"
+fi
+state="$(printf "%s\n" "$RETRY_OUTPUT" | tail -n1 | tr -d '\r')"
 if [[ "$state" != "MERGED" ]]; then
-  gh pr merge --squash --delete-branch "$pr_url" || true
+  if ! run_with_retry_capture "pr_merge" gh pr merge --squash --delete-branch "$pr_url"; then
+    fail_with_resume "pr_merge" "${RETRY_LAST_ERROR:-gh pr merge failed}"
+  fi
 fi
 wait_for_pr_merged "$pr_url"
+write_ship_state "merged" ""
 
 if [[ -n "$PR_BODY_EXCERPT" ]]; then
   printf "%s\n" "$PR_BODY_EXCERPT"
@@ -634,15 +778,22 @@ echo "== 下一枪建议 =="
 echo "如果 QUEUE 还有 [ ]：运行 tools/task.sh --next"
 
 if [[ -n "$(git status --porcelain)" ]]; then
+  write_ship_state "sync_blocked_dirty" "working tree not clean"
   echo "❌ post-ship sync aborted: working tree is not clean."
   echo "   请先处理工作区改动后再同步 main。"
+  print_resume_cmd
   exit 1
 fi
 
-git checkout main
-git pull --rebase origin main
+if ! run_with_retry_capture "sync_checkout_main" git checkout main; then
+  fail_with_resume "sync_checkout_main" "${RETRY_LAST_ERROR:-git checkout main failed}"
+fi
+if ! run_with_retry_capture "sync_pull_main" git pull --rebase origin main; then
+  fail_with_resume "sync_pull_main" "${RETRY_LAST_ERROR:-git pull --rebase origin main failed}"
+fi
 main_sha="$(git rev-parse --short HEAD)"
 origin_sha="$(git rev-parse --short origin/main)"
+write_ship_state "synced" ""
 echo "post-ship synced main@${main_sha} (origin/main@${origin_sha})"
 
 git branch -D "$branch" >/dev/null 2>&1 || true

@@ -44,23 +44,14 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - 1) Read `TASKS/STATE.md` via `tools/view.sh` and treat it as the only current progress baseline.
 - 2) If STATE shows an active RUN_ID, read `reports/{RUN_ID}/summary.md` and
   `reports/{RUN_ID}/decision.md`.
-- 3) (Optional plan) run `tools/task.sh --plan 20` to generate
-  `TASKS/TODO_PROPOSAL.md`, then review candidates, suggested tasks, and recent decisions.
-  If Queue is empty, pick one item from `## Suggested tasks`, paste it into
-  `TASKS/QUEUE.md` as a standard queue block, then use `--next`/`--pick queue-next`.
-- 4) Pick queue-next by running `tools/task.sh --pick queue-next`
-  (equivalent to top unfinished queue pick / `--next`).
-- 5) `--next`/`--pick queue-next` now auto-runs evidence creation and prints a
-  standard next-step checklist; no manual `make evidence` is required after pick.
+- 3) 对外统一入口：先运行 `tools/qf init`（自动 stash 可恢复 + sync main + doctor + onboard）。
+- 4) 运行 `tools/qf plan 20` 生成候选；该命令会复制 proposal 到 `/tmp`（并打印路径）且保持工作区干净。
+- 5) 运行 `tools/qf do queue-next` 领取下一枪（内部确保 plan 前置、自动 evidence）。
 - 6) Expand that item into `TASKS/TASK-*.md` (from template), then run:
   implement minimal diff -> `make verify` -> update reports -> `tools/task.sh` ship.
-- Ship success behavior: `tools/ship.sh` now waits until PR state is `MERGED`,
-  then auto-syncs local `main` to `origin/main` (`checkout main` + `pull --rebase`).
-  For single-user flow, you no longer need a manual `tools/enter.sh` just to
-  refresh local queue/code after ship.
-- If `tools/enter.sh` finds a dirty workspace and you explicitly allow stash,
-  run `ENTER_AUTOSTASH=1 tools/enter.sh`; it will stash (`git stash push -u`)
-  and continue pull/doctor while printing stash recovery commands.
+- Ship failure recovery: `tools/ship.sh` writes `reports/{RUN_ID}/ship_state.json`
+  at key steps. On push/PR/merge/sync failure, run `tools/qf resume RUN_ID=...`.
+- Ship success behavior: after merge, ship auto-syncs local `main` to `origin/main`.
 - 7) On failure, write failure reason, repro, and next step in
   `reports/{RUN_ID}/summary.md` + `reports/{RUN_ID}/decision.md` (and `MISTAKES/`
   or `TASKS/STATE.md` when needed).
