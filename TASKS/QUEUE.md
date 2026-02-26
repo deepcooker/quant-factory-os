@@ -12,7 +12,8 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
-- [ ] TODO Title: tools/qf 三命令收敛：init/plan/do + git 自愈（sync/retry/resume）+ 临时产物隔离
+- [x] TODO Title: tools/qf 三命令收敛：init/plan/do + git 自愈（sync/retry/resume）+ 临时产物隔离  Picked: run-2026-02-26-tools-qf-init-plan-do-git-sync-retry-resume 2026-02-26T16:28:23+0800
+  Done: PR #109, RUN_ID=run-2026-02-26-tools-qf-init-plan-do-git-sync-retry-resume
   Goal: 将 enter/onboard/task/ship 收敛到一个产品级入口 `tools/qf`，固定为三命令 `init/plan/do`，并补齐 git 自愈与临时产物隔离。
   Scope: `tools/`, `tests/`, `docs/WORKFLOW.md`, `TASKS/`, `reports/{RUN_ID}/`
   Acceptance:
