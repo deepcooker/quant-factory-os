@@ -12,7 +12,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
-- [ ] TODO Title: risk guardrail: recurring risk/rollback from decisions
+- [>] TODO Title: risk guardrail: recurring risk/rollback from decisions  Picked: run-2026-02-25-risk-guardrail-recurring-risk-rollback-from-decisions 2026-02-25T19:21:51+0800
   Goal: Aggregate recurring risk/rollback signals in recent decisions and add one preventive guardrail task.
   Scope: `TASKS/STATE.md`, `tests/`, `reports/{RUN_ID}/`
   Acceptance:
