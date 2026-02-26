@@ -12,6 +12,28 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [ ] TODO Title: tools/qf 三命令收敛：init/plan/do + git 自愈（sync/retry/resume）+ 临时产物隔离
+  Goal: 将 enter/onboard/task/ship 收敛到一个产品级入口 `tools/qf`，固定为三命令 `init/plan/do`，并补齐 git 自愈与临时产物隔离。
+  Scope: `tools/`, `tests/`, `docs/WORKFLOW.md`, `TASKS/`, `reports/{RUN_ID}/`
+  Acceptance:
+  - `tools/qf init` 处理 dirty（可恢复 stash）、强制 sync main、执行 doctor/onboard 并输出下一步提示。
+  - `tools/qf plan [N]` 生成候选且不污染工作区；proposal 落在 `/tmp` 或 `reports/{RUN_ID}/` 并打印路径。
+  - `tools/qf do queue-next` 在 plan 前置下自动领取任务并输出 `TASK_FILE`/`RUN_ID`/`EVIDENCE_PATH`。
+  - 关键 git 步骤支持 retry/resume，失败记录写入 `reports/{RUN_ID}/ship_state.json`。
+  - 临时产物隔离后不再污染工作区，`make verify` 全绿。
+
+- [ ] TODO Title: tools/qf 三命令收敛：init/plan/do + git 自愈（sync/retry/resume）+ 临时产物隔离
+  Goal: 将现有 enter/onboard/task/ship 工具收敛为一个产品级入口 tools/qf，提供 3 个稳定命令（init/plan/do）覆盖初始化、任务获取、任务执行；同时补齐 git 自愈（强制 sync main、push/merge 重试、失败记录与 resume），并消除 TODO_PROPOSAL 与 pick-candidate 等临时产物对工作区/guard 的污染。
+  Scope: `tools/`, `tests/`, `docs/WORKFLOW.md`, `TASKS/`, `reports/{RUN_ID}/`
+  Acceptance:
+  - `tools/qf init`：自动处理 dirty（stash + 打印 stash 名与恢复指令），强制 sync main，执行 doctor + onboard，输出下一步提示（plan/do）。
+  - `tools/qf plan [N]`：生成候选清单但不污染 git 工作区（运行后 `git status --porcelain` 为空）；proposal 输出到 `/tmp` 或 `reports/{RUN_ID}/`，并在 stdout 打印路径。
+  - `tools/qf do queue-next`：强制 sync main（考虑 main 变化），必要时自动 stash，确保 plan 前置条件满足，然后执行领取（等价 `tools/task.sh --pick queue-next`），输出 TASK_FILE/RUN_ID/EVIDENCE_PATH 与下一步清单。
+  - git 自愈：对 push/TLS/merge 等关键步骤支持重试；失败时记录断点（branch/commit/pr_url）到 `reports/{RUN_ID}/ship_state.json`，并提供 `tools/qf resume RUN_ID=...` 继续，不生成空分支。
+  - 自动清理/隔离临时产物：`reports/run-*-pick-candidate/` 不再污染工作区（自动删除或迁出到 /tmp）；`TASKS/TODO_PROPOSAL.md` 不再导致 `M`（plan 后自动 restore 或迁出）。
+  - `make verify` 全绿。
+
+
 - [x] TODO Title: risk guardrail: recurring risk/rollback from decisions  Picked: run-2026-02-25-risk-guardrail-recurring-risk-rollback-from-decisions 2026-02-25T19:21:51+0800
   Done: PR #107, RUN_ID=run-2026-02-25-risk-guardrail-recurring-risk-rollback-from-decisions
   Goal: Aggregate recurring risk/rollback signals in recent decisions and add one preventive guardrail task.
