@@ -16,6 +16,7 @@ This document describes the expected workflow for changes in this repository.
   - Input: local repo checkout
   - Output: synced main + doctor checks + onboard summary
   - Note: this is environment preparation only, not readiness pass.
+  - Continuing runs: auto-handoff is executed by default (`QF_INIT_AUTO_HANDOFF=1`).
 - `S1 Handoff`: `tools/qf handoff`
   - Input: `CURRENT_RUN_ID` (or explicit RUN_ID)
   - Output: `reports/{RUN_ID}/handoff.md`
@@ -23,6 +24,7 @@ This document describes the expected workflow for changes in this repository.
 - `S2 Ready gate`: `tools/qf ready`
   - Input: restatement fields (goal/scope/acceptance/steps/stop)
   - Output: `reports/{RUN_ID}/ready.json`
+  - Low-friction mode: fields auto-fill from active task contract by default (`QF_READY_AUTO=1`).
   - Gate: `tools/qf do` must fail without valid `ready.json`.
 - `S3 Execute`: `tools/qf do queue-next`
   - Input: valid ready gate
@@ -78,7 +80,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 
 ## Sync completion criteria (must be true before execution)
 - `tools/qf init` completed successfully.
-- `tools/qf handoff` completed for continuing runs (or explicitly skipped for brand-new run with no prior context).
+- `tools/qf handoff` completed for continuing runs (auto by init unless explicitly disabled).
 - `tools/qf ready` produced `reports/{RUN_ID}/ready.json`.
 - `tools/qf do queue-next` no longer fails on readiness gate.
 
@@ -89,9 +91,10 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - Preferred entrypoint: `tools/qf` (`init/plan/do/resume`).
 - Compatibility wrappers: `tools/enter.sh` and `tools/onboard.sh` forward to `tools/qf`.
 - 1) 运行 `tools/qf init`（自动 stash 可恢复 + sync main + doctor + onboard）。
-- 2) 若为接力会话（`CURRENT_RUN_ID` 已存在），先运行 `tools/qf handoff` 读取上一轮摘要。
+- 2) 若为接力会话（`CURRENT_RUN_ID` 已存在），`tools/qf init` 默认自动执行 `handoff`。
+- 2.1) 如需手动控制，可用：`QF_INIT_AUTO_HANDOFF=0 tools/qf init` 后再手动 `tools/qf handoff`。
 - 3) 按 `SYNC/READ_ORDER.md` 顺序完成阅读与复述。
-- 4) 运行 `tools/qf ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`）。
+- 4) 运行 `tools/qf ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`，默认可自动填充）。
 - 4.1) 在关键决策点执行 `tools/qf snapshot NOTE="..."`，把“本轮结论/下一步”写入仓库证据，避免会话丢失。
 - 5) 运行 `tools/qf plan 20` 生成候选；该命令会复制 proposal 到 `/tmp`（并打印路径）且保持工作区干净。
 - 6) 运行 `tools/qf do queue-next` 领取下一枪（内部确保 ready + plan 前置、自动 evidence）。

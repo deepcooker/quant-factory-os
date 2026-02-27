@@ -1,7 +1,7 @@
 # 最新决策
 
 日期：2026-02-27
-RUN_ID: `run-2026-02-27-p0-sync-state-machine-doc-gates`
+RUN_ID: `run-2026-02-27-p1-qf-low-friction-init-handoff-ready`
 
 ## 决策 1：SYNC 文件名保持英文稳定
 - 结论：`SYNC` 文件名恢复并保持为原英文路径（`README.md`、`READ_ORDER.md` 等）。
@@ -32,3 +32,18 @@ RUN_ID: `run-2026-02-27-p0-sync-state-machine-doc-gates`
 - 结论：流程/规则/工具行为变化必须在同一 RUN 同步更新 owner 文档与 evidence。
 - 原因：若文档滞后，自动化会持续放大偏差。
 - 影响：统一执行真相源，降低后续协作摩擦和返工率。
+
+## 决策 7：init 默认自动 handoff（接力会话）
+- 结论：`tools/qf init` 在存在 `CURRENT_RUN_ID` 时默认自动执行 handoff。
+- 原因：减少重复命令，降低接班摩擦。
+- 影响：接力场景可更快进入 ready 门禁；仍可通过 `QF_INIT_AUTO_HANDOFF=0` 关闭。
+
+## 决策 8：ready 默认自动填充任务复述
+- 结论：`tools/qf ready` 默认从当前任务合同自动填充 goal/scope/acceptance 等字段。
+- 原因：保留门禁同时减少手工输入负担。
+- 影响：同频更顺滑；仍可通过 `QF_READY_AUTO=0` 强制手填。
+
+## 决策 9：handoff 增加推荐下一命令
+- 结论：`tools/qf handoff` 输出中新增 `Recommended Next Command`。
+- 原因：降低“下一步该干什么”的认知成本。
+- 影响：新会话和断线接力都更快进入执行状态。
