@@ -26,6 +26,9 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - The following hard rules are handoff gates and apply to every delivery.
 - Do not store full chat transcripts or raw logs in the repo. Keep them local
   under `chatlogs/` and ensure it is listed in `.gitignore`.
+- For anti-loss fallback, store concise session checkpoints in
+  `reports/{RUN_ID}/conversation.md` via:
+  - `tools/qf snapshot RUN_ID=<run-id> NOTE="decision/next-step summary"`
 - Repo memory is limited to: `docs/` (rules), `TASKS/STATE.md` (current state),
   `reports/{RUN_ID}/decision.md` (key decisions), and `MISTAKES/` (postmortems
   when enabled).
@@ -48,6 +51,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   `reports/{RUN_ID}/decision.md`.
 - 3) 对外统一入口：先运行 `tools/qf init`（自动 stash 可恢复 + sync main + doctor + onboard）。
 - 4) 运行 `tools/qf ready RUN_ID=<run-id>` 完成复述上岗门禁（会写入 `reports/<run-id>/ready.json`）。
+- 4.1) 在关键决策点执行 `tools/qf snapshot RUN_ID=<run-id> NOTE="..."`，把“本轮结论/下一步”写入仓库证据，避免会话丢失。
 - 5) 运行 `tools/qf plan 20` 生成候选；该命令会复制 proposal 到 `/tmp`（并打印路径）且保持工作区干净。
 - 6) 运行 `tools/qf do queue-next` 领取下一枪（内部确保 ready + plan 前置、自动 evidence）。
 - 7) Expand that item into `TASKS/TASK-*.md` (from template), then run:

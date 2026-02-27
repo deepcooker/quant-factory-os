@@ -19,6 +19,7 @@ Usage:
   tools/qf init
   tools/qf onboard RUN_ID
   tools/qf ready RUN_ID=<run-id>
+  tools/qf snapshot RUN_ID=<run-id> NOTE=<text>
   tools/qf plan [N]
   tools/qf do queue-next
   tools/qf resume RUN_ID=<run-id>
@@ -256,6 +257,74 @@ PY
 
   echo "READY_FILE: $ready_file"
   echo "READY_RUN_ID: $run_id"
+}
+
+cmd_snapshot() {
+  local run_id="${RUN_ID:-}"
+  local note="${QF_SNAPSHOT_NOTE:-}"
+  local arg=""
+  local ready_file=""
+  local snapshot_file=""
+  local now_iso=""
+  local branch=""
+  local head=""
+  local status_line=""
+
+  for arg in "$@"; do
+    case "$arg" in
+      RUN_ID=*)
+        run_id="${arg#RUN_ID=}"
+        ;;
+      NOTE=*)
+        note="${arg#NOTE=}"
+        ;;
+      *)
+        if [[ -z "$run_id" ]]; then
+          run_id="$arg"
+        elif [[ -z "$note" ]]; then
+          note="$arg"
+        fi
+        ;;
+    esac
+  done
+
+  if [[ -z "$run_id" ]]; then
+    ready_file="$(resolve_ready_file || true)"
+    if [[ -n "$ready_file" ]]; then
+      run_id="$(basename "$(dirname "$ready_file")")"
+    fi
+  fi
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: snapshot requires RUN_ID=<run-id> (or an existing ready marker)." >&2
+    exit 2
+  fi
+
+  mkdir -p "reports/${run_id}"
+  snapshot_file="reports/${run_id}/conversation.md"
+  now_iso="$(date -Iseconds)"
+  branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")"
+  head="$(git rev-parse --short HEAD 2>/dev/null || echo "none")"
+  if is_dirty; then
+    status_line="dirty"
+  else
+    status_line="clean"
+  fi
+
+  {
+    echo "## ${now_iso}"
+    echo "- branch: \`${branch}\`"
+    echo "- head: \`${head}\`"
+    echo "- working_tree: \`${status_line}\`"
+    if [[ -n "$note" ]]; then
+      echo "- note: ${note}"
+    else
+      echo "- note: (empty)"
+    fi
+    echo
+  } >> "$snapshot_file"
+
+  echo "SNAPSHOT_FILE: $snapshot_file"
+  echo "SNAPSHOT_RUN_ID: $run_id"
 }
 
 ready_file_is_valid() {
@@ -606,6 +675,10 @@ case "$subcmd" in
   ready)
     shift
     cmd_ready "${1:-}"
+    ;;
+  snapshot)
+    shift
+    cmd_snapshot "$@"
     ;;
   plan)
     shift
