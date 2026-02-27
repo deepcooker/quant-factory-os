@@ -15,7 +15,11 @@
 ## 规则
 - 先同频，后执行。
 - `TASKS/STATE.md` 是 `CURRENT_RUN_ID` 的权威来源。
+- `tools/qf init` 只负责环境准备，不等于同频完成。
+- `tools/qf handoff` 只负责接班摘要，不等于门禁通过。
+- `tools/qf ready` 是唯一上岗门禁；没有 `ready.json` 不得执行 `tools/qf do`.
 - 如果 `SYNC/*` 与深层证据冲突，以最新证据为准：
   - `reports/<RUN_ID>/decision.md`
   - `main` 上已合并 PR 状态
+- 流程/规则有变更时，必须同步更新 owner 文档（AGENTS/WORKFLOW/SYNC），否则不允许 ship。
 - 退出前必须更新 `SYNC/SESSION_LATEST.md`。

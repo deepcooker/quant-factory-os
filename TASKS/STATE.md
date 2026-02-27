@@ -1,7 +1,7 @@
 # STATE
 
-CURRENT_RUN_ID: run-2026-02-27-sync-filename-rollback-keep-chinese-content
-CURRENT_TASK_FILE: TASKS/TASK-sync-filename-rollback-keep-chinese-content.md
+CURRENT_RUN_ID: run-2026-02-27-p0-sync-state-machine-doc-gates
+CURRENT_TASK_FILE: TASKS/TASK-p0-sync-state-machine-doc-gates.md
 CURRENT_STATUS: active
 CURRENT_UPDATED_AT: 2026-02-27T00:00:00Z
 

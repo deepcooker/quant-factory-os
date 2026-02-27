@@ -4,6 +4,7 @@
 
 ## 第 0 步：启动
 1. `tools/qf init`
+2. 若 `TASKS/STATE.md` 存在 `CURRENT_RUN_ID`：执行 `tools/qf handoff`
 
 ## 第 1 步：同频层（必须按顺序）
 1. `SYNC/README.md`
@@ -31,3 +32,4 @@
 - Scope（精确路径）
 - 验收（verify/evidence/scope）
 - 下一条命令（只给一条）
+- 门禁文件：`reports/<RUN_ID>/ready.json` 已生成

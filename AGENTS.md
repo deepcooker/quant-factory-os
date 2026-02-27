@@ -72,6 +72,14 @@ If stuck or tests fail:
   - process category: thinking_error / decision_error / execution_error / verification_error / recovery_error / business_error
 - Add/strengthen a test to prevent regression.
 - Treat mistakes as end-to-end process memory, not only business/domain errors.
+- When pausing/stopping a run, record one stop reason in `reports/<RUN_ID>/decision.md`:
+  - task_done
+  - needs_human_decision
+  - infra_network
+  - infra_quota_or_auth
+  - tool_or_script_error
+  - verify_failed
+  - external_blocked
 
 ## 7) PR discipline (Single-user but strict)
 - One task -> one branch -> one PR
@@ -82,17 +90,18 @@ If stuck or tests fail:
 
 ## 8) Session init gate (Mandatory, once per session)
 Before any implementation, you MUST complete init and pass readiness checks:
-1) Run `tools/qf init`
-2) Read, in order:
+1) Run `tools/qf init` (environment prep only; this is NOT readiness pass).
+2) If `CURRENT_RUN_ID` exists, run `tools/qf handoff` (context summary only; this is NOT readiness pass).
+3) Read, in order:
    - `SYNC/READ_ORDER.md`
    - files listed in `SYNC/READ_ORDER.md` (strict order)
-3) Restate and get confirmation before coding:
+4) Restate and get confirmation before coding:
    - Goal (1 sentence)
    - Scope (exact paths)
    - Acceptance (verify/evidence/scope)
    - Execution steps (evidence -> implement -> verify -> reports -> ship)
    - Stop condition (finish and wait)
-4) Record readiness gate:
+5) Record readiness gate:
    - `CURRENT_RUN_ID` source-of-truth is `TASKS/STATE.md`.
    - Run `tools/qf ready` (or `tools/qf ready RUN_ID=<run-id>` for explicit override).
    - `tools/qf do` MUST fail if no valid `reports/<RUN_ID>/ready.json`.
@@ -100,8 +109,7 @@ Before any implementation, you MUST complete init and pass readiness checks:
      `tools/qf snapshot NOTE="decision + next step"` to persist session fallback in repo.
    - `tools/qf do` / `tools/qf resume` must keep execution traces in
      `reports/<RUN_ID>/execution.jsonl` (default redaction on).
-   - On reconnect/new session, run `tools/qf handoff` before continuing.
-5) If restatement is missing or unclear, STOP and do not modify code.
+6) If restatement is missing or unclear, STOP and do not modify code.
 
 ## 9) Governance policy (Default)
 - This repo is PR-driven and local-verify-first.
@@ -110,3 +118,13 @@ Before any implementation, you MUST complete init and pass readiness checks:
 - `.github/workflows/*.yml|*.yaml` is blocked by default in `tools/ship.sh`.
   To allow intentionally for one run:
   - `SHIP_ALLOW_WORKFLOWS=1 tools/ship.sh "<msg>"`
+
+## 10) Documentation freshness gate (Hard rule)
+- Any process/rule/tooling behavior change in this repo MUST update owner docs in the same RUN.
+- Minimum required updates per process change:
+  - `AGENTS.md` (hard rule layer)
+  - `docs/WORKFLOW.md` (execution/state-machine layer)
+  - `SYNC/*` entry docs if startup/order semantics changed
+  - `TASKS/STATE.md` current pointers if active run/task changed
+  - `reports/<RUN_ID>/summary.md` + `reports/<RUN_ID>/decision.md` evidence
+- No doc update, no ship.

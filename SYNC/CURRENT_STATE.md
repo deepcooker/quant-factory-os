@@ -1,7 +1,7 @@
 # 当前状态
 
 最后更新：2026-02-27
-CURRENT_RUN_ID: run-2026-02-27-sync-filename-rollback-keep-chinese-content
+CURRENT_RUN_ID: run-2026-02-27-p0-sync-state-machine-doc-gates
 
 ## 使命快照
 - 构建“同频优先、证据驱动”的智能体操作系统。
@@ -20,9 +20,9 @@ CURRENT_RUN_ID: run-2026-02-27-sync-filename-rollback-keep-chinese-content
 - PR #121：治理收敛 + `CURRENT_RUN_ID` 默认化。
 
 ## 当前主要痛点
-- 同频入口需要同时满足“路径稳定”与“中文可读”。
-- 历史会话可能还在引用中文文件名路径，需逐步自然淘汰。
+- `init / handoff / ready` 在用户感知上仍容易混淆（哪些是准备，哪些是门禁）。
+- 流程规则变更若不同步 owner 文档，会导致“执行和文档脱节”。
 
 ## 下一焦点
-- 保持 `SYNC` 原英文文件名稳定（README/READ_ORDER/...）。
-- 在文件内容中继续使用中文说明，降低沟通摩擦。
+- 固化同频状态机：Environment -> Handoff -> Ready -> Execute -> Ship -> Learn。
+- 把“文档及时更新”升级为硬门禁，形成可审计交付闭环。
