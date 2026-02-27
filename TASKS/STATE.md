@@ -1,9 +1,9 @@
 # STATE
 
-CURRENT_RUN_ID: run-2026-02-27-qf-handoff-session-summary-format
-CURRENT_TASK_FILE: TASKS/TASK-qf-handoff-session-summary-format.md
+CURRENT_RUN_ID: run-2026-02-27-housekeeping-clean-transient-reports
+CURRENT_TASK_FILE: TASKS/TASK-housekeeping-clean-transient-reports.md
 CURRENT_STATUS: active
-CURRENT_UPDATED_AT: 2026-02-27T15:08:25+00:00
+CURRENT_UPDATED_AT: 2026-02-27T23:16:00+08:00
 
 
 
