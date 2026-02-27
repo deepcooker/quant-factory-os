@@ -97,6 +97,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - Preferred entrypoint: `tools/qf` (`init/plan/do/resume`).
 - Compatibility wrappers: `tools/enter.sh` and `tools/onboard.sh` forward to `tools/qf`.
 - 1) 运行 `tools/qf init`（自动 stash 可恢复 + sync main + doctor + onboard）。
+- 1.1) 可选清理历史临时 stash：先预览 `tools/qf stash-clean`，确认后执行 `tools/qf stash-clean apply KEEP=0`。
 - 2) 若为接力会话（`CURRENT_RUN_ID` 已存在），`tools/qf init` 默认自动执行 `handoff`。
 - 2.1) 如需手动控制，可用：`QF_INIT_AUTO_HANDOFF=0 tools/qf init` 后再手动 `tools/qf handoff`。
 - 3) 按 `SYNC/READ_ORDER.md` 顺序完成阅读与复述。

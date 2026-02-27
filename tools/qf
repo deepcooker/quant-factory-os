@@ -26,6 +26,7 @@ Usage:
   tools/qf plan [N]
   tools/qf do queue-next
   tools/qf resume [RUN_ID=<run-id>]
+  tools/qf stash-clean [preview|apply] [KEEP=<n>]
 EOF
 }
 
@@ -1210,6 +1211,117 @@ cmd_do() {
   fi
 }
 
+is_qf_stash_cleanup_candidate() {
+  local subject="${1:-}"
+  case "$subject" in
+    *": ship-wip-"*|*": qf-init-wip-"*|*": resume-cleanup-run-"*|*": tmp-ship-cleanup-"*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+cmd_stash_clean() {
+  local mode="${1:-preview}"
+  local keep_arg="${2:-}"
+  local keep_latest="${QF_STASH_CLEAN_KEEP_LATEST:-2}"
+  local run_id=""
+  local ref=""
+  local subject=""
+  local total=0
+  local drop_count=0
+  local i=0
+  local action=""
+  local command_line=""
+  local -a refs=()
+  local -a subjects=()
+
+  if [[ "$mode" != "preview" && "$mode" != "apply" ]]; then
+    if [[ "$mode" =~ ^KEEP=[0-9]+$ ]]; then
+      keep_arg="$mode"
+      mode="preview"
+    else
+      echo "ERROR: stash-clean mode must be preview or apply." >&2
+      usage
+      exit 2
+    fi
+  fi
+
+  if [[ -n "$keep_arg" ]]; then
+    if [[ "$keep_arg" =~ ^KEEP=([0-9]+)$ ]]; then
+      keep_latest="${BASH_REMATCH[1]}"
+    else
+      echo "ERROR: invalid KEEP argument. expected KEEP=<non-negative-int>." >&2
+      exit 2
+    fi
+  fi
+
+  if [[ ! "$keep_latest" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: keep_latest must be a non-negative integer." >&2
+    exit 2
+  fi
+
+  while IFS='|' read -r ref subject; do
+    [[ -z "$ref" ]] && continue
+    if is_qf_stash_cleanup_candidate "$subject"; then
+      refs+=("$ref")
+      subjects+=("$subject")
+    fi
+  done < <(git stash list --format='%gd|%gs')
+
+  total="${#refs[@]}"
+  if (( total == 0 )); then
+    echo "stash-clean: no qf/ship cleanup stashes found."
+    return 0
+  fi
+
+  if (( total > keep_latest )); then
+    drop_count=$((total - keep_latest))
+  fi
+
+  echo "stash-clean mode=${mode} keep_latest=${keep_latest} candidates=${total} drop=${drop_count}"
+  for ((i=0; i<total; i++)); do
+    action="keep"
+    if (( i >= keep_latest )); then
+      action="drop"
+    fi
+    echo "- [${action}] ${refs[$i]} | ${subjects[$i]}"
+  done
+
+  if [[ "$mode" != "apply" ]]; then
+    echo "next: tools/qf stash-clean apply KEEP=${keep_latest}"
+    return 0
+  fi
+
+  if (( drop_count == 0 )); then
+    echo "stash-clean: nothing to drop."
+    return 0
+  fi
+
+  command_line="tools/qf stash-clean apply KEEP=${keep_latest}"
+  run_id="$(resolve_state_current_run_id || true)"
+
+  # Drop from oldest to newest to avoid stash index shifting issues.
+  for ((i=total-1; i>=keep_latest; i--)); do
+    if git stash drop "${refs[$i]}" >/dev/null 2>&1; then
+      echo "dropped: ${refs[$i]} | ${subjects[$i]}"
+    else
+      echo "ERROR: failed to drop ${refs[$i]}" >&2
+      if [[ -n "$run_id" ]]; then
+        append_execution_event "$run_id" "stash-clean" "stash_clean_failed" "fail" "$command_line" "target=${refs[$i]}" "drop failed"
+      fi
+      exit 1
+    fi
+  done
+
+  if [[ -n "$run_id" ]]; then
+    append_execution_event "$run_id" "stash-clean" "stash_clean_applied" "ok" "$command_line" "drop_count=${drop_count}" ""
+  fi
+  echo "stash-clean done: dropped=${drop_count}"
+}
+
 read_state_field() {
   local file="$1"
   local key="$2"
@@ -1390,6 +1502,10 @@ case "$subcmd" in
   do)
     shift
     cmd_do "${1:-}"
+    ;;
+  stash-clean)
+    shift
+    cmd_stash_clean "${1:-preview}" "${2:-}"
     ;;
   resume)
     shift
