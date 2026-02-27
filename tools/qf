@@ -774,82 +774,122 @@ def read_exec_tail(path: str, n: int) -> list[dict]:
                 continue
     return items[-n:]
 
+def short_text(value: str, max_len: int = 120) -> str:
+    v = (value or "").strip()
+    if len(v) <= max_len:
+        return v
+    return v[:max_len] + "...(truncated)"
+
+def extract_notes(lines: list[str], n: int) -> list[str]:
+    notes = []
+    for line in lines:
+        s = line.strip()
+        if not s:
+            continue
+        if s.startswith("- note:"):
+            notes.append(s[len("- note:"):].strip())
+        elif s.startswith("- "):
+            notes.append(s[2:].strip())
+    out = []
+    for x in notes[-n:]:
+        x = short_text(x, 160)
+        if x:
+            out.append(x)
+    return out
+
 ready = read_ready(ready_file)
 ship = read_ship(ship_file)
 exec_tail = read_exec_tail(exec_file, 8)
 convo_tail = tail_lines(convo_file, 20)
+notes = extract_notes(convo_tail, 3)
 
-next_cmd = "tools/qf ready"
-if ready:
-    if ship and ship.get("last_error"):
-        next_cmd = "tools/qf resume"
-    else:
-        next_cmd = "tools/qf plan 20"
+if not ready:
+    next_cmd = "tools/qf ready"
+elif ship and ship.get("last_error"):
+    next_cmd = "tools/qf resume"
+else:
+    next_cmd = "tools/qf plan 20"
 
 missing = []
 for p in (ready_file, convo_file, exec_file, ship_file):
     if not os.path.exists(p):
         missing.append(p)
 
+latest_event = {}
+if exec_tail:
+    latest_event = exec_tail[-1]
+
+main_lines = []
+if notes:
+    for n in notes:
+        main_lines.append(f"- {n}")
+else:
+    main_lines.append("- missing: conversation.md")
+    if ready:
+        rst = ready.get("restatement", {})
+        if rst.get("goal"):
+            main_lines.append(f"- 目标复述：{short_text(str(rst.get('goal')), 160)}")
+
+conclusion_lines = []
+if ready:
+    rst = ready.get("restatement", {})
+    conclusion_lines.append("- ready 门禁：已通过。")
+    if rst.get("goal"):
+        conclusion_lines.append(f"- 当前目标：{short_text(str(rst.get('goal')), 160)}")
+else:
+    conclusion_lines.append("- ready 门禁：未通过（missing: ready.json）。")
+
+if latest_event:
+    phase = latest_event.get("phase", "")
+    action = latest_event.get("action", "")
+    status = latest_event.get("status", "")
+    artifacts = short_text(str(latest_event.get("artifacts", "")), 120)
+    conclusion_lines.append(f"- 最近执行：{phase}/{action} ({status}) {artifacts}".rstrip())
+elif not os.path.exists(exec_file):
+    conclusion_lines.append("- 执行轨迹：missing: execution.jsonl。")
+
+if ship:
+    step = ship.get("step", "(missing)")
+    pr_url = ship.get("pr_url", "(none)")
+    last_error = ship.get("last_error", "")
+    conclusion_lines.append(f"- 交付状态：step={step}, pr={pr_url}")
+    if last_error:
+        conclusion_lines.append(f"- 交付异常：{short_text(str(last_error), 160)}")
+elif not os.path.exists(ship_file):
+    conclusion_lines.append("- 交付状态：missing: ship_state.json。")
+
+thinking_lines = []
+if any((x.get("status") == "fail") for x in exec_tail):
+    thinking_lines.append("- 最近出现失败事件，建议先 `tools/qf resume` 处理恢复，再继续新任务。")
+elif missing:
+    thinking_lines.append("- 接班信息有缺口；后续在关键决策点执行 `tools/qf snapshot NOTE=\"...\"` 提升连续性。")
+else:
+    thinking_lines.append("- 当前信息链完整，建议保持“短总结 + 证据链接”节奏，避免文档噪音。")
+
 lines = []
-lines.append("# Session Handoff")
+lines.append("# Session 总结")
 lines.append("")
 lines.append(f"RUN_ID: `{run_id}`")
 lines.append(f"Generated At: {datetime.now(timezone.utc).isoformat()}")
 lines.append("")
-lines.append("## Ready Restatement")
-if ready:
-    rst = ready.get("restatement", {})
-    lines.append(f"- goal: {rst.get('goal', '(missing)')}")
-    lines.append(f"- scope: {rst.get('scope', '(missing)')}")
-    lines.append(f"- acceptance: {rst.get('acceptance', '(missing)')}")
-    lines.append(f"- steps: {rst.get('steps', '(missing)')}")
-    lines.append(f"- stop_condition: {rst.get('stop_condition', '(missing)')}")
-else:
-    lines.append("- missing: ready.json")
+lines.append("## 本次沟通主线")
+lines.extend(main_lines)
 lines.append("")
-lines.append("## Recent Conversation Checkpoints")
-if convo_tail:
-    lines.extend(convo_tail)
-else:
-    lines.append("- missing: conversation.md")
+lines.append("## 关键结论")
+lines.extend(conclusion_lines)
 lines.append("")
-lines.append("## Recent Execution Events")
-if exec_tail:
-    for item in exec_tail:
-        ts = item.get("ts", "")
-        phase = item.get("phase", "")
-        action = item.get("action", "")
-        status = item.get("status", "")
-        artifacts = item.get("artifacts", "")
-        lines.append(f"- {ts} | {phase}/{action} | {status} | {artifacts}")
-else:
-    lines.append("- missing: execution.jsonl")
+lines.append("## 少量思考摘要")
+lines.extend(thinking_lines)
 lines.append("")
-lines.append("## Ship State")
-if ship:
-    lines.append(f"- step: {ship.get('step', '(missing)')}")
-    lines.append(f"- pr_url: {ship.get('pr_url', '(none)')}")
-    lines.append(f"- branch: {ship.get('branch', '(missing)')}")
-    lines.append(f"- last_error: {ship.get('last_error', '(none)')}")
-else:
-    lines.append("- missing: ship_state.json")
+lines.append("## 下一步（单条）")
+lines.append(f"- {next_cmd}")
 lines.append("")
-lines.append("## Missing Inputs")
+lines.append("## 缺失输入（可选补齐）")
 if missing:
     for p in missing:
         lines.append(f"- {p}")
 else:
     lines.append("- none")
-lines.append("")
-lines.append("## Recommended Next Command")
-lines.append(f"- {next_cmd}")
-lines.append("")
-lines.append("## Suggested Next Commands")
-lines.append("- tools/qf ready")
-lines.append(f"- tools/qf plan 20")
-lines.append(f"- tools/qf do queue-next")
-lines.append("- tools/qf resume")
 
 with open(out_file, "w", encoding="utf-8") as f:
     f.write("\n".join(lines) + "\n")

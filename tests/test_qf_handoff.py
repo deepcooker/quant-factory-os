@@ -75,10 +75,11 @@ def test_qf_handoff_generates_summary_with_existing_artifacts(tmp_path: Path) ->
     res = run(["bash", "tools/qf", "handoff", f"RUN_ID={run_id}"], cwd=repo)
     assert res.returncode == 0, res.stdout + res.stderr
     handoff = (out_dir / "handoff.md").read_text(encoding="utf-8")
-    assert "Session Handoff" in handoff
-    assert "Recent Execution Events" in handoff
+    assert "Session 总结" in handoff
+    assert "本次沟通主线" in handoff
+    assert "关键结论" in handoff
     assert "do/do_pick_success" in handoff
-    assert "tools/qf ready" in handoff
+    assert "tools/qf plan 20" in handoff
 
 
 def test_qf_handoff_handles_missing_inputs(tmp_path: Path) -> None:
@@ -89,7 +90,7 @@ def test_qf_handoff_handles_missing_inputs(tmp_path: Path) -> None:
     res = run(["bash", "tools/qf", "handoff", f"RUN_ID={run_id}"], cwd=repo)
     assert res.returncode == 0, res.stdout + res.stderr
     handoff = (repo / "reports" / run_id / "handoff.md").read_text(encoding="utf-8")
-    assert "missing: ready.json" in handoff
+    assert "ready 门禁：未通过" in handoff
     assert "missing: execution.jsonl" in handoff
 
 

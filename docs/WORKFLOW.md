@@ -21,6 +21,7 @@ This document describes the expected workflow for changes in this repository.
   - Input: `CURRENT_RUN_ID` (or explicit RUN_ID)
   - Output: `reports/{RUN_ID}/handoff.md`
   - Note: this is context reconstruction only, not readiness pass.
+  - Format: concise session summary (main thread, key conclusions, small reflection, one next command).
 - `S2 Ready gate`: `tools/qf ready`
   - Input: restatement fields (goal/scope/acceptance/steps/stop)
   - Output: `reports/{RUN_ID}/ready.json`
