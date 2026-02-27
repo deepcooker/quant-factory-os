@@ -20,10 +20,11 @@ mkdir -p "$out_dir"
 tmp_runs="$(mktemp)"
 tmp_week="$(mktemp)"
 tmp_mistakes="$(mktemp)"
+tmp_process_mistakes="$(mktemp)"
 tmp_risks="$(mktemp)"
 tmp_suggest="$(mktemp)"
 cleanup() {
-  rm -f "$tmp_runs" "$tmp_week" "$tmp_mistakes" "$tmp_risks" "$tmp_suggest"
+  rm -f "$tmp_runs" "$tmp_week" "$tmp_mistakes" "$tmp_process_mistakes" "$tmp_risks" "$tmp_suggest"
 }
 trap cleanup EXIT
 
@@ -63,6 +64,32 @@ if [[ -d "$mistakes_dir" ]]; then
       done \
     | awk '{count[$0]++} END {for (k in count) printf "%d\t%s\n", count[k], k}' \
     | sort -nr > "$tmp_mistakes"
+fi
+
+# Process mistakes from ship/runtime logs (reports/*/mistake_log.jsonl).
+if [[ -d "$reports_dir" ]]; then
+  find "$reports_dir" -maxdepth 2 -type f -name "mistake_log.jsonl" -exec cat {} + 2>/dev/null \
+    | awk '
+        {
+          cat = ""; step = ""
+          if (match($0, /"category":"[^"]+"/)) {
+            cat = substr($0, RSTART + 12, RLENGTH - 13)
+          }
+          if (match($0, /"step":"[^"]+"/)) {
+            step = substr($0, RSTART + 8, RLENGTH - 9)
+          }
+          if (cat != "" && step != "") {
+            key = cat " / " step
+            count[key]++
+          }
+        }
+        END {
+          for (k in count) {
+            printf "%d\t%s\n", count[k], k
+          }
+        }
+      ' \
+    | sort -nr > "$tmp_process_mistakes"
 fi
 
 # Current risk from STATE.
@@ -118,6 +145,15 @@ fi
     done
   else
     echo "- 无（未检出 MISTAKES 模式）"
+  fi
+  echo
+  echo "## 过程错题（执行/思考）"
+  if [[ -s "$tmp_process_mistakes" ]]; then
+    head -n 5 "$tmp_process_mistakes" | while IFS=$'\t' read -r cnt item; do
+      echo "- ${item} (x${cnt})"
+    done
+  else
+    echo "- 无（未检出 process mistake logs）"
   fi
   echo
   echo "## 当前风险"

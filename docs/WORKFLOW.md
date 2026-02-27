@@ -65,3 +65,6 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - If automation is ever re-enabled, it must be explicitly requested and documented in task acceptance.
 - `tools/ship.sh` hard gate blocks `.github/workflows/*.yml|*.yaml` by default; explicit override required:
   - `SHIP_ALLOW_WORKFLOWS=1 tools/ship.sh "<msg>"`
+- `tools/ship.sh` appends process mistakes to `reports/{RUN_ID}/mistake_log.jsonl` on retries/failures.
+- `tools/observe.sh` summarizes these logs under `过程错题（执行/思考）`.
+- Process mistake template reference: `docs/MISTAKES_TEMPLATE.md`.

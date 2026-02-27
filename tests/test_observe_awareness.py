@@ -29,6 +29,10 @@ def test_awareness_happy_path(tmp_path: Path):
     (tmp_path / "reports" / shipped_run).mkdir(parents=True)
     (tmp_path / "reports" / shipped_run / "decision.md").write_text("# Decision\n", encoding="utf-8")
     (tmp_path / "reports" / shipped_run / "summary.md").write_text("# Summary\n", encoding="utf-8")
+    (tmp_path / "reports" / shipped_run / "mistake_log.jsonl").write_text(
+        '{"ts":"2026-02-27T00:00:00Z","run_id":"run-x","category":"execution_error","step":"pr_merge","source":"retry","error":"merge blocked"}\n',
+        encoding="utf-8",
+    )
 
     (tmp_path / "TASKS").mkdir(parents=True)
     (tmp_path / "TASKS" / "STATE.md").write_text("## Risks\n- backlog drift\n", encoding="utf-8")
@@ -60,6 +64,8 @@ def test_awareness_happy_path(tmp_path: Path):
     assert "backlog drift" in out
     assert "## 下一枪建议" in out
     assert "TASK: improve observer confidence" in out
+    assert "## 过程错题（执行/思考）" in out
+    assert "execution_error / pr_merge" in out
 
 
 def test_awareness_empty_inputs_still_generates(tmp_path: Path):
@@ -76,5 +82,6 @@ def test_awareness_empty_inputs_still_generates(tmp_path: Path):
     out = out_file.read_text(encoding="utf-8")
     assert "## 本周 shipped runs" in out
     assert "## 重复失败模式" in out
+    assert "## 过程错题（执行/思考）" in out
     assert "## 当前风险" in out
     assert "## 下一枪建议" in out

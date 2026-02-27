@@ -62,7 +62,9 @@ If stuck or tests fail:
 - Capture the failing command + minimal logs in reports/<RUN_ID>/summary.md
 - Write MISTAKES/<RUN_ID>.md with:
   - symptom, root cause hypothesis, fix, guardrail test suggestion
+  - process category: thinking_error / decision_error / execution_error / verification_error / recovery_error / business_error
 - Add/strengthen a test to prevent regression.
+- Treat mistakes as end-to-end process memory, not only business/domain errors.
 
 ## 7) PR discipline (Single-user but strict)
 - One task -> one branch -> one PR
