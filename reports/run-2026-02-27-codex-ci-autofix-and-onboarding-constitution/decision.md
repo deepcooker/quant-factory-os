@@ -24,6 +24,8 @@ RUN_ID: `run-2026-02-27-codex-ci-autofix-and-onboarding-constitution`
   - Accepted. Put hard, enforceable operating rules in `AGENTS.md`; keep long-form training/background in `docs/` and `chatlogs/PROJECT_GUIDE.md` referenced by AGENTS init gate.
 - Tool consolidation strategy:
   - Accepted. Keep `tools/qf` as primary agent entrypoint; retain `enter/onboard/start` as backward-compatible wrappers to avoid breaking existing habits/scripts.
+- Session resilience strategy:
+  - Accepted. Add `tools/qf ready` and enforce a readiness marker (`reports/<run-id>/ready.json`) before `tools/qf do`, so sessions can recover deterministically after `/quit`, account switch, or network interruption.
 - Backlog retention strategy:
   - Accepted (owner preference). Keep only active task and active RUN evidence; remove older task/report backlog to reset baseline under new architecture.
 
