@@ -1,9 +1,9 @@
 # STATE
 
-CURRENT_RUN_ID: run-2026-02-27-governance-convergence-sync-priority
-CURRENT_TASK_FILE: TASKS/TASK-governance-convergence-sync-priority.md
+CURRENT_RUN_ID: run-2026-02-27-sync-chinese-entrypoint-naming
+CURRENT_TASK_FILE: TASKS/TASK-sync-chinese-entrypoint-naming.md
 CURRENT_STATUS: active
-CURRENT_UPDATED_AT: 2026-02-27T10:21:05+00:00
+CURRENT_UPDATED_AT: 2026-02-27T00:00:00Z
 
 
 ## Current baseline

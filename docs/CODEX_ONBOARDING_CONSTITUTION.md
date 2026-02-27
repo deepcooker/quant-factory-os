@@ -9,8 +9,8 @@ Purpose: enforce a repeatable, auditable startup gate for every new Codex sessio
 - Confirm working tree is clean before task execution.
 
 2) Mandatory reading (in order)
-- `SYNC/READ_ORDER.md`
-- files listed in `SYNC/READ_ORDER.md` (strict order)
+- `SYNC/01_阅读顺序.md`
+- files listed in `SYNC/01_阅读顺序.md` (strict order)
 - `TASKS/STATE.md`
 - `TASKS/QUEUE.md`
 - `docs/WORKFLOW.md`
