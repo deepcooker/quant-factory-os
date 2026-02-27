@@ -11,6 +11,29 @@ This document describes the expected workflow for changes in this repository.
 - Entity definitions owner: `docs/ENTITIES.md`
 - Strategy/vision owner: `docs/PROJECT_GUIDE.md`
 
+## Session lifecycle state machine (single source)
+- `S0 Environment`: `tools/qf init`
+  - Input: local repo checkout
+  - Output: synced main + doctor checks + onboard summary
+  - Note: this is environment preparation only, not readiness pass.
+- `S1 Handoff`: `tools/qf handoff`
+  - Input: `CURRENT_RUN_ID` (or explicit RUN_ID)
+  - Output: `reports/{RUN_ID}/handoff.md`
+  - Note: this is context reconstruction only, not readiness pass.
+- `S2 Ready gate`: `tools/qf ready`
+  - Input: restatement fields (goal/scope/acceptance/steps/stop)
+  - Output: `reports/{RUN_ID}/ready.json`
+  - Gate: `tools/qf do` must fail without valid `ready.json`.
+- `S3 Execute`: `tools/qf do queue-next`
+  - Input: valid ready gate
+  - Output: task pick + evidence skeleton + execution trace updates
+- `S4 Ship`: `tools/ship.sh` (or `make ship`)
+  - Input: verified diff + in-scope task contract
+  - Output: PR + merge + main sync
+- `S5 Learn`: reports/mistakes updates
+  - Input: execution and verification outcomes
+  - Output: durable memory for next session handoff.
+
 ## Status snapshot rule
 Before each ship, record `/status` output in the evidence for the active RUN_ID.
 
@@ -53,6 +76,12 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   (`summary.md`, `decision.md`, `MISTAKES/`) or in `TASKS/STATE.md`, not in chat.
 - `TASKS/STATE.md` is the source-of-truth for `CURRENT_RUN_ID`.
 
+## Sync completion criteria (must be true before execution)
+- `tools/qf init` completed successfully.
+- `tools/qf handoff` completed for continuing runs (or explicitly skipped for brand-new run with no prior context).
+- `tools/qf ready` produced `reports/{RUN_ID}/ready.json`.
+- `tools/qf do queue-next` no longer fails on readiness gate.
+
 ## Codex session startup checklist
 - Do not rely on chat/session memory; rely only on repo memory:
   `TASKS/STATE.md`, `TASKS/QUEUE.md`, `reports/{RUN_ID}/`.
@@ -60,10 +89,10 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - Preferred entrypoint: `tools/qf` (`init/plan/do/resume`).
 - Compatibility wrappers: `tools/enter.sh` and `tools/onboard.sh` forward to `tools/qf`.
 - 1) 运行 `tools/qf init`（自动 stash 可恢复 + sync main + doctor + onboard）。
-- 2) 按 `SYNC/READ_ORDER.md` 顺序完成阅读与复述。
-- 3) 运行 `tools/qf ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`）。
-- 3.1) 在关键决策点执行 `tools/qf snapshot NOTE="..."`，把“本轮结论/下一步”写入仓库证据，避免会话丢失。
-- 3.2) 若是断线/换号接力，先执行 `tools/qf handoff` 读取上一轮摘要，再继续 `ready -> plan -> do`。
+- 2) 若为接力会话（`CURRENT_RUN_ID` 已存在），先运行 `tools/qf handoff` 读取上一轮摘要。
+- 3) 按 `SYNC/READ_ORDER.md` 顺序完成阅读与复述。
+- 4) 运行 `tools/qf ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`）。
+- 4.1) 在关键决策点执行 `tools/qf snapshot NOTE="..."`，把“本轮结论/下一步”写入仓库证据，避免会话丢失。
 - 5) 运行 `tools/qf plan 20` 生成候选；该命令会复制 proposal 到 `/tmp`（并打印路径）且保持工作区干净。
 - 6) 运行 `tools/qf do queue-next` 领取下一枪（内部确保 ready + plan 前置、自动 evidence）。
 - 7) Expand that item into `TASKS/TASK-*.md` (from template), then run:
@@ -71,9 +100,29 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - Ship failure recovery: `tools/ship.sh` writes `reports/{RUN_ID}/ship_state.json`
   at key steps. On push/PR/merge/sync failure, run `tools/qf resume RUN_ID=...`.
 - Ship success behavior: after merge, ship auto-syncs local `main` to `origin/main`.
-- 7) On failure, write failure reason, repro, and next step in
+- 8) On failure, write failure reason, repro, and next step in
   `reports/{RUN_ID}/summary.md` + `reports/{RUN_ID}/decision.md` (and `MISTAKES/`
   or `TASKS/STATE.md` when needed).
+
+## Pause/stop reason taxonomy (required in decision.md)
+- Use one canonical stop reason when pausing/stopping a run:
+  - `task_done`
+  - `needs_human_decision`
+  - `infra_network`
+  - `infra_quota_or_auth`
+  - `tool_or_script_error`
+  - `verify_failed`
+  - `external_blocked`
+
+## Documentation freshness gate (hard rule)
+- Process/rule/tooling behavior changed in this RUN => update owner docs in this RUN.
+- Minimum documentation set for process changes:
+  - `AGENTS.md`
+  - `docs/WORKFLOW.md`
+  - `SYNC/*` startup docs if order/semantics changed
+  - `TASKS/STATE.md` pointers if run/task context changed
+  - `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+- If documentation is stale, do not ship.
 
 ## Codex governance and automation
 - Session constitution: `docs/CODEX_ONBOARDING_CONSTITUTION.md`

@@ -1,7 +1,7 @@
 # 最新决策
 
 日期：2026-02-27
-RUN_ID: `run-2026-02-27-sync-filename-rollback-keep-chinese-content`
+RUN_ID: `run-2026-02-27-p0-sync-state-machine-doc-gates`
 
 ## 决策 1：SYNC 文件名保持英文稳定
 - 结论：`SYNC` 文件名恢复并保持为原英文路径（`README.md`、`READ_ORDER.md` 等）。
@@ -22,3 +22,13 @@ RUN_ID: `run-2026-02-27-sync-filename-rollback-keep-chinese-content`
 - 结论：财富/量化战略内容不改，仅动治理与同频层。
 - 原因：本轮目标是入口可用性与同频效率，不是业务路线重写。
 - 影响：项目方向稳定，操作体验更清晰。
+
+## 决策 5：同频状态机单一化
+- 结论：统一状态机为 `Environment -> Handoff -> Ready -> Execute -> Ship -> Learn`。
+- 原因：减少 `init/handoff/ready` 语义混淆，提升上手一致性。
+- 影响：同频流程可验证、可审计、可复盘。
+
+## 决策 6：文档更新升级为硬门禁
+- 结论：流程/规则/工具行为变化必须在同一 RUN 同步更新 owner 文档与 evidence。
+- 原因：若文档滞后，自动化会持续放大偏差。
+- 影响：统一执行真相源，降低后续协作摩擦和返工率。
