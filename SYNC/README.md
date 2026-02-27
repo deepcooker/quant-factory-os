@@ -6,11 +6,11 @@
 如果只读一个目录，就先读 `SYNC/`。
 
 ## 建议阅读顺序
-1. `SYNC/01_阅读顺序.md`
-2. `SYNC/02_当前状态.md`
-3. `SYNC/03_本次会话.md`
-4. `SYNC/04_最新决策.md`
-5. `SYNC/05_索引链接.md`
+1. `SYNC/READ_ORDER.md`
+2. `SYNC/CURRENT_STATE.md`
+3. `SYNC/SESSION_LATEST.md`
+4. `SYNC/DECISIONS_LATEST.md`
+5. `SYNC/LINKS.md`
 
 ## 规则
 - 先同频，后执行。
@@ -18,4 +18,4 @@
 - 如果 `SYNC/*` 与深层证据冲突，以最新证据为准：
   - `reports/<RUN_ID>/decision.md`
   - `main` 上已合并 PR 状态
-- 退出前必须更新 `SYNC/03_本次会话.md`。
+- 退出前必须更新 `SYNC/SESSION_LATEST.md`。

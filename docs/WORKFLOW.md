@@ -5,7 +5,7 @@ Standard start
 This document describes the expected workflow for changes in this repository.
 
 ## Document ownership
-- Session entrypoint owner: `SYNC/01_阅读顺序.md`
+- Session entrypoint owner: `SYNC/READ_ORDER.md`
 - Hard rules owner: `AGENTS.md`
 - Execution details owner: `docs/WORKFLOW.md` (this file)
 - Entity definitions owner: `docs/ENTITIES.md`
@@ -56,11 +56,11 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 ## Codex session startup checklist
 - Do not rely on chat/session memory; rely only on repo memory:
   `TASKS/STATE.md`, `TASKS/QUEUE.md`, `reports/{RUN_ID}/`.
-- First read owner entrypoint: `SYNC/01_阅读顺序.md`.
+- First read owner entrypoint: `SYNC/READ_ORDER.md`.
 - Preferred entrypoint: `tools/qf` (`init/plan/do/resume`).
 - Compatibility wrappers: `tools/enter.sh` and `tools/onboard.sh` forward to `tools/qf`.
 - 1) 运行 `tools/qf init`（自动 stash 可恢复 + sync main + doctor + onboard）。
-- 2) 按 `SYNC/01_阅读顺序.md` 顺序完成阅读与复述。
+- 2) 按 `SYNC/READ_ORDER.md` 顺序完成阅读与复述。
 - 3) 运行 `tools/qf ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`）。
 - 3.1) 在关键决策点执行 `tools/qf snapshot NOTE="..."`，把“本轮结论/下一步”写入仓库证据，避免会话丢失。
 - 3.2) 若是断线/换号接力，先执行 `tools/qf handoff` 读取上一轮摘要，再继续 `ready -> plan -> do`。

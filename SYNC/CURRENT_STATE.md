@@ -1,7 +1,7 @@
 # 当前状态
 
 最后更新：2026-02-27
-CURRENT_RUN_ID: run-2026-02-27-sync-chinese-entrypoint-naming
+CURRENT_RUN_ID: run-2026-02-27-sync-filename-rollback-keep-chinese-content
 
 ## 使命快照
 - 构建“同频优先、证据驱动”的智能体操作系统。
@@ -20,9 +20,9 @@ CURRENT_RUN_ID: run-2026-02-27-sync-chinese-entrypoint-naming
 - PR #121：治理收敛 + `CURRENT_RUN_ID` 默认化。
 
 ## 当前主要痛点
-- `SYNC` 文件名与根 `README.md` 易混淆；
-- 需要中文化入口，降低网页端与 CLI 的沟通摩擦。
+- 同频入口需要同时满足“路径稳定”与“中文可读”。
+- 历史会话可能还在引用中文文件名路径，需逐步自然淘汰。
 
 ## 下一焦点
-- 将 `SYNC` 入口文件统一为中文命名；
-- 全仓引用一次性更新，保持同频入口唯一且清晰。
+- 保持 `SYNC` 原英文文件名稳定（README/READ_ORDER/...）。
+- 在文件内容中继续使用中文说明，降低沟通摩擦。

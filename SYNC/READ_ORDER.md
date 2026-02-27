@@ -6,11 +6,11 @@
 1. `tools/qf init`
 
 ## 第 1 步：同频层（必须按顺序）
-1. `SYNC/00_同频入口.md`
-2. `SYNC/02_当前状态.md`
-3. `SYNC/03_本次会话.md`
-4. `SYNC/04_最新决策.md`
-5. `SYNC/05_索引链接.md`
+1. `SYNC/README.md`
+2. `SYNC/CURRENT_STATE.md`
+3. `SYNC/SESSION_LATEST.md`
+4. `SYNC/DECISIONS_LATEST.md`
+5. `SYNC/LINKS.md`
 
 ## 第 2 步：治理核心
 1. `AGENTS.md`

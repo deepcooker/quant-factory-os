@@ -1,7 +1,7 @@
 # STATE
 
-CURRENT_RUN_ID: run-2026-02-27-sync-chinese-entrypoint-naming
-CURRENT_TASK_FILE: TASKS/TASK-sync-chinese-entrypoint-naming.md
+CURRENT_RUN_ID: run-2026-02-27-sync-filename-rollback-keep-chinese-content
+CURRENT_TASK_FILE: TASKS/TASK-sync-filename-rollback-keep-chinese-content.md
 CURRENT_STATUS: active
 CURRENT_UPDATED_AT: 2026-02-27T00:00:00Z
 
