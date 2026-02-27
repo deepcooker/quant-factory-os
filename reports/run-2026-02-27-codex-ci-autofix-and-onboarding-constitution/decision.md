@@ -26,6 +26,8 @@ RUN_ID: `run-2026-02-27-codex-ci-autofix-and-onboarding-constitution`
   - Accepted. Keep `tools/qf` as primary agent entrypoint; retain `enter/onboard/start` as backward-compatible wrappers to avoid breaking existing habits/scripts.
 - Session resilience strategy:
   - Accepted. Add `tools/qf ready` and enforce a readiness marker (`reports/<run-id>/ready.json`) before `tools/qf do`, so sessions can recover deterministically after `/quit`, account switch, or network interruption.
+- Continuous learning update strategy:
+  - Accepted. Introduce `docs/CHANGELOG_KNOWLEDGE.md` + weekly `TASK-knowledge-sync-template.md` and show TTL-based freshness hint in `tools/qf init`.
 - Backlog retention strategy:
   - Accepted (owner preference). Keep only active task and active RUN evidence; remove older task/report backlog to reset baseline under new architecture.
 

@@ -15,6 +15,10 @@ RUN_ID: `run-2026-02-27-codex-ci-autofix-and-onboarding-constitution`
   - `tools/qf do queue-next` now refuses execution unless a valid readiness marker exists.
 - Updated startup tests to assert wrapper/delegation behavior.
 - Added readiness tests in `tests/test_qf_ready_gate.py` for gate failure/success paths.
+- Added canonical knowledge update artifacts:
+  - `docs/CHANGELOG_KNOWLEDGE.md` as repository knowledge changelog.
+  - `TASKS/TASK-knowledge-sync-template.md` as weekly sync task template.
+- Added knowledge TTL hint in `tools/qf init` (`QF_KNOWLEDGE_TTL_DAYS`, default 14 days).
 - Per owner request, removed historical backlog artifacts:
   - Deleted legacy `TASKS/TASK-*.md` files except current active task.
   - Deleted historical `reports/run-*` directories except current active RUN_ID.
@@ -42,6 +46,7 @@ RUN_ID: `run-2026-02-27-codex-ci-autofix-and-onboarding-constitution`
 - `make verify` (after qf entrypoint consolidation: `53 passed in 3.43s`)
 - `make verify` (after backlog cleanup: `53 passed in 3.45s`)
 - `make verify` (after qf ready gate + tests: `55 passed in 3.79s`)
+- `make verify` (after knowledge changelog + TTL hint: `55 passed in 3.69s`)
 
 ## Notes
 - Automation strategy was revised to PR-only local-verify flow per owner preference.
