@@ -1,9 +1,9 @@
 # STATE
 
-CURRENT_RUN_ID: run-2026-02-27-sync-learning-exam-cli-web
-CURRENT_TASK_FILE: TASKS/TASK-sync-learning-exam-cli-web.md
+CURRENT_RUN_ID: run-2026-02-28-sync-exam-assets-followup
+CURRENT_TASK_FILE: TASKS/TASK-sync-exam-assets-followup.md
 CURRENT_STATUS: active
-CURRENT_UPDATED_AT: 2026-02-28T00:08:00+08:00
+CURRENT_UPDATED_AT: 2026-02-28T00:38:00+08:00
 
 
 

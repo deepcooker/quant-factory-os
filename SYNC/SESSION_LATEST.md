@@ -1,7 +1,7 @@
 # Session 总结（Latest）
 
 日期：2026-02-27  
-Current RUN_ID: `run-2026-02-27-sync-learning-exam-cli-web`
+Current RUN_ID: `run-2026-02-28-sync-exam-assets-followup`
 
 ## 本次沟通主线
 - 你强调真正难点是“思想对齐”，不是执行动作本身。
@@ -16,6 +16,7 @@ Current RUN_ID: `run-2026-02-27-sync-learning-exam-cli-web`
   - 自动判定：`tools/sync_exam.py`
 - 评分结果可审计落盘到 `reports/{RUN_ID}/sync_exam_result.json`。
 - 本 RUN 样例评分已通过：`SYNC_EXAM_PASS=true`, `score=100.0`。
+- 已补齐 `SYNC/EXAM_*` 文件落库，避免 ship 白名单导致的遗漏。
 
 ## 少量思考摘要（用于下轮接班）
 - 同频考试本质是“世界模型校准”，不是刷题。

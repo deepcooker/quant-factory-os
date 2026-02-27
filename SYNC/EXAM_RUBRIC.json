@@ -1,0 +1,87 @@
+{
+  "version": "sync_exam_v1",
+  "pass_score": 80,
+  "checks": [
+    {
+      "id": "north_star",
+      "title": "终点一致",
+      "section": "终点一致",
+      "type": "text",
+      "required": true,
+      "weight": 20,
+      "min_len": 40,
+      "keywords": ["自动化", "自我迭代", "涌现智能"],
+      "keyword_mode": "all"
+    },
+    {
+      "id": "stage_alignment",
+      "title": "阶段一致",
+      "section": "阶段一致",
+      "type": "text",
+      "required": true,
+      "weight": 15,
+      "min_len": 30,
+      "keywords": ["当前阶段", "下一阶段", "切换"],
+      "keyword_mode": "any"
+    },
+    {
+      "id": "stop_reason",
+      "title": "上轮停止原因",
+      "section": "上轮停止原因与恢复状态",
+      "type": "text",
+      "required": true,
+      "weight": 15,
+      "min_len": 30,
+      "keywords": [
+        "task_done",
+        "needs_human_decision",
+        "infra_network",
+        "infra_quota_or_auth",
+        "tool_or_script_error",
+        "verify_failed",
+        "external_blocked"
+      ],
+      "keyword_mode": "any"
+    },
+    {
+      "id": "boundary",
+      "title": "边界一致",
+      "section": "边界与非目标",
+      "type": "text",
+      "required": true,
+      "weight": 10,
+      "min_len": 30,
+      "keywords": ["边界", "non-goals", "不做"],
+      "keyword_mode": "any"
+    },
+    {
+      "id": "recent_state",
+      "title": "近况一致",
+      "section": "近况与最近提交",
+      "type": "text",
+      "required": true,
+      "weight": 10,
+      "min_len": 20,
+      "keywords": ["PR", "RUN_ID", "近况"],
+      "keyword_mode": "any"
+    },
+    {
+      "id": "next_command",
+      "title": "下一步单命令",
+      "section": "下一步单命令",
+      "type": "command",
+      "required": true,
+      "weight": 20,
+      "patterns": ["^(tools/|\\./tools/|make )"]
+    },
+    {
+      "id": "rollback_command",
+      "title": "失败回退命令",
+      "section": "失败回退命令",
+      "type": "command",
+      "required": true,
+      "weight": 10,
+      "patterns": ["(tools/qf resume|tools/qf handoff|git stash|git checkout main|git pull --rebase origin main)"]
+    }
+  ]
+}
