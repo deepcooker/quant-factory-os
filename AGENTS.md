@@ -92,6 +92,8 @@ If stuck or tests fail:
 Before any implementation, you MUST complete init and pass readiness checks:
 1) Run `tools/qf init` (environment prep only; this is NOT readiness pass).
 2) If `CURRENT_RUN_ID` exists, run `tools/qf handoff` (context summary only; this is NOT readiness pass).
+   - `tools/qf init` auto-runs this step by default for continuing runs.
+   - To disable auto-handoff for one run: `QF_INIT_AUTO_HANDOFF=0 tools/qf init`
 3) Read, in order:
    - `SYNC/READ_ORDER.md`
    - files listed in `SYNC/READ_ORDER.md` (strict order)
@@ -104,6 +106,8 @@ Before any implementation, you MUST complete init and pass readiness checks:
 5) Record readiness gate:
    - `CURRENT_RUN_ID` source-of-truth is `TASKS/STATE.md`.
    - Run `tools/qf ready` (or `tools/qf ready RUN_ID=<run-id>` for explicit override).
+   - `tools/qf ready` auto-fills restatement from active task contract by default.
+   - To force manual-only input: `QF_READY_AUTO=0 tools/qf ready`
    - `tools/qf do` MUST fail if no valid `reports/<RUN_ID>/ready.json`.
    - At major checkpoints (and before `/quit`), run:
      `tools/qf snapshot NOTE="decision + next step"` to persist session fallback in repo.

@@ -1,7 +1,7 @@
 # 当前状态
 
 最后更新：2026-02-27
-CURRENT_RUN_ID: run-2026-02-27-p0-sync-state-machine-doc-gates
+CURRENT_RUN_ID: run-2026-02-27-p1-qf-low-friction-init-handoff-ready
 
 ## 使命快照
 - 构建“同频优先、证据驱动”的智能体操作系统。
@@ -20,9 +20,9 @@ CURRENT_RUN_ID: run-2026-02-27-p0-sync-state-machine-doc-gates
 - PR #121：治理收敛 + `CURRENT_RUN_ID` 默认化。
 
 ## 当前主要痛点
-- `init / handoff / ready` 在用户感知上仍容易混淆（哪些是准备，哪些是门禁）。
-- 流程规则变更若不同步 owner 文档，会导致“执行和文档脱节”。
+- 同频门禁不能变弱，但操作负担必须更低。
+- 接力会话和新会话需要统一“下一步清晰感”。
 
 ## 下一焦点
-- 固化同频状态机：Environment -> Handoff -> Ready -> Execute -> Ship -> Learn。
-- 把“文档及时更新”升级为硬门禁，形成可审计交付闭环。
+- 在 `init/handoff/ready` 保持严格门禁前提下继续降低摩擦。
+- 下一阶段进入 `P1+`：继续优化提示一致性与恢复体验（不破坏状态机）。

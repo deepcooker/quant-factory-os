@@ -70,3 +70,53 @@ def test_qf_snapshot_appends_conversation_note(tmp_path: Path) -> None:
     content = snapshot.read_text(encoding="utf-8")
     assert "session checkpoint" in content
     assert "working_tree:" in content
+
+
+def test_qf_ready_autofills_from_task_contract(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    (repo / "TASKS").mkdir(parents=True, exist_ok=True)
+    (repo / "TASKS" / "TASK-auto.md").write_text(
+        "\n".join(
+            [
+                "# TASK: auto",
+                "",
+                "RUN_ID: run-current",
+                "",
+                "## Goal",
+                "Keep startup low-friction.",
+                "",
+                "## Scope (Required)",
+                "- `tools/qf`",
+                "- `tests/`",
+                "",
+                "## Acceptance",
+                "- [ ] Command(s) pass: `make verify`",
+                "- [ ] Evidence updated",
+                "",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (repo / "TASKS" / "STATE.md").write_text(
+        "\n".join(
+            [
+                "# STATE",
+                "CURRENT_RUN_ID: run-current",
+                "CURRENT_TASK_FILE: TASKS/TASK-auto.md",
+                "CURRENT_STATUS: active",
+                "",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    res = run(["bash", "tools/qf", "ready"], cwd=repo)
+    assert res.returncode == 0, res.stdout + res.stderr
+    ready = repo / "reports" / "run-current" / "ready.json"
+    assert ready.exists()
+    content = ready.read_text(encoding="utf-8")
+    assert "Keep startup low-friction." in content
+    assert "tools/qf, tests/" in content
+    assert "READY_TASK_FILE: TASKS/TASK-auto.md" in res.stdout

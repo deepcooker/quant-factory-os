@@ -111,3 +111,36 @@ def test_qf_init_prints_handoff_hint_for_recent_run(tmp_path: Path) -> None:
     res = run(["bash", "tools/qf", "init"], cwd=repo, env=env)
     assert res.returncode == 0, res.stdout + res.stderr
     assert "tools/qf handoff RUN_ID=run-prev" in res.stdout
+
+
+def test_qf_init_auto_handoff_for_current_run(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    (repo / "tools" / "doctor.sh").write_text("#!/usr/bin/env bash\nset -euo pipefail\necho doctor-ok\n", encoding="utf-8")
+    os.chmod(repo / "tools" / "doctor.sh", os.stat(repo / "tools" / "doctor.sh").st_mode | stat.S_IXUSR)
+    (repo / "TASKS" / "STATE.md").write_text(
+        "\n".join(
+            [
+                "# STATE",
+                "CURRENT_RUN_ID: run-current",
+                "CURRENT_TASK_FILE: TASKS/TASK-current.md",
+                "CURRENT_STATUS: active",
+                "",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (repo / "TASKS" / "QUEUE.md").write_text("# queue\n", encoding="utf-8")
+    (repo / "reports" / "run-current").mkdir(parents=True, exist_ok=True)
+    (repo / "reports" / "run-current" / "ready.json").write_text('{"restatement_passed": true, "restatement": {}}', encoding="utf-8")
+
+    run(["git", "add", "."], cwd=repo)
+    run(["git", "commit", "-m", "seed"], cwd=repo)
+
+    env = os.environ.copy()
+    env["QF_SKIP_SYNC"] = "1"
+    res = run(["bash", "tools/qf", "init"], cwd=repo, env=env)
+    assert res.returncode == 0, res.stdout + res.stderr
+    assert "AUTO_HANDOFF: tools/qf handoff RUN_ID=run-current" in res.stdout
+    assert "HANDOFF_RUN_ID: run-current" in res.stdout
+    assert (repo / "reports" / "run-current" / "handoff.md").exists()

@@ -414,12 +414,93 @@ cmd_onboard() {
   echo "ONBOARD_FILE: $out_file"
 }
 
-read_or_prompt_field() {
+extract_task_goal_default() {
+  local task_file="$1"
+  if [[ -z "$task_file" || ! -f "$task_file" ]]; then
+    printf ""
+    return 0
+  fi
+  awk '
+    BEGIN { in_goal = 0 }
+    /^##[[:space:]]+Goal/ { in_goal = 1; next }
+    in_goal && /^##[[:space:]]+/ { exit }
+    in_goal {
+      line=$0
+      sub(/\r$/, "", line)
+      if (line ~ /[[:graph:]]/) {
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+        print line
+        exit
+      }
+    }
+  ' "$task_file"
+}
+
+extract_task_scope_default() {
+  local task_file="$1"
+  if [[ -z "$task_file" || ! -f "$task_file" ]]; then
+    printf ""
+    return 0
+  fi
+  awk '
+    BEGIN { in_scope = 0; out = "" }
+    /^##[[:space:]]+Scope/ { in_scope = 1; next }
+    in_scope && /^##[[:space:]]+/ { exit }
+    in_scope && /^[[:space:]]*-[[:space:]]*/ {
+      line=$0
+      sub(/^[[:space:]]*-[[:space:]]*/, "", line)
+      gsub(/`/, "", line)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+      if (line != "") {
+        if (out != "") out = out ", "
+        out = out line
+      }
+    }
+    END {
+      if (out != "") print out
+    }
+  ' "$task_file"
+}
+
+extract_task_acceptance_default() {
+  local task_file="$1"
+  if [[ -z "$task_file" || ! -f "$task_file" ]]; then
+    printf ""
+    return 0
+  fi
+  awk '
+    BEGIN { in_accept = 0; out = "" }
+    /^##[[:space:]]+Acceptance/ { in_accept = 1; next }
+    in_accept && /^##[[:space:]]+/ { exit }
+    in_accept && /^[[:space:]]*-[[:space:]]*/ {
+      line=$0
+      sub(/^[[:space:]]*-[[:space:]]*/, "", line)
+      sub(/^\[[ xX]\][[:space:]]*/, "", line)
+      gsub(/`/, "", line)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+      if (line != "") {
+        if (out != "") out = out "; "
+        out = out line
+      }
+    }
+    END {
+      if (out != "") print out
+    }
+  ' "$task_file"
+}
+
+resolve_ready_field() {
   local env_key="$1"
   local prompt="$2"
+  local default_value="${3:-}"
+  local auto_mode="${QF_READY_AUTO:-1}"
   local value="${!env_key:-}"
   if [[ -n "$value" ]]; then
     printf "%s" "$value"
+    return 0
+  fi
+  if [[ "$auto_mode" == "1" && -n "$default_value" ]]; then
+    printf "%s" "$default_value"
     return 0
   fi
   if [[ -t 0 ]]; then
@@ -437,6 +518,8 @@ cmd_ready() {
   local run_id=""
   local explicit_run_id=""
   local goal scope acceptance steps stop
+  local goal_default scope_default acceptance_default steps_default stop_default
+  local task_file=""
   local ready_file=""
   local py_bin=""
 
@@ -455,11 +538,31 @@ cmd_ready() {
     exit 2
   fi
 
-  goal="$(read_or_prompt_field "QF_READY_GOAL" "Goal (one sentence): ")" || exit 1
-  scope="$(read_or_prompt_field "QF_READY_SCOPE" "Scope (exact paths): ")" || exit 1
-  acceptance="$(read_or_prompt_field "QF_READY_ACCEPTANCE" "Acceptance (verify/evidence/scope): ")" || exit 1
-  steps="$(read_or_prompt_field "QF_READY_STEPS" "Execution steps: ")" || exit 1
-  stop="$(read_or_prompt_field "QF_READY_STOP" "Stop condition: ")" || exit 1
+  task_file="$(state_field_value "CURRENT_TASK_FILE")"
+  goal_default="$(extract_task_goal_default "$task_file")"
+  scope_default="$(extract_task_scope_default "$task_file")"
+  acceptance_default="$(extract_task_acceptance_default "$task_file")"
+  if [[ -z "$goal_default" ]]; then
+    goal_default="Continue ${run_id} with a scoped, minimal, verifiable change."
+  fi
+  if [[ -z "$scope_default" ]]; then
+    if [[ -n "$task_file" ]]; then
+      scope_default="Follow declared scope in ${task_file}"
+    else
+      scope_default="Follow active task scope"
+    fi
+  fi
+  if [[ -z "$acceptance_default" ]]; then
+    acceptance_default="make verify; update reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md; keep scope clean"
+  fi
+  steps_default="evidence -> implement -> verify -> reports -> ship"
+  stop_default="finish and wait for next instruction; if blocked, record stop reason in decision.md"
+
+  goal="$(resolve_ready_field "QF_READY_GOAL" "Goal (one sentence): " "$goal_default")" || exit 1
+  scope="$(resolve_ready_field "QF_READY_SCOPE" "Scope (exact paths): " "$scope_default")" || exit 1
+  acceptance="$(resolve_ready_field "QF_READY_ACCEPTANCE" "Acceptance (verify/evidence/scope): " "$acceptance_default")" || exit 1
+  steps="$(resolve_ready_field "QF_READY_STEPS" "Execution steps: " "$steps_default")" || exit 1
+  stop="$(resolve_ready_field "QF_READY_STOP" "Stop condition: " "$stop_default")" || exit 1
 
   if [[ -z "$goal" || -z "$scope" || -z "$acceptance" || -z "$steps" || -z "$stop" ]]; then
     echo "ERROR: ready fields cannot be empty." >&2
@@ -503,10 +606,13 @@ with open(out, "w", encoding="utf-8") as f:
     f.write("\n")
 PY
 
-  append_execution_event "$run_id" "ready" "ready_passed" "ok" "tools/qf ready" "ready_file=${ready_file}" ""
+  append_execution_event "$run_id" "ready" "ready_passed" "ok" "tools/qf ready" "ready_file=${ready_file};task_file=${task_file}" ""
   update_state_current "$run_id" "$(state_field_value "CURRENT_TASK_FILE")" "active"
   echo "READY_FILE: $ready_file"
   echo "READY_RUN_ID: $run_id"
+  if [[ -n "$task_file" ]]; then
+    echo "READY_TASK_FILE: $task_file"
+  fi
 }
 
 cmd_snapshot() {
@@ -673,6 +779,13 @@ ship = read_ship(ship_file)
 exec_tail = read_exec_tail(exec_file, 8)
 convo_tail = tail_lines(convo_file, 20)
 
+next_cmd = "tools/qf ready"
+if ready:
+    if ship and ship.get("last_error"):
+        next_cmd = "tools/qf resume"
+    else:
+        next_cmd = "tools/qf plan 20"
+
 missing = []
 for p in (ready_file, convo_file, exec_file, ship_file):
     if not os.path.exists(p):
@@ -728,6 +841,9 @@ if missing:
         lines.append(f"- {p}")
 else:
     lines.append("- none")
+lines.append("")
+lines.append("## Recommended Next Command")
+lines.append(f"- {next_cmd}")
 lines.append("")
 lines.append("## Suggested Next Commands")
 lines.append("- tools/qf ready")
@@ -868,6 +984,7 @@ cleanup_pick_candidate_dirs() {
 
 cmd_init() {
   local run_id="${RUN_ID:-run-$(date +%Y-%m-%d)-qf-init}"
+  local init_auto_handoff="${QF_INIT_AUTO_HANDOFF:-1}"
   local knowledge_file="docs/CHANGELOG_KNOWLEDGE.md"
   local knowledge_ttl_days="${QF_KNOWLEDGE_TTL_DAYS:-14}"
   local last_review=""
@@ -876,6 +993,7 @@ cmd_init() {
   local age_days=""
   local latest_handoff_run=""
   local current_run_id=""
+  local handoff_done=0
   local py_bin=""
   cleanup_pick_candidate_dirs
   auto_stash_if_dirty "init"
@@ -933,17 +1051,24 @@ PY
   fi
 
   current_run_id="$(resolve_state_current_run_id || true)"
+  if [[ -n "$current_run_id" && "$init_auto_handoff" == "1" ]]; then
+    echo "AUTO_HANDOFF: tools/qf handoff RUN_ID=${current_run_id}"
+    cmd_handoff "RUN_ID=${current_run_id}"
+    handoff_done=1
+  fi
   echo "INIT_RUN_ID: $run_id"
   append_execution_event "$run_id" "init" "init_completed" "ok" "tools/qf init" "onboard_file=reports/${run_id}/onboard.md" ""
   echo "== 下一步建议 =="
-  if [[ -n "$current_run_id" ]]; then
-    echo "0) tools/qf handoff"
+  if [[ "$handoff_done" -eq 1 ]]; then
+    echo "0) handoff completed for CURRENT_RUN_ID=${current_run_id}"
+  elif [[ -n "$current_run_id" ]]; then
+    echo "0) tools/qf handoff RUN_ID=${current_run_id}"
     echo "CURRENT_RUN_ID: ${current_run_id}"
   elif [[ -n "$latest_handoff_run" ]]; then
     echo "0) tools/qf handoff RUN_ID=${latest_handoff_run}"
   fi
-  echo "1) tools/qf plan 20"
-  echo "2) tools/qf ready"
+  echo "1) tools/qf ready"
+  echo "2) tools/qf plan 20"
   echo "3) tools/qf do queue-next"
 }
 
