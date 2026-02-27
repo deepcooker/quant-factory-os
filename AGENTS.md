@@ -47,7 +47,7 @@ Notes:
 - `tools/enter.sh` and `tools/onboard.sh` are compatibility wrappers.
 
 ## Single source map
-- Session entrypoint owner: `SYNC/READ_ORDER.md`
+- Session entrypoint owner: `SYNC/01_阅读顺序.md`
 - Hard rules owner: `AGENTS.md`
 - Execution workflow owner: `docs/WORKFLOW.md`
 - Entity definitions owner: `docs/ENTITIES.md`
@@ -84,8 +84,8 @@ If stuck or tests fail:
 Before any implementation, you MUST complete init and pass readiness checks:
 1) Run `tools/qf init`
 2) Read, in order:
-   - `SYNC/READ_ORDER.md`
-   - files listed in `SYNC/READ_ORDER.md` (strict order)
+   - `SYNC/01_阅读顺序.md`
+   - files listed in `SYNC/01_阅读顺序.md` (strict order)
 3) Restate and get confirmation before coding:
    - Goal (1 sentence)
    - Scope (exact paths)

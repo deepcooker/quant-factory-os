@@ -17,15 +17,15 @@ PROXY_URL=http://127.0.0.1:7890 ./tools/start.sh
 ```
 
 ## Single source map
-- Session entrypoint owner: `SYNC/READ_ORDER.md`
+- Session entrypoint owner: `SYNC/01_阅读顺序.md`
 - Hard rules owner: `AGENTS.md`
 - Execution workflow owner: `docs/WORKFLOW.md`
 - Entity definitions owner: `docs/ENTITIES.md`
 - Strategy/vision owner: `docs/PROJECT_GUIDE.md`
 
 ## Primary docs
-- `SYNC/README.md`
-- `SYNC/READ_ORDER.md`
+- `SYNC/00_同频入口.md`
+- `SYNC/01_阅读顺序.md`
 - `AGENTS.md`
 - `docs/WORKFLOW.md`
 - `docs/ENTITIES.md`
