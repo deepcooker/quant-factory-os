@@ -14,3 +14,5 @@ def test_start_delegates_to_qf_init():
     start_text = (repo_root / "tools" / "start.sh").read_text(encoding="utf-8")
 
     assert "bash tools/qf init" in start_text
+    assert "START_SESSION_LOG" in start_text
+    assert "chatlogs" in start_text

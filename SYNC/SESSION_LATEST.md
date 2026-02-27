@@ -1,21 +1,23 @@
 # 本次会话
 
 日期：2026-02-27
-Current RUN_ID: `run-2026-02-27-p1-qf-low-friction-init-handoff-ready`
+Current RUN_ID: `run-2026-02-27-p1-local-chatlogs-full-session-transcript`
 
 ## 本轮发生了什么
-- 用户选择进入 `P1`：只优化 `qf init/handoff/ready` 的低摩擦体验，不改 `plan/do`。
-- 目标：降低同频操作负担，让门禁可执行但不增加手工成本。
+- 用户明确要求：完整会话要落本地 `chatlogs/`，不要只看摘要页。
+- 本轮目标：实现本地全量 transcript fallback（不入库），并保持现有治理边界。
 
 ## 本轮输出
-- 已新建任务：`TASKS/TASK-p1-qf-low-friction-init-handoff-ready.md`
-- 已创建 evidence：`reports/run-2026-02-27-p1-qf-low-friction-init-handoff-ready/`
-- 已完成脚本优化：
-  - `tools/qf init`：接力会话默认自动 handoff（可开关）
-  - `tools/qf ready`：默认从任务合同自动填充复述字段（可开关）
-  - `tools/qf handoff`：新增推荐下一条命令
-- 已新增/更新测试并通过：
-  - `make verify` -> `71 passed in 7.22s`
+- 已新建任务：`TASKS/TASK-p1-local-chatlogs-full-session-transcript.md`
+- 已创建 evidence：`reports/run-2026-02-27-p1-local-chatlogs-full-session-transcript/`
+- 已更新启动行为：
+  - `tools/start.sh` 默认记录完整会话到 `chatlogs/session-*.log`
+  - 可用 `START_SESSION_LOG=0` 关闭
+  - 若系统缺少 `script` 命令，会提示并降级为普通启动
+- 已更新文档与测试契约：
+  - `docs/WORKFLOW.md`
+  - `SYNC/README.md`
+  - `tests/test_startup_entrypoints_contract.py`
 
 ## 下一步
-- 更新本 RUN 的 summary/decision 后 ship。
+- 运行 `make verify`，通过后 ship。
