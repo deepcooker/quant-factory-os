@@ -1,23 +1,26 @@
 # Session 总结（Latest）
 
 日期：2026-02-27  
-Current RUN_ID: `run-2026-02-27-qf-handoff-session-summary-format`
+Current RUN_ID: `run-2026-02-27-sync-learning-exam-cli-web`
 
 ## 本次沟通主线
-- 你强调核心痛点是“同频”和“断线后无缝接班”，不是命令数量不够。
-- 我们把治理层收敛为单一入口和固定阅读顺序，目标是 3 分钟内完成接班。
-- 你要求会话必须有本地兜底，避免 `/quit`、账号切换、网络问题导致上下文丢失。
+- 你强调真正难点是“思想对齐”，不是执行动作本身。
+- 要求同频培训兼容 Codex CLI 和网页 GPT，并且必须有专门判定程序。
+- 目标不是做题，而是通过结构化学习掌握项目核心语义与技能。
 
 ## 关键结论
-- `tools/start.sh` 现在默认落本地完整会话到 `chatlogs/session-*.log`（可用 `START_SESSION_LOG=0` 关闭）。
-- `~/.codex/sessions/` 是原始会话事件流；`~/.codex/state_5.sqlite` 是恢复索引，`codex resume --last` 可继续最近会话。
-- 这次你看到的 `Permission denied` 主要是当前受限环境无法写 `~/.codex/tmp/*`，不是会话文件损坏。
-- `tools/qf handoff` 已改为“session总结模板”输出：沟通主线、关键结论、少量思考、下一步单条命令。
+- 新增统一同频考试体系：
+  - `/plan` 题面：`SYNC/EXAM_PLAN_PROMPT.md`
+  - 固定模板：`SYNC/EXAM_ANSWER_TEMPLATE.md`
+  - 评分规则：`SYNC/EXAM_RUBRIC.json`
+  - 自动判定：`tools/sync_exam.py`
+- 评分结果可审计落盘到 `reports/{RUN_ID}/sync_exam_result.json`。
+- 本 RUN 样例评分已通过：`SYNC_EXAM_PASS=true`, `score=100.0`。
 
 ## 少量思考摘要（用于下轮接班）
-- 同频层应该“轻而稳”：给接班者结论和行动，不给过长过程噪音。
-- `SESSION_LATEST` 应定位为“摘要页”；完整过程保留在本地 transcript，不再重复写入治理文档。
-- 任何流程优化都要优先降低你的一线操作摩擦，而不是增加步骤。
+- 同频考试本质是“世界模型校准”，不是刷题。
+- 最核心是：每一步都要解释如何服务终点（自动化 -> 自我迭代 -> 涌现智能）。
+- 有了机器评分，主观争议会显著下降，但 rubric 仍需持续迭代。
 
 ## 下一步（单条）
-- 继续执行：`tools/qf handoff`（默认会生成简版会话总结，可直接给下一会话接班）。
+- 用新流程实战一次：`tools/qf handoff`

@@ -13,6 +13,12 @@
 4. `SYNC/DECISIONS_LATEST.md`
 5. `SYNC/LINKS.md`
 
+## 第 1.5 步：同频考试（新/陌生 agent 必做）
+1. `SYNC/EXAM_PLAN_PROMPT.md`
+2. `SYNC/EXAM_ANSWER_TEMPLATE.md`
+3. `SYNC/EXAM_WORKFLOW.md`
+4. `SYNC/EXAM_RUBRIC.json`
+
 ## 第 2 步：治理核心
 1. `AGENTS.md`
 2. `docs/WORKFLOW.md`

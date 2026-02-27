@@ -1,7 +1,7 @@
 # 最新决策
 
 日期：2026-02-27
-RUN_ID: `run-2026-02-27-p1-qf-low-friction-init-handoff-ready`
+RUN_ID: `run-2026-02-27-sync-learning-exam-cli-web`
 
 ## 决策 1：SYNC 文件名保持英文稳定
 - 结论：`SYNC` 文件名恢复并保持为原英文路径（`README.md`、`READ_ORDER.md` 等）。
@@ -47,3 +47,8 @@ RUN_ID: `run-2026-02-27-p1-qf-low-friction-init-handoff-ready`
 - 结论：`tools/qf handoff` 输出中新增 `Recommended Next Command`。
 - 原因：降低“下一步该干什么”的认知成本。
 - 影响：新会话和断线接力都更快进入执行状态。
+
+## 决策 10：思想同频改为“模板 + 机器评分”门禁
+- 结论：新增同频考试体系（`SYNC/EXAM_*` + `tools/sync_exam.py`），统一 CLI 与网页 GPT 的同频训练与判定。
+- 原因：思想层对齐是核心难点，必须可审计、可复测，不能只靠口头判断。
+- 影响：新/陌生 agent 可通过结构化学习完成上岗；未通过评分不进入执行阶段。
