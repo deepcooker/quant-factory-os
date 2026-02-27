@@ -47,9 +47,10 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - 2) If STATE shows an active RUN_ID, read `reports/{RUN_ID}/summary.md` and
   `reports/{RUN_ID}/decision.md`.
 - 3) 对外统一入口：先运行 `tools/qf init`（自动 stash 可恢复 + sync main + doctor + onboard）。
-- 4) 运行 `tools/qf plan 20` 生成候选；该命令会复制 proposal 到 `/tmp`（并打印路径）且保持工作区干净。
-- 5) 运行 `tools/qf do queue-next` 领取下一枪（内部确保 plan 前置、自动 evidence）。
-- 6) Expand that item into `TASKS/TASK-*.md` (from template), then run:
+- 4) 运行 `tools/qf ready RUN_ID=<run-id>` 完成复述上岗门禁（会写入 `reports/<run-id>/ready.json`）。
+- 5) 运行 `tools/qf plan 20` 生成候选；该命令会复制 proposal 到 `/tmp`（并打印路径）且保持工作区干净。
+- 6) 运行 `tools/qf do queue-next` 领取下一枪（内部确保 ready + plan 前置、自动 evidence）。
+- 7) Expand that item into `TASKS/TASK-*.md` (from template), then run:
   implement minimal diff -> `make verify` -> update reports -> `tools/task.sh` ship.
 - Ship failure recovery: `tools/ship.sh` writes `reports/{RUN_ID}/ship_state.json`
   at key steps. On push/PR/merge/sync failure, run `tools/qf resume RUN_ID=...`.

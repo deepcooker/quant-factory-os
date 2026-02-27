@@ -10,7 +10,11 @@ RUN_ID: `run-2026-02-27-codex-ci-autofix-and-onboarding-constitution`
   - `tools/enter.sh` is now a compatibility wrapper to `tools/qf init` (maps `ENTER_AUTOSTASH` to `QF_AUTOSTASH`).
   - `tools/onboard.sh` is now a compatibility wrapper to `tools/qf onboard`.
   - `tools/start.sh` now runs `tools/qf init` before launching Codex.
+- Added explicit readiness gate:
+  - New command `tools/qf ready RUN_ID=<run-id>` writes `reports/<run-id>/ready.json` with restatement confirmation.
+  - `tools/qf do queue-next` now refuses execution unless a valid readiness marker exists.
 - Updated startup tests to assert wrapper/delegation behavior.
+- Added readiness tests in `tests/test_qf_ready_gate.py` for gate failure/success paths.
 - Per owner request, removed historical backlog artifacts:
   - Deleted legacy `TASKS/TASK-*.md` files except current active task.
   - Deleted historical `reports/run-*` directories except current active RUN_ID.
@@ -37,6 +41,7 @@ RUN_ID: `run-2026-02-27-codex-ci-autofix-and-onboarding-constitution`
 - `make verify` (after AGENTS.md gate update: `53 passed in 3.55s`)
 - `make verify` (after qf entrypoint consolidation: `53 passed in 3.43s`)
 - `make verify` (after backlog cleanup: `53 passed in 3.45s`)
+- `make verify` (after qf ready gate + tests: `55 passed in 3.79s`)
 
 ## Notes
 - Automation strategy was revised to PR-only local-verify flow per owner preference.

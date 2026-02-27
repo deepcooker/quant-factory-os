@@ -18,6 +18,7 @@ usage() {
 Usage:
   tools/qf init
   tools/qf onboard RUN_ID
+  tools/qf ready RUN_ID=<run-id>
   tools/qf plan [N]
   tools/qf do queue-next
   tools/qf resume RUN_ID=<run-id>
@@ -167,6 +168,156 @@ cmd_onboard() {
   echo "ONBOARD_FILE: $out_file"
 }
 
+read_or_prompt_field() {
+  local env_key="$1"
+  local prompt="$2"
+  local value="${!env_key:-}"
+  if [[ -n "$value" ]]; then
+    printf "%s" "$value"
+    return 0
+  fi
+  if [[ -t 0 ]]; then
+    echo -n "$prompt"
+    IFS= read -r value
+    printf "%s" "$value"
+    return 0
+  fi
+  echo "ERROR: missing $env_key and no interactive stdin for prompt: $prompt" >&2
+  return 1
+}
+
+cmd_ready() {
+  local arg="${1:-}"
+  local run_id=""
+  local goal scope acceptance steps stop
+  local ready_file=""
+  local py_bin=""
+
+  if [[ "$arg" =~ ^RUN_ID=.+$ ]]; then
+    run_id="${arg#RUN_ID=}"
+  elif [[ -n "$arg" ]]; then
+    run_id="$arg"
+  elif [[ -n "${RUN_ID:-}" ]]; then
+    run_id="${RUN_ID}"
+  fi
+
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: ready requires RUN_ID. Usage: tools/qf ready RUN_ID=<run-id>" >&2
+    exit 2
+  fi
+
+  goal="$(read_or_prompt_field "QF_READY_GOAL" "Goal (one sentence): ")" || exit 1
+  scope="$(read_or_prompt_field "QF_READY_SCOPE" "Scope (exact paths): ")" || exit 1
+  acceptance="$(read_or_prompt_field "QF_READY_ACCEPTANCE" "Acceptance (verify/evidence/scope): ")" || exit 1
+  steps="$(read_or_prompt_field "QF_READY_STEPS" "Execution steps: ")" || exit 1
+  stop="$(read_or_prompt_field "QF_READY_STOP" "Stop condition: ")" || exit 1
+
+  if [[ -z "$goal" || -z "$scope" || -z "$acceptance" || -z "$steps" || -z "$stop" ]]; then
+    echo "ERROR: ready fields cannot be empty." >&2
+    exit 1
+  fi
+
+  mkdir -p "reports/${run_id}"
+  ready_file="reports/${run_id}/ready.json"
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required to write ready.json" >&2
+    exit 1
+  fi
+
+  "$py_bin" - <<'PY' "$ready_file" "$run_id" "$goal" "$scope" "$acceptance" "$steps" "$stop"
+import json
+import sys
+from datetime import datetime, timezone
+
+out, run_id, goal, scope, acceptance, steps, stop = sys.argv[1:]
+obj = {
+    "run_id": run_id,
+    "created_at_utc": datetime.now(timezone.utc).isoformat(),
+    "constitution_read": True,
+    "workflow_read": True,
+    "restatement_passed": True,
+    "restatement": {
+        "goal": goal,
+        "scope": scope,
+        "acceptance": acceptance,
+        "steps": steps,
+        "stop_condition": stop,
+    },
+}
+with open(out, "w", encoding="utf-8") as f:
+    json.dump(obj, f, ensure_ascii=False, indent=2)
+    f.write("\n")
+PY
+
+  echo "READY_FILE: $ready_file"
+  echo "READY_RUN_ID: $run_id"
+}
+
+ready_file_is_valid() {
+  local ready_file="$1"
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    return 1
+  fi
+  "$py_bin" - <<'PY' "$ready_file"
+import json
+import sys
+
+path = sys.argv[1]
+try:
+    with open(path, "r", encoding="utf-8") as f:
+        obj = json.load(f)
+except Exception:
+    raise SystemExit(1)
+if not obj.get("restatement_passed"):
+    raise SystemExit(1)
+print(path)
+PY
+}
+
+resolve_ready_file() {
+  local ready_file=""
+  if [[ -n "${QF_READY_RUN_ID:-}" ]]; then
+    ready_file="reports/${QF_READY_RUN_ID}/ready.json"
+    if [[ -f "$ready_file" ]] && ready_file_is_valid "$ready_file" >/dev/null 2>&1; then
+      printf "%s" "$ready_file"
+      return 0
+    fi
+    printf ""
+    return 1
+  fi
+
+  ready_file="$(ls -1t reports/run-*/ready.json 2>/dev/null | head -n1 || true)"
+  if [[ -n "$ready_file" ]] && ready_file_is_valid "$ready_file" >/dev/null 2>&1; then
+    printf "%s" "$ready_file"
+    return 0
+  fi
+
+  printf ""
+  return 1
+}
+
+require_ready_gate() {
+  local ready_file=""
+  ready_file="$(resolve_ready_file || true)"
+  if [[ -z "$ready_file" ]]; then
+    echo "ERROR: readiness gate not satisfied." >&2
+    echo "Run: tools/qf ready RUN_ID=<run-id>" >&2
+    echo "Then retry: tools/qf do queue-next" >&2
+    exit 1
+  fi
+  echo "READY_FILE: $ready_file"
+}
+
 sync_main() {
   local run_id="$1"
   if [[ "${QF_SKIP_SYNC:-0}" == "1" ]]; then
@@ -201,9 +352,11 @@ cmd_init() {
   sync_main "$run_id"
   bash tools/doctor.sh
   cmd_onboard "$run_id"
+  echo "INIT_RUN_ID: $run_id"
   echo "== 下一步建议 =="
   echo "1) tools/qf plan 20"
-  echo "2) tools/qf do queue-next"
+  echo "2) tools/qf ready RUN_ID=$run_id"
+  echo "3) tools/qf do queue-next"
 }
 
 cmd_plan() {
@@ -251,6 +404,7 @@ cmd_do() {
   fi
 
   cleanup_pick_candidate_dirs
+  require_ready_gate
   auto_stash_if_dirty "do"
   sync_main "$run_id"
 
@@ -424,6 +578,10 @@ case "$subcmd" in
   onboard)
     shift
     cmd_onboard "${1:-}"
+    ;;
+  ready)
+    shift
+    cmd_ready "${1:-}"
     ;;
   plan)
     shift

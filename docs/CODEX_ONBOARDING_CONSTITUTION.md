@@ -26,6 +26,7 @@ Purpose: enforce a repeatable, auditable startup gate for every new Codex sessio
 - Operator can explain Task/PR/RUN_ID/Evidence relations.
 - Operator can run one safe dry cycle:
   - `tools/qf init`
+  - `tools/qf ready RUN_ID=<run-id>`
   - `tools/qf plan 20`
   - `tools/qf do queue-next`
 - Operator can explain failure protocol and `MISTAKES/<RUN_ID>.md`.

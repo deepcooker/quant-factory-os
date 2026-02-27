@@ -88,7 +88,10 @@ Before any implementation, you MUST complete init and pass readiness checks:
    - Acceptance (verify/evidence/scope)
    - Execution steps (evidence -> implement -> verify -> reports -> ship)
    - Stop condition (finish and wait)
-4) If restatement is missing or unclear, STOP and do not modify code.
+4) Record readiness gate:
+   - Run `tools/qf ready RUN_ID=<run-id>` (interactive or via `QF_READY_*` envs).
+   - `tools/qf do` MUST fail if no valid `reports/<RUN_ID>/ready.json`.
+5) If restatement is missing or unclear, STOP and do not modify code.
 
 ## 9) Governance policy (Default)
 - This repo is PR-driven and local-verify-first.
