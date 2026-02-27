@@ -20,6 +20,7 @@ Usage:
   tools/qf onboard RUN_ID
   tools/qf ready RUN_ID=<run-id>
   tools/qf snapshot RUN_ID=<run-id> NOTE=<text>
+  tools/qf handoff RUN_ID=<run-id>
   tools/qf plan [N]
   tools/qf do queue-next
   tools/qf resume RUN_ID=<run-id>
@@ -38,6 +39,72 @@ print_resume_cmd() {
   if [[ -n "$run_id" ]]; then
     echo "恢复命令：tools/qf resume RUN_ID=${run_id}"
   fi
+}
+
+json_escape() {
+  local value="${1:-}"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  value="${value//$'\r'/}"
+  printf "%s" "$value"
+}
+
+redact_text() {
+  local value="${1:-}"
+  if [[ "${QF_LOG_REDACT:-1}" != "1" ]]; then
+    printf "%s" "$value"
+    return 0
+  fi
+  printf "%s" "$value" | sed -E \
+    -e 's/(token|password|passwd|secret|api[_-]?key)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=<redacted>/Ig' \
+    -e 's/(Authorization:[[:space:]]*Bearer)[[:space:]]+[A-Za-z0-9._-]+/\1 <redacted>/Ig' \
+    -e 's/\b(ghp_[A-Za-z0-9]+)\b/<redacted>/g' \
+    -e 's/\b(sk-[A-Za-z0-9]+)\b/<redacted>/g'
+}
+
+append_execution_event() {
+  local run_id="$1"
+  local phase="$2"
+  local action="$3"
+  local status="$4"
+  local command="${5:-}"
+  local artifacts="${6:-}"
+  local error="${7:-}"
+  local file=""
+  local command_r=""
+  local artifacts_r=""
+  local error_r=""
+  local max_len="${QF_LOG_MAX_LEN:-200}"
+
+  if [[ -z "$run_id" || "${QF_LOG_DISABLE:-0}" == "1" ]]; then
+    return 0
+  fi
+
+  command_r="$(redact_text "$command")"
+  artifacts_r="$(redact_text "$artifacts")"
+  error_r="$(redact_text "$error")"
+  if [[ "${#command_r}" -gt "$max_len" ]]; then
+    command_r="${command_r:0:${max_len}}...(truncated)"
+  fi
+  if [[ "${#artifacts_r}" -gt "$max_len" ]]; then
+    artifacts_r="${artifacts_r:0:${max_len}}...(truncated)"
+  fi
+  if [[ "${#error_r}" -gt "$max_len" ]]; then
+    error_r="${error_r:0:${max_len}}...(truncated)"
+  fi
+
+  file="reports/${run_id}/execution.jsonl"
+  mkdir -p "reports/${run_id}"
+  printf '{"ts":"%s","run_id":"%s","phase":"%s","action":"%s","status":"%s","command":"%s","artifacts":"%s","error":"%s"}\n' \
+    "$(date -Iseconds)" \
+    "$(json_escape "$run_id")" \
+    "$(json_escape "$phase")" \
+    "$(json_escape "$action")" \
+    "$(json_escape "$status")" \
+    "$(json_escape "$command_r")" \
+    "$(json_escape "$artifacts_r")" \
+    "$(json_escape "$error_r")" >> "$file"
 }
 
 run_with_retry_capture() {
@@ -117,7 +184,7 @@ cmd_onboard() {
 
   mkdir -p "$out_dir"
   tmp_recent="$(mktemp)"
-  trap 'rm -f "$tmp_recent"' RETURN
+  trap 'rm -f "${tmp_recent:-}"' RETURN
 
   # shellcheck disable=SC2086
   ls -1t ${decisions_glob} 2>/dev/null | head -n "${recent_limit}" > "$tmp_recent" || true
@@ -255,6 +322,7 @@ with open(out, "w", encoding="utf-8") as f:
     f.write("\n")
 PY
 
+  append_execution_event "$run_id" "ready" "ready_passed" "ok" "tools/qf ready" "ready_file=${ready_file}" ""
   echo "READY_FILE: $ready_file"
   echo "READY_RUN_ID: $run_id"
 }
@@ -325,6 +393,175 @@ cmd_snapshot() {
 
   echo "SNAPSHOT_FILE: $snapshot_file"
   echo "SNAPSHOT_RUN_ID: $run_id"
+}
+
+cmd_handoff() {
+  local arg="${1:-}"
+  local run_id=""
+  local ready_file=""
+  local convo_file=""
+  local exec_file=""
+  local ship_file=""
+  local out_file=""
+  local py_bin=""
+
+  if [[ "$arg" =~ ^RUN_ID=.+$ ]]; then
+    run_id="${arg#RUN_ID=}"
+  elif [[ -n "$arg" ]]; then
+    run_id="$arg"
+  elif [[ -n "${RUN_ID:-}" ]]; then
+    run_id="${RUN_ID}"
+  fi
+
+  if [[ -z "$run_id" ]]; then
+    ready_file="$(resolve_ready_file || true)"
+    if [[ -n "$ready_file" ]]; then
+      run_id="$(basename "$(dirname "$ready_file")")"
+    fi
+  fi
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: handoff requires RUN_ID=<run-id> (or an existing ready marker)." >&2
+    exit 2
+  fi
+
+  ready_file="reports/${run_id}/ready.json"
+  convo_file="reports/${run_id}/conversation.md"
+  exec_file="reports/${run_id}/execution.jsonl"
+  ship_file="reports/${run_id}/ship_state.json"
+  out_file="reports/${run_id}/handoff.md"
+  mkdir -p "reports/${run_id}"
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required to generate handoff.md" >&2
+    exit 1
+  fi
+
+  "$py_bin" - <<'PY' "$run_id" "$ready_file" "$convo_file" "$exec_file" "$ship_file" "$out_file"
+import json
+import os
+import sys
+from datetime import datetime, timezone
+
+run_id, ready_file, convo_file, exec_file, ship_file, out_file = sys.argv[1:]
+
+def tail_lines(path: str, n: int) -> list[str]:
+    if not os.path.exists(path):
+        return []
+    with open(path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    return [x.rstrip("\n") for x in lines[-n:]]
+
+def read_ready(path: str) -> dict:
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def read_ship(path: str) -> dict:
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def read_exec_tail(path: str, n: int) -> list[dict]:
+    if not os.path.exists(path):
+        return []
+    items = []
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                items.append(json.loads(line))
+            except Exception:
+                continue
+    return items[-n:]
+
+ready = read_ready(ready_file)
+ship = read_ship(ship_file)
+exec_tail = read_exec_tail(exec_file, 8)
+convo_tail = tail_lines(convo_file, 20)
+
+missing = []
+for p in (ready_file, convo_file, exec_file, ship_file):
+    if not os.path.exists(p):
+        missing.append(p)
+
+lines = []
+lines.append("# Session Handoff")
+lines.append("")
+lines.append(f"RUN_ID: `{run_id}`")
+lines.append(f"Generated At: {datetime.now(timezone.utc).isoformat()}")
+lines.append("")
+lines.append("## Ready Restatement")
+if ready:
+    rst = ready.get("restatement", {})
+    lines.append(f"- goal: {rst.get('goal', '(missing)')}")
+    lines.append(f"- scope: {rst.get('scope', '(missing)')}")
+    lines.append(f"- acceptance: {rst.get('acceptance', '(missing)')}")
+    lines.append(f"- steps: {rst.get('steps', '(missing)')}")
+    lines.append(f"- stop_condition: {rst.get('stop_condition', '(missing)')}")
+else:
+    lines.append("- missing: ready.json")
+lines.append("")
+lines.append("## Recent Conversation Checkpoints")
+if convo_tail:
+    lines.extend(convo_tail)
+else:
+    lines.append("- missing: conversation.md")
+lines.append("")
+lines.append("## Recent Execution Events")
+if exec_tail:
+    for item in exec_tail:
+        ts = item.get("ts", "")
+        phase = item.get("phase", "")
+        action = item.get("action", "")
+        status = item.get("status", "")
+        artifacts = item.get("artifacts", "")
+        lines.append(f"- {ts} | {phase}/{action} | {status} | {artifacts}")
+else:
+    lines.append("- missing: execution.jsonl")
+lines.append("")
+lines.append("## Ship State")
+if ship:
+    lines.append(f"- step: {ship.get('step', '(missing)')}")
+    lines.append(f"- pr_url: {ship.get('pr_url', '(none)')}")
+    lines.append(f"- branch: {ship.get('branch', '(missing)')}")
+    lines.append(f"- last_error: {ship.get('last_error', '(none)')}")
+else:
+    lines.append("- missing: ship_state.json")
+lines.append("")
+lines.append("## Missing Inputs")
+if missing:
+    for p in missing:
+        lines.append(f"- {p}")
+else:
+    lines.append("- none")
+lines.append("")
+lines.append("## Suggested Next Commands")
+lines.append(f"- tools/qf ready RUN_ID={run_id}")
+lines.append(f"- tools/qf plan 20")
+lines.append(f"- tools/qf do queue-next")
+lines.append(f"- tools/qf resume RUN_ID={run_id}")
+
+with open(out_file, "w", encoding="utf-8") as f:
+    f.write("\n".join(lines) + "\n")
+PY
+
+  append_execution_event "$run_id" "handoff" "handoff_generated" "ok" "tools/qf handoff RUN_ID=${run_id}" "handoff_file=${out_file}" ""
+  echo "HANDOFF_FILE: $out_file"
+  echo "HANDOFF_RUN_ID: $run_id"
 }
 
 ready_file_is_valid() {
@@ -422,6 +659,8 @@ cmd_init() {
   local now_epoch=""
   local reviewed_epoch=""
   local age_days=""
+  local latest_handoff_run=""
+  local py_bin=""
   cleanup_pick_candidate_dirs
   auto_stash_if_dirty "init"
   sync_main "$run_id"
@@ -445,8 +684,44 @@ cmd_init() {
   else
     echo "⚠️ Missing ${knowledge_file}; recommend creating weekly knowledge-sync task."
   fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+  if [[ -n "$py_bin" ]]; then
+    latest_handoff_run="$("$py_bin" - <<'PY'
+from pathlib import Path
+root = Path("reports")
+if not root.exists():
+    raise SystemExit(0)
+cands = []
+for d in root.glob("run-*"):
+    if not d.is_dir():
+        continue
+    hits = [d / "execution.jsonl", d / "conversation.md", d / "ship_state.json"]
+    mt = 0.0
+    ok = False
+    for p in hits:
+        if p.exists():
+            ok = True
+            mt = max(mt, p.stat().st_mtime)
+    if ok:
+        cands.append((mt, d.name))
+if cands:
+    cands.sort(reverse=True)
+    print(cands[0][1])
+PY
+)"
+  fi
+
   echo "INIT_RUN_ID: $run_id"
+  append_execution_event "$run_id" "init" "init_completed" "ok" "tools/qf init" "onboard_file=reports/${run_id}/onboard.md" ""
   echo "== 下一步建议 =="
+  if [[ -n "$latest_handoff_run" ]]; then
+    echo "0) tools/qf handoff RUN_ID=${latest_handoff_run}"
+  fi
   echo "1) tools/qf plan 20"
   echo "2) tools/qf ready RUN_ID=$run_id"
   echo "3) tools/qf do queue-next"
@@ -489,6 +764,7 @@ cmd_do() {
   local task_file=""
   local task_run_id=""
   local evidence_path=""
+  local ready_file=""
 
   if [[ "$target" != "queue-next" ]]; then
     echo "ERROR: only 'queue-next' is supported."
@@ -498,11 +774,17 @@ cmd_do() {
 
   cleanup_pick_candidate_dirs
   require_ready_gate
+  ready_file="$(resolve_ready_file || true)"
+  if [[ -n "$ready_file" ]]; then
+    run_id="$(basename "$(dirname "$ready_file")")"
+  fi
   auto_stash_if_dirty "do"
+  append_execution_event "$run_id" "do" "do_start" "ok" "tools/qf do queue-next" "" ""
   sync_main "$run_id"
 
   if [[ ! -f "$proposal_file" ]]; then
     echo "proposal missing; generating with tools/qf plan 20"
+    append_execution_event "$run_id" "do" "do_autoplan" "ok" "tools/qf plan 20" "" ""
     cmd_plan "20"
   fi
 
@@ -512,6 +794,7 @@ cmd_do() {
   set -e
   if [[ "$rc" -ne 0 ]]; then
     printf "%s\n" "$output" >&2
+    append_execution_event "$run_id" "do" "do_pick_failed" "fail" "bash tools/task.sh --pick queue-next" "" "$output"
     print_resume_cmd "$run_id"
     exit "$rc"
   fi
@@ -528,6 +811,11 @@ cmd_do() {
   fi
   if [[ -n "$evidence_path" ]]; then
     echo "EVIDENCE_PATH: $evidence_path"
+  fi
+  if [[ -n "$task_run_id" ]]; then
+    append_execution_event "$task_run_id" "do" "do_pick_success" "ok" "bash tools/task.sh --pick queue-next" "task_file=${task_file};evidence=${evidence_path}" ""
+  else
+    append_execution_event "$run_id" "do" "do_pick_success" "ok" "bash tools/task.sh --pick queue-next" "task_file=${task_file};evidence=${evidence_path}" ""
   fi
 }
 
@@ -578,10 +866,13 @@ cmd_resume() {
 
   state_file="reports/${run_id}/ship_state.json"
   if [[ ! -f "$state_file" ]]; then
+    append_execution_event "$run_id" "resume" "resume_missing_state" "fail" "tools/qf resume RUN_ID=${run_id}" "state_file=${state_file}" "missing state file"
     echo "ERROR: missing state file: $state_file"
     print_resume_cmd "$run_id"
     exit 1
   fi
+
+  append_execution_event "$run_id" "resume" "resume_start" "ok" "tools/qf resume RUN_ID=${run_id}" "state_file=${state_file}" ""
 
   step="$(read_state_field "$state_file" "step")"
   branch="$(read_state_field "$state_file" "branch")"
@@ -599,23 +890,27 @@ cmd_resume() {
   fi
 
   run_with_retry_capture "resume_fetch" git fetch origin || {
+    append_execution_event "$run_id" "resume" "resume_fetch_failed" "fail" "git fetch origin" "" "${RETRY_LAST_ERROR:-fetch failed}"
     print_resume_cmd "$run_id"
     exit 1
   }
 
   if git show-ref --verify --quiet "refs/heads/${branch}"; then
     run_with_retry_capture "resume_checkout_branch" git checkout "$branch" || {
+      append_execution_event "$run_id" "resume" "resume_checkout_failed" "fail" "git checkout $branch" "" "${RETRY_LAST_ERROR:-checkout failed}"
       print_resume_cmd "$run_id"
       exit 1
     }
   else
     run_with_retry_capture "resume_checkout_branch" git checkout -b "$branch" "origin/$branch" || {
+      append_execution_event "$run_id" "resume" "resume_checkout_failed" "fail" "git checkout -b $branch origin/$branch" "" "${RETRY_LAST_ERROR:-checkout failed}"
       print_resume_cmd "$run_id"
       exit 1
     }
   fi
 
   run_with_retry_capture "resume_push" git push -u origin "$branch" || {
+    append_execution_event "$run_id" "resume" "resume_push_failed" "fail" "git push -u origin $branch" "" "${RETRY_LAST_ERROR:-push failed}"
     print_resume_cmd "$run_id"
     exit 1
   }
@@ -626,6 +921,7 @@ cmd_resume() {
       pr_body="$(cat "reports/${run_id}/pr_body_excerpt.md")"
     fi
     run_with_retry_capture "resume_pr_create" gh pr create --base main --head "$branch" --title "$msg" --body "$pr_body" || {
+      append_execution_event "$run_id" "resume" "resume_pr_create_failed" "fail" "gh pr create --base main --head $branch" "" "${RETRY_LAST_ERROR:-pr create failed}"
       print_resume_cmd "$run_id"
       exit 1
     }
@@ -640,25 +936,30 @@ cmd_resume() {
 
   run_with_retry_capture "resume_pr_merge_auto" gh pr merge --auto --squash --delete-branch "$pr_url" || true
   run_with_retry_capture "resume_pr_state" gh pr view "$pr_url" --json state -q .state || {
+    append_execution_event "$run_id" "resume" "resume_pr_state_failed" "fail" "gh pr view $pr_url --json state -q .state" "" "${RETRY_LAST_ERROR:-pr state failed}"
     print_resume_cmd "$run_id"
     exit 1
   }
   state="$(printf "%s\n" "$RETRY_OUTPUT" | tail -n1 | tr -d '\r')"
   if [[ "$state" != "MERGED" ]]; then
     run_with_retry_capture "resume_pr_merge" gh pr merge --squash --delete-branch "$pr_url" || {
+      append_execution_event "$run_id" "resume" "resume_pr_merge_failed" "fail" "gh pr merge --squash --delete-branch $pr_url" "" "${RETRY_LAST_ERROR:-pr merge failed}"
       print_resume_cmd "$run_id"
       exit 1
     }
   fi
 
   run_with_retry_capture "resume_sync_checkout_main" git checkout main || {
+    append_execution_event "$run_id" "resume" "resume_sync_checkout_failed" "fail" "git checkout main" "" "${RETRY_LAST_ERROR:-checkout main failed}"
     print_resume_cmd "$run_id"
     exit 1
   }
   run_with_retry_capture "resume_sync_pull_main" git pull --rebase origin main || {
+    append_execution_event "$run_id" "resume" "resume_sync_pull_failed" "fail" "git pull --rebase origin main" "" "${RETRY_LAST_ERROR:-sync pull failed}"
     print_resume_cmd "$run_id"
     exit 1
   }
+  append_execution_event "$run_id" "resume" "resume_done" "ok" "tools/qf resume RUN_ID=${run_id}" "pr_url=${pr_url}" ""
   echo "resume done: ${run_id}"
 }
 
@@ -679,6 +980,10 @@ case "$subcmd" in
   snapshot)
     shift
     cmd_snapshot "$@"
+    ;;
+  handoff)
+    shift
+    cmd_handoff "${1:-}"
     ;;
   plan)
     shift

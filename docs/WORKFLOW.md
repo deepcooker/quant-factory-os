@@ -29,6 +29,10 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - For anti-loss fallback, store concise session checkpoints in
   `reports/{RUN_ID}/conversation.md` via:
   - `tools/qf snapshot RUN_ID=<run-id> NOTE="decision/next-step summary"`
+- `tools/qf do` / `tools/qf resume` 自动记录执行轨迹到
+  `reports/{RUN_ID}/execution.jsonl`（默认脱敏，可审计）。
+- 断线恢复建议先生成接班摘要：
+  - `tools/qf handoff RUN_ID=<run-id>` -> `reports/{RUN_ID}/handoff.md`
 - Repo memory is limited to: `docs/` (rules), `TASKS/STATE.md` (current state),
   `reports/{RUN_ID}/decision.md` (key decisions), and `MISTAKES/` (postmortems
   when enabled).
@@ -52,6 +56,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - 3) 对外统一入口：先运行 `tools/qf init`（自动 stash 可恢复 + sync main + doctor + onboard）。
 - 4) 运行 `tools/qf ready RUN_ID=<run-id>` 完成复述上岗门禁（会写入 `reports/<run-id>/ready.json`）。
 - 4.1) 在关键决策点执行 `tools/qf snapshot RUN_ID=<run-id> NOTE="..."`，把“本轮结论/下一步”写入仓库证据，避免会话丢失。
+- 4.2) 若是断线/换号接力，先执行 `tools/qf handoff RUN_ID=<run-id>` 读取上一轮摘要，再继续 `ready -> plan -> do`。
 - 5) 运行 `tools/qf plan 20` 生成候选；该命令会复制 proposal 到 `/tmp`（并打印路径）且保持工作区干净。
 - 6) 运行 `tools/qf do queue-next` 领取下一枪（内部确保 ready + plan 前置、自动 evidence）。
 - 7) Expand that item into `TASKS/TASK-*.md` (from template), then run:

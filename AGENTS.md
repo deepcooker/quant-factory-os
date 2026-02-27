@@ -95,6 +95,9 @@ Before any implementation, you MUST complete init and pass readiness checks:
    - `tools/qf do` MUST fail if no valid `reports/<RUN_ID>/ready.json`.
    - At major checkpoints (and before `/quit`), run:
      `tools/qf snapshot RUN_ID=<run-id> NOTE="decision + next step"` to persist session fallback in repo.
+   - `tools/qf do` / `tools/qf resume` must keep execution traces in
+     `reports/<RUN_ID>/execution.jsonl` (default redaction on).
+   - On reconnect/new session, run `tools/qf handoff RUN_ID=<run-id>` before continuing.
 5) If restatement is missing or unclear, STOP and do not modify code.
 
 ## 9) Governance policy (Default)
