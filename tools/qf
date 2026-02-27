@@ -24,6 +24,7 @@ Usage:
   tools/qf snapshot [RUN_ID=<run-id>] NOTE=<text>
   tools/qf handoff [RUN_ID=<run-id>]
   tools/qf exam [RUN_ID=<run-id>] [ANSWER_FILE=<path>] [RUBRIC_FILE=<path>] [OUTPUT_FILE=<path>]
+  tools/qf exam-auto [RUN_ID=<run-id>] [ANSWER_FILE=<path>] [RUBRIC_FILE=<path>] [OUTPUT_FILE=<path>]
   tools/qf plan [N]
   tools/qf do queue-next
   tools/qf resume [RUN_ID=<run-id>]
@@ -1411,6 +1412,75 @@ cmd_exam() {
   fi
 }
 
+cmd_exam_auto() {
+  local explicit_run_id="${RUN_ID:-}"
+  local run_id=""
+  local answer_file=""
+  local rubric_file="${SYNC_EXAM_RUBRIC_FILE:-SYNC/EXAM_RUBRIC.json}"
+  local output_file=""
+  local template_file="${SYNC_EXAM_TEMPLATE_FILE:-SYNC/EXAM_ANSWER_TEMPLATE.md}"
+  local arg=""
+  local command_line=""
+
+  for arg in "$@"; do
+    case "$arg" in
+      RUN_ID=*)
+        explicit_run_id="${arg#RUN_ID=}"
+        ;;
+      ANSWER_FILE=*)
+        answer_file="${arg#ANSWER_FILE=}"
+        ;;
+      RUBRIC_FILE=*)
+        rubric_file="${arg#RUBRIC_FILE=}"
+        ;;
+      OUTPUT_FILE=*)
+        output_file="${arg#OUTPUT_FILE=}"
+        ;;
+      *)
+        if [[ -z "$answer_file" ]]; then
+          answer_file="$arg"
+        else
+          echo "ERROR: unexpected arg for exam-auto: $arg" >&2
+          usage
+          exit 2
+        fi
+        ;;
+    esac
+  done
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "exam-auto")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: exam-auto requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    exit 2
+  fi
+
+  if [[ -z "$answer_file" ]]; then
+    answer_file="reports/${run_id}/onboard_answer.md"
+  fi
+  if [[ -z "$output_file" ]]; then
+    output_file="reports/${run_id}/sync_exam_result.json"
+  fi
+
+  mkdir -p "reports/${run_id}"
+  if [[ ! -f "$answer_file" ]]; then
+    if [[ ! -f "$template_file" ]]; then
+      append_execution_event "$run_id" "exam-auto" "exam_auto_missing_template" "fail" "tools/qf exam-auto RUN_ID=${run_id}" "template_file=${template_file}" "missing template file"
+      echo "ERROR: exam template file not found: $template_file" >&2
+      exit 1
+    fi
+    cp "$template_file" "$answer_file"
+    command_line="tools/qf exam-auto RUN_ID=${run_id}"
+    append_execution_event "$run_id" "exam-auto" "exam_auto_answer_scaffolded" "ok" "$command_line" "answer_file=${answer_file}" ""
+    echo "EXAM_ANSWER_SCAFFOLDED: $answer_file"
+    echo "请先按模板补全答案，再运行：tools/qf exam-auto RUN_ID=${run_id}"
+    return 3
+  fi
+
+  cmd_exam "RUN_ID=${run_id}" "ANSWER_FILE=${answer_file}" "RUBRIC_FILE=${rubric_file}" "OUTPUT_FILE=${output_file}"
+  command_line="tools/qf exam-auto RUN_ID=${run_id}"
+  append_execution_event "$run_id" "exam-auto" "exam_auto_done" "ok" "$command_line" "answer_file=${answer_file};output_file=${output_file}" ""
+}
+
 read_state_field() {
   local file="$1"
   local key="$2"
@@ -1587,6 +1657,10 @@ case "$subcmd" in
   exam)
     shift
     cmd_exam "$@"
+    ;;
+  exam-auto)
+    shift
+    cmd_exam_auto "$@"
     ;;
   plan)
     shift
