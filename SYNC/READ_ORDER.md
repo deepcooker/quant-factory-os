@@ -16,8 +16,9 @@ This order is mandatory for session handoff alignment.
 1. `AGENTS.md`
 2. `docs/WORKFLOW.md`
 3. `docs/ENTITIES.md`
-4. `TASKS/STATE.md`
-5. `TASKS/QUEUE.md`
+4. `docs/PROJECT_GUIDE.md`
+5. `TASKS/STATE.md`
+6. `TASKS/QUEUE.md`
 
 ## Step 3: Current Run Evidence
 1. latest `reports/<RUN_ID>/handoff.md` (if exists)

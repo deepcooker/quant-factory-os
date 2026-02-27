@@ -12,18 +12,20 @@ QF_RETRY_MAX="${QF_RETRY_MAX:-3}"
 QF_RETRY_BASE_SEC="${QF_RETRY_BASE_SEC:-1}"
 RETRY_OUTPUT=""
 RETRY_LAST_ERROR=""
+STATE_FILE="${QF_STATE_FILE:-TASKS/STATE.md}"
+REQUIRED_READY_FILE=""
 
 usage() {
   cat <<'EOF'
 Usage:
   tools/qf init
   tools/qf onboard RUN_ID
-  tools/qf ready RUN_ID=<run-id>
-  tools/qf snapshot RUN_ID=<run-id> NOTE=<text>
-  tools/qf handoff RUN_ID=<run-id>
+  tools/qf ready [RUN_ID=<run-id>]
+  tools/qf snapshot [RUN_ID=<run-id>] NOTE=<text>
+  tools/qf handoff [RUN_ID=<run-id>]
   tools/qf plan [N]
   tools/qf do queue-next
-  tools/qf resume RUN_ID=<run-id>
+  tools/qf resume [RUN_ID=<run-id>]
 EOF
 }
 
@@ -105,6 +107,182 @@ append_execution_event() {
     "$(json_escape "$command_r")" \
     "$(json_escape "$artifacts_r")" \
     "$(json_escape "$error_r")" >> "$file"
+}
+
+state_field_value() {
+  local key="$1"
+  local py_bin=""
+  if [[ ! -f "$STATE_FILE" ]]; then
+    printf ""
+    return 0
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    printf ""
+    return 0
+  fi
+  "$py_bin" - <<'PY' "$STATE_FILE" "$key"
+import re
+import sys
+
+path, key = sys.argv[1], sys.argv[2]
+pat = re.compile(rf"^\s*{re.escape(key)}:\s*(.*?)\s*$")
+try:
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            m = pat.match(line.rstrip("\n"))
+            if m:
+                print(m.group(1))
+                raise SystemExit(0)
+except FileNotFoundError:
+    pass
+print("")
+PY
+}
+
+resolve_state_current_run_id() {
+  local run_id=""
+  run_id="$(state_field_value "CURRENT_RUN_ID")"
+  if [[ -n "$run_id" ]]; then
+    printf "%s" "$run_id"
+    return 0
+  fi
+  printf ""
+  return 1
+}
+
+resolve_latest_report_run_id() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    printf ""
+    return 1
+  fi
+  "$py_bin" - <<'PY'
+from pathlib import Path
+
+root = Path("reports")
+if not root.exists():
+    raise SystemExit(0)
+
+cands = []
+for d in root.glob("run-*"):
+    if not d.is_dir():
+        continue
+    mt = 0.0
+    for name in ("ready.json", "execution.jsonl", "conversation.md", "handoff.md", "decision.md", "summary.md", "ship_state.json"):
+        p = d / name
+        if p.exists():
+            mt = max(mt, p.stat().st_mtime)
+    if mt > 0:
+        cands.append((mt, d.name))
+
+if cands:
+    cands.sort(reverse=True)
+    print(cands[0][1])
+PY
+}
+
+resolve_run_id_for_cmd() {
+  local explicit_run_id="${1:-}"
+  local context="${2:-cmd}"
+  local state_run_id=""
+  local latest_run_id=""
+
+  state_run_id="$(resolve_state_current_run_id || true)"
+  if [[ -n "$explicit_run_id" ]]; then
+    if [[ -n "$state_run_id" && "$explicit_run_id" != "$state_run_id" && "${QF_ALLOW_RUN_ID_MISMATCH:-0}" != "1" ]]; then
+      echo "ERROR: ${context} run-id mismatch." >&2
+      echo "  explicit: ${explicit_run_id}" >&2
+      echo "  CURRENT_RUN_ID (TASKS/STATE.md): ${state_run_id}" >&2
+      echo "  Fix: update TASKS/STATE.md or pass QF_ALLOW_RUN_ID_MISMATCH=1 for one-time override." >&2
+      return 1
+    fi
+    printf "%s" "$explicit_run_id"
+    return 0
+  fi
+
+  if [[ -n "$state_run_id" ]]; then
+    printf "%s" "$state_run_id"
+    return 0
+  fi
+
+  latest_run_id="$(resolve_latest_report_run_id || true)"
+  if [[ -n "$latest_run_id" ]]; then
+    echo "WARN: ${context} fallback to latest report run-id: ${latest_run_id}" >&2
+    printf "%s" "$latest_run_id"
+    return 0
+  fi
+
+  printf ""
+  return 0
+}
+
+update_state_current() {
+  local run_id="${1:-}"
+  local task_file="${2:-}"
+  local status="${3:-active}"
+  local py_bin=""
+
+  if [[ "${QF_STATE_UPDATE_DISABLE:-0}" == "1" ]]; then
+    return 0
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    return 0
+  fi
+
+  "$py_bin" - <<'PY' "$STATE_FILE" "$run_id" "$task_file" "$status"
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+state_file, run_id, task_file, status = sys.argv[1:]
+path = Path(state_file)
+if path.exists():
+    lines = path.read_text(encoding="utf-8").splitlines()
+else:
+    lines = ["# STATE", ""]
+
+keys = {"CURRENT_RUN_ID", "CURRENT_TASK_FILE", "CURRENT_STATUS", "CURRENT_UPDATED_AT"}
+filtered = []
+for line in lines:
+    matched = False
+    for key in keys:
+        if re.match(rf"^\s*{re.escape(key)}\s*:", line):
+            matched = True
+            break
+    if not matched:
+        filtered.append(line)
+
+insert_idx = 0
+if filtered and filtered[0].startswith("#"):
+    insert_idx = 1
+    if len(filtered) > 1 and filtered[1].strip() == "":
+        insert_idx = 2
+
+meta = [
+    f"CURRENT_RUN_ID: {run_id}",
+    f"CURRENT_TASK_FILE: {task_file}",
+    f"CURRENT_STATUS: {status}",
+    f"CURRENT_UPDATED_AT: {datetime.now(timezone.utc).replace(microsecond=0).isoformat()}",
+    "",
+]
+out = filtered[:insert_idx] + meta + filtered[insert_idx:]
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_text("\n".join(out).rstrip() + "\n", encoding="utf-8")
+PY
 }
 
 run_with_retry_capture() {
@@ -199,7 +377,7 @@ cmd_onboard() {
     echo "- AGENTS.md"
     echo
     echo "## 项目背景/阶段入口"
-    echo "- PROJECT_GUIDE.md"
+    echo "- docs/PROJECT_GUIDE.md"
     echo
     echo "## 工作流入口"
     echo "- docs/WORKFLOW.md"
@@ -207,7 +385,7 @@ cmd_onboard() {
     echo "- TASKS/QUEUE.md"
     echo
     echo "## 强制复述模板入口"
-    echo "- PROJECT_GUIDE.md#强制复述模板"
+    echo "- docs/PROJECT_GUIDE.md#强制复述模板"
     echo
     echo "## 最近 decision 入口列表"
     if [[ -s "$tmp_recent" ]]; then
@@ -257,20 +435,23 @@ read_or_prompt_field() {
 cmd_ready() {
   local arg="${1:-}"
   local run_id=""
+  local explicit_run_id=""
   local goal scope acceptance steps stop
   local ready_file=""
   local py_bin=""
 
   if [[ "$arg" =~ ^RUN_ID=.+$ ]]; then
-    run_id="${arg#RUN_ID=}"
+    explicit_run_id="${arg#RUN_ID=}"
   elif [[ -n "$arg" ]]; then
-    run_id="$arg"
+    explicit_run_id="$arg"
   elif [[ -n "${RUN_ID:-}" ]]; then
-    run_id="${RUN_ID}"
+    explicit_run_id="${RUN_ID}"
   fi
 
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "ready")"
   if [[ -z "$run_id" ]]; then
-    echo "ERROR: ready requires RUN_ID. Usage: tools/qf ready RUN_ID=<run-id>" >&2
+    echo "ERROR: ready requires RUN_ID (from explicit arg/env or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    echo "Usage: tools/qf ready [RUN_ID=<run-id>]" >&2
     exit 2
   fi
 
@@ -323,32 +504,34 @@ with open(out, "w", encoding="utf-8") as f:
 PY
 
   append_execution_event "$run_id" "ready" "ready_passed" "ok" "tools/qf ready" "ready_file=${ready_file}" ""
+  update_state_current "$run_id" "$(state_field_value "CURRENT_TASK_FILE")" "active"
   echo "READY_FILE: $ready_file"
   echo "READY_RUN_ID: $run_id"
 }
 
 cmd_snapshot() {
-  local run_id="${RUN_ID:-}"
+  local run_id=""
+  local explicit_run_id="${RUN_ID:-}"
   local note="${QF_SNAPSHOT_NOTE:-}"
   local arg=""
-  local ready_file=""
   local snapshot_file=""
   local now_iso=""
   local branch=""
   local head=""
   local status_line=""
+  local current_status=""
 
   for arg in "$@"; do
     case "$arg" in
       RUN_ID=*)
-        run_id="${arg#RUN_ID=}"
+        explicit_run_id="${arg#RUN_ID=}"
         ;;
       NOTE=*)
         note="${arg#NOTE=}"
         ;;
       *)
-        if [[ -z "$run_id" ]]; then
-          run_id="$arg"
+        if [[ -z "$explicit_run_id" ]]; then
+          explicit_run_id="$arg"
         elif [[ -z "$note" ]]; then
           note="$arg"
         fi
@@ -356,14 +539,9 @@ cmd_snapshot() {
     esac
   done
 
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "snapshot")"
   if [[ -z "$run_id" ]]; then
-    ready_file="$(resolve_ready_file || true)"
-    if [[ -n "$ready_file" ]]; then
-      run_id="$(basename "$(dirname "$ready_file")")"
-    fi
-  fi
-  if [[ -z "$run_id" ]]; then
-    echo "ERROR: snapshot requires RUN_ID=<run-id> (or an existing ready marker)." >&2
+    echo "ERROR: snapshot requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
     exit 2
   fi
 
@@ -391,6 +569,11 @@ cmd_snapshot() {
     echo
   } >> "$snapshot_file"
 
+  current_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$current_status" ]]; then
+    current_status="active"
+  fi
+  update_state_current "$run_id" "$(state_field_value "CURRENT_TASK_FILE")" "$current_status"
   echo "SNAPSHOT_FILE: $snapshot_file"
   echo "SNAPSHOT_RUN_ID: $run_id"
 }
@@ -398,29 +581,26 @@ cmd_snapshot() {
 cmd_handoff() {
   local arg="${1:-}"
   local run_id=""
+  local explicit_run_id=""
   local ready_file=""
   local convo_file=""
   local exec_file=""
   local ship_file=""
   local out_file=""
   local py_bin=""
+  local current_status=""
 
   if [[ "$arg" =~ ^RUN_ID=.+$ ]]; then
-    run_id="${arg#RUN_ID=}"
+    explicit_run_id="${arg#RUN_ID=}"
   elif [[ -n "$arg" ]]; then
-    run_id="$arg"
+    explicit_run_id="$arg"
   elif [[ -n "${RUN_ID:-}" ]]; then
-    run_id="${RUN_ID}"
+    explicit_run_id="${RUN_ID}"
   fi
 
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "handoff")"
   if [[ -z "$run_id" ]]; then
-    ready_file="$(resolve_ready_file || true)"
-    if [[ -n "$ready_file" ]]; then
-      run_id="$(basename "$(dirname "$ready_file")")"
-    fi
-  fi
-  if [[ -z "$run_id" ]]; then
-    echo "ERROR: handoff requires RUN_ID=<run-id> (or an existing ready marker)." >&2
+    echo "ERROR: handoff requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
     exit 2
   fi
 
@@ -550,16 +730,21 @@ else:
     lines.append("- none")
 lines.append("")
 lines.append("## Suggested Next Commands")
-lines.append(f"- tools/qf ready RUN_ID={run_id}")
+lines.append("- tools/qf ready")
 lines.append(f"- tools/qf plan 20")
 lines.append(f"- tools/qf do queue-next")
-lines.append(f"- tools/qf resume RUN_ID={run_id}")
+lines.append("- tools/qf resume")
 
 with open(out_file, "w", encoding="utf-8") as f:
     f.write("\n".join(lines) + "\n")
 PY
 
   append_execution_event "$run_id" "handoff" "handoff_generated" "ok" "tools/qf handoff RUN_ID=${run_id}" "handoff_file=${out_file}" ""
+  current_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$current_status" ]]; then
+    current_status="active"
+  fi
+  update_state_current "$run_id" "$(state_field_value "CURRENT_TASK_FILE")" "$current_status"
   echo "HANDOFF_FILE: $out_file"
   echo "HANDOFF_RUN_ID: $run_id"
 }
@@ -602,6 +787,16 @@ resolve_ready_file() {
     return 1
   fi
 
+  local current_run_id=""
+  current_run_id="$(resolve_state_current_run_id || true)"
+  if [[ -n "$current_run_id" ]]; then
+    ready_file="reports/${current_run_id}/ready.json"
+    if [[ -f "$ready_file" ]] && ready_file_is_valid "$ready_file" >/dev/null 2>&1; then
+      printf "%s" "$ready_file"
+      return 0
+    fi
+  fi
+
   ready_file="$(ls -1t reports/run-*/ready.json 2>/dev/null | head -n1 || true)"
   if [[ -n "$ready_file" ]] && ready_file_is_valid "$ready_file" >/dev/null 2>&1; then
     printf "%s" "$ready_file"
@@ -612,15 +807,35 @@ resolve_ready_file() {
   return 1
 }
 
-require_ready_gate() {
+resolve_ready_file_for_run() {
+  local run_id="${1:-}"
   local ready_file=""
-  ready_file="$(resolve_ready_file || true)"
+  if [[ -n "$run_id" ]]; then
+    ready_file="reports/${run_id}/ready.json"
+    if [[ -f "$ready_file" ]] && ready_file_is_valid "$ready_file" >/dev/null 2>&1; then
+      printf "%s" "$ready_file"
+      return 0
+    fi
+    printf ""
+    return 1
+  fi
+  resolve_ready_file
+}
+
+require_ready_gate() {
+  local requested_run_id="${1:-}"
+  local ready_file=""
+  ready_file="$(resolve_ready_file_for_run "$requested_run_id" || true)"
   if [[ -z "$ready_file" ]]; then
     echo "ERROR: readiness gate not satisfied." >&2
-    echo "Run: tools/qf ready RUN_ID=<run-id>" >&2
+    if [[ -n "$requested_run_id" ]]; then
+      echo "Expected ready marker: reports/${requested_run_id}/ready.json" >&2
+    fi
+    echo "Run: tools/qf ready" >&2
     echo "Then retry: tools/qf do queue-next" >&2
     exit 1
   fi
+  REQUIRED_READY_FILE="$ready_file"
   echo "READY_FILE: $ready_file"
 }
 
@@ -660,6 +875,7 @@ cmd_init() {
   local reviewed_epoch=""
   local age_days=""
   local latest_handoff_run=""
+  local current_run_id=""
   local py_bin=""
   cleanup_pick_candidate_dirs
   auto_stash_if_dirty "init"
@@ -716,14 +932,18 @@ PY
 )"
   fi
 
+  current_run_id="$(resolve_state_current_run_id || true)"
   echo "INIT_RUN_ID: $run_id"
   append_execution_event "$run_id" "init" "init_completed" "ok" "tools/qf init" "onboard_file=reports/${run_id}/onboard.md" ""
   echo "== 下一步建议 =="
-  if [[ -n "$latest_handoff_run" ]]; then
+  if [[ -n "$current_run_id" ]]; then
+    echo "0) tools/qf handoff"
+    echo "CURRENT_RUN_ID: ${current_run_id}"
+  elif [[ -n "$latest_handoff_run" ]]; then
     echo "0) tools/qf handoff RUN_ID=${latest_handoff_run}"
   fi
   echo "1) tools/qf plan 20"
-  echo "2) tools/qf ready RUN_ID=$run_id"
+  echo "2) tools/qf ready"
   echo "3) tools/qf do queue-next"
 }
 
@@ -758,7 +978,8 @@ cmd_plan() {
 
 cmd_do() {
   local target="${1:-}"
-  local run_id="${RUN_ID:-run-$(date +%Y-%m-%d)-qf-do}"
+  local run_id=""
+  local explicit_run_id="${RUN_ID:-}"
   local proposal_file="${TASK_PLAN_OUTPUT_FILE:-TASKS/TODO_PROPOSAL.md}"
   local output=""
   local task_file=""
@@ -773,10 +994,13 @@ cmd_do() {
   fi
 
   cleanup_pick_candidate_dirs
-  require_ready_gate
-  ready_file="$(resolve_ready_file || true)"
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "do")"
+  require_ready_gate "$run_id"
+  ready_file="$REQUIRED_READY_FILE"
   if [[ -n "$ready_file" ]]; then
     run_id="$(basename "$(dirname "$ready_file")")"
+  elif [[ -z "$run_id" ]]; then
+    run_id="run-$(date +%Y-%m-%d)-qf-do"
   fi
   auto_stash_if_dirty "do"
   append_execution_event "$run_id" "do" "do_start" "ok" "tools/qf do queue-next" "" ""
@@ -814,8 +1038,10 @@ cmd_do() {
   fi
   if [[ -n "$task_run_id" ]]; then
     append_execution_event "$task_run_id" "do" "do_pick_success" "ok" "bash tools/task.sh --pick queue-next" "task_file=${task_file};evidence=${evidence_path}" ""
+    update_state_current "$task_run_id" "$task_file" "active"
   else
     append_execution_event "$run_id" "do" "do_pick_success" "ok" "bash tools/task.sh --pick queue-next" "task_file=${task_file};evidence=${evidence_path}" ""
+    update_state_current "$run_id" "$task_file" "active"
   fi
 }
 
@@ -847,6 +1073,7 @@ PY
 cmd_resume() {
   local arg="${1:-}"
   local run_id=""
+  local explicit_run_id=""
   local state_file=""
   local step=""
   local branch=""
@@ -856,10 +1083,15 @@ cmd_resume() {
   local state=""
 
   if [[ "$arg" =~ ^RUN_ID=.+$ ]]; then
-    run_id="${arg#RUN_ID=}"
+    explicit_run_id="${arg#RUN_ID=}"
+  elif [[ -n "$arg" ]]; then
+    explicit_run_id="$arg"
+  elif [[ -n "${RUN_ID:-}" ]]; then
+    explicit_run_id="${RUN_ID}"
   fi
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "resume")"
   if [[ -z "$run_id" ]]; then
-    echo "ERROR: resume requires RUN_ID=..."
+    echo "ERROR: resume requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)."
     usage
     exit 2
   fi
@@ -960,6 +1192,7 @@ cmd_resume() {
     exit 1
   }
   append_execution_event "$run_id" "resume" "resume_done" "ok" "tools/qf resume RUN_ID=${run_id}" "pr_url=${pr_url}" ""
+  update_state_current "$run_id" "$(state_field_value "CURRENT_TASK_FILE")" "done"
   echo "resume done: ${run_id}"
 }
 

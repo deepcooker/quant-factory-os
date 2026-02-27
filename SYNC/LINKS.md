@@ -10,7 +10,8 @@
 - `TASKS/QUEUE.md`
 
 ## Core guide and deep philosophy
-- `chatlogs/PROJECT_GUIDE.md`
+- `docs/PROJECT_GUIDE.md`
+- `chatlogs/PROJECT_GUIDE.md` (compat pointer)
 - `chatlogs/d.md`
 
 ## Recent run evidence

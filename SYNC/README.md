@@ -14,6 +14,7 @@ If you only read one folder before action, read `SYNC/`.
 
 ## Rules
 - Sync first, execute later.
+- `TASKS/STATE.md` owns `CURRENT_RUN_ID`.
 - If `SYNC/*` conflicts with deeper evidence, trust latest:
   - `reports/<RUN_ID>/decision.md`
   - merged PR state on `main`

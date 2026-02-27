@@ -46,6 +46,13 @@ Notes:
 - Primary agent entrypoint is `tools/qf` (`init/plan/do/resume`).
 - `tools/enter.sh` and `tools/onboard.sh` are compatibility wrappers.
 
+## Single source map
+- Session entrypoint owner: `SYNC/READ_ORDER.md`
+- Hard rules owner: `AGENTS.md`
+- Execution workflow owner: `docs/WORKFLOW.md`
+- Entity definitions owner: `docs/ENTITIES.md`
+- Strategy/vision owner: `docs/PROJECT_GUIDE.md`
+
 ## Reading policy
 - 长文件阅读必须使用 tools/view.sh 分段查看，不得直接使用 sed/cat/rg/grep/awk。
 
@@ -77,13 +84,8 @@ If stuck or tests fail:
 Before any implementation, you MUST complete init and pass readiness checks:
 1) Run `tools/qf init`
 2) Read, in order:
-   - `AGENTS.md`
-   - `chatlogs/PROJECT_GUIDE.md`
-   - `TASKS/STATE.md`
-   - `TASKS/QUEUE.md`
-   - `docs/WORKFLOW.md`
-   - `docs/ENTITIES.md`
-   - latest `reports/<RUN_ID>/decision.md`
+   - `SYNC/READ_ORDER.md`
+   - files listed in `SYNC/READ_ORDER.md` (strict order)
 3) Restate and get confirmation before coding:
    - Goal (1 sentence)
    - Scope (exact paths)
@@ -91,13 +93,14 @@ Before any implementation, you MUST complete init and pass readiness checks:
    - Execution steps (evidence -> implement -> verify -> reports -> ship)
    - Stop condition (finish and wait)
 4) Record readiness gate:
-   - Run `tools/qf ready RUN_ID=<run-id>` (interactive or via `QF_READY_*` envs).
+   - `CURRENT_RUN_ID` source-of-truth is `TASKS/STATE.md`.
+   - Run `tools/qf ready` (or `tools/qf ready RUN_ID=<run-id>` for explicit override).
    - `tools/qf do` MUST fail if no valid `reports/<RUN_ID>/ready.json`.
    - At major checkpoints (and before `/quit`), run:
-     `tools/qf snapshot RUN_ID=<run-id> NOTE="decision + next step"` to persist session fallback in repo.
+     `tools/qf snapshot NOTE="decision + next step"` to persist session fallback in repo.
    - `tools/qf do` / `tools/qf resume` must keep execution traces in
      `reports/<RUN_ID>/execution.jsonl` (default redaction on).
-   - On reconnect/new session, run `tools/qf handoff RUN_ID=<run-id>` before continuing.
+   - On reconnect/new session, run `tools/qf handoff` before continuing.
 5) If restatement is missing or unclear, STOP and do not modify code.
 
 ## 9) Governance policy (Default)
