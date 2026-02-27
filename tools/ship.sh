@@ -411,6 +411,25 @@ extract_task_run_id() {
   ' "$task_file"
 }
 
+normalize_run_id() {
+  local candidate="$1"
+  candidate="$(printf "%s" "$candidate" | tr -d '\r' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
+  candidate="$(printf "%s" "$candidate" | sed -E 's/[:;,。.，；)\]）]+$//')"
+  if [[ "$candidate" =~ ^run-[0-9]{4}-[0-9]{2}-[0-9]{2}-[A-Za-z0-9._-]+$ ]]; then
+    printf "%s" "$candidate"
+    return 0
+  fi
+  printf ""
+  return 0
+}
+
+extract_run_id_from_msg() {
+  local msg="$1"
+  local raw=""
+  raw="$(printf "%s" "$msg" | grep -oE 'run-[0-9]{4}-[0-9]{2}-[0-9]{2}-[A-Za-z0-9._-]+' | head -n1 || true)"
+  normalize_run_id "$raw"
+}
+
 extract_task_scope_paths() {
   local task_file="$1"
   if [[ -z "$task_file" || ! -f "$task_file" ]]; then
@@ -583,6 +602,13 @@ if [[ "${SHIP_SCOPE_GATE_ONLY:-0}" == "1" ]]; then
   exit $?
 fi
 
+if [[ "${SHIP_RUN_ID_PARSE_ONLY:-0}" == "1" ]]; then
+  parse_input="${SHIP_RUN_ID_PARSE_INPUT:-$MSG}"
+  parsed="$(extract_run_id_from_msg "$parse_input")"
+  echo "PARSED_RUN_ID: ${parsed}"
+  exit 0
+fi
+
 if [[ -n "${GH_TOKEN:-}" ]]; then
   if ! gh auth status -h github.com >/dev/null 2>&1; then
     echo "$GH_TOKEN" | gh auth login -h github.com --with-token >/dev/null
@@ -658,11 +684,11 @@ fi
 
 run_id=""
 if [[ -n "${SHIP_RUN_ID:-}" ]]; then
-  run_id="${SHIP_RUN_ID}"
+  run_id="$(normalize_run_id "${SHIP_RUN_ID}")"
 elif [[ -n "${RUN_ID:-}" ]]; then
-  run_id="${RUN_ID}"
+  run_id="$(normalize_run_id "${RUN_ID}")"
 else
-  run_id="$(echo "$MSG" | grep -oE 'run-[0-9]{4}-[0-9]{2}-[0-9]{2}-[^ ]+' | head -n1 || true)"
+  run_id="$(extract_run_id_from_msg "$MSG")"
 fi
 
 if [[ -n "$run_id" ]]; then
