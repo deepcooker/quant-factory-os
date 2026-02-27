@@ -23,6 +23,7 @@ Usage:
   tools/qf ready [RUN_ID=<run-id>]
   tools/qf snapshot [RUN_ID=<run-id>] NOTE=<text>
   tools/qf handoff [RUN_ID=<run-id>]
+  tools/qf exam [RUN_ID=<run-id>] [ANSWER_FILE=<path>] [RUBRIC_FILE=<path>] [OUTPUT_FILE=<path>]
   tools/qf plan [N]
   tools/qf do queue-next
   tools/qf resume [RUN_ID=<run-id>]
@@ -1322,6 +1323,94 @@ cmd_stash_clean() {
   echo "stash-clean done: dropped=${drop_count}"
 }
 
+cmd_exam() {
+  local explicit_run_id="${RUN_ID:-}"
+  local run_id=""
+  local answer_file=""
+  local rubric_file="${SYNC_EXAM_RUBRIC_FILE:-SYNC/EXAM_RUBRIC.json}"
+  local output_file=""
+  local py_bin=""
+  local arg=""
+  local output=""
+  local rc=0
+  local status="ok"
+  local cmd_text=""
+
+  for arg in "$@"; do
+    case "$arg" in
+      RUN_ID=*)
+        explicit_run_id="${arg#RUN_ID=}"
+        ;;
+      ANSWER_FILE=*)
+        answer_file="${arg#ANSWER_FILE=}"
+        ;;
+      RUBRIC_FILE=*)
+        rubric_file="${arg#RUBRIC_FILE=}"
+        ;;
+      OUTPUT_FILE=*)
+        output_file="${arg#OUTPUT_FILE=}"
+        ;;
+      *)
+        if [[ -z "$answer_file" ]]; then
+          answer_file="$arg"
+        else
+          echo "ERROR: unexpected arg for exam: $arg" >&2
+          usage
+          exit 2
+        fi
+        ;;
+    esac
+  done
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "exam")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: exam requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    exit 2
+  fi
+
+  if [[ -z "$answer_file" ]]; then
+    answer_file="reports/${run_id}/onboard_answer.md"
+  fi
+  if [[ -z "$output_file" ]]; then
+    output_file="reports/${run_id}/sync_exam_result.json"
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required for tools/qf exam." >&2
+    exit 1
+  fi
+
+  if [[ ! -f "$answer_file" ]]; then
+    append_execution_event "$run_id" "exam" "exam_missing_answer" "fail" "tools/qf exam RUN_ID=${run_id}" "answer_file=${answer_file}" "missing answer file"
+    echo "ERROR: answer file not found: $answer_file" >&2
+    exit 1
+  fi
+
+  mkdir -p "reports/${run_id}"
+  cmd_text="tools/sync_exam.py --answer-file ${answer_file} --rubric-file ${rubric_file} --output-file ${output_file} --run-id ${run_id}"
+  set +e
+  output="$("$py_bin" tools/sync_exam.py \
+    --answer-file "$answer_file" \
+    --rubric-file "$rubric_file" \
+    --output-file "$output_file" \
+    --run-id "$run_id" 2>&1)"
+  rc=$?
+  set -e
+  printf "%s\n" "$output"
+
+  if [[ "$rc" -ne 0 ]]; then
+    status="fail"
+  fi
+  append_execution_event "$run_id" "exam" "exam_graded" "$status" "tools/qf exam RUN_ID=${run_id}" "answer=${answer_file};rubric=${rubric_file};output=${output_file}" "$output"
+  if [[ "$rc" -ne 0 ]]; then
+    exit "$rc"
+  fi
+}
+
 read_state_field() {
   local file="$1"
   local key="$2"
@@ -1494,6 +1583,10 @@ case "$subcmd" in
   handoff)
     shift
     cmd_handoff "${1:-}"
+    ;;
+  exam)
+    shift
+    cmd_exam "$@"
     ;;
   plan)
     shift
