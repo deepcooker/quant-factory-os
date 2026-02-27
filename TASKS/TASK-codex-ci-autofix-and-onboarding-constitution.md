@@ -9,6 +9,7 @@ PRIORITY: P1
 
 ## Scope (Required)
 - `AGENTS.md`
+- `MISTAKES/`
 - `tools/`
 - `.github/workflows/`
 - `docs/`

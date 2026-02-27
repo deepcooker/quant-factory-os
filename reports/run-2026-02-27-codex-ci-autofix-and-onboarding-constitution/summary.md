@@ -17,8 +17,15 @@ RUN_ID: `run-2026-02-27-codex-ci-autofix-and-onboarding-constitution`
 - Added readiness tests in `tests/test_qf_ready_gate.py` for gate failure/success paths.
 - Added canonical knowledge update artifacts:
   - `docs/CHANGELOG_KNOWLEDGE.md` as repository knowledge changelog.
-  - `TASKS/TASK-knowledge-sync-template.md` as weekly sync task template.
+  - `TASKS/KNOWLEDGE_SYNC_TEMPLATE.md` as weekly sync task template.
 - Added knowledge TTL hint in `tools/qf init` (`QF_KNOWLEDGE_TTL_DAYS`, default 14 days).
+- Added full-process mistakebook baseline:
+  - `docs/MISTAKES_TEMPLATE.md` with process + business categories.
+  - `tools/ship.sh` now appends retry/failure events to `reports/{RUN_ID}/mistake_log.jsonl`.
+  - `tools/observe.sh` now summarizes process mistakes under `过程错题（执行/思考）`.
+- Added/updated tests for process-mistake flow:
+  - `tests/test_observe_awareness.py`
+  - `tests/test_ship_retry_resume_state.py`
 - Per owner request, removed historical backlog artifacts:
   - Deleted legacy `TASKS/TASK-*.md` files except current active task.
   - Deleted historical `reports/run-*` directories except current active RUN_ID.
@@ -47,6 +54,7 @@ RUN_ID: `run-2026-02-27-codex-ci-autofix-and-onboarding-constitution`
 - `make verify` (after backlog cleanup: `53 passed in 3.45s`)
 - `make verify` (after qf ready gate + tests: `55 passed in 3.79s`)
 - `make verify` (after knowledge changelog + TTL hint: `55 passed in 3.69s`)
+- `make verify` (after process mistakebook integration: `55 passed in 3.58s`)
 
 ## Notes
 - Automation strategy was revised to PR-only local-verify flow per owner preference.

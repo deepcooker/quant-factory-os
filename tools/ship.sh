@@ -88,6 +88,53 @@ current_ship_step=""
 RETRY_OUTPUT=""
 RETRY_LAST_ERROR=""
 
+classify_mistake_category() {
+  local step="${1:-}"
+  case "$step" in
+    resume_*|sync_*)
+      echo "recovery_error"
+      ;;
+    *_guard_*|*scope*|*single_run*)
+      echo "decision_error"
+      ;;
+    pr_*|push|commit*)
+      echo "execution_error"
+      ;;
+    *)
+      echo "execution_error"
+      ;;
+  esac
+}
+
+append_mistake_event() {
+  local step="$1"
+  local err="${2:-}"
+  local source="${3:-runtime}"
+  local attempt="${4:-}"
+  local category=""
+  local file=""
+  local attempt_json=""
+
+  [[ -n "${run_id:-}" ]] || return 0
+
+  category="$(classify_mistake_category "$step")"
+  file="reports/${run_id}/mistake_log.jsonl"
+  mkdir -p "reports/${run_id}"
+
+  if [[ -n "$attempt" ]]; then
+    attempt_json=",\"attempt\":\"$(json_escape "$attempt")\""
+  fi
+
+  printf '{"ts":"%s","run_id":"%s","category":"%s","step":"%s","source":"%s","error":"%s"%s}\n' \
+    "$(date -Iseconds)" \
+    "$(json_escape "${run_id}")" \
+    "$(json_escape "${category}")" \
+    "$(json_escape "${step}")" \
+    "$(json_escape "${source}")" \
+    "$(json_escape "${err}")" \
+    "${attempt_json}" >> "$file"
+}
+
 write_ship_state() {
   local step="$1"
   local last_error="${2:-}"
@@ -119,6 +166,7 @@ fail_with_resume() {
   local step="$1"
   local err="${2:-unknown error}"
   write_ship_state "$step" "$err"
+  append_mistake_event "$step" "$err" "fail_with_resume"
   echo "❌ ${step} failed: ${err}" >&2
   print_resume_cmd >&2
   exit 1
@@ -152,6 +200,7 @@ run_with_retry_capture() {
 
     RETRY_LAST_ERROR="$(printf "%s" "$output" | tail -n 3 | tr '\n' ' ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
     write_ship_state "$step" "$RETRY_LAST_ERROR"
+    append_mistake_event "$step" "$RETRY_LAST_ERROR" "retry" "$attempt"
     if [[ "$attempt" -ge "$max_attempts" ]]; then
       if [[ -n "$output" ]]; then
         printf "%s\n" "$output" >&2
@@ -655,6 +704,7 @@ stage_changes
 staged_files="$(git diff --cached --name-only || true)"
 if ! guard_workflow_changes "$staged_files"; then
   write_ship_state "workflow_guard_failed" "workflow guard failed"
+  append_mistake_event "workflow_guard_failed" "workflow guard failed" "guard"
   cleanup_empty_branch "$branch" "origin/main"
   print_resume_cmd
   exit 1
@@ -662,6 +712,7 @@ fi
 
 if ! run_scope_gate "$staged_files"; then
   write_ship_state "scope_gate_failed" "scope gate failed"
+  append_mistake_event "scope_gate_failed" "scope gate failed" "guard"
   cleanup_empty_branch "$branch" "origin/main"
   print_resume_cmd
   exit 1
@@ -669,6 +720,7 @@ fi
 
 if ! guard_single_run; then
   write_ship_state "single_run_guard_failed" "single-run guard failed"
+  append_mistake_event "single_run_guard_failed" "single-run guard failed" "guard"
   cleanup_empty_branch "$branch" "origin/main"
   print_resume_cmd
   exit 1
@@ -677,6 +729,7 @@ fi
 if echo "$staged_files" | grep -qx "project_all_files.txt" \
   && [[ "${SHIP_ALLOW_FILELIST:-0}" != "1" ]]; then
   write_ship_state "filelist_guard_failed" "project_all_files.txt blocked"
+  append_mistake_event "filelist_guard_failed" "project_all_files.txt blocked" "guard"
   echo "❌ 检测到本次提交包含 project_all_files.txt。"
   echo "   该文件为本地生成物，默认不纳入 PR。"
   echo "   如需更新，请设置："
@@ -820,6 +873,7 @@ echo "如果 QUEUE 还有 [ ]：运行 tools/task.sh --next"
 
 if [[ -n "$(git status --porcelain)" ]]; then
   write_ship_state "sync_blocked_dirty" "working tree not clean"
+  append_mistake_event "sync_blocked_dirty" "working tree not clean" "guard"
   echo "❌ post-ship sync aborted: working tree is not clean."
   echo "   请先处理工作区改动后再同步 main。"
   print_resume_cmd

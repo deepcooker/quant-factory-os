@@ -28,6 +28,8 @@ RUN_ID: `run-2026-02-27-codex-ci-autofix-and-onboarding-constitution`
   - Accepted. Add `tools/qf ready` and enforce a readiness marker (`reports/<run-id>/ready.json`) before `tools/qf do`, so sessions can recover deterministically after `/quit`, account switch, or network interruption.
 - Continuous learning update strategy:
   - Accepted. Introduce `docs/CHANGELOG_KNOWLEDGE.md` + weekly `TASK-knowledge-sync-template.md` and show TTL-based freshness hint in `tools/qf init`.
+- Mistakebook strategy:
+  - Accepted. Expand from business-only mistakes to full-process mistakes (thinking/decision/execution/verification/recovery/business) with auto-captured ship retry/failure events and observer digest aggregation.
 - Backlog retention strategy:
   - Accepted (owner preference). Keep only active task and active RUN evidence; remove older task/report backlog to reset baseline under new architecture.
 
