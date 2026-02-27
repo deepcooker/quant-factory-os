@@ -56,3 +56,17 @@ def test_qf_ready_writes_marker_from_env(tmp_path: Path) -> None:
     ready = repo / "reports" / "run-ready" / "ready.json"
     assert ready.exists()
     assert '"restatement_passed": true' in ready.read_text(encoding="utf-8")
+
+
+def test_qf_snapshot_appends_conversation_note(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    res = run(
+        ["bash", "tools/qf", "snapshot", "RUN_ID=run-snapshot", "NOTE=session checkpoint"],
+        cwd=repo,
+    )
+    assert res.returncode == 0, res.stdout + res.stderr
+    snapshot = repo / "reports" / "run-snapshot" / "conversation.md"
+    assert snapshot.exists()
+    content = snapshot.read_text(encoding="utf-8")
+    assert "session checkpoint" in content
+    assert "working_tree:" in content

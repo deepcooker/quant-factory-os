@@ -93,6 +93,8 @@ Before any implementation, you MUST complete init and pass readiness checks:
 4) Record readiness gate:
    - Run `tools/qf ready RUN_ID=<run-id>` (interactive or via `QF_READY_*` envs).
    - `tools/qf do` MUST fail if no valid `reports/<RUN_ID>/ready.json`.
+   - At major checkpoints (and before `/quit`), run:
+     `tools/qf snapshot RUN_ID=<run-id> NOTE="decision + next step"` to persist session fallback in repo.
 5) If restatement is missing or unclear, STOP and do not modify code.
 
 ## 9) Governance policy (Default)
