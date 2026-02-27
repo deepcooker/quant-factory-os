@@ -275,6 +275,11 @@ if [[ "${SHIP_PR_BODY_EXCERPT_ONLY:-0}" == "1" ]]; then
 fi
 
 guard_single_run() {
+  if [[ "${SHIP_ALLOW_MULTI_RUN:-0}" == "1" ]]; then
+    echo "⚠️  Single-run guard override enabled (SHIP_ALLOW_MULTI_RUN=1)."
+    return 0
+  fi
+
   local files=""
   if [[ -n "${SHIP_GUARD_FILE_LIST:-}" ]]; then
     files="${SHIP_GUARD_FILE_LIST}"
@@ -309,6 +314,31 @@ guard_single_run() {
     fi
     return 1
   fi
+}
+
+guard_workflow_changes() {
+  local files="$1"
+  [[ -z "$files" ]] && return 0
+
+  local workflow_files=""
+  workflow_files="$(echo "$files" | grep -E '^\.github/workflows/[^/]+\.(yml|yaml)$' || true)"
+  [[ -z "$workflow_files" ]] && return 0
+
+  if [[ "${SHIP_ALLOW_WORKFLOWS:-0}" == "1" ]]; then
+    echo "⚠️ Workflow guard override enabled (SHIP_ALLOW_WORKFLOWS=1)."
+    return 0
+  fi
+
+  echo "❌ 检测到本次提交包含 GitHub Actions workflow 变更。"
+  echo "   本仓库默认走 PR + 本地 make verify，不依赖 Actions。"
+  echo "   如需本次明确放行，请使用："
+  echo "     SHIP_ALLOW_WORKFLOWS=1 tools/ship.sh \"$MSG\""
+  echo "   Workflow files:"
+  while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+    echo "   - $file"
+  done <<< "$workflow_files"
+  return 1
 }
 
 extract_task_run_id() {
@@ -488,7 +518,11 @@ run_scope_gate() {
 }
 
 if [[ "${SHIP_GUARD_ONLY:-0}" == "1" ]]; then
-  guard_single_run
+  files="${SHIP_GUARD_FILE_LIST:-}"
+  if ! guard_single_run; then
+    exit 1
+  fi
+  guard_workflow_changes "$files"
   exit $?
 fi
 
@@ -619,6 +653,13 @@ stage_changes() {
 stage_changes
 
 staged_files="$(git diff --cached --name-only || true)"
+if ! guard_workflow_changes "$staged_files"; then
+  write_ship_state "workflow_guard_failed" "workflow guard failed"
+  cleanup_empty_branch "$branch" "origin/main"
+  print_resume_cmd
+  exit 1
+fi
+
 if ! run_scope_gate "$staged_files"; then
   write_ship_state "scope_gate_failed" "scope gate failed"
   cleanup_empty_branch "$branch" "origin/main"

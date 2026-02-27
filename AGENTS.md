@@ -31,6 +31,7 @@ Optional:
 
 ## 4) Allowed Commands (Default)
 Use ONLY these unless task explicitly authorizes more:
+- tools/qf
 - tools/doctor.sh
 - tools/enter.sh
 - tools/task.sh
@@ -40,6 +41,10 @@ Use ONLY these unless task explicitly authorizes more:
 - make verify
 - make slice RUN_ID=... DAY=... SYMBOLS=... START=... END=...
 - pytest -q
+
+Notes:
+- Primary agent entrypoint is `tools/qf` (`init/plan/do/resume`).
+- `tools/enter.sh` and `tools/onboard.sh` are compatibility wrappers.
 
 ## Reading policy
 - 长文件阅读必须使用 tools/view.sh 分段查看，不得直接使用 sed/cat/rg/grep/awk。
@@ -65,3 +70,30 @@ If stuck or tests fail:
 - PR body MUST include:
   - Why / What / Verify
   - Evidence paths
+
+## 8) Session init gate (Mandatory, once per session)
+Before any implementation, you MUST complete init and pass readiness checks:
+1) Run `tools/qf init`
+2) Read, in order:
+   - `AGENTS.md`
+   - `chatlogs/PROJECT_GUIDE.md`
+   - `TASKS/STATE.md`
+   - `TASKS/QUEUE.md`
+   - `docs/WORKFLOW.md`
+   - `docs/ENTITIES.md`
+   - latest `reports/<RUN_ID>/decision.md`
+3) Restate and get confirmation before coding:
+   - Goal (1 sentence)
+   - Scope (exact paths)
+   - Acceptance (verify/evidence/scope)
+   - Execution steps (evidence -> implement -> verify -> reports -> ship)
+   - Stop condition (finish and wait)
+4) If restatement is missing or unclear, STOP and do not modify code.
+
+## 9) Governance policy (Default)
+- This repo is PR-driven and local-verify-first.
+- Required before ship: local `make verify` is green and recorded in reports.
+- Do not rely on GitHub Actions queues as required path.
+- `.github/workflows/*.yml|*.yaml` is blocked by default in `tools/ship.sh`.
+  To allow intentionally for one run:
+  - `SHIP_ALLOW_WORKFLOWS=1 tools/ship.sh "<msg>"`

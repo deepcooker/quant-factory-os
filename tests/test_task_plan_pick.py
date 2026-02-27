@@ -80,6 +80,7 @@ def test_task_pick_queue_next_outputs_task_file_and_run_id(tmp_path: Path):
     env["TASK_BOOTSTRAP_TEMPLATE_FILE"] = str(template_file)
     env["TASK_BOOTSTRAP_OUTPUT_DIR"] = str(output_dir)
     env["TASK_PLAN_OUTPUT_FILE"] = str(proposal_file)
+    env["TASK_BOOTSTRAP_EVIDENCE"] = "0"
 
     res = subprocess.run(
         ["bash", "tools/task.sh", "--pick", "queue-next"],

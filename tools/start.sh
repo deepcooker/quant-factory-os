@@ -30,12 +30,12 @@ repo_root="$(cd "${script_dir}/.." && pwd)"
 cd "${repo_root}"
 
 if [[ "${START_DRY_RUN:-0}" == "1" ]]; then
-  echo "dry-run: would run tools/enter.sh"
+  echo "dry-run: would run tools/qf init"
   echo "dry-run: would exec codex"
   exit 0
 fi
 
-if ! bash tools/enter.sh; then
+if ! bash tools/qf init; then
   exit 1
 fi
 
