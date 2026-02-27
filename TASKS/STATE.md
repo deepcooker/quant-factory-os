@@ -1,7 +1,7 @@
 # STATE
 
-CURRENT_RUN_ID: run-2026-02-27-p1-qf-low-friction-init-handoff-ready
-CURRENT_TASK_FILE: TASKS/TASK-p1-qf-low-friction-init-handoff-ready.md
+CURRENT_RUN_ID: run-2026-02-27-p1-local-chatlogs-full-session-transcript
+CURRENT_TASK_FILE: TASKS/TASK-p1-local-chatlogs-full-session-transcript.md
 CURRENT_STATUS: active
 CURRENT_UPDATED_AT: 2026-02-27T00:00:00Z
 

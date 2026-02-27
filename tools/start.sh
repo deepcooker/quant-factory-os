@@ -39,4 +39,22 @@ if ! bash tools/qf init; then
   exit 1
 fi
 
+session_log_enable="${START_SESSION_LOG:-1}"
+chatlog_dir="${START_CHATLOG_DIR:-${repo_root}/chatlogs}"
+session_log_file="${START_SESSION_LOG_FILE:-}"
+if [[ "$session_log_enable" == "1" ]]; then
+  mkdir -p "$chatlog_dir"
+  if [[ -z "$session_log_file" ]]; then
+    session_log_file="${chatlog_dir}/session-$(date +%Y%m%d-%H%M%S).log"
+  fi
+  echo "session-log: ${session_log_file}"
+  if command -v script >/dev/null 2>&1; then
+    # Capture full terminal interaction locally (chatlogs is gitignored).
+    exec script -q -f "$session_log_file" -c "codex"
+  fi
+  echo "WARN: 'script' command not found; fallback to plain codex (no full transcript)."
+else
+  echo "session-log: disabled (START_SESSION_LOG=0)"
+fi
+
 exec codex

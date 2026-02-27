@@ -58,6 +58,11 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - The following hard rules are handoff gates and apply to every delivery.
 - Do not store full chat transcripts or raw logs in the repo. Keep them local
   under `chatlogs/` and ensure it is listed in `.gitignore`.
+- Preferred startup for full local transcript fallback:
+  - `./tools/start.sh` (default `START_SESSION_LOG=1`)
+  - optional controls:
+    - `START_SESSION_LOG=0` disable transcript logging
+    - `START_SESSION_LOG_FILE=/abs/path/session.log` set explicit log file path
 - For anti-loss fallback, store concise session checkpoints in
   `reports/{RUN_ID}/conversation.md` via:
   - `tools/qf snapshot RUN_ID=<run-id> NOTE="decision/next-step summary"`
