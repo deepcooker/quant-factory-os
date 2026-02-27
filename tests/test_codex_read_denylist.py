@@ -1,5 +1,6 @@
 import os
 import subprocess
+from pathlib import Path
 
 
 def run_view(path: str, allow_override: bool = False) -> subprocess.CompletedProcess:
@@ -24,8 +25,13 @@ def test_view_blocks_denylisted_file_by_default():
 
 
 def test_view_allows_denylisted_file_with_override():
-    res = run_view("project_all_files.txt", allow_override=True)
-    assert res.returncode == 0
-    assert res.stdout.strip() != ""
-    combined = res.stdout + res.stderr
-    assert "override enabled" in combined
+    denylisted = Path("project_all_files.txt")
+    denylisted.write_text("sample\n", encoding="utf-8")
+    try:
+        res = run_view("project_all_files.txt", allow_override=True)
+        assert res.returncode == 0
+        assert res.stdout.strip() != ""
+        combined = res.stdout + res.stderr
+        assert "override enabled" in combined
+    finally:
+        denylisted.unlink(missing_ok=True)

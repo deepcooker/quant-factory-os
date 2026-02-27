@@ -2,11 +2,15 @@ import os
 import subprocess
 
 
-def run_guard(file_list: str | None = None) -> subprocess.CompletedProcess:
+def run_guard(
+    file_list: str | None = None, allow_workflows: bool = False
+) -> subprocess.CompletedProcess:
     env = os.environ.copy()
     env["SHIP_GUARD_ONLY"] = "1"
     if file_list is not None:
         env["SHIP_GUARD_FILE_LIST"] = file_list
+    if allow_workflows:
+        env["SHIP_ALLOW_WORKFLOWS"] = "1"
     return subprocess.run(
         ["bash", "tools/ship.sh", "test: ship guard"],
         env=env,
@@ -55,4 +59,17 @@ def test_ship_guard_ignores_untracked_reports_when_staged_single_run():
         os.rmdir(new_dir)
     except OSError:
         pass
+    assert res.returncode == 0
+
+
+def test_ship_guard_blocks_workflow_changes_by_default():
+    res = run_guard(".github/workflows/ci.yml\n")
+    assert res.returncode != 0
+    combined = (res.stdout + res.stderr).strip()
+    assert "workflow" in combined.lower()
+    assert "SHIP_ALLOW_WORKFLOWS=1" in combined
+
+
+def test_ship_guard_allows_workflow_changes_with_override():
+    res = run_guard(".github/workflows/ci.yml\n", allow_workflows=True)
     assert res.returncode == 0

@@ -41,6 +41,8 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 ## Codex session startup checklist
 - Do not rely on chat/session memory; rely only on repo memory:
   `TASKS/STATE.md`, `TASKS/QUEUE.md`, `reports/{RUN_ID}/`.
+- Preferred entrypoint: `tools/qf` (`init/plan/do/resume`).
+- Compatibility wrappers: `tools/enter.sh` and `tools/onboard.sh` forward to `tools/qf`.
 - 1) Read `TASKS/STATE.md` via `tools/view.sh` and treat it as the only current progress baseline.
 - 2) If STATE shows an active RUN_ID, read `reports/{RUN_ID}/summary.md` and
   `reports/{RUN_ID}/decision.md`.
@@ -55,3 +57,10 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - 7) On failure, write failure reason, repro, and next step in
   `reports/{RUN_ID}/summary.md` + `reports/{RUN_ID}/decision.md` (and `MISTAKES/`
   or `TASKS/STATE.md` when needed).
+
+## Codex governance and automation
+- Session constitution: `docs/CODEX_ONBOARDING_CONSTITUTION.md`
+- Default policy: PR-driven flow with local `make verify`; do not depend on GitHub Actions queues.
+- If automation is ever re-enabled, it must be explicitly requested and documented in task acceptance.
+- `tools/ship.sh` hard gate blocks `.github/workflows/*.yml|*.yaml` by default; explicit override required:
+  - `SHIP_ALLOW_WORKFLOWS=1 tools/ship.sh "<msg>"`
