@@ -75,4 +75,6 @@ strategies/old/
 **/.ipynb_checkpoints/
 MISTAKES/
 reports/**/pr_body_excerpt.md
+reports/run-*-qf-init/
+reports/**/mistake_log.jsonl
 project_all_files.txt
