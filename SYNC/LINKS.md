@@ -5,6 +5,13 @@
 - `docs/WORKFLOW.md`
 - `docs/ENTITIES.md`
 
+## 同频考试
+- `SYNC/EXAM_PLAN_PROMPT.md`
+- `SYNC/EXAM_ANSWER_TEMPLATE.md`
+- `SYNC/EXAM_WORKFLOW.md`
+- `SYNC/EXAM_RUBRIC.json`
+- `tools/sync_exam.py`
+
 ## 队列与状态
 - `TASKS/STATE.md`
 - `TASKS/QUEUE.md`

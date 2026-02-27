@@ -1,9 +1,9 @@
 # STATE
 
-CURRENT_RUN_ID: run-2026-02-27-p0-clean-garbage-reports-and-add-archive-structure
-CURRENT_TASK_FILE: TASKS/TASK-p0-clean-garbage-reports-and-add-archive-structure.md
+CURRENT_RUN_ID: run-2026-02-27-sync-learning-exam-cli-web
+CURRENT_TASK_FILE: TASKS/TASK-sync-learning-exam-cli-web.md
 CURRENT_STATUS: active
-CURRENT_UPDATED_AT: 2026-02-27T23:56:00+08:00
+CURRENT_UPDATED_AT: 2026-02-28T00:08:00+08:00
 
 
 

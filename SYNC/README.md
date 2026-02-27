@@ -28,3 +28,7 @@
   - `main` 上已合并 PR 状态
 - 流程/规则有变更时，必须同步更新 owner 文档（AGENTS/WORKFLOW/SYNC），否则不允许 ship。
 - 退出前必须更新 `SYNC/SESSION_LATEST.md`。
+- 新/陌生 agent 上岗前，建议先走同频考试流程：
+  - `/plan` 题面：`SYNC/EXAM_PLAN_PROMPT.md`
+  - 答题模板：`SYNC/EXAM_ANSWER_TEMPLATE.md`
+  - 自动评分：`tools/sync_exam.py` + `SYNC/EXAM_RUBRIC.json`
