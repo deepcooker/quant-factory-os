@@ -4,6 +4,13 @@ Standard start
 
 This document describes the expected workflow for changes in this repository.
 
+## Document ownership
+- Session entrypoint owner: `SYNC/READ_ORDER.md`
+- Hard rules owner: `AGENTS.md`
+- Execution details owner: `docs/WORKFLOW.md` (this file)
+- Entity definitions owner: `docs/ENTITIES.md`
+- Strategy/vision owner: `docs/PROJECT_GUIDE.md`
+
 ## Status snapshot rule
 Before each ship, record `/status` output in the evidence for the active RUN_ID.
 
@@ -44,19 +51,19 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   `reports/{RUN_ID}/`.
 - Hard rule (gate): If local-only context is needed, record it as structured evidence
   (`summary.md`, `decision.md`, `MISTAKES/`) or in `TASKS/STATE.md`, not in chat.
+- `TASKS/STATE.md` is the source-of-truth for `CURRENT_RUN_ID`.
 
 ## Codex session startup checklist
 - Do not rely on chat/session memory; rely only on repo memory:
   `TASKS/STATE.md`, `TASKS/QUEUE.md`, `reports/{RUN_ID}/`.
+- First read owner entrypoint: `SYNC/READ_ORDER.md`.
 - Preferred entrypoint: `tools/qf` (`init/plan/do/resume`).
 - Compatibility wrappers: `tools/enter.sh` and `tools/onboard.sh` forward to `tools/qf`.
-- 1) Read `TASKS/STATE.md` via `tools/view.sh` and treat it as the only current progress baseline.
-- 2) If STATE shows an active RUN_ID, read `reports/{RUN_ID}/summary.md` and
-  `reports/{RUN_ID}/decision.md`.
-- 3) 对外统一入口：先运行 `tools/qf init`（自动 stash 可恢复 + sync main + doctor + onboard）。
-- 4) 运行 `tools/qf ready RUN_ID=<run-id>` 完成复述上岗门禁（会写入 `reports/<run-id>/ready.json`）。
-- 4.1) 在关键决策点执行 `tools/qf snapshot RUN_ID=<run-id> NOTE="..."`，把“本轮结论/下一步”写入仓库证据，避免会话丢失。
-- 4.2) 若是断线/换号接力，先执行 `tools/qf handoff RUN_ID=<run-id>` 读取上一轮摘要，再继续 `ready -> plan -> do`。
+- 1) 运行 `tools/qf init`（自动 stash 可恢复 + sync main + doctor + onboard）。
+- 2) 按 `SYNC/READ_ORDER.md` 顺序完成阅读与复述。
+- 3) 运行 `tools/qf ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`）。
+- 3.1) 在关键决策点执行 `tools/qf snapshot NOTE="..."`，把“本轮结论/下一步”写入仓库证据，避免会话丢失。
+- 3.2) 若是断线/换号接力，先执行 `tools/qf handoff` 读取上一轮摘要，再继续 `ready -> plan -> do`。
 - 5) 运行 `tools/qf plan 20` 生成候选；该命令会复制 proposal 到 `/tmp`（并打印路径）且保持工作区干净。
 - 6) 运行 `tools/qf do queue-next` 领取下一枪（内部确保 ready + plan 前置、自动 evidence）。
 - 7) Expand that item into `TASKS/TASK-*.md` (from template), then run:

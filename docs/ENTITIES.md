@@ -25,6 +25,18 @@ Minimal entity dictionary for existing repository objects and constraints.
 - TODO/Assumptions: no single hard regex is defined in docs; keep current
   `run-<date>-<slug>` convention unless a stricter rule is added.
 
+## CURRENT_RUN_ID
+- Definition: the default active run pointer for session handoff and qf commands.
+- Source-of-truth: `TASKS/STATE.md`.
+- Related fields in `TASKS/STATE.md`:
+  - `CURRENT_RUN_ID`
+  - `CURRENT_TASK_FILE`
+  - `CURRENT_STATUS` (`active|blocked|done`)
+- Priority rule:
+  - explicit command/env run id can override once;
+  - otherwise tools resolve to `CURRENT_RUN_ID`;
+  - fallback to latest evidence is allowed only as last resort with warning.
+
 ## Evidence
 - Definition: structured memory under `reports/<RUN_ID>/`.
 - Required files:

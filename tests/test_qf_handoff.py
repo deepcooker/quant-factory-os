@@ -78,7 +78,7 @@ def test_qf_handoff_generates_summary_with_existing_artifacts(tmp_path: Path) ->
     assert "Session Handoff" in handoff
     assert "Recent Execution Events" in handoff
     assert "do/do_pick_success" in handoff
-    assert f"tools/qf ready RUN_ID={run_id}" in handoff
+    assert "tools/qf ready" in handoff
 
 
 def test_qf_handoff_handles_missing_inputs(tmp_path: Path) -> None:

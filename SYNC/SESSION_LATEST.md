@@ -1,20 +1,20 @@
 # SESSION_LATEST
 
 Date: 2026-02-27
-Current RUN_ID: `run-2026-02-27-sync-entrypoint-layer`
+Current RUN_ID: `run-2026-02-27-governance-convergence-sync-priority`
 
 ## What happened in latest conversation
-- User confirmed the main pain is not command syntax but sync quality:
-  new sessions/accounts/models often lose continuity.
-- User asked to prioritize "same-frequency alignment" over operation mechanics.
-- Decision: create top-level `SYNC/` as the single handoff entrypoint for both
-  Codex CLI and web GPT workflows.
-- Constraint: preserve wealth project roadmap content.
+- User requested top-level governance convergence with sync priority.
+- User approved:
+  - canonical `PROJECT_GUIDE` in `docs/`
+  - `CURRENT_RUN_ID` source-of-truth in `TASKS/STATE.md`.
+- Goal shifted from tool ergonomics to strict cross-session same-frequency.
 
 ## Current output in this session
-- Added `SYNC/README.md`, `SYNC/READ_ORDER.md`, `SYNC/CURRENT_STATE.md`,
-  `SYNC/SESSION_LATEST.md`, `SYNC/DECISIONS_LATEST.md`, `SYNC/LINKS.md`.
-- Added task + evidence for this change.
+- Preparing P0/P1 implementation:
+  - document owner/reference convergence,
+  - `CURRENT_RUN_ID` default behavior in `tools/qf`,
+  - tests for mismatch/fallback/default resolution.
 
 ## Immediate next step
-- Verify (`make verify`) and ship this RUN as one PR.
+- Complete implementation and verify with `make verify`, then ship one PR.
