@@ -1,9 +1,11 @@
 # STATE
 
-CURRENT_RUN_ID: run-2026-02-27-p1-local-chatlogs-full-session-transcript
-CURRENT_TASK_FILE: TASKS/TASK-p1-local-chatlogs-full-session-transcript.md
+CURRENT_RUN_ID: run-2026-02-27-qf-handoff-session-summary-format
+CURRENT_TASK_FILE: TASKS/TASK-qf-handoff-session-summary-format.md
 CURRENT_STATUS: active
-CURRENT_UPDATED_AT: 2026-02-27T00:00:00Z
+CURRENT_UPDATED_AT: 2026-02-27T15:08:25+00:00
+
+
 
 
 ## Current baseline

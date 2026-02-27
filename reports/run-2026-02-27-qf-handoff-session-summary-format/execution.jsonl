@@ -1,0 +1,1 @@
+{"ts":"2026-02-27T23:08:24+08:00","run_id":"run-2026-02-27-qf-handoff-session-summary-format","phase":"handoff","action":"handoff_generated","status":"ok","command":"tools/qf handoff RUN_ID=run-2026-02-27-qf-handoff-session-summary-format","artifacts":"handoff_file=reports/run-2026-02-27-qf-handoff-session-summary-format/handoff.md","error":""}
