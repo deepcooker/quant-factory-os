@@ -12,6 +12,7 @@ PRIORITY: P1
 - `tools/`
 - `.github/workflows/`
 - `docs/`
+- `chatlogs/`
 - `tests/`
 - `TASKS/`
 - `reports/{RUN_ID}/`

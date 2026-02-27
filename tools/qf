@@ -347,11 +347,35 @@ cleanup_pick_candidate_dirs() {
 
 cmd_init() {
   local run_id="${RUN_ID:-run-$(date +%Y-%m-%d)-qf-init}"
+  local knowledge_file="docs/CHANGELOG_KNOWLEDGE.md"
+  local knowledge_ttl_days="${QF_KNOWLEDGE_TTL_DAYS:-14}"
+  local last_review=""
+  local now_epoch=""
+  local reviewed_epoch=""
+  local age_days=""
   cleanup_pick_candidate_dirs
   auto_stash_if_dirty "init"
   sync_main "$run_id"
   bash tools/doctor.sh
   cmd_onboard "$run_id"
+  if [[ -f "$knowledge_file" ]]; then
+    last_review="$(awk '/^- Date: `/ { gsub(/^- Date: `/, "", $0); gsub(/`$/, "", $0); print; exit }' "$knowledge_file" || true)"
+    if [[ -n "$last_review" ]]; then
+      now_epoch="$(date +%s)"
+      reviewed_epoch="$(date -d "$last_review" +%s 2>/dev/null || true)"
+      if [[ -n "$reviewed_epoch" ]]; then
+        age_days="$(( (now_epoch - reviewed_epoch) / 86400 ))"
+        if [[ "$age_days" -gt "$knowledge_ttl_days" ]]; then
+          echo "⚠️ Knowledge TTL exceeded: last review ${last_review} (${age_days}d > ${knowledge_ttl_days}d)."
+          echo "   建议先执行 knowledge-sync 任务再继续开发。"
+        else
+          echo "Knowledge review age: ${age_days}d (ttl=${knowledge_ttl_days}d)"
+        fi
+      fi
+    fi
+  else
+    echo "⚠️ Missing ${knowledge_file}; recommend creating weekly knowledge-sync task."
+  fi
   echo "INIT_RUN_ID: $run_id"
   echo "== 下一步建议 =="
   echo "1) tools/qf plan 20"
