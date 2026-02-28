@@ -105,7 +105,8 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   - `/plan` 题面：`SYNC/EXAM_PLAN_PROMPT.md`
   - 按 `SYNC/EXAM_ANSWER_TEMPLATE.md` 输出到 `reports/{RUN_ID}/onboard_answer.md`
   - 用 `tools/sync_exam.py` 评分，结果写入 `reports/{RUN_ID}/sync_exam_result.json`
-  - 低摩擦首选：`tools/qf exam-auto`（缺答卷会自动落模板并提示补全；已有答卷则直接评分）
+  - 低摩擦首选：`tools/qf exam-auto`（默认缺答卷会自动填答并直接评分）
+  - 手动模式：`tools/qf exam-auto AUTO_FILL=0`（只落模板，不自动填答）
   - 兼容命令：`tools/qf exam`（只做评分，不自动生成答卷）
 - 4) 运行 `tools/qf ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`，默认可自动填充）。
 - 4.1) 在关键决策点执行 `tools/qf snapshot NOTE="..."`，把“本轮结论/下一步”写入仓库证据，避免会话丢失。
