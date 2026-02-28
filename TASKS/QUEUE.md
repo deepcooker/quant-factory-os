@@ -12,6 +12,16 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [x] TODO Title: qf resume 已合并场景避免重复创建 PR  Picked: run-2026-02-28-qf-resume-pr 2026-02-28T12:01:19+0800
+  Done: PR #141, RUN_ID=run-2026-02-28-qf-resume-pr
+  Goal: 当 `tools/qf resume` 读取到的 `ship_state` 对应 PR 已经 `MERGED` 时，直接走本地同步收尾，不再重复创建新 PR。
+  Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `TASKS/`, `reports/{RUN_ID}/`
+  Acceptance:
+  - [ ] 复现路径下（`ship_state` 已有 `pr_url` 且 PR 已合并），`tools/qf resume` 不再调用 `gh pr create`。
+  - [ ] 仍完成 `checkout main + pull --rebase origin main`，并输出 `resume done`。
+  - [ ] 新增/更新回归测试覆盖该分支逻辑。
+  - [ ] `make verify` 通过，证据写入 `reports/{RUN_ID}/`。
+
 - [x] TODO Title: tools/qf 三命令收敛：init/plan/do + git 自愈（sync/retry/resume）+ 临时产物隔离  Picked: run-2026-02-26-tools-qf-init-plan-do-git-sync-retry-resume 2026-02-26T16:28:23+0800
   Done: PR #109, RUN_ID=run-2026-02-26-tools-qf-init-plan-do-git-sync-retry-resume
   Goal: 将 enter/onboard/task/ship 收敛到一个产品级入口 `tools/qf`，固定为三命令 `init/plan/do`，并补齐 git 自愈与临时产物隔离。

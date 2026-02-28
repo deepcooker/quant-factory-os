@@ -1514,6 +1514,8 @@ cmd_resume() {
   local step=""
   local branch=""
   local pr_url=""
+  local merged_pr_url=""
+  local skip_ship_steps=0
   local msg=""
   local pr_body=""
   local state=""
@@ -1563,58 +1565,81 @@ cmd_resume() {
     exit 1
   }
 
-  if git show-ref --verify --quiet "refs/heads/${branch}"; then
-    run_with_retry_capture "resume_checkout_branch" git checkout "$branch" || {
-      append_execution_event "$run_id" "resume" "resume_checkout_failed" "fail" "git checkout $branch" "" "${RETRY_LAST_ERROR:-checkout failed}"
-      print_resume_cmd "$run_id"
-      exit 1
-    }
-  else
-    run_with_retry_capture "resume_checkout_branch" git checkout -b "$branch" "origin/$branch" || {
-      append_execution_event "$run_id" "resume" "resume_checkout_failed" "fail" "git checkout -b $branch origin/$branch" "" "${RETRY_LAST_ERROR:-checkout failed}"
-      print_resume_cmd "$run_id"
-      exit 1
-    }
+  if [[ -n "$pr_url" && "$pr_url" != "null" ]]; then
+    run_with_retry_capture "resume_pr_state_precheck" gh pr view "$pr_url" --json state -q .state || true
+    state="$(printf "%s\n" "$RETRY_OUTPUT" | tail -n1 | tr -d '\r')"
+    if [[ "$state" == "MERGED" ]]; then
+      skip_ship_steps=1
+      append_execution_event "$run_id" "resume" "resume_pr_already_merged" "ok" "gh pr view $pr_url --json state -q .state" "pr_url=${pr_url}" ""
+      echo "resume: detected merged PR, skip push/create/merge: $pr_url"
+    fi
   fi
 
-  run_with_retry_capture "resume_push" git push -u origin "$branch" || {
-    append_execution_event "$run_id" "resume" "resume_push_failed" "fail" "git push -u origin $branch" "" "${RETRY_LAST_ERROR:-push failed}"
-    print_resume_cmd "$run_id"
-    exit 1
-  }
-
-  if [[ -z "$pr_url" || "$pr_url" == "null" ]]; then
-    pr_body="Resume ship for ${run_id}."
-    if [[ -f "reports/${run_id}/pr_body_excerpt.md" ]]; then
-      pr_body="$(cat "reports/${run_id}/pr_body_excerpt.md")"
+  if [[ "$skip_ship_steps" -eq 0 && ( -z "$pr_url" || "$pr_url" == "null" ) ]]; then
+    run_with_retry_capture "resume_pr_lookup_merged" gh pr list --head "$branch" --base main --state merged --limit 1 --json url -q '.[0].url' || true
+    merged_pr_url="$(printf "%s\n" "$RETRY_OUTPUT" | awk '/^https:\/\/github\.com\/.*\/pull\/[0-9]+$/ {print; exit}')"
+    if [[ -n "$merged_pr_url" ]]; then
+      pr_url="$merged_pr_url"
+      skip_ship_steps=1
+      append_execution_event "$run_id" "resume" "resume_pr_already_merged" "ok" "gh pr list --head $branch --base main --state merged" "pr_url=${pr_url}" ""
+      echo "resume: found merged PR by head branch, skip push/create/merge: $pr_url"
     fi
-    run_with_retry_capture "resume_pr_create" gh pr create --base main --head "$branch" --title "$msg" --body "$pr_body" || {
-      append_execution_event "$run_id" "resume" "resume_pr_create_failed" "fail" "gh pr create --base main --head $branch" "" "${RETRY_LAST_ERROR:-pr create failed}"
-      print_resume_cmd "$run_id"
-      exit 1
-    }
-    pr_url="$(printf "%s\n" "$RETRY_OUTPUT" | awk '/^https:\/\/github\.com\/.*\/pull\/[0-9]+$/ {print; exit}')"
-    if [[ -z "$pr_url" ]]; then
-      echo "ERROR: failed to parse PR url from gh output."
-      print_resume_cmd "$run_id"
-      exit 1
-    fi
-    echo "PR: $pr_url"
   fi
 
-  run_with_retry_capture "resume_pr_merge_auto" gh pr merge --auto --squash --delete-branch "$pr_url" || true
-  run_with_retry_capture "resume_pr_state" gh pr view "$pr_url" --json state -q .state || {
-    append_execution_event "$run_id" "resume" "resume_pr_state_failed" "fail" "gh pr view $pr_url --json state -q .state" "" "${RETRY_LAST_ERROR:-pr state failed}"
-    print_resume_cmd "$run_id"
-    exit 1
-  }
-  state="$(printf "%s\n" "$RETRY_OUTPUT" | tail -n1 | tr -d '\r')"
-  if [[ "$state" != "MERGED" ]]; then
-    run_with_retry_capture "resume_pr_merge" gh pr merge --squash --delete-branch "$pr_url" || {
-      append_execution_event "$run_id" "resume" "resume_pr_merge_failed" "fail" "gh pr merge --squash --delete-branch $pr_url" "" "${RETRY_LAST_ERROR:-pr merge failed}"
+  if [[ "$skip_ship_steps" -eq 0 ]]; then
+    if git show-ref --verify --quiet "refs/heads/${branch}"; then
+      run_with_retry_capture "resume_checkout_branch" git checkout "$branch" || {
+        append_execution_event "$run_id" "resume" "resume_checkout_failed" "fail" "git checkout $branch" "" "${RETRY_LAST_ERROR:-checkout failed}"
+        print_resume_cmd "$run_id"
+        exit 1
+      }
+    else
+      run_with_retry_capture "resume_checkout_branch" git checkout -b "$branch" "origin/$branch" || {
+        append_execution_event "$run_id" "resume" "resume_checkout_failed" "fail" "git checkout -b $branch origin/$branch" "" "${RETRY_LAST_ERROR:-checkout failed}"
+        print_resume_cmd "$run_id"
+        exit 1
+      }
+    fi
+
+    run_with_retry_capture "resume_push" git push -u origin "$branch" || {
+      append_execution_event "$run_id" "resume" "resume_push_failed" "fail" "git push -u origin $branch" "" "${RETRY_LAST_ERROR:-push failed}"
       print_resume_cmd "$run_id"
       exit 1
     }
+
+    if [[ -z "$pr_url" || "$pr_url" == "null" ]]; then
+      pr_body="Resume ship for ${run_id}."
+      if [[ -f "reports/${run_id}/pr_body_excerpt.md" ]]; then
+        pr_body="$(cat "reports/${run_id}/pr_body_excerpt.md")"
+      fi
+      run_with_retry_capture "resume_pr_create" gh pr create --base main --head "$branch" --title "$msg" --body "$pr_body" || {
+        append_execution_event "$run_id" "resume" "resume_pr_create_failed" "fail" "gh pr create --base main --head $branch" "" "${RETRY_LAST_ERROR:-pr create failed}"
+        print_resume_cmd "$run_id"
+        exit 1
+      }
+      pr_url="$(printf "%s\n" "$RETRY_OUTPUT" | awk '/^https:\/\/github\.com\/.*\/pull\/[0-9]+$/ {print; exit}')"
+      if [[ -z "$pr_url" ]]; then
+        echo "ERROR: failed to parse PR url from gh output."
+        print_resume_cmd "$run_id"
+        exit 1
+      fi
+      echo "PR: $pr_url"
+    fi
+
+    run_with_retry_capture "resume_pr_merge_auto" gh pr merge --auto --squash --delete-branch "$pr_url" || true
+    run_with_retry_capture "resume_pr_state" gh pr view "$pr_url" --json state -q .state || {
+      append_execution_event "$run_id" "resume" "resume_pr_state_failed" "fail" "gh pr view $pr_url --json state -q .state" "" "${RETRY_LAST_ERROR:-pr state failed}"
+      print_resume_cmd "$run_id"
+      exit 1
+    }
+    state="$(printf "%s\n" "$RETRY_OUTPUT" | tail -n1 | tr -d '\r')"
+    if [[ "$state" != "MERGED" ]]; then
+      run_with_retry_capture "resume_pr_merge" gh pr merge --squash --delete-branch "$pr_url" || {
+        append_execution_event "$run_id" "resume" "resume_pr_merge_failed" "fail" "gh pr merge --squash --delete-branch $pr_url" "" "${RETRY_LAST_ERROR:-pr merge failed}"
+        print_resume_cmd "$run_id"
+        exit 1
+      }
+    fi
   fi
 
   run_with_retry_capture "resume_sync_checkout_main" git checkout main || {
