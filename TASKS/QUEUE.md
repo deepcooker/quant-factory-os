@@ -12,6 +12,15 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [>] TODO Title: qf exam-auto 默认自动填答并自动评分  Picked: run-2026-02-28-qf-exam-auto 2026-02-28T15:02:01+0800
+  Goal: 让 `tools/qf exam-auto` 在答卷缺失时默认自动生成可评分答案并立刻评分，避免人工先填模板再重跑。
+  Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `TASKS/`, `reports/{RUN_ID}/`
+  Acceptance:
+  - [ ] `tools/qf exam-auto` 在缺答卷时默认不再返回 3，而是自动填答并产出 `sync_exam_result.json`。
+  - [ ] 保留手动模式开关（可显式只生成模板不自动填答）。
+  - [ ] 新增/更新回归测试覆盖“默认自动化”和“手动模式”两条路径。
+  - [ ] `make verify` 通过，证据写入 `reports/{RUN_ID}/`。
+
 - [x] TODO Title: qf resume 已合并场景避免重复创建 PR  Picked: run-2026-02-28-qf-resume-pr 2026-02-28T12:01:19+0800
   Done: PR #141, RUN_ID=run-2026-02-28-qf-resume-pr
   Goal: 当 `tools/qf resume` 读取到的 `ship_state` 对应 PR 已经 `MERGED` 时，直接走本地同步收尾，不再重复创建新 PR。

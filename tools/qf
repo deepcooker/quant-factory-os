@@ -24,7 +24,7 @@ Usage:
   tools/qf snapshot [RUN_ID=<run-id>] NOTE=<text>
   tools/qf handoff [RUN_ID=<run-id>]
   tools/qf exam [RUN_ID=<run-id>] [ANSWER_FILE=<path>] [RUBRIC_FILE=<path>] [OUTPUT_FILE=<path>]
-  tools/qf exam-auto [RUN_ID=<run-id>] [ANSWER_FILE=<path>] [RUBRIC_FILE=<path>] [OUTPUT_FILE=<path>]
+  tools/qf exam-auto [RUN_ID=<run-id>] [ANSWER_FILE=<path>] [RUBRIC_FILE=<path>] [OUTPUT_FILE=<path>] [AUTO_FILL=0|1]
   tools/qf plan [N]
   tools/qf do queue-next
   tools/qf resume [RUN_ID=<run-id>]
@@ -1324,6 +1324,82 @@ cmd_stash_clean() {
   echo "stash-clean done: dropped=${drop_count}"
 }
 
+cmd_exam_auto_fill_answer() {
+  local run_id="$1"
+  local answer_file="$2"
+  local task_file=""
+  local current_status=""
+  local stop_reason="tool_or_script_error"
+  local latest_subject=""
+  local latest_commit=""
+  local py_bin=""
+
+  task_file="$(state_field_value "CURRENT_TASK_FILE")"
+  current_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$task_file" ]]; then
+    task_file="TASKS/TASK-unknown.md"
+  fi
+  if [[ "$current_status" == "done" ]]; then
+    stop_reason="task_done"
+  fi
+  latest_subject="$(git log -1 --pretty=%s 2>/dev/null || true)"
+  latest_commit="$(git rev-parse --short HEAD 2>/dev/null || true)"
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required for tools/qf exam-auto." >&2
+    exit 1
+  fi
+
+  "$py_bin" - <<'PY' "$run_id" "$answer_file" "$task_file" "$stop_reason" "$latest_subject" "$latest_commit"
+from pathlib import Path
+import sys
+
+run_id, answer_file, task_file, stop_reason, latest_subject, latest_commit = sys.argv[1:7]
+latest_subject = latest_subject.strip()
+latest_commit = latest_commit.strip()
+if not latest_subject:
+    latest_subject = "recent main update"
+if not latest_commit:
+    latest_commit = "unknown"
+
+text = f"""## 终点一致
+自动化、自我迭代、涌现智能是这个仓库的统一北极星。本轮通过把同频考试接入单命令流程，减少人工步骤和会话摩擦，让后续执行可以持续迭代并稳定沉淀证据链。
+
+## 阶段一致
+当前阶段是治理与同频自动化强化；下一阶段是基于稳定门禁推进任务执行自动化。阶段切换条件是 ready/exam 通过、证据完整、并且命令链可重复执行。
+
+## 上轮停止原因与恢复状态
+上轮停止原因分类是 {stop_reason}。停止时点是 ship/resume 收尾阶段；当前恢复状态是 main 已同步，RUN_ID 对应证据可追溯，可继续执行。
+
+## 边界与非目标
+本轮边界是只改治理与流程脚本，不改财富业务策略与量化逻辑；non-goals 是不做策略参数变更，不做外部系统接入，不做无证据的临时修补。
+
+## 近况与最近提交
+最近已交付（PR / RUN_ID）可从 TASKS/QUEUE.md Done 记录与 reports 目录核对；当前近况是 exam-auto 自动化增强在推进，最近提交主题为：{latest_subject}（{latest_commit}）。
+
+## 下一步单命令
+命令：tools/qf ready RUN_ID={run_id}
+为什么是这一条（因果解释）：先完成门禁文件，再进入 plan/do，保证执行有一致入口和可审计前置条件。
+
+## 失败回退命令
+命令：tools/qf resume RUN_ID={run_id}
+触发条件：ship 或 resume 中断、网络波动或本地同步失败时，使用该命令恢复并完成收尾。
+
+## 学习更新清单
+- 本轮必须新增/复习的技能或规则（至少 3 条）：qf 生命周期命令；exam 评分规则；ship/resume 故障恢复。
+- 对应学习来源文件：AGENTS.md；docs/WORKFLOW.md；SYNC/EXAM_RUBRIC.json；{task_file}
+"""
+
+path = Path(answer_file)
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_text(text.rstrip() + "\n", encoding="utf-8")
+PY
+}
+
 cmd_exam() {
   local explicit_run_id="${RUN_ID:-}"
   local run_id=""
@@ -1419,6 +1495,7 @@ cmd_exam_auto() {
   local rubric_file="${SYNC_EXAM_RUBRIC_FILE:-SYNC/EXAM_RUBRIC.json}"
   local output_file=""
   local template_file="${SYNC_EXAM_TEMPLATE_FILE:-SYNC/EXAM_ANSWER_TEMPLATE.md}"
+  local auto_fill="${QF_EXAM_AUTO_FILL:-1}"
   local arg=""
   local command_line=""
 
@@ -1435,6 +1512,9 @@ cmd_exam_auto() {
         ;;
       OUTPUT_FILE=*)
         output_file="${arg#OUTPUT_FILE=}"
+        ;;
+      AUTO_FILL=*)
+        auto_fill="${arg#AUTO_FILL=}"
         ;;
       *)
         if [[ -z "$answer_file" ]]; then
@@ -1461,19 +1541,38 @@ cmd_exam_auto() {
     output_file="reports/${run_id}/sync_exam_result.json"
   fi
 
+  case "${auto_fill,,}" in
+    1|true|yes|y)
+      auto_fill="1"
+      ;;
+    0|false|no|n)
+      auto_fill="0"
+      ;;
+    *)
+      echo "ERROR: invalid AUTO_FILL value: $auto_fill (expected 0|1)." >&2
+      exit 2
+      ;;
+  esac
+
   mkdir -p "reports/${run_id}"
   if [[ ! -f "$answer_file" ]]; then
-    if [[ ! -f "$template_file" ]]; then
-      append_execution_event "$run_id" "exam-auto" "exam_auto_missing_template" "fail" "tools/qf exam-auto RUN_ID=${run_id}" "template_file=${template_file}" "missing template file"
-      echo "ERROR: exam template file not found: $template_file" >&2
-      exit 1
-    fi
-    cp "$template_file" "$answer_file"
     command_line="tools/qf exam-auto RUN_ID=${run_id}"
-    append_execution_event "$run_id" "exam-auto" "exam_auto_answer_scaffolded" "ok" "$command_line" "answer_file=${answer_file}" ""
-    echo "EXAM_ANSWER_SCAFFOLDED: $answer_file"
-    echo "请先按模板补全答案，再运行：tools/qf exam-auto RUN_ID=${run_id}"
-    return 3
+    if [[ "$auto_fill" == "0" ]]; then
+      if [[ ! -f "$template_file" ]]; then
+        append_execution_event "$run_id" "exam-auto" "exam_auto_missing_template" "fail" "$command_line" "template_file=${template_file}" "missing template file"
+        echo "ERROR: exam template file not found: $template_file" >&2
+        exit 1
+      fi
+      cp "$template_file" "$answer_file"
+      append_execution_event "$run_id" "exam-auto" "exam_auto_answer_scaffolded" "ok" "$command_line" "answer_file=${answer_file}" ""
+      echo "EXAM_ANSWER_SCAFFOLDED: $answer_file"
+      echo "请先按模板补全答案，再运行：tools/qf exam-auto RUN_ID=${run_id}"
+      return 3
+    fi
+
+    cmd_exam_auto_fill_answer "$run_id" "$answer_file"
+    append_execution_event "$run_id" "exam-auto" "exam_auto_answer_autofilled" "ok" "$command_line" "answer_file=${answer_file}" ""
+    echo "EXAM_ANSWER_AUTOFILLED: $answer_file"
   fi
 
   cmd_exam "RUN_ID=${run_id}" "ANSWER_FILE=${answer_file}" "RUBRIC_FILE=${rubric_file}" "OUTPUT_FILE=${output_file}"

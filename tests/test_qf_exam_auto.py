@@ -88,11 +88,25 @@ def write_min_pass_answer(path: Path) -> None:
     )
 
 
-def test_qf_exam_auto_scaffolds_answer_when_missing(tmp_path: Path) -> None:
+def test_qf_exam_auto_autofills_and_grades_when_missing(tmp_path: Path) -> None:
     repo = setup_repo(tmp_path)
     write_state(repo, "run-current")
 
     res = run(["bash", "tools/qf", "exam-auto"], cwd=repo)
+    assert res.returncode == 0, res.stdout + res.stderr
+    assert "EXAM_ANSWER_AUTOFILLED" in res.stdout
+    assert "SYNC_EXAM_PASS: true" in res.stdout
+    assert (repo / "reports" / "run-current" / "onboard_answer.md").exists()
+    assert (repo / "reports" / "run-current" / "sync_exam_result.json").exists()
+
+
+def test_qf_exam_auto_supports_manual_scaffold_mode(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    write_state(repo, "run-current")
+
+    env = os.environ.copy()
+    env["QF_EXAM_AUTO_FILL"] = "0"
+    res = run(["bash", "tools/qf", "exam-auto"], cwd=repo, env=env)
     assert res.returncode == 3, res.stdout + res.stderr
     assert "EXAM_ANSWER_SCAFFOLDED" in res.stdout
     assert (repo / "reports" / "run-current" / "onboard_answer.md").exists()

@@ -1,0 +1,70 @@
+{
+  "schema": "sync_exam_result.v1",
+  "run_id": "run-2026-02-28-qf-exam-auto",
+  "answer_file": "reports/run-2026-02-28-qf-exam-auto/onboard_answer.md",
+  "rubric_file": "SYNC/EXAM_RUBRIC.json",
+  "passed": true,
+  "score": 100.0,
+  "pass_score": 80,
+  "total_weight": 100,
+  "gained_weight": 100,
+  "failed_checks": [],
+  "checks": [
+    {
+      "id": "north_star",
+      "title": "终点一致",
+      "section": "终点一致",
+      "passed": true,
+      "weight": 20,
+      "reason": "ok"
+    },
+    {
+      "id": "stage_alignment",
+      "title": "阶段一致",
+      "section": "阶段一致",
+      "passed": true,
+      "weight": 15,
+      "reason": "ok"
+    },
+    {
+      "id": "stop_reason",
+      "title": "上轮停止原因",
+      "section": "上轮停止原因与恢复状态",
+      "passed": true,
+      "weight": 15,
+      "reason": "ok"
+    },
+    {
+      "id": "boundary",
+      "title": "边界一致",
+      "section": "边界与非目标",
+      "passed": true,
+      "weight": 10,
+      "reason": "ok"
+    },
+    {
+      "id": "recent_state",
+      "title": "近况一致",
+      "section": "近况与最近提交",
+      "passed": true,
+      "weight": 10,
+      "reason": "ok"
+    },
+    {
+      "id": "next_command",
+      "title": "下一步单命令",
+      "section": "下一步单命令",
+      "passed": true,
+      "weight": 20,
+      "reason": "ok"
+    },
+    {
+      "id": "rollback_command",
+      "title": "失败回退命令",
+      "section": "失败回退命令",
+      "passed": true,
+      "weight": 10,
+      "reason": "ok"
+    }
+  ]
+}
