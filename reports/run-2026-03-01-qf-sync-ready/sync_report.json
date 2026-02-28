@@ -1,0 +1,250 @@
+{
+  "run_id": "run-2026-03-01-qf-sync-ready",
+  "created_at_utc": "2026-02-28T17:38:48.388258+00:00",
+  "sync_passed": true,
+  "required_files": [
+    "README.md",
+    "SYNC/README.md",
+    "SYNC/READ_ORDER.md",
+    "SYNC/CURRENT_STATE.md",
+    "SYNC/SESSION_LATEST.md",
+    "SYNC/DECISIONS_LATEST.md",
+    "SYNC/LINKS.md",
+    "SYNC/EXAM_PLAN_PROMPT.md",
+    "SYNC/EXAM_ANSWER_TEMPLATE.md",
+    "SYNC/EXAM_WORKFLOW.md",
+    "SYNC/EXAM_RUBRIC.json",
+    "AGENTS.md",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/PROJECT_GUIDE.md",
+    "TASKS/STATE.md",
+    "TASKS/QUEUE.md"
+  ],
+  "missing_required_files": [],
+  "files_read": [
+    {
+      "path": "README.md",
+      "required": true,
+      "exists": true,
+      "bytes": 960,
+      "lines": 45,
+      "sha256": "84097154c03791f7a01fb22e69bcb91317c3a3a623c7a0ceae88207b4b1ca5e8",
+      "preview": "# quant-factory-os"
+    },
+    {
+      "path": "SYNC/README.md",
+      "required": true,
+      "exists": true,
+      "bytes": 1901,
+      "lines": 36,
+      "sha256": "86cb0b0c00b2b443445e0526e3b2b808f675003fc62d3459a8899e33e14382d4",
+      "preview": "# 同频入口"
+    },
+    {
+      "path": "SYNC/READ_ORDER.md",
+      "required": true,
+      "exists": true,
+      "bytes": 1216,
+      "lines": 42,
+      "sha256": "7903c990647f90f24cc0d36fffd71849b16b88fca75316d238f63d028b982546",
+      "preview": "# 阅读顺序"
+    },
+    {
+      "path": "SYNC/CURRENT_STATE.md",
+      "required": true,
+      "exists": true,
+      "bytes": 1035,
+      "lines": 26,
+      "sha256": "c6eebc1e71853a03a7c05c46c2e12d920b9e469b1f94975bd88596d6f24cb769",
+      "preview": "# 当前状态"
+    },
+    {
+      "path": "SYNC/SESSION_LATEST.md",
+      "required": true,
+      "exists": true,
+      "bytes": 1232,
+      "lines": 27,
+      "sha256": "de7ad8afb6b06d28d08660f9b371f9217291adf2468b0398636ceaa7b9f022ca",
+      "preview": "# Session 总结（Latest）"
+    },
+    {
+      "path": "SYNC/DECISIONS_LATEST.md",
+      "required": true,
+      "exists": true,
+      "bytes": 2952,
+      "lines": 54,
+      "sha256": "38489d8acc7490f71d9b3655cf63c8b2996e29c436fcb9bfbd9eab0904948b31",
+      "preview": "# 最新决策"
+    },
+    {
+      "path": "SYNC/LINKS.md",
+      "required": true,
+      "exists": true,
+      "bytes": 840,
+      "lines": 34,
+      "sha256": "494f0159834a6fb9ef861a8cd870f27973064eeaf901ed28b6b6092e0deabba5",
+      "preview": "# 索引链接"
+    },
+    {
+      "path": "SYNC/EXAM_PLAN_PROMPT.md",
+      "required": true,
+      "exists": true,
+      "bytes": 1004,
+      "lines": 24,
+      "sha256": "5902239578eefd78db0748c2e2d684651ea779e28d77a7a2e6053a219dcc4f97",
+      "preview": "# /plan 同频考试题面（CLI + 网页 GPT 通用）"
+    },
+    {
+      "path": "SYNC/EXAM_ANSWER_TEMPLATE.md",
+      "required": true,
+      "exists": true,
+      "bytes": 1162,
+      "lines": 43,
+      "sha256": "b86446189aaf6c27d4c6e68ace758af788e399b46a90f1a1719630738df4ade0",
+      "preview": "# 同频考试答题模板（用于学习，不是刷题）"
+    },
+    {
+      "path": "SYNC/EXAM_WORKFLOW.md",
+      "required": true,
+      "exists": true,
+      "bytes": 994,
+      "lines": 31,
+      "sha256": "f0ac3aea520e3bcad9467c666922aac7e12dc989123877b114350a17f896e1cc",
+      "preview": "# 同频考试工作流（CLI + 网页 GPT）"
+    },
+    {
+      "path": "SYNC/EXAM_RUBRIC.json",
+      "required": true,
+      "exists": true,
+      "bytes": 2196,
+      "lines": 87,
+      "sha256": "14e79009c0693337932131af66e4f2b74f60fa41297509c1b4e46753845b06be",
+      "preview": "{"
+    },
+    {
+      "path": "AGENTS.md",
+      "required": true,
+      "exists": true,
+      "bytes": 6049,
+      "lines": 138,
+      "sha256": "e5007d0164e738677ff2e5ae20edcc16388c9df9434d86cf2e0814fbd6d32080",
+      "preview": "# AGENTS.md (Hard Rules for Codex / Agents)"
+    },
+    {
+      "path": "docs/WORKFLOW.md",
+      "required": true,
+      "exists": true,
+      "bytes": 9427,
+      "lines": 162,
+      "sha256": "e3ab9f76635e856e414e0b236b4377f8ef34af64643c3002fa76ac7ce36916f1",
+      "preview": "# WORKFLOW"
+    },
+    {
+      "path": "docs/ENTITIES.md",
+      "required": true,
+      "exists": true,
+      "bytes": 4125,
+      "lines": 94,
+      "sha256": "4f61133b7930502b914d04e712a9685cad7ad446126334f6793101e5fada59c8",
+      "preview": "# ENTITIES"
+    },
+    {
+      "path": "docs/PROJECT_GUIDE.md",
+      "required": true,
+      "exists": true,
+      "bytes": 19628,
+      "lines": 450,
+      "sha256": "f8d900e41cf562a619d53e846cdc9258beafa6684792e8667a5a2884c0567ab3",
+      "preview": "# PROJECT_GUIDE.md (v2) — quant-factory-os 自举式智能工厂操作系统"
+    },
+    {
+      "path": "TASKS/STATE.md",
+      "required": true,
+      "exists": true,
+      "bytes": 1959,
+      "lines": 53,
+      "sha256": "a9ed60dd1d8a0faf9462eb5013c3f2174c4887585505f29fcadac532c1198a91",
+      "preview": "# STATE"
+    },
+    {
+      "path": "TASKS/QUEUE.md",
+      "required": true,
+      "exists": true,
+      "bytes": 18076,
+      "lines": 254,
+      "sha256": "ee17dfd8b3796418cdd0e62a7618e127f4bd7e596ff2b548b362a6a0eebe1559",
+      "preview": "# QUEUE"
+    },
+    {
+      "path": "TASKS/TASK-qf-sync-ready.md",
+      "required": false,
+      "exists": true,
+      "bytes": 1542,
+      "lines": 41,
+      "sha256": "a04014894679b3204554a26a1197dcb9b3c6642a134e7657c6b24b89c6b419aa",
+      "preview": "# TASK: qf sync 自动同频 + ready 硬门禁 + 对话证据自动更新"
+    },
+    {
+      "path": "reports/run-2026-03-01-qf-sync-ready/handoff.md",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "reports/run-2026-03-01-qf-sync-ready/conversation.md",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "reports/run-2026-03-01-qf-sync-ready/decision.md",
+      "required": false,
+      "exists": true,
+      "bytes": 112,
+      "lines": 12,
+      "sha256": "98cf27106d028689ba94fa6b9f7b5c011e4e1f08ec117e03ac26793ddec09547",
+      "preview": "# Decision"
+    },
+    {
+      "path": "reports/run-2026-03-01-qf-sync-ready/summary.md",
+      "required": false,
+      "exists": true,
+      "bytes": 109,
+      "lines": 12,
+      "sha256": "88d5b6e3271b612d68a066ad3c7b56f1f3635a5e4a0e3996560ab41f4405766a",
+      "preview": "# Summary"
+    }
+  ],
+  "project_overview": {
+    "summary": "quant-factory-os is the governance/execution base for quant engineering.",
+    "north_star": "quant-factory-os 是一个“自举式智能工厂操作系统”：它能**自动执行任务**、能**从证据链与错题本学习变强**、能**训练/引导新的智能体加入并理解因果链**、能**自我迭代升级工具与流程**、最终能**多智能协作形成涌现智能**，并把这些能力用于任何项目（最初是量化策略工厂，最终是通用项目底座）。"
+  },
+  "governance": {
+    "constitution": "AGENTS.md",
+    "workflow": "docs/WORKFLOW.md",
+    "entities": "docs/ENTITIES.md"
+  },
+  "skill_lookup": {
+    "primary": "AGENTS.md (Skills section)",
+    "fallback": "/root/.codex/skills/.system/*/SKILL.md"
+  },
+  "current_stage": {
+    "current_run_id": "run-2026-03-01-qf-sync-ready",
+    "current_task_file": "TASKS/TASK-qf-sync-ready.md",
+    "current_status": "active"
+  },
+  "session_handoff": {
+    "continuity": "ready_to_continue",
+    "has_handoff": false,
+    "has_decision": true,
+    "has_summary": true
+  },
+  "next_command": "tools/qf ready"
+}

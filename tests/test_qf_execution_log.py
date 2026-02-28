@@ -56,6 +56,7 @@ def test_qf_do_writes_execution_log(tmp_path: Path) -> None:
     run(["git", "commit", "-m", "seed"], cwd=repo)
 
     env = os.environ.copy()
+    env["QF_READY_REQUIRE_SYNC"] = "0"
     env["QF_READY_GOAL"] = "one goal"
     env["QF_READY_SCOPE"] = "tools/qf"
     env["QF_READY_ACCEPTANCE"] = "make verify"
@@ -102,6 +103,7 @@ def test_qf_execution_log_redacts_token_text(tmp_path: Path) -> None:
     run(["git", "commit", "-m", "seed"], cwd=repo)
 
     env = os.environ.copy()
+    env["QF_READY_REQUIRE_SYNC"] = "0"
     env["QF_READY_GOAL"] = "goal"
     env["QF_READY_SCOPE"] = "scope"
     env["QF_READY_ACCEPTANCE"] = "accept"

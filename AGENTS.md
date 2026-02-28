@@ -44,6 +44,7 @@ Use ONLY these unless task explicitly authorizes more:
 
 Notes:
 - Primary agent entrypoint is `tools/qf` (`init/plan/do/resume`).
+- Sync gate command: `tools/qf sync` (auto reading + sync report).
 - `tools/enter.sh` and `tools/onboard.sh` are compatibility wrappers.
 
 ## Single source map
@@ -97,6 +98,7 @@ Before any implementation, you MUST complete init and pass readiness checks:
 3) Read, in order:
    - `SYNC/READ_ORDER.md`
    - files listed in `SYNC/READ_ORDER.md` (strict order)
+   - then run `tools/qf sync` to materialize read evidence (`sync_report.json/.md`)
 4) Restate and get confirmation before coding:
    - Goal (1 sentence)
    - Scope (exact paths)
@@ -106,9 +108,11 @@ Before any implementation, you MUST complete init and pass readiness checks:
 5) Record readiness gate:
    - `CURRENT_RUN_ID` source-of-truth is `TASKS/STATE.md`.
    - Run `tools/qf ready` (or `tools/qf ready RUN_ID=<run-id>` for explicit override).
+   - `tools/qf ready` requires valid `reports/<RUN_ID>/sync_report.json`; by default it auto-runs `tools/qf sync` when missing (`QF_READY_AUTO_SYNC=1`).
    - `tools/qf ready` auto-fills restatement from active task contract by default.
    - To force manual-only input: `QF_READY_AUTO=0 tools/qf ready`
    - `tools/qf do` MUST fail if no valid `reports/<RUN_ID>/ready.json`.
+   - Keep conversation evidence fresh: `tools/qf sync|ready|plan` should append checkpoint notes into `reports/<RUN_ID>/conversation.md` (unless explicitly disabled).
    - At major checkpoints (and before `/quit`), run:
      `tools/qf snapshot NOTE="decision + next step"` to persist session fallback in repo.
    - `tools/qf do` / `tools/qf resume` must keep execution traces in

@@ -12,6 +12,16 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [x] TODO Title: qf sync 自动同频 + ready 硬门禁 + 对话证据自动更新  Picked: run-2026-03-01-qf-sync-ready 2026-03-01T01:30:01+0800
+  Done: local verify passed, RUN_ID=run-2026-03-01-qf-sync-ready
+  Goal: 把同频阶段做成高自动化闭环：自动读取必读链路、自动生成同频报告、ready 强制校验同频完成，并在关键命令自动更新会话证据。
+  Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `AGENTS.md`, `SYNC/`, `TASKS/`, `reports/{RUN_ID}/`
+  Acceptance:
+  - [x] 新增 `tools/qf sync`：自动读取必读文件并落盘 `reports/{RUN_ID}/sync_report.json` 与 `sync_report.md`，包含“已读文件清单、项目总况、宪法、工作流、技能查找入口、当前任务阶段、会话承接状态、下一条命令”。
+  - [x] `tools/qf ready` 在缺失有效同频报告时不得通过；默认自动补跑同频后再写 `ready.json`（可通过开关关闭自动补跑）。
+  - [x] `tools/qf plan` 在常见脏工作区（STATE/execution/report 变更）下不再反复卡住，保持低摩擦可用。
+  - [x] `make verify` 通过；本 RUN 的 `reports/{RUN_ID}/summary.md` 与 `decision.md` 记录变更、验证和风险。
+
 - [x] TODO Title: qf exam-auto 默认自动填答并自动评分  Picked: run-2026-02-28-qf-exam-auto 2026-02-28T15:02:01+0800
   Done: PR #142, RUN_ID=run-2026-02-28-qf-exam-auto
   Goal: 让 `tools/qf exam-auto` 在答卷缺失时默认自动生成可评分答案并立刻评分，避免人工先填模板再重跑。

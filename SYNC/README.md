@@ -18,7 +18,9 @@
 - `tools/qf init` 只负责环境准备，不等于同频完成。
 - 接力会话下，`tools/qf init` 默认自动执行 `tools/qf handoff`（可用 `QF_INIT_AUTO_HANDOFF=0` 关闭）。
 - `tools/qf handoff` 只负责接班摘要，不等于门禁通过。
+- `tools/qf sync` 负责把同频阅读固化为证据（`reports/{RUN_ID}/sync_report.json|md`）。
 - `tools/qf ready` 是唯一上岗门禁；没有 `ready.json` 不得执行 `tools/qf do`.
+- `tools/qf ready` 依赖有效 `sync_report.json`；默认缺失时会自动补跑 `tools/qf sync`（`QF_READY_AUTO_SYNC=1`）。
 - `tools/qf ready` 默认可从当前任务合同自动填充复述字段（可用 `QF_READY_AUTO=0` 强制手填）。
 - 完整会话转录优先落本地 `chatlogs/`（不入库）：
   - `./tools/start.sh` 默认会记录到 `chatlogs/session-*.log`

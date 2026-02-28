@@ -20,6 +20,7 @@ usage() {
 Usage:
   tools/qf init
   tools/qf onboard RUN_ID
+  tools/qf sync [RUN_ID=<run-id>]
   tools/qf ready [RUN_ID=<run-id>]
   tools/qf snapshot [RUN_ID=<run-id>] NOTE=<text>
   tools/qf handoff [RUN_ID=<run-id>]
@@ -110,6 +111,46 @@ append_execution_event() {
     "$(json_escape "$command_r")" \
     "$(json_escape "$artifacts_r")" \
     "$(json_escape "$error_r")" >> "$file"
+}
+
+append_conversation_checkpoint() {
+  local run_id="$1"
+  local phase="${2:-checkpoint}"
+  local note="${3:-}"
+  local file=""
+  local now_iso=""
+  local branch=""
+  local head=""
+  local status_line=""
+
+  if [[ -z "$run_id" || "${QF_AUTO_CONVERSATION:-1}" != "1" ]]; then
+    return 0
+  fi
+
+  file="reports/${run_id}/conversation.md"
+  mkdir -p "reports/${run_id}"
+  now_iso="$(date -Iseconds)"
+  branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")"
+  head="$(git rev-parse --short HEAD 2>/dev/null || echo "none")"
+  if is_dirty; then
+    status_line="dirty"
+  else
+    status_line="clean"
+  fi
+
+  {
+    echo "## ${now_iso}"
+    echo "- phase: \`${phase}\`"
+    echo "- branch: \`${branch}\`"
+    echo "- head: \`${head}\`"
+    echo "- working_tree: \`${status_line}\`"
+    if [[ -n "$note" ]]; then
+      echo "- note: ${note}"
+    else
+      echo "- note: (empty)"
+    fi
+    echo
+  } >> "$file"
 }
 
 state_field_value() {
@@ -492,6 +533,285 @@ extract_task_acceptance_default() {
   ' "$task_file"
 }
 
+cmd_sync() {
+  local arg="${1:-}"
+  local run_id=""
+  local explicit_run_id=""
+  local task_file=""
+  local current_status=""
+  local sync_file=""
+  local sync_md=""
+  local py_bin=""
+
+  if [[ "$arg" =~ ^RUN_ID=.+$ ]]; then
+    explicit_run_id="${arg#RUN_ID=}"
+  elif [[ -n "$arg" ]]; then
+    explicit_run_id="$arg"
+  elif [[ -n "${RUN_ID:-}" ]]; then
+    explicit_run_id="${RUN_ID}"
+  fi
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "sync")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: sync requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    exit 2
+  fi
+
+  task_file="$(state_field_value "CURRENT_TASK_FILE")"
+  current_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$current_status" ]]; then
+    current_status="active"
+  fi
+
+  mkdir -p "reports/${run_id}"
+  sync_file="reports/${run_id}/sync_report.json"
+  sync_md="reports/${run_id}/sync_report.md"
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required to write sync report." >&2
+    exit 1
+  fi
+
+  "$py_bin" - <<'PY' "$run_id" "$task_file" "$current_status" "$sync_file" "$sync_md"
+import hashlib
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+run_id, task_file, current_status, sync_file, sync_md = sys.argv[1:]
+
+required_files = [
+    "README.md",
+    "SYNC/README.md",
+    "SYNC/READ_ORDER.md",
+    "SYNC/CURRENT_STATE.md",
+    "SYNC/SESSION_LATEST.md",
+    "SYNC/DECISIONS_LATEST.md",
+    "SYNC/LINKS.md",
+    "SYNC/EXAM_PLAN_PROMPT.md",
+    "SYNC/EXAM_ANSWER_TEMPLATE.md",
+    "SYNC/EXAM_WORKFLOW.md",
+    "SYNC/EXAM_RUBRIC.json",
+    "AGENTS.md",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/PROJECT_GUIDE.md",
+    "TASKS/STATE.md",
+    "TASKS/QUEUE.md",
+]
+
+optional_files = [
+    task_file,
+    f"reports/{run_id}/handoff.md",
+    f"reports/{run_id}/conversation.md",
+    f"reports/{run_id}/decision.md",
+    f"reports/{run_id}/summary.md",
+]
+
+
+def read_text(path: str) -> str:
+    p = Path(path)
+    if not p.is_file():
+        return ""
+    return p.read_text(encoding="utf-8", errors="replace")
+
+
+def first_non_empty_line(text: str) -> str:
+    for raw in text.splitlines():
+        line = raw.strip()
+        if line:
+            return line[:160]
+    return ""
+
+
+def count_lines(text: str) -> int:
+    if not text:
+        return 0
+    return len(text.splitlines())
+
+
+read_entries = []
+seen = set()
+for path in required_files + optional_files:
+    if not path or path in seen:
+        continue
+    seen.add(path)
+    p = Path(path)
+    entry = {
+        "path": path,
+        "required": path in required_files,
+        "exists": p.is_file(),
+        "bytes": 0,
+        "lines": 0,
+        "sha256": "",
+        "preview": "",
+    }
+    if p.is_file():
+        data = p.read_bytes()
+        text = data.decode("utf-8", errors="replace")
+        entry["bytes"] = len(data)
+        entry["lines"] = count_lines(text)
+        entry["sha256"] = hashlib.sha256(data).hexdigest()
+        entry["preview"] = first_non_empty_line(text)
+    read_entries.append(entry)
+
+missing_required = [x["path"] for x in read_entries if x["required"] and not x["exists"]]
+sync_passed = len(missing_required) == 0
+
+state_text = read_text("TASKS/STATE.md")
+
+
+def state_field(name: str) -> str:
+    m = re.search(rf"^\s*{re.escape(name)}:\s*(.*?)\s*$", state_text, flags=re.M)
+    if not m:
+        return ""
+    return m.group(1).strip()
+
+
+state_run_id = state_field("CURRENT_RUN_ID") or run_id
+state_task_file = state_field("CURRENT_TASK_FILE") or task_file
+state_status = state_field("CURRENT_STATUS") or current_status or "active"
+
+project_guide = read_text("docs/PROJECT_GUIDE.md")
+north_star = ""
+guide_lines = project_guide.splitlines()
+for i, raw in enumerate(guide_lines):
+    if "一句话北极星" not in raw:
+        continue
+    for cand in guide_lines[i + 1 :]:
+        s = cand.strip()
+        if not s or s.startswith("#") or s.startswith(">") or s.startswith("-"):
+            continue
+        north_star = s
+        break
+    break
+if not north_star:
+    north_star = "quant-factory-os is an evidence-driven operating system for quant engineering."
+
+readme_text = read_text("README.md")
+project_summary = ""
+for raw in readme_text.splitlines():
+    s = raw.strip()
+    if s and not s.startswith("#"):
+        project_summary = s
+        break
+if not project_summary:
+    project_summary = "quant-factory-os governance/execution base for quant engineering."
+
+ready_exists = Path(f"reports/{run_id}/ready.json").is_file()
+next_command = "tools/qf plan 20" if ready_exists else "tools/qf ready"
+
+decision_exists = Path(f"reports/{run_id}/decision.md").is_file()
+summary_exists = Path(f"reports/{run_id}/summary.md").is_file()
+handoff_exists = Path(f"reports/{run_id}/handoff.md").is_file()
+session_continuity = "ready_to_continue" if (decision_exists and summary_exists) else "partial_context"
+if handoff_exists and session_continuity == "partial_context":
+    session_continuity = "handoff_available"
+
+obj = {
+    "run_id": run_id,
+    "created_at_utc": datetime.now(timezone.utc).isoformat(),
+    "sync_passed": sync_passed,
+    "required_files": required_files,
+    "missing_required_files": missing_required,
+    "files_read": read_entries,
+    "project_overview": {
+        "summary": project_summary,
+        "north_star": north_star,
+    },
+    "governance": {
+        "constitution": "AGENTS.md",
+        "workflow": "docs/WORKFLOW.md",
+        "entities": "docs/ENTITIES.md",
+    },
+    "skill_lookup": {
+        "primary": "AGENTS.md (Skills section)",
+        "fallback": "/root/.codex/skills/.system/*/SKILL.md",
+    },
+    "current_stage": {
+        "current_run_id": state_run_id,
+        "current_task_file": state_task_file,
+        "current_status": state_status,
+    },
+    "session_handoff": {
+        "continuity": session_continuity,
+        "has_handoff": handoff_exists,
+        "has_decision": decision_exists,
+        "has_summary": summary_exists,
+    },
+    "next_command": next_command,
+}
+
+Path(sync_file).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+md = []
+md.append("# Sync Report")
+md.append("")
+md.append(f"RUN_ID: `{run_id}`")
+md.append(f"Generated At (UTC): {obj['created_at_utc']}")
+md.append(f"SYNC_PASS: {'true' if sync_passed else 'false'}")
+md.append("")
+md.append("## Files Read")
+for item in read_entries:
+    status = "read" if item["exists"] else "missing"
+    req = "required" if item["required"] else "optional"
+    md.append(f"- `{item['path']}` ({req}, {status}, lines={item['lines']})")
+md.append("")
+md.append("## Project Overview")
+md.append(f"- Summary: {project_summary}")
+md.append(f"- North star: {north_star}")
+md.append("")
+md.append("## Governance")
+md.append("- Constitution: `AGENTS.md`")
+md.append("- Workflow: `docs/WORKFLOW.md`")
+md.append("- Entity map: `docs/ENTITIES.md`")
+md.append("")
+md.append("## Skill Lookup")
+md.append("- Primary: `AGENTS.md` Skills section")
+md.append("- Fallback: `/root/.codex/skills/.system/*/SKILL.md`")
+md.append("")
+md.append("## Current Stage")
+md.append(f"- CURRENT_RUN_ID: `{state_run_id}`")
+md.append(f"- CURRENT_TASK_FILE: `{state_task_file}`")
+md.append(f"- CURRENT_STATUS: `{state_status}`")
+md.append("")
+md.append("## Session Continuity")
+md.append(f"- continuity: `{session_continuity}`")
+md.append(f"- has_handoff: `{str(handoff_exists).lower()}`")
+md.append(f"- has_decision: `{str(decision_exists).lower()}`")
+md.append(f"- has_summary: `{str(summary_exists).lower()}`")
+md.append("")
+md.append("## Next Command")
+md.append(f"- `{next_command}`")
+md.append("")
+if missing_required:
+    md.append("## Missing Required Files")
+    for path in missing_required:
+        md.append(f"- `{path}`")
+    md.append("")
+
+Path(sync_md).write_text("\n".join(md) + "\n", encoding="utf-8")
+
+print(f"SYNC_PASS: {'true' if sync_passed else 'false'}")
+print(f"SYNC_FILES_READ: {len(read_entries)}")
+print(f"SYNC_MISSING_REQUIRED: {len(missing_required)}")
+print(f"SYNC_NEXT_COMMAND: {next_command}")
+PY
+
+  append_execution_event "$run_id" "sync" "sync_generated" "ok" "tools/qf sync RUN_ID=${run_id}" "sync_file=${sync_file};sync_md=${sync_md}" ""
+  append_conversation_checkpoint "$run_id" "sync" "sync completed; report generated at ${sync_md}"
+  update_state_current "$run_id" "$task_file" "$current_status"
+  echo "SYNC_REPORT_FILE: ${sync_file}"
+  echo "SYNC_REPORT_MD: ${sync_md}"
+  echo "SYNC_RUN_ID: ${run_id}"
+}
+
 resolve_ready_field() {
   local env_key="$1"
   local prompt="$2"
@@ -524,6 +844,9 @@ cmd_ready() {
   local goal_default scope_default acceptance_default steps_default stop_default
   local task_file=""
   local ready_file=""
+  local sync_report_file=""
+  local require_sync="${QF_READY_REQUIRE_SYNC:-1}"
+  local auto_sync="${QF_READY_AUTO_SYNC:-1}"
   local py_bin=""
 
   if [[ "$arg" =~ ^RUN_ID=.+$ ]]; then
@@ -539,6 +862,21 @@ cmd_ready() {
     echo "ERROR: ready requires RUN_ID (from explicit arg/env or TASKS/STATE.md CURRENT_RUN_ID)." >&2
     echo "Usage: tools/qf ready [RUN_ID=<run-id>]" >&2
     exit 2
+  fi
+
+  if [[ "$require_sync" == "1" ]]; then
+    sync_report_file="$(resolve_sync_file_for_run "$run_id" || true)"
+    if [[ -z "$sync_report_file" && "$auto_sync" == "1" ]]; then
+      echo "SYNC_AUTO_RUN: tools/qf sync RUN_ID=${run_id}"
+      cmd_sync "RUN_ID=${run_id}"
+      sync_report_file="$(resolve_sync_file_for_run "$run_id" || true)"
+    fi
+    if [[ -z "$sync_report_file" ]]; then
+      echo "ERROR: sync gate not satisfied for run ${run_id}." >&2
+      echo "Run: tools/qf sync RUN_ID=${run_id}" >&2
+      echo "Then retry: tools/qf ready RUN_ID=${run_id}" >&2
+      exit 1
+    fi
   fi
 
   task_file="$(state_field_value "CURRENT_TASK_FILE")"
@@ -584,17 +922,23 @@ cmd_ready() {
     exit 1
   fi
 
-  "$py_bin" - <<'PY' "$ready_file" "$run_id" "$goal" "$scope" "$acceptance" "$steps" "$stop"
+  "$py_bin" - <<'PY' "$ready_file" "$run_id" "$goal" "$scope" "$acceptance" "$steps" "$stop" "$sync_report_file" "$require_sync"
 import json
 import sys
 from datetime import datetime, timezone
 
-out, run_id, goal, scope, acceptance, steps, stop = sys.argv[1:]
+out, run_id, goal, scope, acceptance, steps, stop, sync_report_file, require_sync = sys.argv[1:]
+required = require_sync == "1"
 obj = {
     "run_id": run_id,
     "created_at_utc": datetime.now(timezone.utc).isoformat(),
     "constitution_read": True,
     "workflow_read": True,
+    "sync_gate": {
+        "required": required,
+        "sync_report_file": sync_report_file,
+        "sync_passed": (bool(sync_report_file) if required else True),
+    },
     "restatement_passed": True,
     "restatement": {
         "goal": goal,
@@ -609,10 +953,14 @@ with open(out, "w", encoding="utf-8") as f:
     f.write("\n")
 PY
 
-  append_execution_event "$run_id" "ready" "ready_passed" "ok" "tools/qf ready" "ready_file=${ready_file};task_file=${task_file}" ""
+  append_execution_event "$run_id" "ready" "ready_passed" "ok" "tools/qf ready" "ready_file=${ready_file};sync_report=${sync_report_file};task_file=${task_file}" ""
+  append_conversation_checkpoint "$run_id" "ready" "ready gate passed; sync_report=${sync_report_file}"
   update_state_current "$run_id" "$(state_field_value "CURRENT_TASK_FILE")" "active"
   echo "READY_FILE: $ready_file"
   echo "READY_RUN_ID: $run_id"
+  if [[ -n "$sync_report_file" ]]; then
+    echo "READY_SYNC_REPORT: $sync_report_file"
+  fi
   if [[ -n "$task_file" ]]; then
     echo "READY_TASK_FILE: $task_file"
   fi
@@ -908,6 +1256,52 @@ PY
   echo "HANDOFF_RUN_ID: $run_id"
 }
 
+sync_file_is_valid() {
+  local sync_file="$1"
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    return 1
+  fi
+  "$py_bin" - <<'PY' "$sync_file"
+import json
+import sys
+
+path = sys.argv[1]
+try:
+    with open(path, "r", encoding="utf-8") as f:
+        obj = json.load(f)
+except Exception:
+    raise SystemExit(1)
+if not obj.get("sync_passed"):
+    raise SystemExit(1)
+if obj.get("missing_required_files"):
+    raise SystemExit(1)
+if not obj.get("files_read"):
+    raise SystemExit(1)
+print(path)
+PY
+}
+
+resolve_sync_file_for_run() {
+  local run_id="${1:-}"
+  local sync_file=""
+  if [[ -z "$run_id" ]]; then
+    printf ""
+    return 1
+  fi
+  sync_file="reports/${run_id}/sync_report.json"
+  if [[ -f "$sync_file" ]] && sync_file_is_valid "$sync_file" >/dev/null 2>&1; then
+    printf "%s" "$sync_file"
+    return 0
+  fi
+  printf ""
+  return 1
+}
+
 ready_file_is_valid() {
   local ready_file="$1"
   local py_bin=""
@@ -920,6 +1314,7 @@ ready_file_is_valid() {
   fi
   "$py_bin" - <<'PY' "$ready_file"
 import json
+import os
 import sys
 
 path = sys.argv[1]
@@ -930,6 +1325,13 @@ except Exception:
     raise SystemExit(1)
 if not obj.get("restatement_passed"):
     raise SystemExit(1)
+require_sync = os.environ.get("QF_READY_REQUIRE_SYNC", "1") == "1"
+if require_sync:
+    sync_gate = obj.get("sync_gate") or {}
+    if not sync_gate.get("sync_passed"):
+        raise SystemExit(1)
+    if not sync_gate.get("sync_report_file"):
+        raise SystemExit(1)
 print(path)
 PY
 }
@@ -1117,10 +1519,17 @@ PY
 
 cmd_plan() {
   local n="${1:-20}"
-  local run_id="${RUN_ID:-run-$(date +%Y-%m-%d)-qf-plan}"
+  local explicit_run_id="${RUN_ID:-}"
+  local run_id=""
   local proposal_file="${TASK_PLAN_OUTPUT_FILE:-TASKS/TODO_PROPOSAL.md}"
   local proposal_copy="${QF_PLAN_COPY_PATH:-/tmp/qf_todo_proposal.md}"
 
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "plan")"
+  if [[ -z "$run_id" ]]; then
+    run_id="run-$(date +%Y-%m-%d)-qf-plan"
+  fi
+
+  auto_stash_if_dirty "plan"
   sync_main "$run_id"
   bash tools/task.sh --plan "$n"
 
@@ -1133,7 +1542,11 @@ cmd_plan() {
   fi
 
   if [[ -f "TASKS/TODO_PROPOSAL.md" ]]; then
-    git restore TASKS/TODO_PROPOSAL.md || true
+    if git ls-files --error-unmatch TASKS/TODO_PROPOSAL.md >/dev/null 2>&1; then
+      git restore TASKS/TODO_PROPOSAL.md || true
+    else
+      rm -f TASKS/TODO_PROPOSAL.md || true
+    fi
   fi
   cleanup_pick_candidate_dirs
 
@@ -1765,6 +2178,10 @@ case "$subcmd" in
   onboard)
     shift
     cmd_onboard "${1:-}"
+    ;;
+  sync)
+    shift
+    cmd_sync "${1:-}"
     ;;
   ready)
     shift
