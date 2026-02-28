@@ -22,9 +22,14 @@ This document describes the expected workflow for changes in this repository.
   - Output: `reports/{RUN_ID}/handoff.md`
   - Note: this is context reconstruction only, not readiness pass.
   - Format: concise session summary (main thread, key conclusions, small reflection, one next command).
+- `S1.5 Sync Evidence`: `tools/qf sync`
+  - Input: `SYNC/READ_ORDER.md` + required governance/startup files.
+  - Output: `reports/{RUN_ID}/sync_report.json` + `reports/{RUN_ID}/sync_report.md`.
+  - Gate: marks whether required sync files are all present/readable (`sync_passed`).
 - `S2 Ready gate`: `tools/qf ready`
   - Input: restatement fields (goal/scope/acceptance/steps/stop)
   - Output: `reports/{RUN_ID}/ready.json`
+  - Sync dependency: requires valid `sync_report.json`; default auto-runs `tools/qf sync` if missing (`QF_READY_AUTO_SYNC=1`).
   - Low-friction mode: fields auto-fill from active task contract by default (`QF_READY_AUTO=1`).
   - Gate: `tools/qf do` must fail without valid `ready.json`.
 - `S3 Execute`: `tools/qf do queue-next`
@@ -69,6 +74,8 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   - `tools/qf snapshot RUN_ID=<run-id> NOTE="decision/next-step summary"`
 - `tools/qf do` / `tools/qf resume` 自动记录执行轨迹到
   `reports/{RUN_ID}/execution.jsonl`（默认脱敏，可审计）。
+- `tools/qf sync` / `tools/qf ready` / `tools/qf plan` 默认写入
+  `reports/{RUN_ID}/conversation.md` checkpoint（可用 `QF_AUTO_CONVERSATION=0` 关闭）。
 - 断线恢复建议先生成接班摘要：
   - `tools/qf handoff RUN_ID=<run-id>` -> `reports/{RUN_ID}/handoff.md`
 - Repo memory is limited to: `docs/` (rules), `TASKS/STATE.md` (current state),
@@ -87,6 +94,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 ## Sync completion criteria (must be true before execution)
 - `tools/qf init` completed successfully.
 - `tools/qf handoff` completed for continuing runs (auto by init unless explicitly disabled).
+- `tools/qf sync` produced valid `reports/{RUN_ID}/sync_report.json`.
 - `tools/qf ready` produced `reports/{RUN_ID}/ready.json`.
 - `tools/qf do queue-next` no longer fails on readiness gate.
 
@@ -101,14 +109,15 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - 2) 若为接力会话（`CURRENT_RUN_ID` 已存在），`tools/qf init` 默认自动执行 `handoff`。
 - 2.1) 如需手动控制，可用：`QF_INIT_AUTO_HANDOFF=0 tools/qf init` 后再手动 `tools/qf handoff`。
 - 3) 按 `SYNC/READ_ORDER.md` 顺序完成阅读与复述。
-- 3.1) 新/陌生 agent 建议先完成同频考试：
+- 3.1) 运行 `tools/qf sync` 固化同频证据（读文件清单/项目总况/治理入口/当前阶段/下一步）。
+- 3.2) 新/陌生 agent 建议先完成同频考试：
   - `/plan` 题面：`SYNC/EXAM_PLAN_PROMPT.md`
   - 按 `SYNC/EXAM_ANSWER_TEMPLATE.md` 输出到 `reports/{RUN_ID}/onboard_answer.md`
   - 用 `tools/sync_exam.py` 评分，结果写入 `reports/{RUN_ID}/sync_exam_result.json`
   - 低摩擦首选：`tools/qf exam-auto`（默认缺答卷会自动填答并直接评分）
   - 手动模式：`tools/qf exam-auto AUTO_FILL=0`（只落模板，不自动填答）
   - 兼容命令：`tools/qf exam`（只做评分，不自动生成答卷）
-- 4) 运行 `tools/qf ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`，默认可自动填充）。
+- 4) 运行 `tools/qf ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`，默认可自动填充；默认缺失 sync report 时自动补跑 `tools/qf sync`）。
 - 4.1) 在关键决策点执行 `tools/qf snapshot NOTE="..."`，把“本轮结论/下一步”写入仓库证据，避免会话丢失。
 - 5) 运行 `tools/qf plan 20` 生成候选；该命令会复制 proposal 到 `/tmp`（并打印路径）且保持工作区干净。
 - 6) 运行 `tools/qf do queue-next` 领取下一枪（内部确保 ready + plan 前置、自动 evidence）。

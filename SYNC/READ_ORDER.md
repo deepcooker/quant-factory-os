@@ -38,4 +38,5 @@
 - Scope（精确路径）
 - 验收（verify/evidence/scope）
 - 下一条命令（只给一条）
+- 同频证据：`reports/<RUN_ID>/sync_report.json` 已生成且 `sync_passed=true`
 - 门禁文件：`reports/<RUN_ID>/ready.json` 已生成

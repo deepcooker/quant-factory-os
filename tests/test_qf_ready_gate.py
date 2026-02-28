@@ -46,6 +46,7 @@ def test_qf_do_requires_ready_gate(tmp_path: Path) -> None:
 def test_qf_ready_writes_marker_from_env(tmp_path: Path) -> None:
     repo = setup_repo(tmp_path)
     env = os.environ.copy()
+    env["QF_READY_REQUIRE_SYNC"] = "0"
     env["QF_READY_GOAL"] = "one goal"
     env["QF_READY_SCOPE"] = "tools/qf"
     env["QF_READY_ACCEPTANCE"] = "make verify"
@@ -112,7 +113,9 @@ def test_qf_ready_autofills_from_task_contract(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    res = run(["bash", "tools/qf", "ready"], cwd=repo)
+    env = os.environ.copy()
+    env["QF_READY_REQUIRE_SYNC"] = "0"
+    res = run(["bash", "tools/qf", "ready"], cwd=repo, env=env)
     assert res.returncode == 0, res.stdout + res.stderr
     ready = repo / "reports" / "run-current" / "ready.json"
     assert ready.exists()

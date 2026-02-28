@@ -54,6 +54,7 @@ def test_qf_ready_defaults_to_current_run_id(tmp_path: Path) -> None:
     repo = setup_repo(tmp_path)
     write_state(repo, "run-current")
     env = os.environ.copy()
+    env["QF_READY_REQUIRE_SYNC"] = "0"
     env["QF_READY_GOAL"] = "goal"
     env["QF_READY_SCOPE"] = "scope"
     env["QF_READY_ACCEPTANCE"] = "accept"
@@ -69,6 +70,7 @@ def test_qf_ready_fails_on_run_id_mismatch(tmp_path: Path) -> None:
     repo = setup_repo(tmp_path)
     write_state(repo, "run-current")
     env = os.environ.copy()
+    env["QF_READY_REQUIRE_SYNC"] = "0"
     env["QF_READY_GOAL"] = "goal"
     env["QF_READY_SCOPE"] = "scope"
     env["QF_READY_ACCEPTANCE"] = "accept"
@@ -120,6 +122,7 @@ def test_qf_do_updates_current_run_pointer_after_pick(tmp_path: Path) -> None:
 
     env = os.environ.copy()
     env["QF_SKIP_SYNC"] = "1"
+    env["QF_READY_REQUIRE_SYNC"] = "0"
     res = run(["bash", "tools/qf", "do", "queue-next"], cwd=repo, env=env)
     assert res.returncode == 0, res.stdout + res.stderr
     state = (repo / "TASKS" / "STATE.md").read_text(encoding="utf-8")
