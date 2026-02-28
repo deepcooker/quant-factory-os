@@ -12,7 +12,8 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
-- [>] TODO Title: qf resume 已合并场景避免重复创建 PR  Picked: run-2026-02-28-qf-resume-pr 2026-02-28T12:01:19+0800
+- [x] TODO Title: qf resume 已合并场景避免重复创建 PR  Picked: run-2026-02-28-qf-resume-pr 2026-02-28T12:01:19+0800
+  Done: PR #141, RUN_ID=run-2026-02-28-qf-resume-pr
   Goal: 当 `tools/qf resume` 读取到的 `ship_state` 对应 PR 已经 `MERGED` 时，直接走本地同步收尾，不再重复创建新 PR。
   Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `TASKS/`, `reports/{RUN_ID}/`
   Acceptance:
