@@ -12,7 +12,8 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
-- [>] TODO Title: qf exam-auto 默认自动填答并自动评分  Picked: run-2026-02-28-qf-exam-auto 2026-02-28T15:02:01+0800
+- [x] TODO Title: qf exam-auto 默认自动填答并自动评分  Picked: run-2026-02-28-qf-exam-auto 2026-02-28T15:02:01+0800
+  Done: PR #142, RUN_ID=run-2026-02-28-qf-exam-auto
   Goal: 让 `tools/qf exam-auto` 在答卷缺失时默认自动生成可评分答案并立刻评分，避免人工先填模板再重跑。
   Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `TASKS/`, `reports/{RUN_ID}/`
   Acceptance:
