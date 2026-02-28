@@ -135,3 +135,89 @@ def test_qf_resume_defaults_to_current_run_id(tmp_path: Path) -> None:
     combined = res.stdout + res.stderr
     assert "missing state file" in combined
     assert "reports/run-current/ship_state.json" in combined
+
+
+def test_qf_resume_uses_merged_pr_lookup_without_create(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+
+    checkout_main = run(["git", "checkout", "-b", "main"], cwd=repo)
+    assert checkout_main.returncode == 0, checkout_main.stdout + checkout_main.stderr
+    (repo / "README.md").write_text("seed\n", encoding="utf-8")
+    add_seed = run(["git", "add", "README.md"], cwd=repo)
+    assert add_seed.returncode == 0, add_seed.stdout + add_seed.stderr
+    seed_commit = run(["git", "commit", "-m", "seed"], cwd=repo)
+    assert seed_commit.returncode == 0, seed_commit.stdout + seed_commit.stderr
+
+    origin = tmp_path / "origin.git"
+    clone_bare = run(["git", "clone", "--bare", "--no-hardlinks", str(repo), str(origin)], cwd=tmp_path)
+    assert clone_bare.returncode == 0, clone_bare.stdout + clone_bare.stderr
+    add_remote = run(["git", "remote", "add", "origin", str(origin)], cwd=repo)
+    assert add_remote.returncode == 0, add_remote.stdout + add_remote.stderr
+
+    feature_branch = "chore/resume-test"
+    write_state(repo, "run-current")
+    run_dir = repo / "reports" / "run-current"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "ship_state.json").write_text(
+        "\n".join(
+            [
+                "{",
+                '  "run_id": "run-current",',
+                f'  "branch": "{feature_branch}",',
+                '  "commit": "seed",',
+                '  "pr_url": "",',
+                '  "step": "branch_prepared",',
+                '  "last_error": "",',
+                '  "msg": "resume test",',
+                '  "updated_at": "2026-02-28T00:00:00+08:00"',
+                "}",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    bin_dir = repo / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    gh_log = repo / "gh.log"
+    (bin_dir / "gh").write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "set -euo pipefail",
+                f"echo \"$*\" >> \"{gh_log}\"",
+                "if [[ \"${1:-}\" == \"pr\" && \"${2:-}\" == \"list\" ]]; then",
+                "  echo \"https://github.com/example/repo/pull/123\"",
+                "  exit 0",
+                "fi",
+                "if [[ \"${1:-}\" == \"pr\" && \"${2:-}\" == \"create\" ]]; then",
+                "  echo \"unexpected pr create\" >&2",
+                "  exit 88",
+                "fi",
+                "if [[ \"${1:-}\" == \"pr\" && \"${2:-}\" == \"view\" ]]; then",
+                "  echo \"MERGED\"",
+                "  exit 0",
+                "fi",
+                "if [[ \"${1:-}\" == \"pr\" && \"${2:-}\" == \"merge\" ]]; then",
+                "  exit 0",
+                "fi",
+                "if [[ \"${1:-}\" == \"auth\" && \"${2:-}\" == \"status\" ]]; then",
+                "  exit 0",
+                "fi",
+                "exit 0",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    os.chmod(bin_dir / "gh", os.stat(bin_dir / "gh").st_mode | stat.S_IXUSR)
+
+    env = os.environ.copy()
+    env["PATH"] = f"{bin_dir}:{env['PATH']}"
+    res = run(["bash", "tools/qf", "resume", "RUN_ID=run-current"], cwd=repo, env=env)
+    assert res.returncode == 0, res.stdout + res.stderr
+    assert "resume done: run-current" in (res.stdout + res.stderr)
+
+    gh_calls = gh_log.read_text(encoding="utf-8")
+    assert "pr list" in gh_calls
+    assert "pr create" not in gh_calls

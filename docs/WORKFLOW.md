@@ -115,6 +115,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   implement minimal diff -> `make verify` -> update reports -> `tools/task.sh` ship.
 - Ship failure recovery: `tools/ship.sh` writes `reports/{RUN_ID}/ship_state.json`
   at key steps. On push/PR/merge/sync failure, run `tools/qf resume RUN_ID=...`.
+- `tools/qf resume` 会先检查是否已存在同分支的已合并 PR；若已合并则跳过重复 `pr create/merge`，直接执行本地 `main` 同步收尾。
 - Ship success behavior: after merge, ship auto-syncs local `main` to `origin/main`.
 - 8) On failure, write failure reason, repro, and next step in
   `reports/{RUN_ID}/summary.md` + `reports/{RUN_ID}/decision.md` (and `MISTAKES/`
