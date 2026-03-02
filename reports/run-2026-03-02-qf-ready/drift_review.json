@@ -1,0 +1,62 @@
+{
+  "run_id": "run-2026-03-02-qf-ready",
+  "created_at_utc": "2026-03-02T08:24:47.343762+00:00",
+  "auto_fix": true,
+  "strict": true,
+  "non_blocking": false,
+  "status": "pass",
+  "blockers_count": 0,
+  "warnings_count": 0,
+  "checks": [
+    {
+      "name": "summary_file",
+      "status": "pass",
+      "message": "reports/run-2026-03-02-qf-ready/summary.md exists",
+      "fixed": false
+    },
+    {
+      "name": "decision_file",
+      "status": "pass",
+      "message": "reports/run-2026-03-02-qf-ready/decision.md exists",
+      "fixed": false
+    },
+    {
+      "name": "ready_gate",
+      "status": "pass",
+      "message": "reports/run-2026-03-02-qf-ready/ready.json exists",
+      "fixed": false
+    },
+    {
+      "name": "direction_choice",
+      "status": "pass",
+      "message": "reports/run-2026-03-02-qf-ready/orient_choice.json exists",
+      "fixed": false
+    },
+    {
+      "name": "direction_contract",
+      "status": "pass",
+      "message": "reports/run-2026-03-02-qf-ready/direction_contract.json exists",
+      "fixed": false
+    },
+    {
+      "name": "verify_record",
+      "status": "pass",
+      "message": "summary includes make verify record",
+      "fixed": false
+    },
+    {
+      "name": "stop_reason",
+      "status": "pass",
+      "message": "decision contains stop reason",
+      "fixed": false
+    },
+    {
+      "name": "task_contract",
+      "status": "pass",
+      "message": "TASKS/TASK-qf-ready.md exists",
+      "fixed": false
+    }
+  ],
+  "fixes": [],
+  "next_command": "tools/qf do queue-next"
+}

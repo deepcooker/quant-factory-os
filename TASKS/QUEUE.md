@@ -190,7 +190,8 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   - [ ] Scope remains within declared paths
   Contract: run_id=run-2026-03-02-qf-ready option=ready-exit-resolution
 
-- [>] TODO Title: qf ready 讨论执行分离 + 强认知输出 + 多角色评审闭环  Picked: run-2026-03-02-qf-ready 2026-03-02T12:58:05+0800
+- [x] TODO Title: qf ready 讨论执行分离 + 强认知输出 + 多角色评审闭环  Picked: run-2026-03-02-qf-ready 2026-03-02T12:58:05+0800
+  Done: PR #155, RUN_ID=run-2026-03-02-qf-ready
   Goal: 把 `ready` 升级为“先判定会话状态、再给方向、确认后执行”的决策中枢，并将讨论态与执行态证据彻底分层。
   Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `AGENTS.md`, `SYNC/`, `TASKS/`, `reports/{RUN_ID}/`
   Acceptance:
