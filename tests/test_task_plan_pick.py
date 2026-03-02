@@ -95,6 +95,67 @@ def test_task_pick_queue_next_outputs_task_file_and_run_id(tmp_path: Path):
     assert re.search(r"^RUN_ID:\s+run-[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+$", res.stdout, flags=re.MULTILINE)
 
 
+def test_task_pick_queue_next_prefers_current_run_slice_block(tmp_path: Path):
+    repo_root = Path(__file__).resolve().parents[1]
+    queue_file = tmp_path / "QUEUE.md"
+    template_file = tmp_path / "_TEMPLATE.md"
+    output_dir = tmp_path / "TASKS_OUT"
+    state_file = tmp_path / "STATE.md"
+
+    queue_file.write_text(
+        "\n".join(
+            [
+                "# QUEUE",
+                "",
+                "## Queue",
+                "- [ ] TODO Title: first candidate",
+                "  Goal: first",
+                "  Scope: tests/",
+                "  Slice: run_id=run-other task_id=slice-1",
+                "",
+                "- [ ] TODO Title: target candidate",
+                "  Goal: second",
+                "  Scope: tests/",
+                "  Slice: run_id=run-current task_id=slice-2",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    state_file.write_text(
+        "\n".join(
+            [
+                "# STATE",
+                "CURRENT_RUN_ID: run-current",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    template_file.write_text("# TASK: x\n\nRUN_ID: x\nOWNER: x\nPRIORITY: P1\n", encoding="utf-8")
+
+    env = os.environ.copy()
+    env["TASK_BOOTSTRAP_QUEUE_FILE"] = str(queue_file)
+    env["TASK_BOOTSTRAP_TEMPLATE_FILE"] = str(template_file)
+    env["TASK_BOOTSTRAP_OUTPUT_DIR"] = str(output_dir)
+    env["TASK_BOOTSTRAP_STATE_FILE"] = str(state_file)
+    env["TASK_BOOTSTRAP_EVIDENCE"] = "0"
+
+    res = subprocess.run(
+        ["bash", "tools/task.sh", "--pick", "queue-next"],
+        cwd=repo_root,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert res.returncode == 0, res.stdout + res.stderr
+
+    queue_text = queue_file.read_text(encoding="utf-8")
+    assert "- [ ] TODO Title: first candidate" in queue_text
+    assert "- [>] TODO Title: target candidate" in queue_text
+    assert "Slice: run_id=run-current task_id=slice-2" in queue_text
+
+
 def test_task_plan_includes_suggested_tasks_when_queue_empty(tmp_path: Path):
     repo_root = Path(__file__).resolve().parents[1]
     queue_file = tmp_path / "QUEUE.md"

@@ -1,41 +1,41 @@
 {
-  "run_id": "run-2026-03-02-slice-next-p0-ready-run-core-delivery",
-  "created_at_utc": "2026-03-02T07:46:37.244098+00:00",
+  "run_id": "run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment",
+  "created_at_utc": "2026-03-02T07:48:42.010374+00:00",
   "auto_fix": true,
-  "strict": true,
+  "strict": false,
   "non_blocking": false,
   "status": "pass",
   "blockers_count": 0,
-  "warnings_count": 0,
+  "warnings_count": 3,
   "checks": [
     {
       "name": "summary_file",
       "status": "pass",
-      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-core-delivery/summary.md exists",
+      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment/summary.md exists",
       "fixed": false
     },
     {
       "name": "decision_file",
       "status": "pass",
-      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-core-delivery/decision.md exists",
+      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment/decision.md exists",
       "fixed": false
     },
     {
       "name": "ready_gate",
-      "status": "pass",
-      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-core-delivery/ready.json exists",
+      "status": "warn",
+      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment/ready.json missing",
       "fixed": false
     },
     {
       "name": "direction_choice",
-      "status": "pass",
-      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-core-delivery/orient_choice.json exists",
+      "status": "warn",
+      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment/orient_choice.json missing",
       "fixed": false
     },
     {
       "name": "direction_contract",
-      "status": "pass",
-      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-core-delivery/direction_contract.json exists",
+      "status": "warn",
+      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment/direction_contract.json missing",
       "fixed": false
     },
     {

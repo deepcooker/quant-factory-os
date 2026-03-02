@@ -303,10 +303,11 @@ PY
 }
 
 bootstrap_next_task() {
-  local queue_file template_file output_dir
+  local queue_file template_file output_dir state_file
   queue_file="${TASK_BOOTSTRAP_QUEUE_FILE:-TASKS/QUEUE.md}"
   template_file="${TASK_BOOTSTRAP_TEMPLATE_FILE:-TASKS/_TEMPLATE.md}"
   output_dir="${TASK_BOOTSTRAP_OUTPUT_DIR:-TASKS}"
+  state_file="${TASK_BOOTSTRAP_STATE_FILE:-TASKS/STATE.md}"
 
   if [[ ! -f "$queue_file" ]]; then
     echo "❌ QUEUE 文件不存在：$queue_file"
@@ -319,23 +320,91 @@ bootstrap_next_task() {
   mkdir -p "$output_dir"
 
   local block title_line title goal scope_text acceptance_block
-  block="$(awk '
-    BEGIN { in_block = 0 }
-    /^- \[ \] / {
-      if (!in_block) {
-        in_block = 1
-        print
-        next
-      }
-      if (in_block) {
+  local current_run_id selection block_start_line
+  current_run_id=""
+  if [[ -f "$state_file" ]]; then
+    current_run_id="$(awk -F':' '
+      /^[[:space:]]*CURRENT_RUN_ID:[[:space:]]*/ {
+        value=$2
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+        print value
         exit
       }
+    ' "$state_file" || true)"
+  fi
+
+  selection="$(awk -v target="$current_run_id" '
+    function flush_block() {
+      if (!in_block) {
+        return
+      }
+      if (first_block == "") {
+        first_start = block_start
+        first_block = block_text
+      }
+      if (target != "" && block_matches_target && matched_block == "") {
+        matched_start = block_start
+        matched_block = block_text
+      }
     }
-    in_block { print }
+
+    BEGIN {
+      in_block = 0
+      block_start = 0
+      block_text = ""
+      block_matches_target = 0
+      first_block = ""
+      matched_block = ""
+      first_start = 0
+      matched_start = 0
+    }
+
+    /^- \[ \] / {
+      flush_block()
+      in_block = 1
+      block_start = NR
+      block_text = $0 ORS
+      block_matches_target = 0
+      next
+    }
+
+    /^- \[[x>]\] / {
+      flush_block()
+      in_block = 0
+      block_start = 0
+      block_text = ""
+      block_matches_target = 0
+      next
+    }
+
+    {
+      if (in_block) {
+        block_text = block_text $0 ORS
+        if (target != "" && $0 ~ ("^[[:space:]]*Slice:[[:space:]]*run_id=" target "([[:space:]]|$)")) {
+          block_matches_target = 1
+        }
+      }
+    }
+
+    END {
+      flush_block()
+      if (matched_block != "") {
+        printf "START_LINE:%d\n%s", matched_start, matched_block
+      } else if (first_block != "") {
+        printf "START_LINE:%d\n%s", first_start, first_block
+      }
+    }
   ' "$queue_file")"
+
+  block_start_line="$(printf "%s\n" "$selection" | awk -F':' 'NR==1 && $1=="START_LINE" {print $2; exit}')"
+  block="$(printf "%s\n" "$selection" | sed '1d')"
 
   if [[ -z "$block" ]]; then
     echo "❌ QUEUE 中没有未完成项（- [ ]）"
+    exit 1
+  fi
+  if [[ -z "$block_start_line" ]]; then
+    echo "❌ 无法定位被选中的 QUEUE 条目（start line missing）"
     exit 1
   fi
 
@@ -465,11 +534,9 @@ bootstrap_next_task() {
   queue_backup="${queue_file}.bak.$$"
   cp "$queue_file" "$queue_backup"
   picked_ts="$(date +%Y-%m-%dT%H:%M:%S%z)"
-  awk -v rid="$run_id" -v ts="$picked_ts" '
-      BEGIN { done=0 }
+  awk -v target_line="$block_start_line" -v rid="$run_id" -v ts="$picked_ts" '
       {
-        if (!done && $0 ~ /^- \[ \] /) {
-          done=1
+        if (NR == target_line) {
           sub(/^- \[ \] /, "- [>] ")
           if ($0 !~ /Picked:/) {
             $0 = $0 "  Picked: " rid " " ts
