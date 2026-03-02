@@ -21,6 +21,7 @@
 - `tools/qf sync` 负责把同频阅读固化为证据（`reports/{RUN_ID}/sync_report.json|md`）。
 - `tools/qf ready` 是唯一上岗门禁；没有 `ready.json` 不得执行 `tools/qf do`.
 - `tools/qf ready` 依赖有效 `sync_report.json`；默认缺失时会自动补跑 `tools/qf sync`（`QF_READY_AUTO_SYNC=1`）。
+- Strong mode: `ready` 后先 `tools/qf orient`（方向候选）再 `tools/qf choose OPTION=<id>`（方向确认），再进入 `plan/do`。
 - `tools/qf ready` 默认可从当前任务合同自动填充复述字段（可用 `QF_READY_AUTO=0` 强制手填）。
 - 完整会话转录优先落本地 `chatlogs/`（不入库）：
   - `./tools/start.sh` 默认会记录到 `chatlogs/session-*.log`

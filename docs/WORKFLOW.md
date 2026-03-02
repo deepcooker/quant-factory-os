@@ -32,8 +32,12 @@ This document describes the expected workflow for changes in this repository.
   - Sync dependency: requires valid `sync_report.json`; default auto-runs `tools/qf sync` if missing (`QF_READY_AUTO_SYNC=1`).
   - Low-friction mode: fields auto-fill from active task contract by default (`QF_READY_AUTO=1`).
   - Gate: `tools/qf do` must fail without valid `ready.json`.
+- `S2.5 Direction gate`: `tools/qf orient` + `tools/qf choose`
+  - Input: `docs/PROJECT_GUIDE.md` + governance docs + state/evidence.
+  - Output: `reports/{RUN_ID}/orient.json|md` + `reports/{RUN_ID}/orient_choice.json`.
+  - Purpose: confirm direction/priority before execution queue pick.
 - `S3 Execute`: `tools/qf do queue-next`
-  - Input: valid ready gate
+  - Input: valid ready gate + execution queue readiness
   - Output: task pick + evidence skeleton + execution trace updates
 - `S4 Ship`: `tools/ship.sh` (or `make ship`)
   - Input: verified diff + in-scope task contract
@@ -74,7 +78,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   - `tools/qf snapshot RUN_ID=<run-id> NOTE="decision/next-step summary"`
 - `tools/qf do` / `tools/qf resume` 自动记录执行轨迹到
   `reports/{RUN_ID}/execution.jsonl`（默认脱敏，可审计）。
-- `tools/qf sync` / `tools/qf ready` / `tools/qf plan` 默认写入
+- `tools/qf sync` / `tools/qf ready` / `tools/qf orient` / `tools/qf choose` 默认写入
   `reports/{RUN_ID}/conversation.md` checkpoint（可用 `QF_AUTO_CONVERSATION=0` 关闭）。
 - 断线恢复建议先生成接班摘要：
   - `tools/qf handoff RUN_ID=<run-id>` -> `reports/{RUN_ID}/handoff.md`
@@ -96,13 +100,14 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - `tools/qf handoff` completed for continuing runs (auto by init unless explicitly disabled).
 - `tools/qf sync` produced valid `reports/{RUN_ID}/sync_report.json`.
 - `tools/qf ready` produced `reports/{RUN_ID}/ready.json`.
+- Strong-mode recommended: `tools/qf orient` and `tools/qf choose` completed before `plan/do`.
 - `tools/qf do queue-next` no longer fails on readiness gate.
 
 ## Codex session startup checklist
 - Do not rely on chat/session memory; rely only on repo memory:
   `TASKS/STATE.md`, `TASKS/QUEUE.md`, `reports/{RUN_ID}/`.
 - First read owner entrypoint: `SYNC/READ_ORDER.md`.
-- Preferred entrypoint: `tools/qf` (`init/plan/do/resume`).
+- Preferred entrypoint: `tools/qf` (`init/sync/ready/orient/choose/plan/do/resume`).
 - Compatibility wrappers: `tools/enter.sh` and `tools/onboard.sh` forward to `tools/qf`.
 - 1) 运行 `tools/qf init`（自动 stash 可恢复 + sync main + doctor + onboard）。
 - 1.1) 可选清理历史临时 stash：先预览 `tools/qf stash-clean`，确认后执行 `tools/qf stash-clean apply KEEP=0`。
@@ -118,9 +123,11 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   - 手动模式：`tools/qf exam-auto AUTO_FILL=0`（只落模板，不自动填答）
   - 兼容命令：`tools/qf exam`（只做评分，不自动生成答卷）
 - 4) 运行 `tools/qf ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`，默认可自动填充；默认缺失 sync report 时自动补跑 `tools/qf sync`）。
-- 4.1) 在关键决策点执行 `tools/qf snapshot NOTE="..."`，把“本轮结论/下一步”写入仓库证据，避免会话丢失。
+- 4.1) 运行 `tools/qf orient` 生成方向候选与优先级（L1 方向层）。
+- 4.2) 运行 `tools/qf choose OPTION=<id>` 确认方向后再进入执行层（L2）。
+- 4.3) 在关键决策点执行 `tools/qf snapshot NOTE="..."`，把“本轮结论/下一步”写入仓库证据，避免会话丢失。
 - 5) 运行 `tools/qf plan 20` 生成候选；该命令会复制 proposal 到 `/tmp`（并打印路径）且保持工作区干净。
-- 6) 运行 `tools/qf do queue-next` 领取下一枪（内部确保 ready + plan 前置、自动 evidence）。
+- 6) 运行 `tools/qf do queue-next` 领取下一枪（内部确保 ready 前置；缺 proposal 时会自动 plan，再 pick）。
 - 7) Expand that item into `TASKS/TASK-*.md` (from template), then run:
   implement minimal diff -> `make verify` -> update reports -> `tools/task.sh` ship.
 - Ship failure recovery: `tools/ship.sh` writes `reports/{RUN_ID}/ship_state.json`

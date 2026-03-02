@@ -1,0 +1,19 @@
+{
+  "run_id": "run-2026-03-02-qf-v1-l1-do-plan",
+  "created_at_utc": "2026-03-02T04:24:46.045614+00:00",
+  "constitution_read": true,
+  "workflow_read": true,
+  "sync_gate": {
+    "required": true,
+    "sync_report_file": "reports/run-2026-03-02-qf-v1-l1-do-plan/sync_report.json",
+    "sync_passed": true
+  },
+  "restatement_passed": true,
+  "restatement": {
+    "goal": "把 `ready->plan->do` 升级为“先方向确认后执行”的做强模式入口，并修复 `do/plan` 的低摩擦稳定性问题。",
+    "scope": "tools/qf, tests/, docs/WORKFLOW.md, AGENTS.md, SYNC/, TASKS/, reports/{RUN_ID}/",
+    "acceptance": "新增 L1 方向层入口（orient/choose 或等价命令）：基于 docs/PROJECT_GUIDE.md + docs/* + state/evidence 生成多方向候选与优先级，并落证据文件。; tools/qf do queue-next 不再因内部日志写入导致 pull 前工作区变脏；失败时仍保留可恢复命令。; tools/qf do 的 auto-plan 与 pick 链路修复：内部自动 plan 后能继续 pick，不再出现“proposal missing”断链。; Queue 为空时提供“回到方向层确认”的明确下一步，不是直接死路。; make verify 通过；owner 文档（AGENTS.md/docs/WORKFLOW.md/SYNC/*）与本 RUN evidence 同步更新。",
+    "steps": "evidence -> implement -> verify -> reports -> ship",
+    "stop_condition": "finish and wait for next instruction; if blocked, record stop reason in decision.md"
+  }
+}

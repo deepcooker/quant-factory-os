@@ -22,6 +22,8 @@ Usage:
   tools/qf onboard RUN_ID
   tools/qf sync [RUN_ID=<run-id>]
   tools/qf ready [RUN_ID=<run-id>]
+  tools/qf orient [RUN_ID=<run-id>]
+  tools/qf choose [RUN_ID=<run-id>] OPTION=<id>
   tools/qf snapshot [RUN_ID=<run-id>] NOTE=<text>
   tools/qf handoff [RUN_ID=<run-id>]
   tools/qf exam [RUN_ID=<run-id>] [ANSWER_FILE=<path>] [RUBRIC_FILE=<path>] [OUTPUT_FILE=<path>]
@@ -705,7 +707,13 @@ if not project_summary:
     project_summary = "quant-factory-os governance/execution base for quant engineering."
 
 ready_exists = Path(f"reports/{run_id}/ready.json").is_file()
-next_command = "tools/qf plan 20" if ready_exists else "tools/qf ready"
+choose_exists = Path(f"reports/{run_id}/orient_choice.json").is_file()
+if not ready_exists:
+    next_command = "tools/qf ready"
+elif not choose_exists:
+    next_command = "tools/qf orient"
+else:
+    next_command = "tools/qf plan 20"
 
 decision_exists = Path(f"reports/{run_id}/decision.md").is_file()
 summary_exists = Path(f"reports/{run_id}/summary.md").is_file()
@@ -964,6 +972,272 @@ PY
   if [[ -n "$task_file" ]]; then
     echo "READY_TASK_FILE: $task_file"
   fi
+}
+
+cmd_orient() {
+  local arg="${1:-}"
+  local run_id=""
+  local explicit_run_id=""
+  local orient_file=""
+  local orient_md=""
+  local py_bin=""
+  local task_file=""
+  local current_status=""
+
+  if [[ "$arg" =~ ^RUN_ID=.+$ ]]; then
+    explicit_run_id="${arg#RUN_ID=}"
+  elif [[ -n "$arg" ]]; then
+    explicit_run_id="$arg"
+  elif [[ -n "${RUN_ID:-}" ]]; then
+    explicit_run_id="${RUN_ID}"
+  fi
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "orient")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: orient requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    exit 2
+  fi
+
+  task_file="$(state_field_value "CURRENT_TASK_FILE")"
+  current_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$current_status" ]]; then
+    current_status="active"
+  fi
+
+  orient_file="reports/${run_id}/orient.json"
+  orient_md="reports/${run_id}/orient.md"
+  mkdir -p "reports/${run_id}"
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required to write orient reports." >&2
+    exit 1
+  fi
+
+  "$py_bin" - <<'PY' "$run_id" "$task_file" "$orient_file" "$orient_md"
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+run_id, task_file, orient_file, orient_md = sys.argv[1:]
+
+def read_text(path: str) -> str:
+    p = Path(path)
+    if not p.is_file():
+        return ""
+    return p.read_text(encoding="utf-8", errors="replace")
+
+def count_open_queue_items(text: str) -> int:
+    return len(re.findall(r"^- \[ \] ", text, flags=re.M))
+
+docs_paths = [
+    "docs/PROJECT_GUIDE.md",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "TASKS/STATE.md",
+    "TASKS/QUEUE.md",
+    f"reports/{run_id}/summary.md",
+    f"reports/{run_id}/decision.md",
+]
+docs_blob = "\n".join(read_text(p) for p in docs_paths)
+queue_text = read_text("TASKS/QUEUE.md")
+open_items = count_open_queue_items(queue_text)
+
+def score_for(keywords: list[str], base: int) -> int:
+    s = base
+    low = docs_blob.lower()
+    for k in keywords:
+        s += low.count(k.lower()) * 2
+    return s
+
+directions = [
+    {
+        "id": "stability-do-plan",
+        "title": "P0: qf do/plan 稳定性硬化",
+        "why": "降低执行摩擦，优先修复 do/plan 断链与脏工作区冲突。",
+        "scope_hint": ["tools/qf", "tests/"],
+        "score": score_for(["do", "plan", "proposal", "queue", "resume"], 70),
+    },
+    {
+        "id": "l1-direction-layer",
+        "title": "P1: L1 方向层（orient/choose）",
+        "why": "在执行前先做方向确认与优先级选择，建立两层任务模型。",
+        "scope_hint": ["tools/qf", "TASKS/", "docs/WORKFLOW.md", "SYNC/"],
+        "score": score_for(["project_guide", "北极星", "阶段", "queue"], 66) + (14 if open_items == 0 else 0),
+    },
+    {
+        "id": "council-review-loop",
+        "title": "P2: 多角色评审博弈（architect/qa/dev/product）",
+        "why": "通过独立思考与冲突收敛提高方案质量，避免单视角偏差。",
+        "scope_hint": ["tools/qf", "docs/WORKFLOW.md", "reports/"],
+        "score": score_for(["planner", "reviewer", "observer", "多智能", "协作"], 58),
+    },
+]
+
+directions.sort(key=lambda x: x["score"], reverse=True)
+for idx, item in enumerate(directions):
+    item["priority_rank"] = idx + 1
+    item["priority"] = f"P{idx}"
+
+recommended = directions[0]["id"] if directions else ""
+next_cmd = f"tools/qf choose RUN_ID={run_id} OPTION={recommended}" if recommended else f"tools/qf plan 20"
+
+obj = {
+    "run_id": run_id,
+    "created_at_utc": datetime.now(timezone.utc).isoformat(),
+    "task_file": task_file,
+    "open_queue_items": open_items,
+    "inputs": docs_paths,
+    "directions": directions,
+    "recommended_option": recommended,
+    "next_command": next_cmd,
+}
+
+Path(orient_file).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+lines = []
+lines.append("# Orientation Report")
+lines.append("")
+lines.append(f"RUN_ID: `{run_id}`")
+lines.append(f"Generated At (UTC): {obj['created_at_utc']}")
+lines.append(f"Open Queue Items: {open_items}")
+lines.append("")
+lines.append("## Direction Options")
+for item in directions:
+    lines.append(f"- id=`{item['id']}` | priority=`{item['priority']}` | score={item['score']}")
+    lines.append(f"  - title: {item['title']}")
+    lines.append(f"  - why: {item['why']}")
+    lines.append(f"  - scope_hint: {', '.join(item['scope_hint'])}")
+lines.append("")
+lines.append("## Recommended")
+lines.append(f"- `{recommended}`")
+lines.append("")
+lines.append("## Next Command")
+lines.append(f"- `{next_cmd}`")
+lines.append("")
+
+Path(orient_md).write_text("\n".join(lines), encoding="utf-8")
+
+print(f"ORIENT_OPTIONS: {len(directions)}")
+print(f"ORIENT_RECOMMENDED: {recommended}")
+print(f"ORIENT_NEXT_COMMAND: {next_cmd}")
+PY
+
+  append_execution_event "$run_id" "orient" "orient_generated" "ok" "tools/qf orient RUN_ID=${run_id}" "orient_file=${orient_file}" ""
+  append_conversation_checkpoint "$run_id" "orient" "orientation generated; recommended option ready for choose"
+  update_state_current "$run_id" "$task_file" "$current_status"
+  echo "ORIENT_FILE: ${orient_file}"
+  echo "ORIENT_MD: ${orient_md}"
+  echo "ORIENT_RUN_ID: ${run_id}"
+}
+
+cmd_choose() {
+  local arg="${1:-}"
+  local arg2="${2:-}"
+  local run_id=""
+  local explicit_run_id=""
+  local option="${QF_ORIENT_OPTION:-}"
+  local orient_file=""
+  local choice_file=""
+  local py_bin=""
+  local current_status=""
+  local task_file=""
+
+  for token in "$arg" "$arg2"; do
+    [[ -z "$token" ]] && continue
+    case "$token" in
+      RUN_ID=*)
+        explicit_run_id="${token#RUN_ID=}"
+        ;;
+      OPTION=*)
+        option="${token#OPTION=}"
+        ;;
+      *)
+        if [[ -z "$option" ]]; then
+          option="$token"
+        fi
+        ;;
+    esac
+  done
+  if [[ -z "$explicit_run_id" && -n "${RUN_ID:-}" ]]; then
+    explicit_run_id="${RUN_ID}"
+  fi
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "choose")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: choose requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    exit 2
+  fi
+
+  orient_file="reports/${run_id}/orient.json"
+  choice_file="reports/${run_id}/orient_choice.json"
+  if [[ ! -f "$orient_file" ]]; then
+    echo "ERROR: missing orientation file: $orient_file" >&2
+    echo "Run: tools/qf orient RUN_ID=${run_id}" >&2
+    exit 1
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required to write choose result." >&2
+    exit 1
+  fi
+
+  "$py_bin" - <<'PY' "$orient_file" "$choice_file" "$option"
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+orient_path, out_path, option = sys.argv[1:]
+obj = json.loads(Path(orient_path).read_text(encoding="utf-8"))
+directions = obj.get("directions", [])
+if not directions:
+    raise SystemExit("ERROR: orient report has no direction options.")
+
+ids = {x.get("id"): x for x in directions if x.get("id")}
+selected = option.strip() if option else ""
+if not selected:
+    selected = obj.get("recommended_option", "")
+if selected not in ids:
+    known = ", ".join(sorted(ids))
+    raise SystemExit(f"ERROR: invalid OPTION={selected!r}. valid: {known}")
+
+picked = ids[selected]
+out = {
+    "run_id": obj.get("run_id"),
+    "created_at_utc": datetime.now(timezone.utc).isoformat(),
+    "selected_option": selected,
+    "selected_title": picked.get("title", ""),
+    "priority": picked.get("priority", ""),
+    "reason": picked.get("why", ""),
+    "source_orient_file": orient_path,
+    "next_command": f"tools/qf plan 20",
+}
+Path(out_path).write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+print(f"CHOOSE_OPTION: {selected}")
+print(f"CHOOSE_TITLE: {picked.get('title', '')}")
+print("CHOOSE_NEXT_COMMAND: tools/qf plan 20")
+PY
+
+  task_file="$(state_field_value "CURRENT_TASK_FILE")"
+  current_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$current_status" ]]; then
+    current_status="active"
+  fi
+  append_execution_event "$run_id" "orient" "orient_chosen" "ok" "tools/qf choose RUN_ID=${run_id} OPTION=${option}" "choice_file=${choice_file}" ""
+  append_conversation_checkpoint "$run_id" "choose" "direction selected; next step plan"
+  update_state_current "$run_id" "$task_file" "$current_status"
+  echo "CHOOSE_FILE: ${choice_file}"
+  echo "CHOOSE_RUN_ID: ${run_id}"
 }
 
 cmd_snapshot() {
@@ -1513,8 +1787,9 @@ PY
     echo "0) tools/qf handoff RUN_ID=${latest_handoff_run}"
   fi
   echo "1) tools/qf ready"
-  echo "2) tools/qf plan 20"
-  echo "3) tools/qf do queue-next"
+  echo "2) tools/qf orient"
+  echo "3) tools/qf plan 20"
+  echo "4) tools/qf do queue-next"
 }
 
 cmd_plan() {
@@ -1563,10 +1838,14 @@ cmd_do() {
   local explicit_run_id="${RUN_ID:-}"
   local proposal_file="${TASK_PLAN_OUTPUT_FILE:-TASKS/TODO_PROPOSAL.md}"
   local output=""
+  local plan_output=""
+  local plan_rc=0
   local task_file=""
   local task_run_id=""
   local evidence_path=""
   local ready_file=""
+  local auto_generated_proposal=0
+  local rc=0
 
   if [[ "$target" != "queue-next" ]]; then
     echo "ERROR: only 'queue-next' is supported."
@@ -1584,13 +1863,29 @@ cmd_do() {
     run_id="run-$(date +%Y-%m-%d)-qf-do"
   fi
   auto_stash_if_dirty "do"
-  append_execution_event "$run_id" "do" "do_start" "ok" "tools/qf do queue-next" "" ""
   sync_main "$run_id"
+  append_execution_event "$run_id" "do" "do_start" "ok" "tools/qf do queue-next" "" ""
 
   if [[ ! -f "$proposal_file" ]]; then
-    echo "proposal missing; generating with tools/qf plan 20"
-    append_execution_event "$run_id" "do" "do_autoplan" "ok" "tools/qf plan 20" "" ""
-    cmd_plan "20"
+    echo "proposal missing; generating with tools/task.sh --plan 20"
+    append_execution_event "$run_id" "do" "do_autoplan" "ok" "bash tools/task.sh --plan 20" "" ""
+    set +e
+    plan_output="$(bash tools/task.sh --plan 20 2>&1)"
+    plan_rc=$?
+    set -e
+    printf "%s\n" "$plan_output"
+    if [[ "$plan_rc" -ne 0 ]]; then
+      append_execution_event "$run_id" "do" "do_autoplan_failed" "fail" "bash tools/task.sh --plan 20" "" "$plan_output"
+      print_resume_cmd "$run_id"
+      exit "$plan_rc"
+    fi
+    if [[ ! -f "$proposal_file" ]]; then
+      append_execution_event "$run_id" "do" "do_autoplan_missing_proposal" "fail" "bash tools/task.sh --plan 20" "" "proposal file missing after plan"
+      echo "ERROR: proposal still missing after auto-plan: $proposal_file" >&2
+      print_resume_cmd "$run_id"
+      exit 1
+    fi
+    auto_generated_proposal=1
   fi
 
   set +e
@@ -1600,6 +1895,16 @@ cmd_do() {
   if [[ "$rc" -ne 0 ]]; then
     printf "%s\n" "$output" >&2
     append_execution_event "$run_id" "do" "do_pick_failed" "fail" "bash tools/task.sh --pick queue-next" "" "$output"
+    if [[ "$output" == *"QUEUE 中没有未完成项"* ]]; then
+      echo "下一步建议：tools/qf orient RUN_ID=${run_id}" >&2
+    fi
+    if [[ "$auto_generated_proposal" -eq 1 && -f "$proposal_file" ]]; then
+      if git ls-files --error-unmatch "$proposal_file" >/dev/null 2>&1; then
+        git restore "$proposal_file" || true
+      else
+        rm -f "$proposal_file" || true
+      fi
+    fi
     print_resume_cmd "$run_id"
     exit "$rc"
   fi
@@ -1623,6 +1928,14 @@ cmd_do() {
   else
     append_execution_event "$run_id" "do" "do_pick_success" "ok" "bash tools/task.sh --pick queue-next" "task_file=${task_file};evidence=${evidence_path}" ""
     update_state_current "$run_id" "$task_file" "active"
+  fi
+
+  if [[ "$auto_generated_proposal" -eq 1 && -f "$proposal_file" ]]; then
+    if git ls-files --error-unmatch "$proposal_file" >/dev/null 2>&1; then
+      git restore "$proposal_file" || true
+    else
+      rm -f "$proposal_file" || true
+    fi
   fi
 }
 
@@ -2186,6 +2499,14 @@ case "$subcmd" in
   ready)
     shift
     cmd_ready "${1:-}"
+    ;;
+  orient)
+    shift
+    cmd_orient "${1:-}"
+    ;;
+  choose)
+    shift
+    cmd_choose "${1:-}" "${2:-}"
     ;;
   snapshot)
     shift
