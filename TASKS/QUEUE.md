@@ -24,7 +24,8 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
   Slice: run_id=run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment task_id=slice-1
 
-- [ ] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - enforce guardrail tests
+- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - enforce guardrail tests  Picked: run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests 2026-03-02T15:58:36+0800
+  Done: PR #151, RUN_ID=run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests
   Goal: Add or refine guardrail tests to lock behavior of the selected direction.
   Scope: `tests/`, `tools/qf`
   Acceptance:

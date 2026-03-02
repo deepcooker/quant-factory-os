@@ -1,6 +1,6 @@
 {
   "run_id": "run-2026-03-02-slice-next-p0-ready-run-core-delivery",
-  "created_at_utc": "2026-03-02T07:45:16.757547+00:00",
+  "created_at_utc": "2026-03-02T07:58:35.198963+00:00",
   "direction": {
     "selected_option": "ready-exit-resolution",
     "selected_title": "P0: ready 先处理未收尾 run（收尾/抛弃）",

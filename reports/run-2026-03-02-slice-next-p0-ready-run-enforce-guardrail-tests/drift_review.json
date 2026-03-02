@@ -1,6 +1,6 @@
 {
   "run_id": "run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests",
-  "created_at_utc": "2026-03-02T07:35:50.237771+00:00",
+  "created_at_utc": "2026-03-02T07:59:40.206310+00:00",
   "auto_fix": true,
   "strict": false,
   "non_blocking": false,
@@ -53,7 +53,7 @@
     {
       "name": "task_contract",
       "status": "pass",
-      "message": "TASKS/TASK-slice-next-p0-ready-run-enforce-guardrail-tests-153436.md exists",
+      "message": "TASKS/TASK-slice-next-p0-ready-run-enforce-guardrail-tests-155836.md exists",
       "fixed": false
     }
   ],
