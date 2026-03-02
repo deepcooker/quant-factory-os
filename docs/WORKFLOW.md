@@ -64,6 +64,7 @@ This document describes the expected workflow for changes in this repository.
   - Input: valid gates (`ready.json` + `orient_choice.json` + `council.json` + `execution_contract.json` + `slice_state.json`)
   - Output: task pick + evidence skeleton + execution trace updates
   - Task pick command: `tools/task.sh --next` (no `plan 20` dependency in critical path)
+  - Queue pick policy: prefer unchecked item whose `Slice: run_id=<CURRENT_RUN_ID>` matches `TASKS/STATE.md`; fallback to first unchecked item.
   - Auto checkpoint: runs `tools/qf review RUN_ID=<picked-run> AUTO_FIX=1 NON_BLOCKING=1` to emit drift report early.
 - `S2.5~S3 Orchestrator (optional)`: `tools/qf execute`
   - Purpose: low-friction single command to advance gate chain and execute.
@@ -144,6 +145,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - `tools/qf arbiter` produced `reports/{RUN_ID}/execution_contract.json`.
 - `tools/qf slice` produced `reports/{RUN_ID}/slice_state.json`.
 - `tools/qf do queue-next` requires all gates above and then picks via `tools/task.sh --next`.
+- `tools/task.sh --next` prioritizes queue blocks that match `CURRENT_RUN_ID` slice marker before generic first-unchecked fallback.
 - Optional shortcut: `tools/qf execute` can run the same chain with explicit/auto option strategy.
 
 ## Codex session startup checklist

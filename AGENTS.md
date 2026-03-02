@@ -127,6 +127,9 @@ Before any implementation, you MUST complete init and pass readiness checks:
   - Slice execution contract to queue tasks via `tools/qf slice`:
     - output: `reports/<RUN_ID>/slice_state.json`
     - queue insertion: `TASKS/QUEUE.md` (idempotent by slice marker)
+  - Queue pick policy (`tools/task.sh --next`):
+    - prefer unchecked item whose `Slice: run_id=<CURRENT_RUN_ID>` matches `TASKS/STATE.md`
+    - fallback to first unchecked item when no matching slice exists
   - Low-friction orchestrator (optional): `tools/qf execute`
     - default: stops at choose if no `OPTION` confirmed
     - auto mode: `QF_EXECUTE_AUTO_CHOOSE=1 tools/qf execute` auto-picks recommended option then runs `council->arbiter->slice->do`
