@@ -1,0 +1,9 @@
+{
+  "run_id": "run-2026-03-02-qf-ready",
+  "created_at_utc": "2026-03-02T08:28:32.423079+00:00",
+  "source_contract": "reports/run-2026-03-02-qf-ready/execution_contract.json",
+  "tasks_total": 3,
+  "queue_inserted": 0,
+  "queue_existing": 3,
+  "next_command": "tools/qf do queue-next"
+}
