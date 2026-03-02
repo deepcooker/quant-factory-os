@@ -1,8 +1,8 @@
 {
   "run_id": "run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests",
-  "created_at_utc": "2026-03-02T08:02:44.575375+00:00",
+  "created_at_utc": "2026-03-02T08:04:40.164598+00:00",
   "auto_fix": true,
-  "strict": false,
+  "strict": true,
   "non_blocking": false,
   "status": "pass",
   "blockers_count": 0,
@@ -53,7 +53,7 @@
     {
       "name": "task_contract",
       "status": "pass",
-      "message": "TASKS/TASK-slice-next-p0-ready-run-enforce-guardrail-tests-160104.md exists",
+      "message": "TASKS/TASK-slice-next-p0-ready-run-evidence-and-docs-alignment-160402.md exists",
       "fixed": false
     }
   ],

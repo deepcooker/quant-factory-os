@@ -12,8 +12,10 @@ RUN_ID: `run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment`
 
 ## Commands / Outputs
 - `make verify`
-  - result: `109 passed in 27.79s`
+  - result: `109 passed in 27.82s`
 - `QF_ALLOW_RUN_ID_MISMATCH=1 tools/qf review RUN_ID=run-2026-03-02-slice-next-p0-ready-run-core-delivery AUTO_FIX=1 STRICT=1`
+  - result: `REVIEW_STATUS: pass`, `REVIEW_BLOCKERS: 0`, `REVIEW_WARNINGS: 0`
+- `QF_ALLOW_RUN_ID_MISMATCH=1 tools/qf review RUN_ID=run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests AUTO_FIX=1 STRICT=1`
   - result: `REVIEW_STATUS: pass`, `REVIEW_BLOCKERS: 0`, `REVIEW_WARNINGS: 0`
 - `tools/qf do queue-next`（修复后实测）
   - result: 成功拉起 `TASKS/TASK-slice-next-p0-ready-run-evidence-and-docs-alignment-154517.md`，未再误拉 `core delivery`

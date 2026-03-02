@@ -68,7 +68,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
   Slice: run_id=run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests task_id=slice-2
 
-- [ ] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment
+- [>] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment  Picked: run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment 2026-03-02T16:04:02+0800
   Goal: Keep evidence and owner docs aligned with final behavior of this direction.
   Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `SYNC/`, `reports/{RUN_ID}/`
   Acceptance:
