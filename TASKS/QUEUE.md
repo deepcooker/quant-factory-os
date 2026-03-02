@@ -44,7 +44,8 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
   Slice: run_id=run-2026-03-02-qf-ready task_id=slice-3
 
-- [>] TODO Title: contract-next: P0: ready 先处理未收尾 run（收尾/抛弃）  Picked: run-2026-03-02-contract-next-p0-ready-run 2026-03-02T14:38:33+0800
+- [x] TODO Title: contract-next: P0: ready 先处理未收尾 run（收尾/抛弃）  Picked: run-2026-03-02-contract-next-p0-ready-run 2026-03-02T14:38:33+0800
+  Done: PR #145, RUN_ID=run-2026-03-02-contract-next-p0-ready-run
   Goal: 避免把历史中断状态混入新需求，先做生命周期分流。
   Scope: `tools/qf`, `tests/`
   Acceptance:
