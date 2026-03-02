@@ -1,12 +1,12 @@
 {
   "run_id": "run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests",
-  "created_at_utc": "2026-03-02T07:59:40.206310+00:00",
+  "created_at_utc": "2026-03-02T08:02:44.575375+00:00",
   "auto_fix": true,
   "strict": false,
   "non_blocking": false,
   "status": "pass",
   "blockers_count": 0,
-  "warnings_count": 3,
+  "warnings_count": 0,
   "checks": [
     {
       "name": "summary_file",
@@ -22,20 +22,20 @@
     },
     {
       "name": "ready_gate",
-      "status": "warn",
-      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/ready.json missing",
+      "status": "pass",
+      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/ready.json exists",
       "fixed": false
     },
     {
       "name": "direction_choice",
-      "status": "warn",
-      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/orient_choice.json missing",
+      "status": "pass",
+      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/orient_choice.json exists",
       "fixed": false
     },
     {
       "name": "direction_contract",
-      "status": "warn",
-      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/direction_contract.json missing",
+      "status": "pass",
+      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/direction_contract.json exists",
       "fixed": false
     },
     {
@@ -53,7 +53,7 @@
     {
       "name": "task_contract",
       "status": "pass",
-      "message": "TASKS/TASK-slice-next-p0-ready-run-enforce-guardrail-tests-155836.md exists",
+      "message": "TASKS/TASK-slice-next-p0-ready-run-enforce-guardrail-tests-160104.md exists",
       "fixed": false
     }
   ],

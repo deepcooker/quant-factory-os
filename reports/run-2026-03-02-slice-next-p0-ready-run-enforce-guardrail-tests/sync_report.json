@@ -1,0 +1,368 @@
+{
+  "run_id": "run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests",
+  "created_at_utc": "2026-03-02T08:00:48.093507+00:00",
+  "sync_passed": true,
+  "required_files": [
+    "README.md",
+    "SYNC/README.md",
+    "SYNC/READ_ORDER.md",
+    "SYNC/CURRENT_STATE.md",
+    "SYNC/SESSION_LATEST.md",
+    "SYNC/DECISIONS_LATEST.md",
+    "SYNC/LINKS.md",
+    "SYNC/EXAM_PLAN_PROMPT.md",
+    "SYNC/EXAM_ANSWER_TEMPLATE.md",
+    "SYNC/EXAM_WORKFLOW.md",
+    "SYNC/EXAM_RUBRIC.json",
+    "AGENTS.md",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/PROJECT_GUIDE.md",
+    "TASKS/STATE.md",
+    "TASKS/QUEUE.md"
+  ],
+  "missing_required_files": [],
+  "files_read": [
+    {
+      "path": "README.md",
+      "required": true,
+      "exists": true,
+      "bytes": 960,
+      "lines": 45,
+      "sha256": "84097154c03791f7a01fb22e69bcb91317c3a3a623c7a0ceae88207b4b1ca5e8",
+      "preview": "# quant-factory-os"
+    },
+    {
+      "path": "SYNC/README.md",
+      "required": true,
+      "exists": true,
+      "bytes": 3111,
+      "lines": 54,
+      "sha256": "72383a833dd21f5ee3476c03df2754c11c1ff81390952be0ab8cbd26b79b08d5",
+      "preview": "# 同频入口"
+    },
+    {
+      "path": "SYNC/READ_ORDER.md",
+      "required": true,
+      "exists": true,
+      "bytes": 1777,
+      "lines": 48,
+      "sha256": "aa8305045073d71940cfa8fb03bb24198df3e905e80c276ff11d2609bd4f2fe2",
+      "preview": "# 阅读顺序"
+    },
+    {
+      "path": "SYNC/CURRENT_STATE.md",
+      "required": true,
+      "exists": true,
+      "bytes": 1035,
+      "lines": 26,
+      "sha256": "c6eebc1e71853a03a7c05c46c2e12d920b9e469b1f94975bd88596d6f24cb769",
+      "preview": "# 当前状态"
+    },
+    {
+      "path": "SYNC/SESSION_LATEST.md",
+      "required": true,
+      "exists": true,
+      "bytes": 1232,
+      "lines": 27,
+      "sha256": "de7ad8afb6b06d28d08660f9b371f9217291adf2468b0398636ceaa7b9f022ca",
+      "preview": "# Session 总结（Latest）"
+    },
+    {
+      "path": "SYNC/DECISIONS_LATEST.md",
+      "required": true,
+      "exists": true,
+      "bytes": 2952,
+      "lines": 54,
+      "sha256": "38489d8acc7490f71d9b3655cf63c8b2996e29c436fcb9bfbd9eab0904948b31",
+      "preview": "# 最新决策"
+    },
+    {
+      "path": "SYNC/LINKS.md",
+      "required": true,
+      "exists": true,
+      "bytes": 840,
+      "lines": 34,
+      "sha256": "494f0159834a6fb9ef861a8cd870f27973064eeaf901ed28b6b6092e0deabba5",
+      "preview": "# 索引链接"
+    },
+    {
+      "path": "SYNC/EXAM_PLAN_PROMPT.md",
+      "required": true,
+      "exists": true,
+      "bytes": 1004,
+      "lines": 24,
+      "sha256": "5902239578eefd78db0748c2e2d684651ea779e28d77a7a2e6053a219dcc4f97",
+      "preview": "# /plan 同频考试题面（CLI + 网页 GPT 通用）"
+    },
+    {
+      "path": "SYNC/EXAM_ANSWER_TEMPLATE.md",
+      "required": true,
+      "exists": true,
+      "bytes": 1162,
+      "lines": 43,
+      "sha256": "b86446189aaf6c27d4c6e68ace758af788e399b46a90f1a1719630738df4ade0",
+      "preview": "# 同频考试答题模板（用于学习，不是刷题）"
+    },
+    {
+      "path": "SYNC/EXAM_WORKFLOW.md",
+      "required": true,
+      "exists": true,
+      "bytes": 994,
+      "lines": 31,
+      "sha256": "f0ac3aea520e3bcad9467c666922aac7e12dc989123877b114350a17f896e1cc",
+      "preview": "# 同频考试工作流（CLI + 网页 GPT）"
+    },
+    {
+      "path": "SYNC/EXAM_RUBRIC.json",
+      "required": true,
+      "exists": true,
+      "bytes": 2196,
+      "lines": 87,
+      "sha256": "14e79009c0693337932131af66e4f2b74f60fa41297509c1b4e46753845b06be",
+      "preview": "{"
+    },
+    {
+      "path": "AGENTS.md",
+      "required": true,
+      "exists": true,
+      "bytes": 8121,
+      "lines": 165,
+      "sha256": "0121aeba77efa58f7ff38f86b3c130e13dd7241b3ff94714e1841631a49b2e08",
+      "preview": "# AGENTS.md (Hard Rules for Codex / Agents)"
+    },
+    {
+      "path": "docs/WORKFLOW.md",
+      "required": true,
+      "exists": true,
+      "bytes": 14188,
+      "lines": 223,
+      "sha256": "cea9ad3d72247da3330c2210079c2551768703373302bb28d84e30e244778565",
+      "preview": "# WORKFLOW"
+    },
+    {
+      "path": "docs/ENTITIES.md",
+      "required": true,
+      "exists": true,
+      "bytes": 4125,
+      "lines": 94,
+      "sha256": "4f61133b7930502b914d04e712a9685cad7ad446126334f6793101e5fada59c8",
+      "preview": "# ENTITIES"
+    },
+    {
+      "path": "docs/PROJECT_GUIDE.md",
+      "required": true,
+      "exists": true,
+      "bytes": 19628,
+      "lines": 450,
+      "sha256": "f8d900e41cf562a619d53e846cdc9258beafa6684792e8667a5a2884c0567ab3",
+      "preview": "# PROJECT_GUIDE.md (v2) — quant-factory-os 自举式智能工厂操作系统"
+    },
+    {
+      "path": "TASKS/STATE.md",
+      "required": true,
+      "exists": true,
+      "bytes": 2118,
+      "lines": 137,
+      "sha256": "27dd0800fb9fa630833031919c643decba186c1c70faf2ecac244e110a6fbae9",
+      "preview": "# STATE"
+    },
+    {
+      "path": "TASKS/QUEUE.md",
+      "required": true,
+      "exists": true,
+      "bytes": 32001,
+      "lines": 453,
+      "sha256": "8fcb673ec2bf0e1d5290af2ef59fc9fc844ca6cb76fb8ea2fa1843c5e2a9b1a3",
+      "preview": "# QUEUE"
+    },
+    {
+      "path": "TASKS/TASK-slice-next-p0-ready-run-enforce-guardrail-tests-155836.md",
+      "required": false,
+      "exists": true,
+      "bytes": 979,
+      "lines": 36,
+      "sha256": "a448b6a7aa3f39d39e9e0e04c93d2fbeadd10b5116d1e34117ec1584699a1e12",
+      "preview": "# TASK: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - enforce guardrail tests"
+    },
+    {
+      "path": "reports/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/handoff.md",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "reports/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/conversation.md",
+      "required": false,
+      "exists": true,
+      "bytes": 1851,
+      "lines": 70,
+      "sha256": "94e522c5d6eefcb7f870319b8eff5dfe92993c533c24007c1b929448ca995277",
+      "preview": "## 2026-03-02T15:34:37+08:00"
+    },
+    {
+      "path": "reports/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/decision.md",
+      "required": false,
+      "exists": true,
+      "bytes": 808,
+      "lines": 19,
+      "sha256": "5d3d26823c1da21eeba68e93e5ca86939e7e43628c7c45a8ea9ca09ae1a425bd",
+      "preview": "# Decision"
+    },
+    {
+      "path": "reports/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/summary.md",
+      "required": false,
+      "exists": true,
+      "bytes": 573,
+      "lines": 14,
+      "sha256": "0ca33bcddba523b0c10c078bc19a6d04a1351ea5de42f9c0744d4d0ff8d699e0",
+      "preview": "# Summary"
+    },
+    {
+      "path": "reports/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/orient_choice.json",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "reports/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/direction_contract.json",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "reports/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/execution_contract.json",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "reports/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/slice_state.json",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "reports/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/drift_review.json",
+      "required": false,
+      "exists": true,
+      "bytes": 1830,
+      "lines": 62,
+      "sha256": "f77866190d0cef86a6788a1a3a63c490f5fc6648bb74311eeedf6398bac8b23d",
+      "preview": "{"
+    },
+    {
+      "path": "reports/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/drift_review.md",
+      "required": false,
+      "exists": true,
+      "bytes": 1162,
+      "lines": 25,
+      "sha256": "a4d17371377ffceb788e683e93140a60da4988ad5ce68640d6ee33b3cb86e161",
+      "preview": "# Drift Review"
+    },
+    {
+      "path": "SYNC/discussion/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/ready_brief.json",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "SYNC/discussion/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/ready_brief.md",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "SYNC/discussion/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/orient.json",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "SYNC/discussion/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/orient.md",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "SYNC/discussion/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/council.json",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "SYNC/discussion/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/council.md",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "SYNC/discussion/run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests/drift_todo.md",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    }
+  ],
+  "project_overview": {
+    "summary": "quant-factory-os is the governance/execution base for quant engineering.",
+    "north_star": "quant-factory-os 是一个“自举式智能工厂操作系统”：它能**自动执行任务**、能**从证据链与错题本学习变强**、能**训练/引导新的智能体加入并理解因果链**、能**自我迭代升级工具与流程**、最终能**多智能协作形成涌现智能**，并把这些能力用于任何项目（最初是量化策略工厂，最终是通用项目底座）。"
+  },
+  "governance": {
+    "constitution": "AGENTS.md",
+    "workflow": "docs/WORKFLOW.md",
+    "entities": "docs/ENTITIES.md"
+  },
+  "skill_lookup": {
+    "primary": "AGENTS.md (Skills section)",
+    "fallback": "/root/.codex/skills/.system/*/SKILL.md"
+  },
+  "current_stage": {
+    "current_run_id": "run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests",
+    "current_task_file": "TASKS/TASK-slice-next-p0-ready-run-enforce-guardrail-tests-155836.md",
+    "current_status": "active"
+  },
+  "session_handoff": {
+    "continuity": "ready_to_continue",
+    "has_handoff": false,
+    "has_decision": true,
+    "has_summary": true
+  },
+  "next_command": "tools/qf ready",
+  "next_command_low_friction": "tools/qf ready"
+}
