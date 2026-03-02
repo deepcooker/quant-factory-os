@@ -1,9 +1,9 @@
 # Drift Review
 
 RUN_ID: `run-2026-03-02-slice-next-p0-ready-run-core-delivery`
-Generated At (UTC): 2026-03-02T07:46:37.244098+00:00
+Generated At (UTC): 2026-03-02T07:57:17.548064+00:00
 Status: `pass`
-Strict: `true` | Auto-fix: `true` | Non-blocking: `false`
+Strict: `false` | Auto-fix: `true` | Non-blocking: `false`
 
 ## Checks
 - [pass] summary_file: reports/run-2026-03-02-slice-next-p0-ready-run-core-delivery/summary.md exists (raw)
@@ -13,7 +13,7 @@ Strict: `true` | Auto-fix: `true` | Non-blocking: `false`
 - [pass] direction_contract: reports/run-2026-03-02-slice-next-p0-ready-run-core-delivery/direction_contract.json exists (raw)
 - [pass] verify_record: summary includes make verify record (raw)
 - [pass] stop_reason: decision contains stop reason (raw)
-- [pass] task_contract: TASKS/TASK-slice-next-p0-ready-run-evidence-and-docs-alignment-154517.md exists (raw)
+- [pass] task_contract: TASKS/TASK-slice-next-p0-ready-run-core-delivery-155555.md exists (raw)
 
 ## Fixes
 - none
