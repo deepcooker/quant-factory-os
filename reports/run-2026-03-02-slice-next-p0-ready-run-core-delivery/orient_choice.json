@@ -1,0 +1,13 @@
+{
+  "run_id": "run-2026-03-02-slice-next-p0-ready-run-core-delivery",
+  "created_at_utc": "2026-03-02T07:17:27.377305+00:00",
+  "selected_option": "ready-exit-resolution",
+  "selected_title": "P0: ready 先处理未收尾 run（收尾/抛弃）",
+  "priority": "P0",
+  "reason": "避免把历史中断状态混入新需求，先做生命周期分流。",
+  "source_orient_file": "SYNC/discussion/run-2026-03-02-slice-next-p0-ready-run-core-delivery/orient.json",
+  "discussion_confirmed": true,
+  "contract_json": "reports/run-2026-03-02-slice-next-p0-ready-run-core-delivery/direction_contract.json",
+  "contract_md": "reports/run-2026-03-02-slice-next-p0-ready-run-core-delivery/direction_contract.md",
+  "next_command": "tools/qf council RUN_ID=run-2026-03-02-slice-next-p0-ready-run-core-delivery"
+}

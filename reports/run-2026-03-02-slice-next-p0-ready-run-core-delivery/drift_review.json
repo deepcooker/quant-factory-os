@@ -1,12 +1,12 @@
 {
   "run_id": "run-2026-03-02-slice-next-p0-ready-run-core-delivery",
-  "created_at_utc": "2026-03-02T06:55:48.467404+00:00",
+  "created_at_utc": "2026-03-02T07:17:57.275627+00:00",
   "auto_fix": true,
   "strict": false,
-  "non_blocking": false,
+  "non_blocking": true,
   "status": "pass",
   "blockers_count": 0,
-  "warnings_count": 3,
+  "warnings_count": 0,
   "checks": [
     {
       "name": "summary_file",
@@ -22,20 +22,20 @@
     },
     {
       "name": "ready_gate",
-      "status": "warn",
-      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-core-delivery/ready.json missing",
+      "status": "pass",
+      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-core-delivery/ready.json exists",
       "fixed": false
     },
     {
       "name": "direction_choice",
-      "status": "warn",
-      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-core-delivery/orient_choice.json missing",
+      "status": "pass",
+      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-core-delivery/orient_choice.json exists",
       "fixed": false
     },
     {
       "name": "direction_contract",
-      "status": "warn",
-      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-core-delivery/direction_contract.json missing",
+      "status": "pass",
+      "message": "reports/run-2026-03-02-slice-next-p0-ready-run-core-delivery/direction_contract.json exists",
       "fixed": false
     },
     {
@@ -53,7 +53,7 @@
     {
       "name": "task_contract",
       "status": "pass",
-      "message": "TASKS/TASK-slice-next-p0-ready-run-core-delivery-144925.md exists",
+      "message": "TASKS/TASK-slice-next-p0-ready-run-core-delivery-151756.md exists",
       "fixed": false
     }
   ],
