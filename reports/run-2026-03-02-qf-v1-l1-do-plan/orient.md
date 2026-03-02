@@ -1,15 +1,15 @@
 # Orientation Report
 
 RUN_ID: `run-2026-03-02-qf-v1-l1-do-plan`
-Generated At (UTC): 2026-03-02T04:24:55.045632+00:00
+Generated At (UTC): 2026-03-02T06:35:50.531989+00:00
 Open Queue Items: 0
 
 ## Direction Options
-- id=`stability-do-plan` | priority=`P0` | score=746
+- id=`stability-do-plan` | priority=`P0` | score=840
   - title: P0: qf do/plan 稳定性硬化
   - why: 降低执行摩擦，优先修复 do/plan 断链与脏工作区冲突。
   - scope_hint: tools/qf, tests/
-- id=`l1-direction-layer` | priority=`P1` | score=272
+- id=`l1-direction-layer` | priority=`P1` | score=284
   - title: P1: L1 方向层（orient/choose）
   - why: 在执行前先做方向确认与优先级选择，建立两层任务模型。
   - scope_hint: tools/qf, TASKS/, docs/WORKFLOW.md, SYNC/

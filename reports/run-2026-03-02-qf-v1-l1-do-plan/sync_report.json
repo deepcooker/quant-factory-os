@@ -1,6 +1,6 @@
 {
   "run_id": "run-2026-03-02-qf-v1-l1-do-plan",
-  "created_at_utc": "2026-03-02T04:24:45.746657+00:00",
+  "created_at_utc": "2026-03-02T04:40:55.804513+00:00",
   "sync_passed": true,
   "required_files": [
     "README.md",
@@ -162,18 +162,18 @@
       "path": "TASKS/STATE.md",
       "required": true,
       "exists": true,
-      "bytes": 1969,
-      "lines": 57,
-      "sha256": "c6dccd19c49352bf6463997944766873d57b4462f14e7d6950e25a13a5d3075d",
+      "bytes": 1973,
+      "lines": 63,
+      "sha256": "9a679e85be8d86f0304526676d31e5c927f1cc5a4b40c7b0e4bd5a76b7943a96",
       "preview": "# STATE"
     },
     {
       "path": "TASKS/QUEUE.md",
       "required": true,
       "exists": true,
-      "bytes": 19249,
-      "lines": 265,
-      "sha256": "83c53578160a261b9de7f0c4b9a26c22c17680125a9474437e04245607c1fa6f",
+      "bytes": 19317,
+      "lines": 266,
+      "sha256": "a1a685c27dc8e2710aadf868e5b30f57fa3528c0d225e9d4f020451a815b10b9",
       "preview": "# QUEUE"
     },
     {
@@ -197,28 +197,28 @@
     {
       "path": "reports/run-2026-03-02-qf-v1-l1-do-plan/conversation.md",
       "required": false,
-      "exists": false,
-      "bytes": 0,
-      "lines": 0,
-      "sha256": "",
-      "preview": ""
+      "exists": true,
+      "bytes": 1109,
+      "lines": 40,
+      "sha256": "bfadba0349c9f2264656410c7bdcddb057c2bbb75cd87118dd89de6b86fd5baa",
+      "preview": "## 2026-03-02T12:24:45+08:00"
     },
     {
       "path": "reports/run-2026-03-02-qf-v1-l1-do-plan/decision.md",
       "required": false,
       "exists": true,
-      "bytes": 115,
-      "lines": 12,
-      "sha256": "e16776d2dcfd8e0825753ef62c2f41ce4ecc037bf7e8606c7feb0a6dd997c5d3",
+      "bytes": 1482,
+      "lines": 30,
+      "sha256": "a22145e6753e35e0df949f86483c98c88b154875d4a29a2ea0faf5479f9ec772",
       "preview": "# Decision"
     },
     {
       "path": "reports/run-2026-03-02-qf-v1-l1-do-plan/summary.md",
       "required": false,
       "exists": true,
-      "bytes": 112,
-      "lines": 12,
-      "sha256": "394f1cb5e31957dda5d8d7a7aeb84e4e5d68f2b2437d05cfcd65f34e4140c2f4",
+      "bytes": 2094,
+      "lines": 38,
+      "sha256": "92692c4bca052a71dfcc4f5c203f4e5660034f3752676a9d96b67c325431cd2e",
       "preview": "# Summary"
     }
   ],
@@ -238,7 +238,7 @@
   "current_stage": {
     "current_run_id": "run-2026-03-02-qf-v1-l1-do-plan",
     "current_task_file": "TASKS/TASK-qf-v1-l1-do-plan.md",
-    "current_status": "active"
+    "current_status": "done"
   },
   "session_handoff": {
     "continuity": "ready_to_continue",
@@ -246,5 +246,5 @@
     "has_decision": true,
     "has_summary": true
   },
-  "next_command": "tools/qf ready"
+  "next_command": "tools/qf plan 20"
 }

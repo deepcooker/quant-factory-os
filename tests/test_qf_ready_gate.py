@@ -123,3 +123,121 @@ def test_qf_ready_autofills_from_task_contract(tmp_path: Path) -> None:
     assert "Keep startup low-friction." in content
     assert "tools/qf, tests/" in content
     assert "READY_TASK_FILE: TASKS/TASK-auto.md" in res.stdout
+
+
+def test_qf_ready_requires_resolution_for_unfinished_run(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    (repo / "TASKS").mkdir(parents=True, exist_ok=True)
+    (repo / "TASKS" / "TASK-a.md").write_text("# TASK: a\n", encoding="utf-8")
+    (repo / "TASKS" / "STATE.md").write_text(
+        "\n".join(
+            [
+                "# STATE",
+                "CURRENT_RUN_ID: run-active",
+                "CURRENT_TASK_FILE: TASKS/TASK-a.md",
+                "CURRENT_STATUS: active",
+                "",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    run_dir = repo / "reports" / "run-active"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "ready.json").write_text('{"restatement_passed": true}\n', encoding="utf-8")
+
+    env = os.environ.copy()
+    env["QF_READY_REQUIRE_SYNC"] = "0"
+    env["QF_READY_GOAL"] = "goal"
+    env["QF_READY_SCOPE"] = "scope"
+    env["QF_READY_ACCEPTANCE"] = "accept"
+    env["QF_READY_STEPS"] = "steps"
+    env["QF_READY_STOP"] = "stop"
+    res = run(["bash", "tools/qf", "ready", "RUN_ID=run-active"], cwd=repo, env=env)
+    assert res.returncode != 0
+    combined = res.stdout + res.stderr
+    assert "READY_NEEDS_DECISION: true" in combined
+    assert "resume-close" in combined
+    assert "abandon-new" in combined
+
+
+def test_qf_ready_abandon_new_writes_discussion_brief_and_orient(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    (repo / "TASKS").mkdir(parents=True, exist_ok=True)
+    (repo / "TASKS" / "TASK-a.md").write_text("# TASK: a\n", encoding="utf-8")
+    (repo / "TASKS" / "STATE.md").write_text(
+        "\n".join(
+            [
+                "# STATE",
+                "CURRENT_RUN_ID: run-active",
+                "CURRENT_TASK_FILE: TASKS/TASK-a.md",
+                "CURRENT_STATUS: active",
+                "",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    run_dir = repo / "reports" / "run-active"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "ready.json").write_text('{"restatement_passed": true}\n', encoding="utf-8")
+
+    env = os.environ.copy()
+    env["QF_READY_REQUIRE_SYNC"] = "0"
+    env["QF_READY_GOAL"] = "goal"
+    env["QF_READY_SCOPE"] = "scope"
+    env["QF_READY_ACCEPTANCE"] = "accept"
+    env["QF_READY_STEPS"] = "steps"
+    env["QF_READY_STOP"] = "stop"
+    res = run(
+        ["bash", "tools/qf", "ready", "RUN_ID=run-active", "DECISION=abandon-new"],
+        cwd=repo,
+        env=env,
+    )
+    assert res.returncode == 0, res.stdout + res.stderr
+    assert (repo / "reports" / "run-active" / "ready.json").exists()
+    assert (repo / "SYNC" / "discussion" / "run-active" / "ready_brief.md").exists()
+    assert (repo / "SYNC" / "discussion" / "run-active" / "orient.json").exists()
+    assert "ORIENT_OPTIONS:" in res.stdout
+
+
+def test_qf_ready_abandon_new_persists_resolution_for_same_run(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    (repo / "TASKS").mkdir(parents=True, exist_ok=True)
+    (repo / "TASKS" / "TASK-a.md").write_text("# TASK: a\n", encoding="utf-8")
+    (repo / "TASKS" / "STATE.md").write_text(
+        "\n".join(
+            [
+                "# STATE",
+                "CURRENT_RUN_ID: run-active",
+                "CURRENT_TASK_FILE: TASKS/TASK-a.md",
+                "CURRENT_STATUS: active",
+                "",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    run_dir = repo / "reports" / "run-active"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "ready.json").write_text('{"restatement_passed": true}\n', encoding="utf-8")
+
+    env = os.environ.copy()
+    env["QF_READY_REQUIRE_SYNC"] = "0"
+    env["QF_READY_GOAL"] = "goal"
+    env["QF_READY_SCOPE"] = "scope"
+    env["QF_READY_ACCEPTANCE"] = "accept"
+    env["QF_READY_STEPS"] = "steps"
+    env["QF_READY_STOP"] = "stop"
+
+    first = run(
+        ["bash", "tools/qf", "ready", "RUN_ID=run-active", "DECISION=abandon-new"],
+        cwd=repo,
+        env=env,
+    )
+    assert first.returncode == 0, first.stdout + first.stderr
+
+    second = run(["bash", "tools/qf", "ready", "RUN_ID=run-active"], cwd=repo, env=env)
+    assert second.returncode == 0, second.stdout + second.stderr
+    combined = second.stdout + second.stderr
+    assert "READY_NEEDS_DECISION: true" not in combined

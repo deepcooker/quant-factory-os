@@ -31,14 +31,48 @@ This document describes the expected workflow for changes in this repository.
   - Output: `reports/{RUN_ID}/ready.json`
   - Sync dependency: requires valid `sync_report.json`; default auto-runs `tools/qf sync` if missing (`QF_READY_AUTO_SYNC=1`).
   - Low-friction mode: fields auto-fill from active task contract by default (`QF_READY_AUTO=1`).
+  - Exit resolution gate: if unresolved run context is detected, must choose:
+    - `DECISION=resume-close` (run `tools/qf resume`)
+    - `DECISION=abandon-new` (continue new direction cycle)
+  - Resolution persistence: `abandon-new` is stored in `ready.json` for the same RUN to avoid repeated prompts on subsequent `ready`.
+  - Ready also writes discussion brief to `SYNC/discussion/{RUN_ID}/ready_brief.json|md`.
   - Gate: `tools/qf do` must fail without valid `ready.json`.
 - `S2.5 Direction gate`: `tools/qf orient` + `tools/qf choose`
   - Input: `docs/PROJECT_GUIDE.md` + governance docs + state/evidence.
-  - Output: `reports/{RUN_ID}/orient.json|md` + `reports/{RUN_ID}/orient_choice.json`.
+  - Output:
+    - discussion draft: `SYNC/discussion/{RUN_ID}/orient.json|md`
+    - confirmed decision: `reports/{RUN_ID}/orient_choice.json`
+    - direction contract: `reports/{RUN_ID}/direction_contract.json|md`
   - Purpose: confirm direction/priority before execution queue pick.
+- `S2.6 Council gate`: `tools/qf council`
+  - Input: `orient_choice.json` + `direction_contract.json`
+  - Output: `SYNC/discussion/{RUN_ID}/council.json|md`
+  - Purpose: product/architect/dev/qa independent review before convergence.
+  - Rule: council output must be evidence-based (sync/ready/scope/verify/docs/queue pressure checks), not static templates.
+- `S2.7 Arbiter gate`: `tools/qf arbiter`
+  - Input: `council.json` + `direction_contract.json`
+  - Output: `reports/{RUN_ID}/execution_contract.json|md`
+  - Purpose: converge independent views into one executable contract.
+  - Rule: execution slices must reflect council blockers/warnings/role conditions.
+- `S2.8 Slice gate`: `tools/qf slice`
+  - Input: `execution_contract.json`
+  - Output:
+    - `reports/{RUN_ID}/slice_state.json`
+    - queue insertion into `TASKS/QUEUE.md` (idempotent by slice marker)
+  - Purpose: turn contract into smallest executable queue tasks.
 - `S3 Execute`: `tools/qf do queue-next`
-  - Input: valid ready gate + execution queue readiness
+  - Input: valid gates (`ready.json` + `orient_choice.json` + `council.json` + `execution_contract.json` + `slice_state.json`)
   - Output: task pick + evidence skeleton + execution trace updates
+  - Task pick command: `tools/task.sh --next` (no `plan 20` dependency in critical path)
+  - Auto checkpoint: runs `tools/qf review RUN_ID=<picked-run> AUTO_FIX=1 NON_BLOCKING=1` to emit drift report early.
+- `S2.5~S3 Orchestrator (optional)`: `tools/qf execute`
+  - Purpose: low-friction single command to advance gate chain and execute.
+  - Default behavior: if no confirmed option, stop with actionable choose command.
+  - Auto mode: `QF_EXECUTE_AUTO_CHOOSE=1 tools/qf execute` uses orient recommended option and continues through `council->arbiter->slice->do`.
+- `S3.5 Review`: `tools/qf review`
+  - Input: run evidence (`summary/decision/ready/choice/contract`) and optional flags (`AUTO_FIX`, `STRICT`).
+  - Output: `reports/{RUN_ID}/drift_review.json|md`; blockers additionally write `SYNC/discussion/{RUN_ID}/drift_todo.md`.
+  - Gate: strict mode blockers must be resolved before ship.
 - `S4 Ship`: `tools/ship.sh` (or `make ship`)
   - Input: verified diff + in-scope task contract
   - Output: PR + merge + main sync
@@ -78,8 +112,12 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   - `tools/qf snapshot RUN_ID=<run-id> NOTE="decision/next-step summary"`
 - `tools/qf do` / `tools/qf resume` 自动记录执行轨迹到
   `reports/{RUN_ID}/execution.jsonl`（默认脱敏，可审计）。
-- `tools/qf sync` / `tools/qf ready` / `tools/qf orient` / `tools/qf choose` 默认写入
+- `tools/qf sync` / `tools/qf ready` / `tools/qf orient` / `tools/qf choose` /
+  `tools/qf council` / `tools/qf arbiter` / `tools/qf slice` 默认写入
   `reports/{RUN_ID}/conversation.md` checkpoint（可用 `QF_AUTO_CONVERSATION=0` 关闭）。
+- Discussion drafts are intentionally separated from execution evidence:
+  - pre-confirmation drafts in `SYNC/discussion/{RUN_ID}/`
+  - post-confirmation execution evidence in `reports/{RUN_ID}/`
 - 断线恢复建议先生成接班摘要：
   - `tools/qf handoff RUN_ID=<run-id>` -> `reports/{RUN_ID}/handoff.md`
 - Repo memory is limited to: `docs/` (rules), `TASKS/STATE.md` (current state),
@@ -100,14 +138,19 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - `tools/qf handoff` completed for continuing runs (auto by init unless explicitly disabled).
 - `tools/qf sync` produced valid `reports/{RUN_ID}/sync_report.json`.
 - `tools/qf ready` produced `reports/{RUN_ID}/ready.json`.
-- Strong-mode recommended: `tools/qf orient` and `tools/qf choose` completed before `plan/do`.
-- `tools/qf do queue-next` no longer fails on readiness gate.
+- `tools/qf orient` produced `SYNC/discussion/{RUN_ID}/orient.json`.
+- `tools/qf choose` produced `reports/{RUN_ID}/orient_choice.json`.
+- `tools/qf council` produced `SYNC/discussion/{RUN_ID}/council.json`.
+- `tools/qf arbiter` produced `reports/{RUN_ID}/execution_contract.json`.
+- `tools/qf slice` produced `reports/{RUN_ID}/slice_state.json`.
+- `tools/qf do queue-next` requires all gates above and then picks via `tools/task.sh --next`.
+- Optional shortcut: `tools/qf execute` can run the same chain with explicit/auto option strategy.
 
 ## Codex session startup checklist
 - Do not rely on chat/session memory; rely only on repo memory:
   `TASKS/STATE.md`, `TASKS/QUEUE.md`, `reports/{RUN_ID}/`.
 - First read owner entrypoint: `SYNC/READ_ORDER.md`.
-- Preferred entrypoint: `tools/qf` (`init/sync/ready/orient/choose/plan/do/resume`).
+- Preferred entrypoint: `tools/qf` (`init/sync/ready/orient/choose/council/arbiter/slice/execute/do/review/resume`).
 - Compatibility wrappers: `tools/enter.sh` and `tools/onboard.sh` forward to `tools/qf`.
 - 1) 运行 `tools/qf init`（自动 stash 可恢复 + sync main + doctor + onboard）。
 - 1.1) 可选清理历史临时 stash：先预览 `tools/qf stash-clean`，确认后执行 `tools/qf stash-clean apply KEEP=0`。
@@ -123,18 +166,27 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   - 手动模式：`tools/qf exam-auto AUTO_FILL=0`（只落模板，不自动填答）
   - 兼容命令：`tools/qf exam`（只做评分，不自动生成答卷）
 - 4) 运行 `tools/qf ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`，默认可自动填充；默认缺失 sync report 时自动补跑 `tools/qf sync`）。
+- 4.0) 若 `ready` 提示 unresolved run context，先二选一：
+  - `tools/qf resume RUN_ID=<run-id>`（收尾）
+  - `tools/qf ready RUN_ID=<run-id> DECISION=abandon-new`（明确抛弃旧上下文后继续）
 - 4.1) 运行 `tools/qf orient` 生成方向候选与优先级（L1 方向层）。
 - 4.2) 运行 `tools/qf choose OPTION=<id>` 确认方向后再进入执行层（L2）。
+- 4.2.1) 运行 `tools/qf council` 生成产品/架构/研发/测试独立评审结果（讨论态）。
+- 4.2.2) 运行 `tools/qf arbiter` 收敛为统一执行契约（执行态）。
+- 4.2.3) 运行 `tools/qf slice` 把执行契约拆成最小 queue tasks（幂等入队）。
 - 4.3) 在关键决策点执行 `tools/qf snapshot NOTE="..."`，把“本轮结论/下一步”写入仓库证据，避免会话丢失。
-- 5) 运行 `tools/qf plan 20` 生成候选；该命令会复制 proposal 到 `/tmp`（并打印路径）且保持工作区干净。
-- 6) 运行 `tools/qf do queue-next` 领取下一枪（内部确保 ready 前置；缺 proposal 时会自动 plan，再 pick）。
-- 7) Expand that item into `TASKS/TASK-*.md` (from template), then run:
+- 5) 运行 `tools/qf do queue-next` 领取下一枪（内部强制 ready + choose + council + arbiter + slice 前置；并自动产出一次 non-blocking drift review）。
+- 5.0) 低摩擦可选：`tools/qf execute`
+  - 默认在缺少方向确认时停在 choose（保留人工确认）
+  - 自动推进模式：`QF_EXECUTE_AUTO_CHOOSE=1 tools/qf execute`
+- 5.1) 需求执行完成后，显式运行 `tools/qf review RUN_ID=<run-id> STRICT=1 AUTO_FIX=1`，清空 blocker 后再 ship。
+- 6) Expand that item into `TASKS/TASK-*.md` (from template), then run:
   implement minimal diff -> `make verify` -> update reports -> `tools/task.sh` ship.
 - Ship failure recovery: `tools/ship.sh` writes `reports/{RUN_ID}/ship_state.json`
   at key steps. On push/PR/merge/sync failure, run `tools/qf resume RUN_ID=...`.
 - `tools/qf resume` 会先检查是否已存在同分支的已合并 PR；若已合并则跳过重复 `pr create/merge`，直接执行本地 `main` 同步收尾。
 - Ship success behavior: after merge, ship auto-syncs local `main` to `origin/main`.
-- 8) On failure, write failure reason, repro, and next step in
+- 7) On failure, write failure reason, repro, and next step in
   `reports/{RUN_ID}/summary.md` + `reports/{RUN_ID}/decision.md` (and `MISTAKES/`
   or `TASKS/STATE.md` when needed).
 

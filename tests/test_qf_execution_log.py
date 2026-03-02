@@ -34,13 +34,40 @@ def setup_repo(tmp_path: Path) -> Path:
     return repo
 
 
+def seed_direction_choice(repo: Path, run_id: str) -> None:
+    run_dir = repo / "reports" / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "orient_choice.json").write_text(
+        '{"run_id":"%s","selected_option":"ready-strong-brief","discussion_confirmed":true}\n' % run_id,
+        encoding="utf-8",
+    )
+
+
+def seed_execution_gates(repo: Path, run_id: str) -> None:
+    seed_direction_choice(repo, run_id)
+    (repo / "SYNC" / "discussion" / run_id).mkdir(parents=True, exist_ok=True)
+    (repo / "SYNC" / "discussion" / run_id / "council.json").write_text(
+        '{"run_id":"%s","roles":[]}\n' % run_id,
+        encoding="utf-8",
+    )
+    run_dir = repo / "reports" / run_id
+    (run_dir / "execution_contract.json").write_text(
+        '{"run_id":"%s","tasks":[]}\n' % run_id,
+        encoding="utf-8",
+    )
+    (run_dir / "slice_state.json").write_text(
+        '{"run_id":"%s","tasks_total":0}\n' % run_id,
+        encoding="utf-8",
+    )
+
+
 def test_qf_do_writes_execution_log(tmp_path: Path) -> None:
     repo = setup_repo(tmp_path)
     task_script = repo / "tools" / "task.sh"
     task_script.write_text(
         "#!/usr/bin/env bash\n"
         "set -euo pipefail\n"
-        "if [[ \"${1:-}\" == \"--pick\" ]]; then\n"
+        "if [[ \"${1:-}\" == \"--next\" ]]; then\n"
         "  echo \"TASK_FILE: TASKS/TASK-picked.md\"\n"
         "  echo \"RUN_ID: run-picked\"\n"
         "  echo \"EVIDENCE_PATH: reports/run-picked\"\n"
@@ -50,7 +77,6 @@ def test_qf_do_writes_execution_log(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     os.chmod(task_script, os.stat(task_script).st_mode | stat.S_IXUSR)
-    (repo / "TASKS" / "TODO_PROPOSAL.md").write_text("# proposal\n", encoding="utf-8")
 
     run(["git", "add", "."], cwd=repo)
     run(["git", "commit", "-m", "seed"], cwd=repo)
@@ -64,6 +90,7 @@ def test_qf_do_writes_execution_log(tmp_path: Path) -> None:
     env["QF_READY_STOP"] = "wait"
     ready = run(["bash", "tools/qf", "ready", "RUN_ID=run-ready"], cwd=repo, env=env)
     assert ready.returncode == 0, ready.stdout + ready.stderr
+    seed_execution_gates(repo, "run-ready")
 
     env["QF_SKIP_SYNC"] = "1"
     do = run(["bash", "tools/qf", "do", "queue-next"], cwd=repo, env=env)
@@ -74,7 +101,9 @@ def test_qf_do_writes_execution_log(tmp_path: Path) -> None:
     assert ready_log.exists()
     assert picked_log.exists()
     assert "do_start" in ready_log.read_text(encoding="utf-8")
-    assert "do_pick_success" in picked_log.read_text(encoding="utf-8")
+    picked_text = picked_log.read_text(encoding="utf-8")
+    assert "do_pick_success" in picked_text
+    assert "do_auto_review_done" in picked_text
 
 
 def test_qf_resume_missing_state_writes_failure_event(tmp_path: Path) -> None:
@@ -93,12 +122,14 @@ def test_qf_execution_log_redacts_token_text(tmp_path: Path) -> None:
     task_script.write_text(
         "#!/usr/bin/env bash\n"
         "set -euo pipefail\n"
+        "if [[ \"${1:-}\" != \"--next\" ]]; then\n"
+        "  exit 1\n"
+        "fi\n"
         "echo \"token=abc123 password=xyz Authorization: Bearer secrettoken\" >&2\n"
         "exit 1\n",
         encoding="utf-8",
     )
     os.chmod(task_script, os.stat(task_script).st_mode | stat.S_IXUSR)
-    (repo / "TASKS" / "TODO_PROPOSAL.md").write_text("# proposal\n", encoding="utf-8")
     run(["git", "add", "."], cwd=repo)
     run(["git", "commit", "-m", "seed"], cwd=repo)
 
@@ -111,6 +142,7 @@ def test_qf_execution_log_redacts_token_text(tmp_path: Path) -> None:
     env["QF_READY_STOP"] = "stop"
     ready = run(["bash", "tools/qf", "ready", "RUN_ID=run-redact"], cwd=repo, env=env)
     assert ready.returncode == 0
+    seed_execution_gates(repo, "run-redact")
 
     env["QF_SKIP_SYNC"] = "1"
     do = run(["bash", "tools/qf", "do", "queue-next"], cwd=repo, env=env)

@@ -98,9 +98,25 @@ def test_qf_handoff_defaults_to_current_run_id(tmp_path: Path) -> None:
 def test_qf_do_updates_current_run_pointer_after_pick(tmp_path: Path) -> None:
     repo = setup_repo(tmp_path)
     write_state(repo, "run-current", "TASKS/TASK-old.md", "active")
+    (repo / "SYNC" / "discussion" / "run-current").mkdir(parents=True, exist_ok=True)
     (repo / "reports" / "run-current").mkdir(parents=True, exist_ok=True)
     (repo / "reports" / "run-current" / "ready.json").write_text('{"restatement_passed": true}', encoding="utf-8")
-    (repo / "TASKS" / "TODO_PROPOSAL.md").write_text("# proposal\n", encoding="utf-8")
+    (repo / "reports" / "run-current" / "orient_choice.json").write_text(
+        '{"run_id":"run-current","selected_option":"ready-strong-brief","discussion_confirmed":true}\n',
+        encoding="utf-8",
+    )
+    (repo / "SYNC" / "discussion" / "run-current" / "council.json").write_text(
+        '{"run_id":"run-current","roles":[]}\n',
+        encoding="utf-8",
+    )
+    (repo / "reports" / "run-current" / "execution_contract.json").write_text(
+        '{"run_id":"run-current","tasks":[]}\n',
+        encoding="utf-8",
+    )
+    (repo / "reports" / "run-current" / "slice_state.json").write_text(
+        '{"run_id":"run-current","tasks_total":0}\n',
+        encoding="utf-8",
+    )
 
     task_script = repo / "tools" / "task.sh"
     task_script.write_text(
@@ -108,9 +124,13 @@ def test_qf_do_updates_current_run_pointer_after_pick(tmp_path: Path) -> None:
             [
                 "#!/usr/bin/env bash",
                 "set -euo pipefail",
-                "echo 'TASK_FILE: TASKS/TASK-picked.md'",
-                "echo 'RUN_ID: run-picked'",
-                "echo 'EVIDENCE_PATH: reports/run-picked/'",
+                "if [[ \"${1:-}\" == \"--next\" ]]; then",
+                "  echo 'TASK_FILE: TASKS/TASK-picked.md'",
+                "  echo 'RUN_ID: run-picked'",
+                "  echo 'EVIDENCE_PATH: reports/run-picked/'",
+                "  exit 0",
+                "fi",
+                "exit 1",
             ]
         )
         + "\n",

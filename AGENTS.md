@@ -43,9 +43,10 @@ Use ONLY these unless task explicitly authorizes more:
 - pytest -q
 
 Notes:
-- Primary agent entrypoint is `tools/qf` (`init/sync/ready/orient/choose/plan/do/resume`).
+- Primary agent entrypoint is `tools/qf` (`init/sync/ready/orient/choose/council/arbiter/slice/execute/do/review/resume`).
 - Sync gate command: `tools/qf sync` (auto reading + sync report).
 - `tools/enter.sh` and `tools/onboard.sh` are compatibility wrappers.
+- Discussion drafts live in `SYNC/discussion/<RUN_ID>/`; execution evidence lives in `reports/<RUN_ID>/`.
 
 ## Single source map
 - Session entrypoint owner: `SYNC/READ_ORDER.md`
@@ -107,13 +108,35 @@ Before any implementation, you MUST complete init and pass readiness checks:
    - Stop condition (finish and wait)
 5) Record readiness gate:
    - `CURRENT_RUN_ID` source-of-truth is `TASKS/STATE.md`.
-   - Run `tools/qf ready` (or `tools/qf ready RUN_ID=<run-id>` for explicit override).
+  - Run `tools/qf ready` (or `tools/qf ready RUN_ID=<run-id>` for explicit override).
+  - If unresolved run context is detected, `ready` MUST stop and require decision:
+    - `DECISION=resume-close` (go close via `tools/qf resume`)
+    - `DECISION=abandon-new` (explicitly continue as new direction cycle)
+  - Resolution memory: after `DECISION=abandon-new`, the same RUN keeps this decision in `ready.json` and should not re-prompt on every `ready`.
    - `tools/qf ready` requires valid `reports/<RUN_ID>/sync_report.json`; by default it auto-runs `tools/qf sync` when missing (`QF_READY_AUTO_SYNC=1`).
-   - `tools/qf ready` auto-fills restatement from active task contract by default.
-   - To force manual-only input: `QF_READY_AUTO=0 tools/qf ready`
-   - `tools/qf do` MUST fail if no valid `reports/<RUN_ID>/ready.json`.
-   - After ready, run `tools/qf orient` and confirm with `tools/qf choose OPTION=<id>` before `plan/do` (default strong mode).
-   - Keep conversation evidence fresh: `tools/qf sync|ready|orient|choose` should append checkpoint notes into `reports/<RUN_ID>/conversation.md` (unless explicitly disabled).
+  - `tools/qf ready` auto-fills restatement from active task contract by default.
+  - To force manual-only input: `QF_READY_AUTO=0 tools/qf ready`
+  - `tools/qf do` MUST fail if no valid `reports/<RUN_ID>/ready.json`.
+  - After ready, orientation drafts are generated under `SYNC/discussion/<RUN_ID>/orient.json|md`.
+  - Confirm direction with `tools/qf choose OPTION=<id>`:
+    - confirmation result goes to `reports/<RUN_ID>/orient_choice.json`
+    - direction contract goes to `reports/<RUN_ID>/direction_contract.json|md`
+  - Generate independent multi-role reviews via `tools/qf council`.
+  - Converge to execution contract via `tools/qf arbiter`:
+    - output: `reports/<RUN_ID>/execution_contract.json|md`
+  - Slice execution contract to queue tasks via `tools/qf slice`:
+    - output: `reports/<RUN_ID>/slice_state.json`
+    - queue insertion: `TASKS/QUEUE.md` (idempotent by slice marker)
+  - Low-friction orchestrator (optional): `tools/qf execute`
+    - default: stops at choose if no `OPTION` confirmed
+    - auto mode: `QF_EXECUTE_AUTO_CHOOSE=1 tools/qf execute` auto-picks recommended option then runs `council->arbiter->slice->do`
+  - `tools/qf do` MUST fail if any required gate is missing:
+    - `reports/<RUN_ID>/orient_choice.json`
+    - `SYNC/discussion/<RUN_ID>/council.json`
+    - `reports/<RUN_ID>/execution_contract.json`
+    - `reports/<RUN_ID>/slice_state.json`
+  - After execution, run `tools/qf review` (or rely on `tools/qf do` auto-review checkpoint) and resolve drift blockers before ship.
+  - Keep conversation evidence fresh: `tools/qf sync|ready|orient|choose|council|arbiter|slice` should append checkpoint notes into `reports/<RUN_ID>/conversation.md` (unless explicitly disabled).
    - At major checkpoints (and before `/quit`), run:
      `tools/qf snapshot NOTE="decision + next step"` to persist session fallback in repo.
    - `tools/qf do` / `tools/qf resume` must keep execution traces in

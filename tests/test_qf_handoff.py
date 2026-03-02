@@ -79,7 +79,7 @@ def test_qf_handoff_generates_summary_with_existing_artifacts(tmp_path: Path) ->
     assert "本次沟通主线" in handoff
     assert "关键结论" in handoff
     assert "do/do_pick_success" in handoff
-    assert "tools/qf plan 20" in handoff
+    assert f"tools/qf orient RUN_ID={run_id}" in handoff
 
 
 def test_qf_handoff_handles_missing_inputs(tmp_path: Path) -> None:
