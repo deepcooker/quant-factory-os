@@ -1,7 +1,7 @@
 # Drift Review
 
 RUN_ID: `run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment`
-Generated At (UTC): 2026-03-02T07:48:42.010374+00:00
+Generated At (UTC): 2026-03-02T08:05:02.930224+00:00
 Status: `pass`
 Strict: `false` | Auto-fix: `true` | Non-blocking: `false`
 
@@ -13,7 +13,7 @@ Strict: `false` | Auto-fix: `true` | Non-blocking: `false`
 - [warn] direction_contract: reports/run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment/direction_contract.json missing (raw)
 - [pass] verify_record: summary includes make verify record (raw)
 - [pass] stop_reason: decision contains stop reason (raw)
-- [pass] task_contract: TASKS/TASK-slice-next-p0-ready-run-evidence-and-docs-alignment-154517.md exists (raw)
+- [pass] task_contract: TASKS/TASK-slice-next-p0-ready-run-evidence-and-docs-alignment-160402.md exists (raw)
 
 ## Fixes
 - none
