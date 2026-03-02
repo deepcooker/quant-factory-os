@@ -12,6 +12,38 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [>] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - core delivery  Picked: run-2026-03-02-slice-next-p0-ready-run-core-delivery 2026-03-02T14:49:25+0800
+  Goal: 避免把历史中断状态混入新需求，先做生命周期分流。
+  Scope: `tools/qf`, `tests/`
+  Acceptance:
+  - [ ] deliver selected direction option `ready-exit-resolution` with bounded scope
+  - [ ] command(s) pass: make verify
+  - [ ] reports summary/decision updated for this slice
+  - [ ] Command(s) pass: `make verify`
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+  Slice: run_id=run-2026-03-02-contract-next-p0-ready-run task_id=slice-1
+
+- [ ] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - enforce guardrail tests
+  Goal: Add or refine guardrail tests to lock behavior of the selected direction.
+  Scope: `tests/`, `tools/qf`
+  Acceptance:
+  - [ ] critical path regression tests added or refreshed
+  - [ ] failure-path assertions are explicit and actionable
+  - [ ] Command(s) pass: `make verify`
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+  Slice: run_id=run-2026-03-02-contract-next-p0-ready-run task_id=slice-2
+
+- [ ] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment
+  Goal: Keep evidence and owner docs aligned with final behavior of this direction.
+  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `SYNC/`, `reports/{RUN_ID}/`
+  Acceptance:
+  - [ ] owner docs updated in same run when behavior/rules changed
+  - [ ] tools/qf review STRICT=1 AUTO_FIX=1 passes
+  - [ ] decision records accepted tradeoffs and residual risks
+  - [ ] Command(s) pass: `make verify`
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+  Slice: run_id=run-2026-03-02-contract-next-p0-ready-run task_id=slice-3
+
 - [>] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - core delivery  Picked: run-2026-03-02-slice-next-p0-ready-run-core-delivery 2026-03-02T14:23:03+0800
   Goal: 避免把历史中断状态混入新需求，先做生命周期分流。
   Scope: `tools/qf`, `tests/`
