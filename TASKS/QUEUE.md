@@ -12,7 +12,8 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
-- [>] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - core delivery  Picked: run-2026-03-02-slice-next-p0-ready-run-core-delivery 2026-03-02T15:17:56+0800
+- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - core delivery  Picked: run-2026-03-02-slice-next-p0-ready-run-core-delivery 2026-03-02T15:17:56+0800
+  Done: PR #147, RUN_ID=run-2026-03-02-slice-next-p0-ready-run-core-delivery
   Goal: 避免把历史中断状态混入新需求，先做生命周期分流。
   Scope: `tools/qf`, `tests/`
   Acceptance:
