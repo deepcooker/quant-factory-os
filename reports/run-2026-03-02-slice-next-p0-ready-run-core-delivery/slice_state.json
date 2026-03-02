@@ -1,0 +1,9 @@
+{
+  "run_id": "run-2026-03-02-slice-next-p0-ready-run-core-delivery",
+  "created_at_utc": "2026-03-02T07:17:36.004120+00:00",
+  "source_contract": "reports/run-2026-03-02-slice-next-p0-ready-run-core-delivery/execution_contract.json",
+  "tasks_total": 3,
+  "queue_inserted": 3,
+  "queue_existing": 0,
+  "next_command": "tools/qf do queue-next"
+}
