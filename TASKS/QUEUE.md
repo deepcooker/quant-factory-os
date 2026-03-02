@@ -35,7 +35,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
   Slice: run_id=run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment task_id=slice-2
 
-- [ ] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment
+- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment
   Goal: Keep evidence and owner docs aligned with final behavior of this direction.
   Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `SYNC/`, `reports/{RUN_ID}/`
   Acceptance:
@@ -46,7 +46,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
   Slice: run_id=run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment task_id=slice-3
 
-- [>] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - core delivery  Picked: run-2026-03-02-slice-next-p0-ready-run-core-delivery 2026-03-02T15:37:04+0800
+- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - core delivery  Picked: run-2026-03-02-slice-next-p0-ready-run-core-delivery 2026-03-02T15:37:04+0800
   Goal: 避免把历史中断状态混入新需求，先做生命周期分流。
   Scope: `tools/qf`, `tests/`
   Acceptance:
@@ -103,7 +103,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
   Slice: run_id=run-2026-03-02-slice-next-p0-ready-run-core-delivery task_id=slice-2
 
-- [>] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment  Picked: run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment 2026-03-02T15:45:17+0800
+- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment  Picked: run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment 2026-03-02T15:45:17+0800
   Goal: Keep evidence and owner docs aligned with final behavior of this direction.
   Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `SYNC/`, `reports/{RUN_ID}/`
   Acceptance:
@@ -126,7 +126,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
   Slice: run_id=run-2026-03-02-contract-next-p0-ready-run task_id=slice-1
 
-- [ ] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - enforce guardrail tests
+- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - enforce guardrail tests
   Goal: Add or refine guardrail tests to lock behavior of the selected direction.
   Scope: `tests/`, `tools/qf`
   Acceptance:
@@ -136,7 +136,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
   Slice: run_id=run-2026-03-02-contract-next-p0-ready-run task_id=slice-2
 
-- [ ] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment
+- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment
   Goal: Keep evidence and owner docs aligned with final behavior of this direction.
   Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `SYNC/`, `reports/{RUN_ID}/`
   Acceptance:
@@ -147,7 +147,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
   Slice: run_id=run-2026-03-02-contract-next-p0-ready-run task_id=slice-3
 
-- [>] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - core delivery  Picked: run-2026-03-02-slice-next-p0-ready-run-core-delivery 2026-03-02T14:23:03+0800
+- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - core delivery  Picked: run-2026-03-02-slice-next-p0-ready-run-core-delivery 2026-03-02T14:23:03+0800
   Goal: 避免把历史中断状态混入新需求，先做生命周期分流。
   Scope: `tools/qf`, `tests/`
   Acceptance:
@@ -158,7 +158,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
   Slice: run_id=run-2026-03-02-qf-ready task_id=slice-1
 
-- [>] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - enforce guardrail tests  Picked: run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests 2026-03-02T14:30:59+0800
+- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - enforce guardrail tests  Picked: run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests 2026-03-02T14:30:59+0800
   Goal: Add or refine guardrail tests to lock behavior of the selected direction.
   Scope: `tests/`, `tools/qf`
   Acceptance:
@@ -168,7 +168,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
   Slice: run_id=run-2026-03-02-qf-ready task_id=slice-2
 
-- [>] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment  Picked: run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment 2026-03-02T14:33:10+0800
+- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment  Picked: run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment 2026-03-02T14:33:10+0800
   Goal: Keep evidence and owner docs aligned with final behavior of this direction.
   Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `SYNC/`, `reports/{RUN_ID}/`
   Acceptance:
