@@ -151,3 +151,60 @@ def test_task_plan_includes_suggested_tasks_when_queue_empty(tmp_path: Path):
     assert "Goal:" in content
     assert "Scope:" in content
     assert "Acceptance:" in content
+
+
+def test_task_plan_prioritizes_contract_first_suggestion(tmp_path: Path):
+    repo_root = Path(__file__).resolve().parents[1]
+    queue_file = tmp_path / "QUEUE.md"
+    reports_dir = tmp_path / "reports"
+    state_file = tmp_path / "STATE.md"
+    proposal_file = tmp_path / "TODO_PROPOSAL.md"
+
+    queue_file.write_text("# QUEUE\n\n## Queue\n", encoding="utf-8")
+    run_id = "run-contract"
+    (reports_dir / run_id).mkdir(parents=True)
+    (reports_dir / run_id / "direction_contract.json").write_text(
+        "\n".join(
+            [
+                "{",
+                f'  "run_id": "{run_id}",',
+                '  "selected_option": "ready-strong-brief",',
+                '  "selected_title": "P1: ready 输出最强认知摘要与证据链",',
+                '  "execution_goal": "ready 后自动产出强认知摘要并给出方向建议。",',
+                '  "scope_hint": ["tools/qf", "tests/"]',
+                "}",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    state_file.write_text(
+        "\n".join(
+            [
+                "# STATE",
+                f"CURRENT_RUN_ID: {run_id}",
+                "",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    env = os.environ.copy()
+    env["TASK_PLAN_QUEUE_FILE"] = str(queue_file)
+    env["TASK_PLAN_REPORTS_DIR"] = str(reports_dir)
+    env["TASK_PLAN_STATE_FILE"] = str(state_file)
+    env["TASK_PLAN_OUTPUT_FILE"] = str(proposal_file)
+
+    res = subprocess.run(
+        ["bash", "tools/task.sh", "--plan", "20"],
+        cwd=repo_root,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert res.returncode == 0, res.stdout + res.stderr
+    content = proposal_file.read_text(encoding="utf-8")
+    assert "TODO Title: contract-first:" in content
+    assert "ready-strong-brief" in content

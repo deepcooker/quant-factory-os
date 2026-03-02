@@ -39,5 +39,10 @@
 - 验收（verify/evidence/scope）
 - 下一条命令（只给一条）
 - 同频证据：`reports/<RUN_ID>/sync_report.json` 已生成且 `sync_passed=true`
-- 方向确认（强模式推荐）：`reports/<RUN_ID>/orient.json` 已生成，并确认一个 `OPTION`
+- 方向草案（讨论态）：`SYNC/discussion/<RUN_ID>/orient.json` 已生成
+- 方向确认（执行态）：`reports/<RUN_ID>/orient_choice.json` 已生成，并确认一个 `OPTION`
+- 多角色评审（讨论态）：`SYNC/discussion/<RUN_ID>/council.json` 已生成
+- 执行契约（执行态）：`reports/<RUN_ID>/execution_contract.json` 已生成
+- 拆解状态（执行态）：`reports/<RUN_ID>/slice_state.json` 已生成
 - 门禁文件：`reports/<RUN_ID>/ready.json` 已生成
+- 可选一键入口：`tools/qf execute`（默认保留 choose 人工确认；`QF_EXECUTE_AUTO_CHOOSE=1` 可自动推进）

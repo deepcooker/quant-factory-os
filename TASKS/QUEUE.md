@@ -12,6 +12,59 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [>] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - core delivery  Picked: run-2026-03-02-slice-next-p0-ready-run-core-delivery 2026-03-02T14:23:03+0800
+  Goal: 避免把历史中断状态混入新需求，先做生命周期分流。
+  Scope: `tools/qf`, `tests/`
+  Acceptance:
+  - [ ] deliver selected direction option `ready-exit-resolution` with bounded scope
+  - [ ] command(s) pass: make verify
+  - [ ] reports summary/decision updated for this slice
+  - [ ] Command(s) pass: `make verify`
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+  Slice: run_id=run-2026-03-02-qf-ready task_id=slice-1
+
+- [>] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - enforce guardrail tests  Picked: run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests 2026-03-02T14:30:59+0800
+  Goal: Add or refine guardrail tests to lock behavior of the selected direction.
+  Scope: `tests/`, `tools/qf`
+  Acceptance:
+  - [ ] critical path regression tests added or refreshed
+  - [ ] failure-path assertions are explicit and actionable
+  - [ ] Command(s) pass: `make verify`
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+  Slice: run_id=run-2026-03-02-qf-ready task_id=slice-2
+
+- [>] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment  Picked: run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment 2026-03-02T14:33:10+0800
+  Goal: Keep evidence and owner docs aligned with final behavior of this direction.
+  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `SYNC/`, `reports/{RUN_ID}/`
+  Acceptance:
+  - [ ] owner docs updated in same run when behavior/rules changed
+  - [ ] tools/qf review STRICT=1 AUTO_FIX=1 passes
+  - [ ] decision records accepted tradeoffs and residual risks
+  - [ ] Command(s) pass: `make verify`
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+  Slice: run_id=run-2026-03-02-qf-ready task_id=slice-3
+
+- [>] TODO Title: contract-next: P0: ready 先处理未收尾 run（收尾/抛弃）  Picked: run-2026-03-02-contract-next-p0-ready-run 2026-03-02T14:38:33+0800
+  Goal: 避免把历史中断状态混入新需求，先做生命周期分流。
+  Scope: `tools/qf`, `tests/`
+  Acceptance:
+  - [ ] Command(s) pass: `make verify`
+  - [ ] Contract delivered: `reports/run-2026-03-02-qf-ready/direction_contract.json`
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+  - [ ] Scope remains within declared paths
+  Contract: run_id=run-2026-03-02-qf-ready option=ready-exit-resolution
+
+- [>] TODO Title: qf ready 讨论执行分离 + 强认知输出 + 多角色评审闭环  Picked: run-2026-03-02-qf-ready 2026-03-02T12:58:05+0800
+  Goal: 把 `ready` 升级为“先判定会话状态、再给方向、确认后执行”的决策中枢，并将讨论态与执行态证据彻底分层。
+  Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `AGENTS.md`, `SYNC/`, `TASKS/`, `reports/{RUN_ID}/`
+  Acceptance:
+  - [ ] `tools/qf ready` 在检测到上次 run 非完成态时，必须先给出“收尾（resume-close）/抛弃并新开（abandon-new）”决策，不得直接进入新方向。
+  - [ ] `ready` 输出固定包含：项目目标解读、宪法/工作流解读、证据链状态、session 承接状态、风险/阻塞、建议下一步。
+  - [ ] `ready` 通过后自动产出 3-5 个方向候选（含优先级/收益/风险/成本/依赖）并支持用户确认；用户确认前不写入 `reports/{RUN_ID}/` 执行证据。
+  - [ ] 确认方向后进入多角色评审（产品/架构/研发/测试）并产出统一执行契约；执行结束后自动做偏差审计（需求/实现/测试/文档）与必要修复。
+  - [ ] 文档更新为硬门禁：流程或规则变更若未同步 owner docs 和 run evidence，不能通过收尾。
+  - [ ] `make verify` 通过；新增回归测试覆盖“讨论态不入 report、确认后入 report、旧 run 决策分流”。
+
 - [x] TODO Title: qf 做强模式 v1：L1方向层 + do/plan 稳定性修复 + 文档强门禁  Picked: run-2026-03-02-qf-v1-l1-do-plan 2026-03-02T12:18:09+0800
   Done: local verify passed, RUN_ID=run-2026-03-02-qf-v1-l1-do-plan
   Goal: 把 `ready->plan->do` 升级为“先方向确认后执行”的做强模式入口，并修复 `do/plan` 的低摩擦稳定性问题。

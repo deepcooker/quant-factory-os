@@ -21,7 +21,24 @@
 - `tools/qf sync` 负责把同频阅读固化为证据（`reports/{RUN_ID}/sync_report.json|md`）。
 - `tools/qf ready` 是唯一上岗门禁；没有 `ready.json` 不得执行 `tools/qf do`.
 - `tools/qf ready` 依赖有效 `sync_report.json`；默认缺失时会自动补跑 `tools/qf sync`（`QF_READY_AUTO_SYNC=1`）。
-- Strong mode: `ready` 后先 `tools/qf orient`（方向候选）再 `tools/qf choose OPTION=<id>`（方向确认），再进入 `plan/do`。
+- 若 `ready` 检测到未收尾 run，上岗前必须先决策：
+  - `DECISION=resume-close`（先 `tools/qf resume`）
+  - `DECISION=abandon-new`（明确抛弃旧上下文再继续）
+- Strong mode: `ready` 后按顺序执行：
+  - `tools/qf orient`（方向候选）
+  - `tools/qf choose OPTION=<id>`（方向确认）
+  - `tools/qf council`（多角色独立评审）
+  - `tools/qf arbiter`（统一执行契约）
+  - `tools/qf slice`（契约拆解入队）
+  - `tools/qf do queue-next`（执行）
+- 低摩擦可选入口：`tools/qf execute`
+  - 默认：若未确认 OPTION，会停在 choose 并给出下一条命令
+  - 自动推进：`QF_EXECUTE_AUTO_CHOOSE=1 tools/qf execute`
+- `tools/qf review` 用于执行后偏差审计（需求/实现/测试/文档）；blocker 会写入 `SYNC/discussion/<RUN_ID>/drift_todo.md` 等待讨论。
+- 讨论态与执行态分层：
+  - 讨论草案：`SYNC/discussion/<RUN_ID>/ready_brief.*`、`orient.*`、`council.*`
+  - 执行证据：`reports/<RUN_ID>/`（确认后写入 `orient_choice` 与 contract）
+- `council/arbiter` 不是固定模板：必须基于当前 run 的证据差异（ready/sync/scope/verify/docs/queue）产出评审与收敛结果。
 - `tools/qf ready` 默认可从当前任务合同自动填充复述字段（可用 `QF_READY_AUTO=0` 强制手填）。
 - 完整会话转录优先落本地 `chatlogs/`（不入库）：
   - `./tools/start.sh` 默认会记录到 `chatlogs/session-*.log`

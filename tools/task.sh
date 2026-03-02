@@ -39,6 +39,8 @@ task_plan_generate() {
   fi
 
   local queue_file reports_dir proposal_file state_file mistakes_dir
+  local contract_file state_run_id py_bin contract_line
+  local contract_run_id contract_title contract_goal contract_option contract_scope
   queue_file="${TASK_PLAN_QUEUE_FILE:-${TASK_BOOTSTRAP_QUEUE_FILE:-TASKS/QUEUE.md}}"
   reports_dir="${TASK_PLAN_REPORTS_DIR:-reports}"
   proposal_file="${TASK_PLAN_OUTPUT_FILE:-TASKS/TODO_PROPOSAL.md}"
@@ -89,6 +91,69 @@ task_plan_generate() {
     fi
     printf '%s\t%s\t%s\t%s\n' "$title" "$goal" "$scope" "$acceptance" >> "$suggestions_tmp"
   }
+
+  state_run_id=""
+  if [[ -f "$state_file" ]]; then
+    state_run_id="$(awk -F':' '/^[[:space:]]*CURRENT_RUN_ID:[[:space:]]*/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}' "$state_file" || true)"
+  fi
+  contract_file="${TASK_PLAN_CONTRACT_FILE:-}"
+  if [[ -z "$contract_file" && -n "$state_run_id" ]]; then
+    contract_file="${reports_dir}/${state_run_id}/direction_contract.json"
+  fi
+
+  if [[ -n "$contract_file" && -f "$contract_file" ]]; then
+    py_bin=""
+    if command -v python3 >/dev/null 2>&1; then
+      py_bin="python3"
+    elif command -v python >/dev/null 2>&1; then
+      py_bin="python"
+    fi
+    if [[ -n "$py_bin" ]]; then
+      contract_line="$("$py_bin" - <<'PY' "$contract_file" 2>/dev/null || true
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+try:
+    obj = json.loads(path.read_text(encoding="utf-8"))
+except Exception:
+    raise SystemExit(0)
+
+def clean(v):
+    return " ".join(str(v or "").split())
+
+run_id = clean(obj.get("run_id"))
+title = clean(obj.get("selected_title")) or "confirmed direction contract"
+goal = clean(obj.get("execution_goal")) or "Execute the confirmed direction contract with minimal verifiable diff."
+option = clean(obj.get("selected_option")) or "direction-option"
+scope_hint = obj.get("scope_hint") or []
+if not isinstance(scope_hint, list):
+    scope_hint = []
+scope = []
+for item in scope_hint:
+    s = clean(item).replace("`", "")
+    if s:
+        scope.append(s)
+if not scope:
+    scope = ["tools/qf", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "SYNC/", "TASKS/", "reports/{RUN_ID}/"]
+scope_line = ", ".join(f"`{x}`" for x in scope)
+
+print("\t".join([run_id, title, goal, option, scope_line]))
+PY
+)"
+      if [[ -n "$contract_line" ]]; then
+        IFS=$'\t' read -r contract_run_id contract_title contract_goal contract_option contract_scope <<< "$contract_line"
+        if [[ -n "$contract_title" ]]; then
+          add_suggestion \
+            "contract-first: ${contract_title}" \
+            "${contract_goal}" \
+            "${contract_scope}" \
+            "[ ] Confirmed option: ${contract_option};[ ] Contract source: ${contract_file};[ ] make verify"
+        fi
+      fi
+    fi
+  fi
 
   while IFS= read -r decision_path; do
     [[ -z "$decision_path" ]] && continue

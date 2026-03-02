@@ -151,3 +151,90 @@ def test_qf_ready_fails_without_sync_when_auto_sync_disabled(tmp_path: Path) -> 
     combined = res.stdout + res.stderr
     assert "sync gate not satisfied" in combined
     assert f"tools/qf sync RUN_ID={run_id}" in combined
+
+
+def test_qf_sync_next_command_prefers_choose_when_orient_draft_exists(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    run_id = "run-sync"
+    seed_sync_required_files(repo, run_id)
+    (repo / "reports" / run_id / "ready.json").write_text(
+        '{"run_id":"run-sync","restatement_passed":true,"sync_gate":{"required":false,"sync_passed":true,"sync_report_file":""}}\n',
+        encoding="utf-8",
+    )
+    orient_dir = repo / "SYNC" / "discussion" / run_id
+    orient_dir.mkdir(parents=True, exist_ok=True)
+    (orient_dir / "orient.json").write_text(
+        json.dumps(
+            {
+                "run_id": run_id,
+                "recommended_option": "ready-strong-brief",
+                "directions": [{"id": "ready-strong-brief"}],
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    res = run(["bash", "tools/qf", "sync", f"RUN_ID={run_id}"], cwd=repo)
+    assert res.returncode == 0, res.stdout + res.stderr
+    report_file = repo / "reports" / run_id / "sync_report.json"
+    obj = json.loads(report_file.read_text(encoding="utf-8"))
+    assert obj["next_command"] == f"tools/qf choose RUN_ID={run_id} OPTION=ready-strong-brief"
+
+
+def test_qf_sync_next_command_prefers_council_after_choose(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    run_id = "run-sync"
+    seed_sync_required_files(repo, run_id)
+    run_dir = repo / "reports" / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "ready.json").write_text(
+        '{"run_id":"run-sync","restatement_passed":true,"sync_gate":{"required":false,"sync_passed":true,"sync_report_file":""}}\n',
+        encoding="utf-8",
+    )
+    (run_dir / "orient_choice.json").write_text(
+        '{"run_id":"run-sync","selected_option":"ready-strong-brief","discussion_confirmed":true}\n',
+        encoding="utf-8",
+    )
+
+    res = run(["bash", "tools/qf", "sync", f"RUN_ID={run_id}"], cwd=repo)
+    assert res.returncode == 0, res.stdout + res.stderr
+    obj = json.loads((repo / "reports" / run_id / "sync_report.json").read_text(encoding="utf-8"))
+    assert obj["next_command"] == f"tools/qf council RUN_ID={run_id}"
+
+
+def test_qf_sync_next_command_prefers_arbiter_then_slice_then_do(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    run_id = "run-sync"
+    seed_sync_required_files(repo, run_id)
+    run_dir = repo / "reports" / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    discussion_dir = repo / "SYNC" / "discussion" / run_id
+    discussion_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "ready.json").write_text(
+        '{"run_id":"run-sync","restatement_passed":true,"sync_gate":{"required":false,"sync_passed":true,"sync_report_file":""}}\n',
+        encoding="utf-8",
+    )
+    (run_dir / "orient_choice.json").write_text(
+        '{"run_id":"run-sync","selected_option":"ready-strong-brief","discussion_confirmed":true}\n',
+        encoding="utf-8",
+    )
+    (discussion_dir / "council.json").write_text('{"run_id":"run-sync","roles":[]}\n', encoding="utf-8")
+
+    res1 = run(["bash", "tools/qf", "sync", f"RUN_ID={run_id}"], cwd=repo)
+    assert res1.returncode == 0, res1.stdout + res1.stderr
+    obj1 = json.loads((repo / "reports" / run_id / "sync_report.json").read_text(encoding="utf-8"))
+    assert obj1["next_command"] == f"tools/qf arbiter RUN_ID={run_id}"
+
+    (run_dir / "execution_contract.json").write_text('{"run_id":"run-sync","tasks":[]}\n', encoding="utf-8")
+    res2 = run(["bash", "tools/qf", "sync", f"RUN_ID={run_id}"], cwd=repo)
+    assert res2.returncode == 0, res2.stdout + res2.stderr
+    obj2 = json.loads((repo / "reports" / run_id / "sync_report.json").read_text(encoding="utf-8"))
+    assert obj2["next_command"] == f"tools/qf slice RUN_ID={run_id}"
+
+    (run_dir / "slice_state.json").write_text('{"run_id":"run-sync","tasks_total":0}\n', encoding="utf-8")
+    res3 = run(["bash", "tools/qf", "sync", f"RUN_ID={run_id}"], cwd=repo)
+    assert res3.returncode == 0, res3.stdout + res3.stderr
+    obj3 = json.loads((repo / "reports" / run_id / "sync_report.json").read_text(encoding="utf-8"))
+    assert obj3["next_command"] == "tools/qf do queue-next"

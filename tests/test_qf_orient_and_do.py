@@ -93,6 +93,40 @@ def seed_docs(repo: Path, run_id: str) -> None:
     )
 
 
+def seed_direction_choice(repo: Path, run_id: str) -> None:
+    run_dir = repo / "reports" / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "orient_choice.json").write_text(
+        json.dumps(
+            {
+                "run_id": run_id,
+                "selected_option": "ready-strong-brief",
+                "discussion_confirmed": True,
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def seed_execution_gates(repo: Path, run_id: str) -> None:
+    seed_direction_choice(repo, run_id)
+    (repo / "SYNC" / "discussion" / run_id).mkdir(parents=True, exist_ok=True)
+    (repo / "SYNC" / "discussion" / run_id / "council.json").write_text(
+        json.dumps({"run_id": run_id, "roles": []}, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    (repo / "reports" / run_id / "execution_contract.json").write_text(
+        json.dumps({"run_id": run_id, "tasks": []}, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    (repo / "reports" / run_id / "slice_state.json").write_text(
+        json.dumps({"run_id": run_id, "tasks_total": 0}, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
 def commit_all(repo: Path, msg: str) -> None:
     add = run(["git", "add", "."], cwd=repo)
     assert add.returncode == 0, add.stdout + add.stderr
@@ -109,7 +143,7 @@ def test_qf_orient_and_choose_write_reports(tmp_path: Path) -> None:
     orient = run(["bash", "tools/qf", "orient", f"RUN_ID={run_id}"], cwd=repo)
     assert orient.returncode == 0, orient.stdout + orient.stderr
     assert "ORIENT_OPTIONS:" in orient.stdout
-    orient_file = repo / "reports" / run_id / "orient.json"
+    orient_file = repo / "SYNC" / "discussion" / run_id / "orient.json"
     assert orient_file.exists()
     orient_obj = json.loads(orient_file.read_text(encoding="utf-8"))
     assert len(orient_obj.get("directions", [])) >= 3
@@ -121,9 +155,85 @@ def test_qf_orient_and_choose_write_reports(tmp_path: Path) -> None:
     assert f"CHOOSE_OPTION: {recommended}" in choose.stdout
     choice_file = repo / "reports" / run_id / "orient_choice.json"
     assert choice_file.exists()
+    contract_json = repo / "reports" / run_id / "direction_contract.json"
+    contract_md = repo / "reports" / run_id / "direction_contract.md"
+    assert contract_json.exists()
+    assert contract_md.exists()
 
 
-def test_qf_do_autoplan_then_pick_success(tmp_path: Path) -> None:
+def test_qf_choose_is_idempotent_without_queue_mutation(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    run_id = "run-current"
+    seed_docs(repo, run_id)
+    commit_all(repo, "seed")
+
+    orient = run(["bash", "tools/qf", "orient", f"RUN_ID={run_id}"], cwd=repo)
+    assert orient.returncode == 0, orient.stdout + orient.stderr
+    orient_file = repo / "SYNC" / "discussion" / run_id / "orient.json"
+    orient_obj = json.loads(orient_file.read_text(encoding="utf-8"))
+    recommended = orient_obj.get("recommended_option", "")
+    assert recommended
+    queue_before = (repo / "TASKS" / "QUEUE.md").read_text(encoding="utf-8")
+
+    first = run(["bash", "tools/qf", "choose", f"RUN_ID={run_id}", f"OPTION={recommended}"], cwd=repo)
+    assert first.returncode == 0, first.stdout + first.stderr
+    second = run(["bash", "tools/qf", "choose", f"RUN_ID={run_id}", f"OPTION={recommended}"], cwd=repo)
+    assert second.returncode == 0, second.stdout + second.stderr
+
+    queue_after = (repo / "TASKS" / "QUEUE.md").read_text(encoding="utf-8")
+    assert queue_before == queue_after
+
+
+def test_qf_council_arbiter_slice_generates_queue_tasks_idempotently(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    run_id = "run-current"
+    seed_docs(repo, run_id)
+    commit_all(repo, "seed")
+
+    orient = run(["bash", "tools/qf", "orient", f"RUN_ID={run_id}"], cwd=repo)
+    assert orient.returncode == 0, orient.stdout + orient.stderr
+    orient_obj = json.loads((repo / "SYNC" / "discussion" / run_id / "orient.json").read_text(encoding="utf-8"))
+    recommended = orient_obj.get("recommended_option", "")
+    assert recommended
+
+    choose = run(["bash", "tools/qf", "choose", f"RUN_ID={run_id}", f"OPTION={recommended}"], cwd=repo)
+    assert choose.returncode == 0, choose.stdout + choose.stderr
+
+    council = run(["bash", "tools/qf", "council", f"RUN_ID={run_id}"], cwd=repo)
+    assert council.returncode == 0, council.stdout + council.stderr
+    assert (repo / "SYNC" / "discussion" / run_id / "council.json").exists()
+
+    arbiter = run(["bash", "tools/qf", "arbiter", f"RUN_ID={run_id}"], cwd=repo)
+    assert arbiter.returncode == 0, arbiter.stdout + arbiter.stderr
+    assert (repo / "reports" / run_id / "execution_contract.json").exists()
+
+    slice_first = run(["bash", "tools/qf", "slice", f"RUN_ID={run_id}"], cwd=repo)
+    assert slice_first.returncode == 0, slice_first.stdout + slice_first.stderr
+    assert (repo / "reports" / run_id / "slice_state.json").exists()
+
+    slice_second = run(["bash", "tools/qf", "slice", f"RUN_ID={run_id}"], cwd=repo)
+    assert slice_second.returncode == 0, slice_second.stdout + slice_second.stderr
+    queue_text = (repo / "TASKS" / "QUEUE.md").read_text(encoding="utf-8")
+    assert queue_text.count(f"Slice: run_id={run_id} task_id=slice-1") == 1
+
+
+def test_qf_execute_requires_manual_option_by_default(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    run_id = "run-current"
+    seed_docs(repo, run_id)
+    commit_all(repo, "seed")
+
+    env = os.environ.copy()
+    env["QF_SKIP_SYNC"] = "1"
+    env["QF_READY_REQUIRE_SYNC"] = "0"
+    res = run(["bash", "tools/qf", "execute", f"RUN_ID={run_id}"], cwd=repo, env=env)
+    assert res.returncode != 0
+    combined = res.stdout + res.stderr
+    assert "EXECUTE_NEEDS_OPTION: true" in combined
+    assert "EXECUTE_NEXT_COMMAND: tools/qf choose" in combined
+
+
+def test_qf_execute_auto_choose_and_run_do(tmp_path: Path) -> None:
     repo = setup_repo(tmp_path)
     run_id = "run-current"
     seed_docs(repo, run_id)
@@ -134,17 +244,47 @@ def test_qf_do_autoplan_then_pick_success(tmp_path: Path) -> None:
             [
                 "#!/usr/bin/env bash",
                 "set -euo pipefail",
-                "if [[ \"${1:-}\" == \"--plan\" ]]; then",
-                "  mkdir -p TASKS",
-                "  printf '# TODO Proposal\\n' > TASKS/TODO_PROPOSAL.md",
-                "  echo 'PROPOSAL_FILE: TASKS/TODO_PROPOSAL.md'",
+                "if [[ \"${1:-}\" == \"--next\" ]]; then",
+                "  echo 'TASK_FILE: TASKS/TASK-picked.md'",
+                "  echo 'RUN_ID: run-picked'",
+                "  echo 'EVIDENCE_PATH: reports/run-picked/'",
                 "  exit 0",
                 "fi",
-                "if [[ \"${1:-}\" == \"--pick\" && \"${2:-}\" == \"queue-next\" ]]; then",
-                "  if [[ ! -f TASKS/TODO_PROPOSAL.md ]]; then",
-                "    echo '❌ 未找到 proposal：TASKS/TODO_PROPOSAL.md' >&2",
-                "    exit 1",
-                "  fi",
+                "exit 1",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    os.chmod(task_script, os.stat(task_script).st_mode | stat.S_IXUSR)
+    commit_all(repo, "seed")
+
+    env = os.environ.copy()
+    env["QF_SKIP_SYNC"] = "1"
+    env["QF_READY_REQUIRE_SYNC"] = "0"
+    env["QF_EXECUTE_AUTO_CHOOSE"] = "1"
+    res = run(["bash", "tools/qf", "execute", f"RUN_ID={run_id}"], cwd=repo, env=env)
+    assert res.returncode == 0, res.stdout + res.stderr
+    assert "TASK_FILE: TASKS/TASK-picked.md" in res.stdout
+    assert (repo / "reports" / run_id / "orient_choice.json").exists()
+    assert (repo / "SYNC" / "discussion" / run_id / "council.json").exists()
+    assert (repo / "reports" / run_id / "execution_contract.json").exists()
+    assert (repo / "reports" / run_id / "slice_state.json").exists()
+
+
+def test_qf_do_next_then_pick_success(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    run_id = "run-current"
+    seed_docs(repo, run_id)
+    seed_execution_gates(repo, run_id)
+
+    task_script = repo / "tools" / "task.sh"
+    task_script.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "set -euo pipefail",
+                "if [[ \"${1:-}\" == \"--next\" ]]; then",
                 "  echo 'TASK_FILE: TASKS/TASK-picked.md'",
                 "  echo 'RUN_ID: run-picked'",
                 "  echo 'EVIDENCE_PATH: reports/run-picked/'",
@@ -165,13 +305,13 @@ def test_qf_do_autoplan_then_pick_success(tmp_path: Path) -> None:
     res = run(["bash", "tools/qf", "do", "queue-next"], cwd=repo, env=env)
     assert res.returncode == 0, res.stdout + res.stderr
     assert "TASK_FILE: TASKS/TASK-picked.md" in res.stdout
-    assert not (repo / "TASKS" / "TODO_PROPOSAL.md").exists()
 
 
 def test_qf_do_queue_empty_shows_orient_hint(tmp_path: Path) -> None:
     repo = setup_repo(tmp_path)
     run_id = "run-current"
     seed_docs(repo, run_id)
+    seed_execution_gates(repo, run_id)
 
     task_script = repo / "tools" / "task.sh"
     task_script.write_text(
@@ -179,12 +319,7 @@ def test_qf_do_queue_empty_shows_orient_hint(tmp_path: Path) -> None:
             [
                 "#!/usr/bin/env bash",
                 "set -euo pipefail",
-                "if [[ \"${1:-}\" == \"--plan\" ]]; then",
-                "  printf '# TODO Proposal\\n' > TASKS/TODO_PROPOSAL.md",
-                "  echo 'PROPOSAL_FILE: TASKS/TODO_PROPOSAL.md'",
-                "  exit 0",
-                "fi",
-                "if [[ \"${1:-}\" == \"--pick\" && \"${2:-}\" == \"queue-next\" ]]; then",
+                "if [[ \"${1:-}\" == \"--next\" ]]; then",
                 "  echo '❌ QUEUE 中没有未完成项（- [ ]）' >&2",
                 "  exit 1",
                 "fi",
@@ -206,13 +341,85 @@ def test_qf_do_queue_empty_shows_orient_hint(tmp_path: Path) -> None:
     assert "下一步建议：tools/qf orient RUN_ID=run-current" in combined
 
 
+def test_qf_do_requires_direction_choice_gate(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    run_id = "run-current"
+    seed_docs(repo, run_id)
+    commit_all(repo, "seed")
+
+    env = os.environ.copy()
+    env["QF_SKIP_SYNC"] = "1"
+    env["QF_READY_REQUIRE_SYNC"] = "0"
+    res = run(["bash", "tools/qf", "do", "queue-next"], cwd=repo, env=env)
+    assert res.returncode != 0
+    combined = res.stdout + res.stderr
+    assert "direction gate not satisfied" in combined
+    assert "tools/qf choose RUN_ID=run-current OPTION=<id>" in combined
+
+
+def test_qf_do_requires_council_gate(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    run_id = "run-current"
+    seed_docs(repo, run_id)
+    seed_direction_choice(repo, run_id)
+    commit_all(repo, "seed")
+
+    env = os.environ.copy()
+    env["QF_SKIP_SYNC"] = "1"
+    env["QF_READY_REQUIRE_SYNC"] = "0"
+    res = run(["bash", "tools/qf", "do", "queue-next"], cwd=repo, env=env)
+    assert res.returncode != 0
+    combined = res.stdout + res.stderr
+    assert "council gate not satisfied" in combined
+    assert f"tools/qf council RUN_ID={run_id}" in combined
+
+
+def test_qf_do_requires_execution_contract_gate(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    run_id = "run-current"
+    seed_docs(repo, run_id)
+    seed_direction_choice(repo, run_id)
+    (repo / "SYNC" / "discussion" / run_id).mkdir(parents=True, exist_ok=True)
+    (repo / "SYNC" / "discussion" / run_id / "council.json").write_text('{"run_id":"run-current","roles":[]}\n', encoding="utf-8")
+    commit_all(repo, "seed")
+
+    env = os.environ.copy()
+    env["QF_SKIP_SYNC"] = "1"
+    env["QF_READY_REQUIRE_SYNC"] = "0"
+    res = run(["bash", "tools/qf", "do", "queue-next"], cwd=repo, env=env)
+    assert res.returncode != 0
+    combined = res.stdout + res.stderr
+    assert "execution-contract gate not satisfied" in combined
+    assert f"tools/qf arbiter RUN_ID={run_id}" in combined
+
+
+def test_qf_do_requires_slice_gate(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    run_id = "run-current"
+    seed_docs(repo, run_id)
+    seed_direction_choice(repo, run_id)
+    (repo / "SYNC" / "discussion" / run_id).mkdir(parents=True, exist_ok=True)
+    (repo / "SYNC" / "discussion" / run_id / "council.json").write_text('{"run_id":"run-current","roles":[]}\n', encoding="utf-8")
+    (repo / "reports" / run_id / "execution_contract.json").write_text('{"run_id":"run-current","tasks":[]}\n', encoding="utf-8")
+    commit_all(repo, "seed")
+
+    env = os.environ.copy()
+    env["QF_SKIP_SYNC"] = "1"
+    env["QF_READY_REQUIRE_SYNC"] = "0"
+    res = run(["bash", "tools/qf", "do", "queue-next"], cwd=repo, env=env)
+    assert res.returncode != 0
+    combined = res.stdout + res.stderr
+    assert "slice gate not satisfied" in combined
+    assert f"tools/qf slice RUN_ID={run_id}" in combined
+
+
 def test_qf_do_sync_before_execution_log_write(tmp_path: Path) -> None:
     repo = setup_repo(tmp_path)
     run_id = "run-current"
     seed_docs(repo, run_id)
+    seed_execution_gates(repo, run_id)
 
     (repo / "reports" / run_id / "execution.jsonl").write_text('{"seed":"1"}\n', encoding="utf-8")
-    (repo / "TASKS" / "TODO_PROPOSAL.md").write_text("# TODO Proposal\n", encoding="utf-8")
 
     task_script = repo / "tools" / "task.sh"
     task_script.write_text(
@@ -220,7 +427,7 @@ def test_qf_do_sync_before_execution_log_write(tmp_path: Path) -> None:
             [
                 "#!/usr/bin/env bash",
                 "set -euo pipefail",
-                "if [[ \"${1:-}\" == \"--pick\" && \"${2:-}\" == \"queue-next\" ]]; then",
+                "if [[ \"${1:-}\" == \"--next\" ]]; then",
                 "  echo 'TASK_FILE: TASKS/TASK-picked.md'",
                 "  echo 'RUN_ID: run-picked'",
                 "  echo 'EVIDENCE_PATH: reports/run-picked/'",

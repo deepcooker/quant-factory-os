@@ -1,7 +1,7 @@
 # Sync Report
 
 RUN_ID: `run-2026-03-02-qf-v1-l1-do-plan`
-Generated At (UTC): 2026-03-02T04:24:45.746657+00:00
+Generated At (UTC): 2026-03-02T04:40:55.804513+00:00
 SYNC_PASS: true
 
 ## Files Read
@@ -20,13 +20,13 @@ SYNC_PASS: true
 - `docs/WORKFLOW.md` (required, read, lines=169)
 - `docs/ENTITIES.md` (required, read, lines=94)
 - `docs/PROJECT_GUIDE.md` (required, read, lines=450)
-- `TASKS/STATE.md` (required, read, lines=57)
-- `TASKS/QUEUE.md` (required, read, lines=265)
+- `TASKS/STATE.md` (required, read, lines=63)
+- `TASKS/QUEUE.md` (required, read, lines=266)
 - `TASKS/TASK-qf-v1-l1-do-plan.md` (optional, read, lines=42)
 - `reports/run-2026-03-02-qf-v1-l1-do-plan/handoff.md` (optional, missing, lines=0)
-- `reports/run-2026-03-02-qf-v1-l1-do-plan/conversation.md` (optional, missing, lines=0)
-- `reports/run-2026-03-02-qf-v1-l1-do-plan/decision.md` (optional, read, lines=12)
-- `reports/run-2026-03-02-qf-v1-l1-do-plan/summary.md` (optional, read, lines=12)
+- `reports/run-2026-03-02-qf-v1-l1-do-plan/conversation.md` (optional, read, lines=40)
+- `reports/run-2026-03-02-qf-v1-l1-do-plan/decision.md` (optional, read, lines=30)
+- `reports/run-2026-03-02-qf-v1-l1-do-plan/summary.md` (optional, read, lines=38)
 
 ## Project Overview
 - Summary: quant-factory-os is the governance/execution base for quant engineering.
@@ -44,7 +44,7 @@ SYNC_PASS: true
 ## Current Stage
 - CURRENT_RUN_ID: `run-2026-03-02-qf-v1-l1-do-plan`
 - CURRENT_TASK_FILE: `TASKS/TASK-qf-v1-l1-do-plan.md`
-- CURRENT_STATUS: `active`
+- CURRENT_STATUS: `done`
 
 ## Session Continuity
 - continuity: `ready_to_continue`
@@ -53,5 +53,5 @@ SYNC_PASS: true
 - has_summary: `true`
 
 ## Next Command
-- `tools/qf ready`
+- `tools/qf plan 20`
 

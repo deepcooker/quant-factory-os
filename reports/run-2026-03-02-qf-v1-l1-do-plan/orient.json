@@ -1,6 +1,6 @@
 {
   "run_id": "run-2026-03-02-qf-v1-l1-do-plan",
-  "created_at_utc": "2026-03-02T04:24:55.045632+00:00",
+  "created_at_utc": "2026-03-02T06:35:50.531989+00:00",
   "task_file": "TASKS/TASK-qf-v1-l1-do-plan.md",
   "open_queue_items": 0,
   "inputs": [
@@ -21,7 +21,7 @@
         "tools/qf",
         "tests/"
       ],
-      "score": 746,
+      "score": 840,
       "priority_rank": 1,
       "priority": "P0"
     },
@@ -35,7 +35,7 @@
         "docs/WORKFLOW.md",
         "SYNC/"
       ],
-      "score": 272,
+      "score": 284,
       "priority_rank": 2,
       "priority": "P1"
     },
