@@ -43,7 +43,7 @@ Use ONLY these unless task explicitly authorizes more:
 - pytest -q
 
 Notes:
-- Primary agent entrypoint is `tools/qf` (`init/plan/do/resume`).
+- Primary agent entrypoint is `tools/qf` (`init/sync/ready/orient/choose/plan/do/resume`).
 - Sync gate command: `tools/qf sync` (auto reading + sync report).
 - `tools/enter.sh` and `tools/onboard.sh` are compatibility wrappers.
 
@@ -112,7 +112,8 @@ Before any implementation, you MUST complete init and pass readiness checks:
    - `tools/qf ready` auto-fills restatement from active task contract by default.
    - To force manual-only input: `QF_READY_AUTO=0 tools/qf ready`
    - `tools/qf do` MUST fail if no valid `reports/<RUN_ID>/ready.json`.
-   - Keep conversation evidence fresh: `tools/qf sync|ready|plan` should append checkpoint notes into `reports/<RUN_ID>/conversation.md` (unless explicitly disabled).
+   - After ready, run `tools/qf orient` and confirm with `tools/qf choose OPTION=<id>` before `plan/do` (default strong mode).
+   - Keep conversation evidence fresh: `tools/qf sync|ready|orient|choose` should append checkpoint notes into `reports/<RUN_ID>/conversation.md` (unless explicitly disabled).
    - At major checkpoints (and before `/quit`), run:
      `tools/qf snapshot NOTE="decision + next step"` to persist session fallback in repo.
    - `tools/qf do` / `tools/qf resume` must keep execution traces in

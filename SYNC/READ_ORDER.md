@@ -39,4 +39,5 @@
 - 验收（verify/evidence/scope）
 - 下一条命令（只给一条）
 - 同频证据：`reports/<RUN_ID>/sync_report.json` 已生成且 `sync_passed=true`
+- 方向确认（强模式推荐）：`reports/<RUN_ID>/orient.json` 已生成，并确认一个 `OPTION`
 - 门禁文件：`reports/<RUN_ID>/ready.json` 已生成

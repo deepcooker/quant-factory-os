@@ -12,6 +12,17 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [x] TODO Title: qf 做强模式 v1：L1方向层 + do/plan 稳定性修复 + 文档强门禁  Picked: run-2026-03-02-qf-v1-l1-do-plan 2026-03-02T12:18:09+0800
+  Done: local verify passed, RUN_ID=run-2026-03-02-qf-v1-l1-do-plan
+  Goal: 把 `ready->plan->do` 升级为“先方向确认后执行”的做强模式入口，并修复 `do/plan` 的低摩擦稳定性问题。
+  Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `AGENTS.md`, `SYNC/`, `TASKS/`, `reports/{RUN_ID}/`
+  Acceptance:
+  - [x] 新增 L1 方向层入口（`orient/choose` 或等价命令）：基于 `docs/PROJECT_GUIDE.md` + `docs/*` + state/evidence 生成多方向候选与优先级，并落证据文件。
+  - [x] `tools/qf do queue-next` 不再因内部日志写入导致 pull 前工作区变脏；失败时仍保留可恢复命令。
+  - [x] `tools/qf do` 的 auto-plan 与 pick 链路修复：内部自动 plan 后能继续 pick，不再出现“proposal missing”断链。
+  - [x] Queue 为空时提供“回到方向层确认”的明确下一步，不是直接死路。
+  - [x] `make verify` 通过；owner 文档（`AGENTS.md`/`docs/WORKFLOW.md`/`SYNC/*`）与本 RUN evidence 同步更新。
+
 - [x] TODO Title: qf sync 自动同频 + ready 硬门禁 + 对话证据自动更新  Picked: run-2026-03-01-qf-sync-ready 2026-03-01T01:30:01+0800
   Done: local verify passed, RUN_ID=run-2026-03-01-qf-sync-ready
   Goal: 把同频阶段做成高自动化闭环：自动读取必读链路、自动生成同频报告、ready 强制校验同频完成，并在关键命令自动更新会话证据。
