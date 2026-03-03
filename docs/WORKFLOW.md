@@ -16,6 +16,10 @@ This document describes the expected workflow for changes in this repository.
   - Input: local repo checkout
   - Output: synced main + doctor checks + onboard summary
   - Note: this is environment preparation only, not readiness pass.
+  - Output visibility: prints `INIT_STEP[<i>/<n>]` stage markers.
+  - Safety: no implicit cleanup of `reports/run-*-pick-candidate` directories.
+  - Boundary: init does not create a new business `RUN_ID`; it uses `CURRENT_RUN_ID` when present, otherwise session context only.
+  - Project context: reads `CURRENT_PROJECT_ID` from `TASKS/STATE.md` (defaults to `project-0`).
   - Continuing runs: auto-handoff is executed by default (`QF_INIT_AUTO_HANDOFF=1`).
 - `S1 Handoff`: `tools/qf handoff`
   - Input: `CURRENT_RUN_ID` (or explicit RUN_ID)
@@ -26,9 +30,19 @@ This document describes the expected workflow for changes in this repository.
   - Input: `SYNC/READ_ORDER.md` + required governance/startup files.
   - Output: `reports/{RUN_ID}/sync_report.json` + `reports/{RUN_ID}/sync_report.md`.
   - Gate: marks whether required sync files are all present/readable (`sync_passed`).
+- `S1.6 Learn Gate`: `tools/qf learn`
+  - Input: valid sync report; optional exam auto-flow (`tools/qf exam-auto`).
+  - Output: `reports/projects/{project_id}/session/learn.json` + `reports/projects/{project_id}/session/learn.md`.
+  - Output visibility: prints `LEARN_STEP[<i>/<n>]` stage markers.
+  - Optional stdout mirror: `tools/qf learn -log` writes `reports/projects/{project_id}/session/learn.stdout.log` (or `LOG=<path>`).
+  - Purpose: materialize onboarding understanding (project/constitution/workflow/skills/session) with exam evidence.
 - `S2 Ready gate`: `tools/qf ready`
   - Input: restatement fields (goal/scope/acceptance/steps/stop)
   - Output: `reports/{RUN_ID}/ready.json`
+  - Output visibility: prints `READY_STEP[<i>/<n>]` stage markers.
+  - Machine-readable stream (optional): `QF_EVENT_STREAM=1` emits JSONL step events to stdout.
+  - Learn dependency: `QF_READY_REQUIRE_LEARN=auto` (default) enforces learn gate when sync gate is enabled.
+    - auto recovery: `QF_READY_AUTO_LEARN=1` auto-runs `tools/qf learn` when learn evidence is missing/expired.
   - Sync dependency: requires valid `sync_report.json`; default auto-runs `tools/qf sync` if missing (`QF_READY_AUTO_SYNC=1`).
   - Low-friction mode: fields auto-fill from active task contract by default (`QF_READY_AUTO=1`).
   - Exit resolution gate: if unresolved run context is detected, must choose:
@@ -60,6 +74,9 @@ This document describes the expected workflow for changes in this repository.
     - `reports/{RUN_ID}/slice_state.json`
     - queue insertion into `TASKS/QUEUE.md` (idempotent by slice marker)
   - Purpose: turn contract into smallest executable queue tasks.
+- `S2.9 Discuss shortcut`: `tools/qf discuss`
+  - Purpose: one command to run discussion chain (`orient/choose/council/arbiter/slice`) and stop before execution.
+  - Default target: `prepare` (prints `EXECUTE_STATUS: prepared` + next do command).
 - `S3 Execute`: `tools/qf do queue-next`
   - Input: valid gates (`ready.json` + `orient_choice.json` + `council.json` + `execution_contract.json` + `slice_state.json`)
   - Output: task pick + evidence skeleton + execution trace updates
@@ -68,7 +85,12 @@ This document describes the expected workflow for changes in this repository.
   - Auto checkpoint: runs `tools/qf review RUN_ID=<picked-run> AUTO_FIX=1 NON_BLOCKING=1` to emit drift report early.
 - `S2.5~S3 Orchestrator (optional)`: `tools/qf execute`
   - Purpose: low-friction single command to advance gate chain and execute.
+  - Output visibility: prints `EXECUTE_STEP[<i>/<n>]` stage markers.
   - Default behavior: if no confirmed option, stop with actionable choose command.
+  - Contract confirm gate for execution:
+    - `TARGET=do` requires `reports/{RUN_ID}/execution_contract_confirm.json`.
+    - quick confirm command: `tools/qf execute RUN_ID=<run-id> PROJECT_ID=<project-id> CONFIRM_CONTRACT=1 TARGET=do`.
+    - automation mode: `QF_EXECUTE_AUTO_CONFIRM_CONTRACT=1 tools/qf execute`.
   - Auto mode: `QF_EXECUTE_AUTO_CHOOSE=1 tools/qf execute` uses orient recommended option and continues through `council->arbiter->slice->do`.
 - `S3.5 Review`: `tools/qf review`
   - Input: run evidence (`summary/decision/ready/choice/contract`) and optional flags (`AUTO_FIX`, `STRICT`).
@@ -132,12 +154,13 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   `reports/{RUN_ID}/`.
 - Hard rule (gate): If local-only context is needed, record it as structured evidence
   (`summary.md`, `decision.md`, `MISTAKES/`) or in `TASKS/STATE.md`, not in chat.
-- `TASKS/STATE.md` is the source-of-truth for `CURRENT_RUN_ID`.
+- `TASKS/STATE.md` is the source-of-truth for `CURRENT_PROJECT_ID` and `CURRENT_RUN_ID`.
 
 ## Sync completion criteria (must be true before execution)
 - `tools/qf init` completed successfully.
 - `tools/qf handoff` completed for continuing runs (auto by init unless explicitly disabled).
 - `tools/qf sync` produced valid `reports/{RUN_ID}/sync_report.json`.
+- `tools/qf learn` produced valid `reports/projects/{project_id}/session/learn.json` (`RUN_ID` optional).
 - `tools/qf ready` produced `reports/{RUN_ID}/ready.json`.
 - `tools/qf orient` produced `SYNC/discussion/{RUN_ID}/orient.json`.
 - `tools/qf choose` produced `reports/{RUN_ID}/orient_choice.json`.
@@ -152,9 +175,10 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - Do not rely on chat/session memory; rely only on repo memory:
   `TASKS/STATE.md`, `TASKS/QUEUE.md`, `reports/{RUN_ID}/`.
 - First read owner entrypoint: `SYNC/READ_ORDER.md`.
-- Preferred entrypoint: `tools/qf` (`init/sync/ready/orient/choose/council/arbiter/slice/execute/do/review/resume`).
+- Preferred entrypoint: `tools/qf` (`init/sync/learn/ready/orient/choose/council/arbiter/slice/execute/do/review/resume`).
 - Compatibility wrappers: `tools/enter.sh` and `tools/onboard.sh` forward to `tools/qf`.
 - 1) 运行 `tools/qf init`（自动 stash 可恢复 + sync main + doctor + onboard）。
+- 1.0) 若希望在终端消费结构化日志，可设置 `QF_EVENT_STREAM=1`（stdout 会追加 JSONL 事件）。
 - 1.1) 可选清理历史临时 stash：先预览 `tools/qf stash-clean`，确认后执行 `tools/qf stash-clean apply KEEP=0`。
 - 2) 若为接力会话（`CURRENT_RUN_ID` 已存在），`tools/qf init` 默认自动执行 `handoff`。
 - 2.1) 如需手动控制，可用：`QF_INIT_AUTO_HANDOFF=0 tools/qf init` 后再手动 `tools/qf handoff`。
@@ -167,7 +191,13 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   - 低摩擦首选：`tools/qf exam-auto`（默认缺答卷会自动填答并直接评分）
   - 手动模式：`tools/qf exam-auto AUTO_FILL=0`（只落模板，不自动填答）
   - 兼容命令：`tools/qf exam`（只做评分，不自动生成答卷）
-- 4) 运行 `tools/qf ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`，默认可自动填充；默认缺失 sync report 时自动补跑 `tools/qf sync`）。
+- 3.3) 运行 `tools/qf learn` 固化“上岗学习”证据（项目+宪法+工作流+技能+session+考试），默认打印分步日志。
+  - `RUN_ID` 可选：
+    - 有 `RUN_ID`/`CURRENT_RUN_ID`：复用该 run 的 `sync/exam` 证据。
+    - 无 run 上下文：进入 `session-direct-read`，直接读取必读文档并生成 learn 证据（不隐式绑定历史 run）。
+  - `project_id` 默认来自 `TASKS/STATE.md: CURRENT_PROJECT_ID`（缺省 `project-0`），也可通过环境变量覆盖：`PROJECT_ID` / `QF_PROJECT_ID`。
+    - 无 run 上下文且不存在 session exam 结果时，会打印 `LEARN_EXAM_BYPASS_NO_RUN_CONTEXT: true` 并降级为“仅文档同频门禁”。
+- 4) 运行 `tools/qf ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`，默认可自动填充；默认缺失 learn/sync 时可自动补跑）。
 - 4.0) 若 `ready` 提示 unresolved run context，先二选一：
   - `tools/qf resume RUN_ID=<run-id>`（收尾）
   - `tools/qf ready RUN_ID=<run-id> DECISION=abandon-new`（明确抛弃旧上下文后继续）
@@ -176,6 +206,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - 4.2.1) 运行 `tools/qf council` 生成产品/架构/研发/测试独立评审结果（讨论态）。
 - 4.2.2) 运行 `tools/qf arbiter` 收敛为统一执行契约（执行态）。
 - 4.2.3) 运行 `tools/qf slice` 把执行契约拆成最小 queue tasks（幂等入队）。
+- 4.2.4) 低摩擦讨论收敛可用：`tools/qf discuss`（默认停在 prepare，不直接 do）。
 - 4.3) 在关键决策点执行 `tools/qf snapshot NOTE="..."`，把“本轮结论/下一步”写入仓库证据，避免会话丢失。
 - 5) 运行 `tools/qf do queue-next` 领取下一枪（内部强制 ready + choose + council + arbiter + slice 前置；并自动产出一次 non-blocking drift review）。
 - 5.0) 低摩擦可选：`tools/qf execute`

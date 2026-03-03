@@ -93,6 +93,10 @@ If stuck or tests fail:
 ## 8) Session init gate (Mandatory, once per session)
 Before any implementation, you MUST complete init and pass readiness checks:
 1) Run `tools/qf init` (environment prep only; this is NOT readiness pass).
+   - Visible progress markers are required: `INIT_STEP[<i>/<n>]`.
+   - `init` must not silently clean `reports/run-*-pick-candidate` directories.
+   - `init` must not create a new business `RUN_ID`; run ownership starts at `learn/ready` (or existing `CURRENT_RUN_ID`).
+   - Optional machine stream: set `QF_EVENT_STREAM=1` to emit JSONL step events to stdout.
 2) If `CURRENT_RUN_ID` exists, run `tools/qf handoff` (context summary only; this is NOT readiness pass).
    - `tools/qf init` auto-runs this step by default for continuing runs.
    - To disable auto-handoff for one run: `QF_INIT_AUTO_HANDOFF=0 tools/qf init`
@@ -107,8 +111,22 @@ Before any implementation, you MUST complete init and pass readiness checks:
    - Execution steps (evidence -> implement -> verify -> reports -> ship)
    - Stop condition (finish and wait)
 5) Record readiness gate:
-   - `CURRENT_RUN_ID` source-of-truth is `TASKS/STATE.md`.
+   - `CURRENT_PROJECT_ID` + `CURRENT_RUN_ID` source-of-truth is `TASKS/STATE.md`.
+   - default `project_id` is `project-0` when missing.
+  - Run `tools/qf learn` before `ready` to complete onboarding learning gate:
+    - output: `reports/projects/<project_id>/session/learn.json|md` (project-scoped session memory)
+    - `RUN_ID` is optional for `learn`:
+      - with `RUN_ID`/`CURRENT_RUN_ID`: uses run-scoped sync/exam evidence.
+      - without run context: enters `session-direct-read` mode (reads required docs directly; no implicit fallback to latest historical run).
+      - without run context and no session exam result, exam requirement is downgraded for that learn pass (`LEARN_EXAM_BYPASS_NO_RUN_CONTEXT: true`).
+    - optional stdout log mirror: `tools/qf learn -log` -> `reports/projects/<project_id>/session/learn.stdout.log` (or `LOG=<path>`)
+    - Visible progress markers are required: `LEARN_STEP[<i>/<n>]`.
+    - Optional machine stream: set `QF_EVENT_STREAM=1` to emit JSONL step events to stdout.
   - Run `tools/qf ready` (or `tools/qf ready RUN_ID=<run-id>` for explicit override).
+  - Visible progress markers are required: `READY_STEP[<i>/<n>]`.
+  - Optional machine stream: set `QF_EVENT_STREAM=1` to emit JSONL step events to stdout.
+  - `tools/qf ready` enforces learn gate by default when sync gate is enabled (`QF_READY_REQUIRE_LEARN=auto`).
+    - auto recovery: `QF_READY_AUTO_LEARN=1` allows `ready` to auto-run `tools/qf learn` when missing/expired.
   - If unresolved run context is detected, `ready` MUST stop and require decision:
     - `DECISION=resume-close` (go close via `tools/qf resume`)
     - `DECISION=abandon-new` (explicitly continue as new direction cycle)
@@ -127,11 +145,17 @@ Before any implementation, you MUST complete init and pass readiness checks:
   - Slice execution contract to queue tasks via `tools/qf slice`:
     - output: `reports/<RUN_ID>/slice_state.json`
     - queue insertion: `TASKS/QUEUE.md` (idempotent by slice marker)
+  - Discussion-first shortcut (recommended): `tools/qf discuss`
+    - default target is `prepare` (generates council/contract/slice, does not execute do)
+    - next command is explicit `tools/qf do queue-next`
   - Queue pick policy (`tools/task.sh --next`):
     - prefer unchecked item whose `Slice: run_id=<CURRENT_RUN_ID>` matches `TASKS/STATE.md`
     - fallback to first unchecked item when no matching slice exists
   - Low-friction orchestrator (optional): `tools/qf execute`
     - default: stops at choose if no `OPTION` confirmed
+    - for `TARGET=do`, execution requires contract confirmation evidence:
+      - one-shot confirm: `tools/qf execute RUN_ID=<run-id> PROJECT_ID=<project-id> CONFIRM_CONTRACT=1 TARGET=do`
+      - auto confirm mode: `QF_EXECUTE_AUTO_CONFIRM_CONTRACT=1 tools/qf execute`
     - auto mode: `QF_EXECUTE_AUTO_CHOOSE=1 tools/qf execute` auto-picks recommended option then runs `council->arbiter->slice->do`
   - `tools/qf do` MUST fail if any required gate is missing:
     - `reports/<RUN_ID>/orient_choice.json`

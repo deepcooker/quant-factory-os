@@ -14,11 +14,15 @@
 
 ## 规则
 - 先同频，后执行。
-- `TASKS/STATE.md` 是 `CURRENT_RUN_ID` 的权威来源。
+- `TASKS/STATE.md` 是 `CURRENT_PROJECT_ID` 与 `CURRENT_RUN_ID` 的权威来源。
 - `tools/qf init` 只负责环境准备，不等于同频完成。
 - 接力会话下，`tools/qf init` 默认自动执行 `tools/qf handoff`（可用 `QF_INIT_AUTO_HANDOFF=0` 关闭）。
 - `tools/qf handoff` 只负责接班摘要，不等于门禁通过。
 - `tools/qf sync` 负责把同频阅读固化为证据（`reports/{RUN_ID}/sync_report.json|md`）。
+- `tools/qf learn` 负责固化 project/session 级“上岗学习”证据（`reports/projects/<project_id>/session/learn.json|md`）：
+  - `RUN_ID` 可选；无 run 上下文时会进入 `session-direct-read`，直接读取必读文档。
+  - `project_id` 默认来自 `CURRENT_PROJECT_ID`（缺省 `project-0`）。
+  - 无 run 上下文且没有 session exam 结果时，learn 会降级为文档同频门禁并打印 `LEARN_EXAM_BYPASS_NO_RUN_CONTEXT: true`。
 - `tools/qf ready` 是唯一上岗门禁；没有 `ready.json` 不得执行 `tools/qf do`.
 - `tools/qf ready` 依赖有效 `sync_report.json`；默认缺失时会自动补跑 `tools/qf sync`（`QF_READY_AUTO_SYNC=1`）。
 - 若 `ready` 检测到未收尾 run，上岗前必须先决策：
@@ -33,6 +37,9 @@
   - `tools/qf do queue-next`（执行）
 - 低摩擦可选入口：`tools/qf execute`
   - 默认：若未确认 OPTION，会停在 choose 并给出下一条命令
+  - `TARGET=do` 前需要契约确认（`execution_contract_confirm.json`）：
+    - 一次确认：`tools/qf execute RUN_ID=<run-id> PROJECT_ID=<project-id> CONFIRM_CONTRACT=1 TARGET=do`
+    - 自动确认：`QF_EXECUTE_AUTO_CONFIRM_CONTRACT=1 tools/qf execute`
   - 自动推进：`QF_EXECUTE_AUTO_CHOOSE=1 tools/qf execute`
 - `tools/qf review` 用于执行后偏差审计（需求/实现/测试/文档）；blocker 会写入 `SYNC/discussion/<RUN_ID>/drift_todo.md` 等待讨论。
 - 讨论态与执行态分层：

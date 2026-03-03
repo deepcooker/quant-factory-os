@@ -4,6 +4,12 @@ Entities
 
 Minimal entity dictionary for existing repository objects and constraints.
 
+## Project
+- Definition: top-level context namespace for one product/project lifecycle.
+- Default id: `project-0` (foundation/base project).
+- Source-of-truth pointer: `TASKS/STATE.md -> CURRENT_PROJECT_ID`.
+- Relation: one project contains multiple `RUN_ID` cycles.
+
 ## Task
 - Definition: work contract for one change shot.
 - Location: `TASKS/TASK-*.md` (template: `TASKS/_TEMPLATE.md`).
@@ -37,6 +43,14 @@ Minimal entity dictionary for existing repository objects and constraints.
   - otherwise tools resolve to `CURRENT_RUN_ID`;
   - fallback to latest evidence is allowed only as last resort with warning.
 
+## CURRENT_PROJECT_ID
+- Definition: default active project pointer for qf commands.
+- Source-of-truth: `TASKS/STATE.md`.
+- Defaulting rule: if missing, tools normalize to `project-0`.
+- Priority rule:
+  - explicit env/arg project id can override once;
+  - otherwise tools resolve to `CURRENT_PROJECT_ID`.
+
 ## Evidence
 - Definition: structured memory under `reports/<RUN_ID>/`.
 - Required files:
@@ -44,6 +58,8 @@ Minimal entity dictionary for existing repository objects and constraints.
   - `summary.md`: what changed + commands/outputs + notes.
   - `decision.md`: why/options/risks.
 - Minimum requirement: every task must create/update all three (`AGENTS.md`).
+- Project/session learning evidence:
+  - `reports/projects/<PROJECT_ID>/session/learn.json|md|learn.stdout.log`.
 
 ## STATE
 - Definition: current progress baseline and startup entrypoint.

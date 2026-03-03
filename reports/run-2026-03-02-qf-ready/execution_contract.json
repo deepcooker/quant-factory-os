@@ -1,11 +1,12 @@
 {
+  "project_id": "project-0",
   "run_id": "run-2026-03-02-qf-ready",
-  "created_at_utc": "2026-03-02T08:28:22.232165+00:00",
+  "created_at_utc": "2026-03-03T04:51:38.143087+00:00",
   "direction": {
-    "selected_option": "ready-exit-resolution",
-    "selected_title": "P0: ready 先处理未收尾 run（收尾/抛弃）",
-    "goal": "避免把历史中断状态混入新需求，先做生命周期分流。",
-    "priority": "P0"
+    "selected_option": "ready-strong-brief",
+    "selected_title": "P1: ready 输出最强认知摘要与证据链",
+    "goal": "ready 通过后立即给出项目理解、宪法解读、工作流和下一步建议。",
+    "priority": "P1"
   },
   "council_source": "SYNC/discussion/run-2026-03-02-qf-ready/council.json",
   "arbiter_rule": "converge independent evidence-based reviews into one executable contract",
@@ -19,21 +20,22 @@
   "tasks": [
     {
       "task_id": "slice-1",
-      "title": "P0: ready 先处理未收尾 run（收尾/抛弃） - core delivery",
-      "goal": "避免把历史中断状态混入新需求，先做生命周期分流。",
+      "title": "P1: ready 输出最强认知摘要与证据链 - core delivery",
+      "goal": "ready 通过后立即给出项目理解、宪法解读、工作流和下一步建议。",
       "scope": [
         "tools/qf",
-        "tests/"
+        "SYNC/",
+        "docs/WORKFLOW.md"
       ],
       "acceptance": [
-        "deliver selected direction option `ready-exit-resolution` with bounded scope",
+        "deliver selected direction option `ready-strong-brief` with bounded scope",
         "command(s) pass: make verify",
         "reports summary/decision updated for this slice"
       ]
     },
     {
       "task_id": "slice-2",
-      "title": "P0: ready 先处理未收尾 run（收尾/抛弃） - enforce guardrail tests",
+      "title": "P1: ready 输出最强认知摘要与证据链 - enforce guardrail tests",
       "goal": "Add or refine guardrail tests to lock behavior of the selected direction.",
       "scope": [
         "tests/",
@@ -46,7 +48,7 @@
     },
     {
       "task_id": "slice-3",
-      "title": "P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment",
+      "title": "P1: ready 输出最强认知摘要与证据链 - evidence and docs alignment",
       "goal": "Keep evidence and owner docs aligned with final behavior of this direction.",
       "scope": [
         "AGENTS.md",

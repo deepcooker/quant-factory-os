@@ -145,3 +145,29 @@ def test_qf_init_auto_handoff_for_current_run(tmp_path: Path) -> None:
     assert "AUTO_HANDOFF: tools/qf handoff RUN_ID=run-current" in res.stdout
     assert "HANDOFF_RUN_ID: run-current" in res.stdout
     assert (repo / "reports" / "run-current" / "handoff.md").exists()
+
+
+def test_qf_init_keeps_pick_candidate_dirs_and_prints_steps(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    (repo / "tools" / "doctor.sh").write_text("#!/usr/bin/env bash\nset -euo pipefail\necho doctor-ok\n", encoding="utf-8")
+    os.chmod(repo / "tools" / "doctor.sh", os.stat(repo / "tools" / "doctor.sh").st_mode | stat.S_IXUSR)
+    (repo / "TASKS" / "STATE.md").write_text("# STATE\n", encoding="utf-8")
+    (repo / "TASKS" / "QUEUE.md").write_text("# QUEUE\n", encoding="utf-8")
+
+    pick_candidate = repo / "reports" / "run-demo-pick-candidate"
+    pick_candidate.mkdir(parents=True, exist_ok=True)
+    (pick_candidate / "marker.txt").write_text("keep\n", encoding="utf-8")
+
+    run(["git", "add", "."], cwd=repo)
+    run(["git", "commit", "-m", "seed"], cwd=repo)
+
+    env = os.environ.copy()
+    env["QF_SKIP_SYNC"] = "1"
+    res = run(["bash", "tools/qf", "init"], cwd=repo, env=env)
+    assert res.returncode == 0, res.stdout + res.stderr
+    assert "INIT_STEP[1/8]: prepare run context" in res.stdout
+    assert "INIT_STEP[8/8]: finalize and print next commands" in res.stdout
+    assert "INIT_RUN_ID_SOURCE: session-context-only (init does not create business RUN_ID)" in res.stdout
+    assert "INIT_RUN_ID: (none)" in res.stdout
+    assert pick_candidate.exists()
+    assert not any(repo.glob("reports/run-*-qf-init"))

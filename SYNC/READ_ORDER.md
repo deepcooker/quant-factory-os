@@ -38,7 +38,9 @@
 - Scope（精确路径）
 - 验收（verify/evidence/scope）
 - 下一条命令（只给一条）
+- project_id（当前项目标识，默认 `project-0`）
 - 同频证据：`reports/<RUN_ID>/sync_report.json` 已生成且 `sync_passed=true`
+- 学习门禁：`reports/projects/<project_id>/session/learn.json` 已生成且 `learn_passed=true`
 - 方向草案（讨论态）：`SYNC/discussion/<RUN_ID>/orient.json` 已生成
 - 方向确认（执行态）：`reports/<RUN_ID>/orient_choice.json` 已生成，并确认一个 `OPTION`
 - 多角色评审（讨论态）：`SYNC/discussion/<RUN_ID>/council.json` 已生成

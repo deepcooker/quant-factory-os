@@ -1,16 +1,18 @@
 # Direction Contract
 
+PROJECT_ID: `project-0`
 RUN_ID: `run-2026-03-02-qf-ready`
-Generated At (UTC): 2026-03-02T08:28:02.724232+00:00
-Selected Option: `ready-exit-resolution`
-Title: P0: ready 先处理未收尾 run（收尾/抛弃）
+Generated At (UTC): 2026-03-03T04:51:30.478711+00:00
+Selected Option: `ready-strong-brief`
+Title: P1: ready 输出最强认知摘要与证据链
 
 ## Why
-- 避免把历史中断状态混入新需求，先做生命周期分流。
+- ready 通过后立即给出项目理解、宪法解读、工作流和下一步建议。
 
 ## Scope Hint
 - `tools/qf`
-- `tests/`
+- `SYNC/`
+- `docs/WORKFLOW.md`
 
 ## Multi-Role Independent Reviews
 - role: `product` | focus: value and scope relevance

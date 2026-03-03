@@ -1,7 +1,8 @@
 # Ready Brief (Discussion Draft)
 
+PROJECT_ID: `project-0`
 RUN_ID: `run-2026-03-02-qf-ready`
-Generated At (UTC): 2026-03-02T08:19:12.235085+00:00
+Generated At (UTC): 2026-03-03T04:31:33.919118+00:00
 Mode: discussion-only (pre-confirmation)
 
 ## 项目理解
@@ -13,13 +14,14 @@ Mode: discussion-only (pre-confirmation)
 - Workflow: 流程以门禁推进：sync 同频 -> ready 上岗 -> orient/choose 定方向 -> council/arbiter 收敛 -> slice 拆解 -> do 执行 -> verify/review/ship 收尾。
 
 ## 证据链状态
+- learn_report_file: reports/projects/project-0/session/learn.json
 - sync_report_file: reports/run-2026-03-02-qf-ready/sync_report.json
 - ready_file: reports/run-2026-03-02-qf-ready/ready.json
-- decision_exists: False
-- summary_exists: False
+- decision_exists: True
+- summary_exists: True
 - conversation_exists: True
 - execution_exists: True
-- ship_state_exists: False
+- ship_state_exists: True
 
 ## Session 承接
 - continuity: partial_context
@@ -28,13 +30,13 @@ Mode: discussion-only (pre-confirmation)
 - current_status: done
 
 ## Restatement
-- Goal: Close stale queue in-progress/unchecked leftovers and set session state to done.
-- Scope: TASKS/QUEUE.md, TASKS/STATE.md, reports/{RUN_ID}/
-- Acceptance: All stale slice-next: ... ready 先处理未收尾 run leftover items are no longer [ ]/[>].; TASKS/STATE.md status is done for the current run snapshot.; Command(s) pass: make verify; Evidence updated: reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md
+- Goal: 把 `ready` 升级为“先判定会话状态、再给方向、确认后执行”的决策中枢，并将讨论态与执行态证据彻底分层。
+- Scope: tools/qf, tests/, docs/WORKFLOW.md, AGENTS.md, SYNC/, TASKS/, reports/{RUN_ID}/
+- Acceptance: tools/qf ready 在检测到上次 run 非完成态时，必须先给出“收尾（resume-close）/抛弃并新开（abandon-new）”决策，不得直接进入新方向。; ready 输出固定包含：项目目标解读、宪法/工作流解读、证据链状态、session 承接状态、风险/阻塞、建议下一步。; ready 通过后自动产出 3-5 个方向候选（含优先级/收益/风险/成本/依赖）并支持用户确认；用户确认前不写入 reports/{RUN_ID}/ 执行证据。; 确认方向后进入多角色评审（产品/架构/研发/测试）并产出统一执行契约；执行结束后自动做偏差审计（需求/实现/测试/文档）与必要修复。; 文档更新为硬门禁：流程或规则变更若未同步 owner docs 和 run evidence，不能通过收尾。; make verify 通过；新增回归测试覆盖“讨论态不入 report、确认后入 report、旧 run 决策分流”。
 - Steps: evidence -> implement -> verify -> reports -> ship
 - Stop: finish and wait for next instruction; if blocked, record stop reason in decision.md
 
 ## Run 决策
 - resolution_required: false
-- decision: continue
+- decision: abandon-new
 
