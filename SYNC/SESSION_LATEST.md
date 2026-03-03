@@ -1,23 +1,22 @@
 # Session 总结（Latest）
 
-日期：2026-03-03  
-Current RUN_ID: `run-2026-03-02-qf-ready`
+日期：2026-03-04  
+Current RUN_ID: `run-2026-03-04-docs-governance-cleanup`
 
 ## 本次沟通主线
-- 统一把重心拉回 `learn`：同频必须可见、可验证、可审计。
-- 把旧考试体系替换为深度问卷（15+2），并要求标准答案可追溯到证据文件。
-- 明确 Codex CLI 的实操规范与证据落盘方式。
+- 做一次文档体系大清理，统一同频文档边界，删除噪声与过时占位内容。
+- 以“问题驱动同频”为核心，确保入口文件、考试模板、流程文档不冲突。
+- 明确哪些信息必须放在 owner 文档，哪些只能放在 session/sync 层。
 
 ## 关键结论
-- `tools/qf learn` 已支持真实 Codex 模型交互（read-only + JSONL 事件流 + 强模式 schema 校验）。
-- learn 输出已包含主线锚点与口述问答锚点（`LEARN_MODEL_ORAL_*`）。
-- `SYNC/EXAM_*` 已升级为 v2 深度问卷；`exam-auto` 支持旧答卷自动迁移填充。
-- 新增 `docs/CODEX_CLI_OPERATION.md`，定义讨论/执行两种模式与参数语义。
+- 文档 owner 边界已经补充为硬规则（`AGENTS.md`）。
+- `SYNC/LINKS.md` 已从历史 run 清单改为稳定入口索引，避免旧证据误导。
+- 过时/占位文档（`docs/BOUNDARY_A9.md`、`docs/CODEX_ONBOARDING_CONSTITUTION.md`、`docs/INTEGRATION_A9.md`）已移除并修正引用。
 
 ## 少量思考摘要（用于下轮接班）
-- 同频质量是执行质量上限。
-- learn 需要持续防“跑偏”：以 STATE + RUN 证据链为主线锚点。
-- 任何自动化改动必须同步 owner docs 与 run evidence。
+- “文档多”不是问题，“同一规则被多处重定义”才是问题。
+- 边界收敛的标准是：一个主题只能有一个 owner 文档，其余只做链接。
+- 同频质量的上限由证据链清晰度决定，不由回答长度决定。
 
 ## 下一步（单条）
-- `tools/qf ready RUN_ID=run-2026-03-02-qf-ready`
+- `make verify`

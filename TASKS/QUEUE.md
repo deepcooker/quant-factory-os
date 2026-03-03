@@ -12,6 +12,16 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [>] TODO Title: docs governance cleanup: 同频文档全量清理与边界重定义  Picked: run-2026-03-04-docs-governance-cleanup 2026-03-04T02:17:41+0800
+  Goal: 统一 AGENTS/README/docs/SYNC 的职责边界，删除噪声与重复，细化同频标准，形成可执行且可审计的文档体系。
+  Scope: `AGENTS.md`, `README.md`, `docs/`, `SYNC/`, `reports/{RUN_ID}/`
+  Acceptance:
+  - [ ] 形成“保留/删除/合并/细化”清单并落地到文档
+  - [ ] 明确并写入边界规则：哪个问题归哪个 owner 文档
+  - [ ] 同频入口读序与考试问答保持一致，无冲突项
+  - [ ] Command(s) pass: `make verify`
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
 - [x] TODO Title: docs cleanup: PROJECT_GUIDE 仅保留问答 + 新增财富系统新建项目引导  Picked: run-2026-03-04-docs-cleanup-project-guide 2026-03-04T02:01:25+0800
   Done: PR #158, RUN_ID=run-2026-03-04-docs-cleanup-project-guide
   Goal: 把同频入口压缩成“问题-标准回答”格式，并单独提供财富系统项目落地引导文档，降低新会话学习噪音。

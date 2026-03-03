@@ -97,7 +97,6 @@ Minimal entity dictionary for existing repository objects and constraints.
   - `tools/view.sh`: constrained, range-based repo file reader.
   - `tools/task.sh`: select task and call ship with task metadata.
   - `tools/ship.sh`: commit/push/PR automation with gates.
-  - `tools/run_a9`: TODO/Assumptions (not found as regular file in this repo).
 
 ## Artifact
 - `docs/`: stable rules and conventions.
@@ -106,5 +105,3 @@ Minimal entity dictionary for existing repository objects and constraints.
 
 ## TODO/Assumptions
 - RUN_ID hard-format rule is not centrally specified beyond current conventions.
-- `tools/run_a9` is requested in dictionary scope but not present as a readable
-  repo file; add when tool exists or document alias path.

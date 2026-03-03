@@ -23,6 +23,12 @@ PROXY_URL=http://127.0.0.1:7890 ./tools/start.sh
 - Entity definitions owner: `docs/ENTITIES.md`
 - Strategy/vision owner: `docs/PROJECT_GUIDE.md`
 
+## Boundary quick rules
+- `README.md` is index-only.
+- Rules live in `AGENTS.md`.
+- Process/state machine lives in `docs/WORKFLOW.md`.
+- Session sync snapshots live in `SYNC/*`.
+
 ## Primary docs
 - `SYNC/README.md`
 - `SYNC/READ_ORDER.md`

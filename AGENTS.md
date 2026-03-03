@@ -56,6 +56,17 @@ Notes:
 - Strategy/vision owner: `docs/PROJECT_GUIDE.md`
 - Codex operation owner: `docs/CODEX_CLI_OPERATION.md`
 
+## Documentation boundary (Hard)
+- `README.md`: index only; do not duplicate hard rules/process details.
+- `AGENTS.md`: hard constraints/gates only; do not store historical run narratives.
+- `docs/WORKFLOW.md`: executable state machine only (step semantics, gate dependencies).
+- `docs/ENTITIES.md`: entity dictionary only.
+- `docs/PROJECT_GUIDE.md`: onboarding Q&A truth source only.
+- `SYNC/*`: current session sync layer only (current state/decisions/links/exam), no strategy duplication.
+- `reports/<RUN_ID>/*`: run-scoped evidence only.
+- If a topic appears in multiple places, keep full definition only in the owner file; other files must link, not re-define.
+- Placeholder or stale docs without active owner/update path must be removed.
+
 ## Reading policy
 - 长文件阅读必须使用 tools/view.sh 分段查看，不得直接使用 sed/cat/rg/grep/awk。
 
