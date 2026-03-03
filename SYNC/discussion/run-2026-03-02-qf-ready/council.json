@@ -1,12 +1,14 @@
 {
+  "project_id": "project-0",
   "run_id": "run-2026-03-02-qf-ready",
-  "created_at_utc": "2026-03-02T08:28:10.268759+00:00",
+  "created_at_utc": "2026-03-03T04:51:37.704687+00:00",
   "source_contract": "reports/run-2026-03-02-qf-ready/direction_contract.json",
-  "direction_title": "P0: ready 先处理未收尾 run（收尾/抛弃）",
-  "direction_goal": "避免把历史中断状态混入新需求，先做生命周期分流。",
+  "direction_title": "P1: ready 输出最强认知摘要与证据链",
+  "direction_goal": "ready 通过后立即给出项目理解、宪法解读、工作流和下一步建议。",
   "scope_hint": [
     "tools/qf",
-    "tests/"
+    "SYNC/",
+    "docs/WORKFLOW.md"
   ],
   "queue_open_items": 0,
   "evidence_summary": {

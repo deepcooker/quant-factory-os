@@ -1,1 +1,0 @@
-{"run_id":"run-2026-03-02-slice-next-p0-ready-run-core-delivery","branch":"chore/run-2026-03-02-slice-next-p0-ready-run-c-20260302-155729","commit":"25fb664","pr_url":"","step":"branch_prepared","last_error":"","msg":"run-2026-03-02-slice-next-p0-ready-run-core-delivery: task: TASK: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - core delivery","updated_at":"2026-03-02T15:57:32+08:00"}

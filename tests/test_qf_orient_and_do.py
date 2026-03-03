@@ -263,9 +263,11 @@ def test_qf_execute_auto_choose_and_run_do(tmp_path: Path) -> None:
     env["QF_SKIP_SYNC"] = "1"
     env["QF_READY_REQUIRE_SYNC"] = "0"
     env["QF_EXECUTE_AUTO_CHOOSE"] = "1"
+    env["QF_EXECUTE_AUTO_CONFIRM_CONTRACT"] = "1"
     res = run(["bash", "tools/qf", "execute", f"RUN_ID={run_id}"], cwd=repo, env=env)
     assert res.returncode == 0, res.stdout + res.stderr
     assert "TASK_FILE: TASKS/TASK-picked.md" in res.stdout
+    assert (repo / "reports" / run_id / "execution_contract_confirm.json").exists()
     assert (repo / "reports" / run_id / "orient_choice.json").exists()
     assert (repo / "SYNC" / "discussion" / run_id / "council.json").exists()
     assert (repo / "reports" / run_id / "execution_contract.json").exists()

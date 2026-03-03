@@ -1,8 +1,9 @@
 # Council Review (Discussion)
 
+PROJECT_ID: `project-0`
 RUN_ID: `run-2026-03-02-qf-ready`
-Generated At (UTC): 2026-03-02T08:28:10.268759+00:00
-Direction: P0: ready 先处理未收尾 run（收尾/抛弃）
+Generated At (UTC): 2026-03-03T04:51:37.704687+00:00
+Direction: P1: ready 输出最强认知摘要与证据链
 Queue Open Items: 0
 
 ## Evidence Checks

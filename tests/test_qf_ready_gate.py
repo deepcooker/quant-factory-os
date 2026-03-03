@@ -198,6 +198,25 @@ def test_qf_ready_abandon_new_writes_discussion_brief_and_orient(tmp_path: Path)
     assert (repo / "reports" / "run-active" / "ready.json").exists()
     assert (repo / "SYNC" / "discussion" / "run-active" / "ready_brief.md").exists()
     assert (repo / "SYNC" / "discussion" / "run-active" / "orient.json").exists()
+
+
+def test_qf_ready_prints_step_markers_and_supports_json_stream(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    env = os.environ.copy()
+    env["QF_READY_REQUIRE_SYNC"] = "0"
+    env["QF_READY_GOAL"] = "goal"
+    env["QF_READY_SCOPE"] = "scope"
+    env["QF_READY_ACCEPTANCE"] = "accept"
+    env["QF_READY_STEPS"] = "steps"
+    env["QF_READY_STOP"] = "stop"
+    env["QF_EVENT_STREAM"] = "1"
+
+    res = run(["bash", "tools/qf", "ready", "RUN_ID=run-step"], cwd=repo, env=env)
+    assert res.returncode == 0, res.stdout + res.stderr
+    assert "READY_STEP[1/12]: resolve run context" in res.stdout
+    assert "READY_STEP[12/12]: print output artifacts" in res.stdout
+    assert '"type":"qf_event"' in res.stdout
+    assert '"phase":"ready"' in res.stdout
     assert "ORIENT_OPTIONS:" in res.stdout
 
 
