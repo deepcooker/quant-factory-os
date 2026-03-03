@@ -14,6 +14,8 @@
 
 ## 规则
 - 先同频，后执行。
+- `SYNC/*` 只放“当前会话同频与接班信息”，不重复定义宪法/工作流/实体。
+- 宪法与流程以 owner 文档为准：`AGENTS.md`、`docs/WORKFLOW.md`、`docs/ENTITIES.md`、`docs/PROJECT_GUIDE.md`。
 - `TASKS/STATE.md` 是 `CURRENT_PROJECT_ID` 与 `CURRENT_RUN_ID` 的权威来源。
 - `tools/qf init` 只负责环境准备，不等于同频完成。
 - 接力会话下，`tools/qf init` 默认自动执行 `tools/qf handoff`（可用 `QF_INIT_AUTO_HANDOFF=0` 关闭）。

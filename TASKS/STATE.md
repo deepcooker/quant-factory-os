@@ -1,10 +1,11 @@
 # STATE
 
 CURRENT_PROJECT_ID: project-0
-CURRENT_RUN_ID: run-2026-03-02-qf-ready
-CURRENT_TASK_FILE: TASKS/TASK-qf-ready.md
+CURRENT_RUN_ID: run-2026-03-04-docs-governance-cleanup
+CURRENT_TASK_FILE: TASKS/TASK-docs-governance-cleanup.md
 CURRENT_STATUS: active
-CURRENT_UPDATED_AT: 2026-03-03T16:44:15+00:00
+CURRENT_UPDATED_AT: 2026-03-04T02:22:53+08:00
+
 
 
 
@@ -178,7 +179,7 @@ CURRENT_UPDATED_AT: 2026-03-03T16:44:15+00:00
 - RUN_ID = evidence namespace under `reports/<RUN_ID>/`.
 - Handoff rule: `docs/WORKFLOW.md` Memory & Context.
 - Handoff hard rules (gate): `docs/WORKFLOW.md` -> Memory & Context.
-- Boundary v0: `docs/BOUNDARY_A9.md`.
+- Documentation boundary: `AGENTS.md` -> Documentation boundary (Hard).
 - Session startup entrypoints:
 - Queue: `TASKS/QUEUE.md`.
 - Entities: `docs/ENTITIES.md`.

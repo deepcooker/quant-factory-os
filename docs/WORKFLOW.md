@@ -265,7 +265,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - If documentation is stale, do not ship.
 
 ## Codex governance and automation
-- Session constitution: `docs/CODEX_ONBOARDING_CONSTITUTION.md`
+- Session constitution and operation standard: `AGENTS.md` + `docs/CODEX_CLI_OPERATION.md`
 - Default policy: PR-driven flow with local `make verify`; do not depend on GitHub Actions queues.
 - If automation is ever re-enabled, it must be explicitly requested and documented in task acceptance.
 - `tools/ship.sh` hard gate blocks `.github/workflows/*.yml|*.yaml` by default; explicit override required:
