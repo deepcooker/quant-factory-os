@@ -317,3 +317,65 @@
 - working_tree: `dirty`
 - note: post-cleanup verified; discussion contract switched to ready-strong-brief; awaiting /plan deep review
 
+## 2026-03-04T00:10:47+08:00
+- phase: `learn`
+- branch: `main`
+- head: `ee145f8`
+- working_tree: `dirty`
+- note: learn gate completed; next step ready
+
+## 2026-03-04T00:10:57+08:00
+- phase: `learn`
+- branch: `main`
+- head: `ee145f8`
+- working_tree: `dirty`
+- note: learn gate completed; next step ready
+
+## 2026-03-04T00:11:16+08:00
+- phase: `ready`
+- branch: `main`
+- head: `ee145f8`
+- working_tree: `dirty`
+- note: ready gate passed; brief=SYNC/discussion/run-2026-03-02-qf-ready/ready_brief.md; orient=SYNC/discussion/run-2026-03-02-qf-ready/orient.json
+
+## 2026-03-04T00:32:13+08:00
+- phase: `learn`
+- branch: `main`
+- head: `ee145f8`
+- working_tree: `dirty`
+- note: learn gate completed; next step ready
+
+## 2026-03-04T00:36:18+08:00
+- phase: `learn`
+- branch: `main`
+- head: `ee145f8`
+- working_tree: `dirty`
+- note: learn gate completed; next step ready
+
+## 2026-03-04T00:36:19+08:00
+- phase: `ready`
+- branch: `main`
+- head: `ee145f8`
+- working_tree: `dirty`
+- note: ready gate passed; brief=SYNC/discussion/run-2026-03-02-qf-ready/ready_brief.md; orient=SYNC/discussion/run-2026-03-02-qf-ready/orient.json
+
+## 2026-03-04T00:36:25+08:00
+- phase: `sync`
+- branch: `main`
+- head: `ee145f8`
+- working_tree: `dirty`
+- note: sync completed; report generated at reports/run-2026-03-02-qf-ready/sync_report.md
+
+## 2026-03-04T00:39:09+08:00
+- phase: `learn`
+- branch: `main`
+- head: `ee145f8`
+- working_tree: `dirty`
+- note: learn gate completed; next step ready
+
+## 2026-03-04T00:44:15+08:00
+- branch: `main`
+- head: `ee145f8`
+- working_tree: `dirty`
+- note: learn strong sync + exam v2 + codex ops guide done; verify 123 passed; next: present full Q&A
+

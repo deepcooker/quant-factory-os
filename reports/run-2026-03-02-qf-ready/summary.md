@@ -277,3 +277,44 @@ RUN_ID: `run-2026-03-02-qf-ready`
   - `TASKS/QUEUE.md`
   - `TASKS/TASK-qf-ready.md`
   - templates (`_TEMPLATE.md`, `KNOWLEDGE_SYNC_TEMPLATE.md`, `TODO_PROPOSAL.md`)
+
+## Iteration: learn 强同频 + 考试 v2 + Codex 操作手册
+- 重构 `tools/qf learn`：
+  - 支持 `MODEL_SYNC=auto|0|1`、`PLAN_MODE=strong|basic`、`MODEL_TIMEOUT_SEC`、`MODEL`。
+  - 增加真实 Codex 模型同频链路（read-only + JSONL 事件流 + output-last-message）。
+  - 增加主线锚点输出：`LEARN_MAINLINE` / `LEARN_CURRENT_STAGE` / `LEARN_NEXT_STEP` / `LEARN_REQUIRED_FILES_READ_LIST`。
+  - 强模式增加口述与问答锚点：`LEARN_MODEL_PLAN_*`、`LEARN_MODEL_ORAL_*`。
+  - 模型证据落盘：`learn.model.prompt/raw/json/events/stderr`。
+  - 严格模式 `MODEL_SYNC=1` 下，模型同频失败会阻断 learn。
+- 修复 `tools/qf learn MODEL_SYNC=1 ...` 被误判为 run_id 的参数解析问题。
+- 重构同频考试体系（`SYNC/EXAM_*`）为 15+2 深度问卷：
+  - 新题面：`SYNC/EXAM_PLAN_PROMPT.md`
+  - 新模板：`SYNC/EXAM_ANSWER_TEMPLATE.md`
+  - 新流程：`SYNC/EXAM_WORKFLOW.md`
+  - 新评分：`SYNC/EXAM_RUBRIC.json`（pass_score=85）
+- 升级 `tools/qf exam-auto`：当发现旧答卷格式时，自动迁移填充为新模板，避免 learn 自动链路被旧答卷阻塞。
+- 新增 Codex 操作手册：`docs/CODEX_CLI_OPERATION.md`。
+- 更新 owner docs 与同步层：
+  - `AGENTS.md`
+  - `docs/WORKFLOW.md`
+  - `docs/PROJECT_GUIDE.md`
+  - `README.md`
+  - `SYNC/README.md`
+  - `SYNC/READ_ORDER.md`
+  - `SYNC/LINKS.md`
+  - `SYNC/CURRENT_STATE.md`
+  - `SYNC/SESSION_LATEST.md`
+  - `SYNC/DECISIONS_LATEST.md`
+
+## Runtime evidence
+- `tools/qf learn -log`
+  - 产出 `LEARN_MODEL_ORAL_*` 与 `LEARN_MODEL_PLAN_*` 锚点。
+  - 产出模型证据文件 `reports/projects/project-0/session/learn.model.*`。
+- `tools/qf ready`
+  - 通过 learn/sync gate 并输出 `READY_STEP[1/12..12/12]`。
+- `tools/qf sync`
+  - 刷新 sync_report 并纳入 `docs/CODEX_CLI_OPERATION.md` 到必读链路。
+- `tools/qf learn MODEL_SYNC=1 PLAN_MODE=strong -log`
+  - 严格模型同频通过；`LEARN_SYNC_REQUIRED_READ: 18/18`。
+- `make verify`
+  - `123 passed in 55.36s`。

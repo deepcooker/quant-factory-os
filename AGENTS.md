@@ -54,6 +54,7 @@ Notes:
 - Execution workflow owner: `docs/WORKFLOW.md`
 - Entity definitions owner: `docs/ENTITIES.md`
 - Strategy/vision owner: `docs/PROJECT_GUIDE.md`
+- Codex operation owner: `docs/CODEX_CLI_OPERATION.md`
 
 ## Reading policy
 - 长文件阅读必须使用 tools/view.sh 分段查看，不得直接使用 sed/cat/rg/grep/awk。
@@ -104,6 +105,7 @@ Before any implementation, you MUST complete init and pass readiness checks:
    - `SYNC/READ_ORDER.md`
    - files listed in `SYNC/READ_ORDER.md` (strict order)
    - then run `tools/qf sync` to materialize read evidence (`sync_report.json/.md`)
+   - exam package is v2 deep questionnaire (`SYNC/EXAM_PLAN_PROMPT.md`, `SYNC/EXAM_ANSWER_TEMPLATE.md`, `SYNC/EXAM_WORKFLOW.md`, `SYNC/EXAM_RUBRIC.json`)
 4) Restate and get confirmation before coding:
    - Goal (1 sentence)
    - Scope (exact paths)
@@ -115,12 +117,42 @@ Before any implementation, you MUST complete init and pass readiness checks:
    - default `project_id` is `project-0` when missing.
   - Run `tools/qf learn` before `ready` to complete onboarding learning gate:
     - output: `reports/projects/<project_id>/session/learn.json|md` (project-scoped session memory)
+    - model sync (Codex real interaction) options:
+      - `MODEL_SYNC=0|auto|1` (or `QF_LEARN_MODEL_SYNC`), default `auto`
+      - `MODEL_SYNC=1` is strict mode: learn fails if model sync fails
+      - `PLAN_MODE=strong|basic` (or `QF_LEARN_PLAN_MODE`), default `strong`
+      - timeout/model override: `MODEL_TIMEOUT_SEC=<n>` (default 180), `MODEL=<slug>`
+      - invocation profile: `codex --search --ask-for-approval never exec --sandbox read-only --json --output-last-message ...`
+      - model artifacts:
+        - `reports/projects/<project_id>/session/learn.model.prompt.txt`
+        - `reports/projects/<project_id>/session/learn.model.raw.txt`
+        - `reports/projects/<project_id>/session/learn.model.json`
+        - `reports/projects/<project_id>/session/learn.model.events.jsonl`
+        - `reports/projects/<project_id>/session/learn.model.stderr.log`
     - `RUN_ID` is optional for `learn`:
       - with `RUN_ID`/`CURRENT_RUN_ID`: uses run-scoped sync/exam evidence.
       - without run context: enters `session-direct-read` mode (reads required docs directly; no implicit fallback to latest historical run).
       - without run context and no session exam result, exam requirement is downgraded for that learn pass (`LEARN_EXAM_BYPASS_NO_RUN_CONTEXT: true`).
     - optional stdout log mirror: `tools/qf learn -log` -> `reports/projects/<project_id>/session/learn.stdout.log` (or `LOG=<path>`)
     - Visible progress markers are required: `LEARN_STEP[<i>/<n>]`.
+    - learn anchors are required in stdout:
+      - `LEARN_MAINLINE`
+      - `LEARN_CURRENT_STAGE`
+      - `LEARN_NEXT_STEP`
+      - `LEARN_REQUIRED_FILES_READ_LIST`
+      - when model sync passes: `LEARN_MODEL_MAINLINE`, `LEARN_MODEL_CURRENT_STAGE`, `LEARN_MODEL_NEXT_STEP`, `LEARN_MODEL_FILES_READ_LIST`
+      - when `PLAN_MODE=strong` and model sync passes:
+        - `LEARN_MODEL_PLAN_GOAL`
+        - `LEARN_MODEL_PLAN_NON_GOAL`
+        - `LEARN_MODEL_PLAN_REBUTTAL`
+        - `LEARN_MODEL_PLAN_DECISION_STOP`
+        - `LEARN_MODEL_ORAL_PROJECT`
+        - `LEARN_MODEL_ORAL_CONSTITUTION`
+        - `LEARN_MODEL_ORAL_EVIDENCE`
+        - `LEARN_MODEL_ORAL_SESSION`
+        - `LEARN_MODEL_ORAL_CURRENT_FOCUS`
+        - `LEARN_MODEL_ORAL_NEXT_ACTION`
+        - `LEARN_MODEL_ORAL_EXAM_QA_COUNT`
     - Optional machine stream: set `QF_EVENT_STREAM=1` to emit JSONL step events to stdout.
   - Run `tools/qf ready` (or `tools/qf ready RUN_ID=<run-id>` for explicit override).
   - Visible progress markers are required: `READY_STEP[<i>/<n>]`.

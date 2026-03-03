@@ -1,44 +1,45 @@
 # Sync Report
 
 RUN_ID: `run-2026-03-02-qf-ready`
-Generated At (UTC): 2026-03-02T08:19:11.916842+00:00
+Generated At (UTC): 2026-03-03T16:36:25.831833+00:00
 SYNC_PASS: true
 
 ## Files Read
-- `README.md` (required, read, lines=45)
-- `SYNC/README.md` (required, read, lines=54)
-- `SYNC/READ_ORDER.md` (required, read, lines=48)
+- `README.md` (required, read, lines=46)
+- `SYNC/README.md` (required, read, lines=62)
+- `SYNC/READ_ORDER.md` (required, read, lines=51)
 - `SYNC/CURRENT_STATE.md` (required, read, lines=26)
-- `SYNC/SESSION_LATEST.md` (required, read, lines=27)
-- `SYNC/DECISIONS_LATEST.md` (required, read, lines=54)
-- `SYNC/LINKS.md` (required, read, lines=34)
-- `SYNC/EXAM_PLAN_PROMPT.md` (required, read, lines=24)
-- `SYNC/EXAM_ANSWER_TEMPLATE.md` (required, read, lines=43)
-- `SYNC/EXAM_WORKFLOW.md` (required, read, lines=31)
-- `SYNC/EXAM_RUBRIC.json` (required, read, lines=87)
-- `AGENTS.md` (required, read, lines=165)
-- `docs/WORKFLOW.md` (required, read, lines=223)
-- `docs/ENTITIES.md` (required, read, lines=94)
-- `docs/PROJECT_GUIDE.md` (required, read, lines=450)
-- `TASKS/STATE.md` (required, read, lines=149)
-- `TASKS/QUEUE.md` (required, read, lines=455)
-- `TASKS/TASK-queue-state-closure-20260302.md` (optional, read, lines=39)
-- `reports/run-2026-03-02-qf-ready/handoff.md` (optional, missing, lines=0)
-- `reports/run-2026-03-02-qf-ready/conversation.md` (optional, missing, lines=0)
-- `reports/run-2026-03-02-qf-ready/decision.md` (optional, missing, lines=0)
-- `reports/run-2026-03-02-qf-ready/summary.md` (optional, missing, lines=0)
-- `reports/run-2026-03-02-qf-ready/orient_choice.json` (optional, missing, lines=0)
-- `reports/run-2026-03-02-qf-ready/direction_contract.json` (optional, missing, lines=0)
-- `reports/run-2026-03-02-qf-ready/execution_contract.json` (optional, missing, lines=0)
-- `reports/run-2026-03-02-qf-ready/slice_state.json` (optional, missing, lines=0)
-- `reports/run-2026-03-02-qf-ready/drift_review.json` (optional, missing, lines=0)
-- `reports/run-2026-03-02-qf-ready/drift_review.md` (optional, missing, lines=0)
-- `SYNC/discussion/run-2026-03-02-qf-ready/ready_brief.json` (optional, missing, lines=0)
-- `SYNC/discussion/run-2026-03-02-qf-ready/ready_brief.md` (optional, missing, lines=0)
-- `SYNC/discussion/run-2026-03-02-qf-ready/orient.json` (optional, missing, lines=0)
-- `SYNC/discussion/run-2026-03-02-qf-ready/orient.md` (optional, missing, lines=0)
-- `SYNC/discussion/run-2026-03-02-qf-ready/council.json` (optional, missing, lines=0)
-- `SYNC/discussion/run-2026-03-02-qf-ready/council.md` (optional, missing, lines=0)
+- `SYNC/SESSION_LATEST.md` (required, read, lines=23)
+- `SYNC/DECISIONS_LATEST.md` (required, read, lines=29)
+- `SYNC/LINKS.md` (required, read, lines=35)
+- `SYNC/EXAM_PLAN_PROMPT.md` (required, read, lines=37)
+- `SYNC/EXAM_ANSWER_TEMPLATE.md` (required, read, lines=91)
+- `SYNC/EXAM_WORKFLOW.md` (required, read, lines=32)
+- `SYNC/EXAM_RUBRIC.json` (required, read, lines=193)
+- `AGENTS.md` (required, read, lines=221)
+- `docs/WORKFLOW.md` (required, read, lines=275)
+- `docs/ENTITIES.md` (required, read, lines=110)
+- `docs/CODEX_CLI_OPERATION.md` (required, read, lines=65)
+- `docs/PROJECT_GUIDE.md` (required, read, lines=523)
+- `TASKS/STATE.md` (required, read, lines=204)
+- `TASKS/QUEUE.md` (required, read, lines=456)
+- `TASKS/TASK-qf-ready.md` (optional, read, lines=43)
+- `reports/run-2026-03-02-qf-ready/handoff.md` (optional, read, lines=24)
+- `reports/run-2026-03-02-qf-ready/conversation.md` (optional, read, lines=361)
+- `reports/run-2026-03-02-qf-ready/decision.md` (optional, read, lines=112)
+- `reports/run-2026-03-02-qf-ready/summary.md` (optional, read, lines=279)
+- `reports/run-2026-03-02-qf-ready/orient_choice.json` (optional, read, lines=14)
+- `reports/run-2026-03-02-qf-ready/direction_contract.json` (optional, read, lines=74)
+- `reports/run-2026-03-02-qf-ready/execution_contract.json` (optional, read, lines=67)
+- `reports/run-2026-03-02-qf-ready/slice_state.json` (optional, read, lines=10)
+- `reports/run-2026-03-02-qf-ready/drift_review.json` (optional, read, lines=62)
+- `reports/run-2026-03-02-qf-ready/drift_review.md` (optional, read, lines=25)
+- `SYNC/discussion/run-2026-03-02-qf-ready/ready_brief.json` (optional, read, lines=36)
+- `SYNC/discussion/run-2026-03-02-qf-ready/ready_brief.md` (optional, read, lines=42)
+- `SYNC/discussion/run-2026-03-02-qf-ready/orient.json` (optional, read, lines=121)
+- `SYNC/discussion/run-2026-03-02-qf-ready/orient.md` (optional, read, lines=50)
+- `SYNC/discussion/run-2026-03-02-qf-ready/council.json` (optional, read, lines=125)
+- `SYNC/discussion/run-2026-03-02-qf-ready/council.md` (optional, read, lines=46)
 - `SYNC/discussion/run-2026-03-02-qf-ready/drift_todo.md` (optional, missing, lines=0)
 
 ## Project Overview
@@ -55,17 +56,18 @@ SYNC_PASS: true
 - Fallback: `/root/.codex/skills/.system/*/SKILL.md`
 
 ## Current Stage
-- CURRENT_RUN_ID: `run-2026-03-02-queue-state-closure`
-- CURRENT_TASK_FILE: `TASKS/TASK-queue-state-closure-20260302.md`
-- CURRENT_STATUS: `done`
+- CURRENT_PROJECT_ID: `project-0`
+- CURRENT_RUN_ID: `run-2026-03-02-qf-ready`
+- CURRENT_TASK_FILE: `TASKS/TASK-qf-ready.md`
+- CURRENT_STATUS: `active`
 
 ## Session Continuity
-- continuity: `partial_context`
-- has_handoff: `false`
-- has_decision: `false`
-- has_summary: `false`
+- continuity: `ready_to_continue`
+- has_handoff: `true`
+- has_decision: `true`
+- has_summary: `true`
 
 ## Next Command
-- `tools/qf ready`
-- low-friction: `tools/qf ready`
+- `tools/qf do queue-next`
+- low-friction: `tools/qf execute RUN_ID=run-2026-03-02-qf-ready`
 

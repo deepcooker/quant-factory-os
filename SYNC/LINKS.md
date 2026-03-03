@@ -4,6 +4,7 @@
 - `AGENTS.md`
 - `docs/WORKFLOW.md`
 - `docs/ENTITIES.md`
+- `docs/CODEX_CLI_OPERATION.md`
 
 ## 同频考试
 - `SYNC/EXAM_PLAN_PROMPT.md`
