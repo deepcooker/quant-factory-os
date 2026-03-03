@@ -1,7 +1,7 @@
 {
   "project_id": "project-0",
   "run_id": "run-2026-03-02-qf-ready",
-  "created_at_utc": "2026-03-03T04:31:33.919118+00:00",
+  "created_at_utc": "2026-03-03T16:36:19.300919+00:00",
   "project_summary": "quant-factory-os is the governance/execution base for quant engineering.",
   "project_goal": "quant-factory-os 是一个“自举式智能工厂操作系统”：它能**自动执行任务**、能**从证据链与错题本学习变强**、能**训练/引导新的智能体加入并理解因果链**、能**自我迭代升级工具与流程**、最终能**多智能协作形成涌现智能**，并把这些能力用于任何项目（最初是量化策略工厂，最终是通用项目底座）。",
   "constitution_interpretation": "约束是任务驱动、证据优先、scope 严格、文档新鲜度硬门禁。",

@@ -18,6 +18,7 @@
 2. `SYNC/EXAM_ANSWER_TEMPLATE.md`
 3. `SYNC/EXAM_WORKFLOW.md`
 4. `SYNC/EXAM_RUBRIC.json`
+> 当前版本：v2 深度问卷（15+2），目标是检验项目理解与主线承接能力。
 
 ## 第 2 步：治理核心
 1. `AGENTS.md`

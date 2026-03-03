@@ -11,10 +11,14 @@ PRIORITY: P1
 - `tools/qf`
 - `tests/`
 - `docs/WORKFLOW.md`
+- `docs/PROJECT_GUIDE.md`
+- `docs/CODEX_CLI_OPERATION.md`
+- `README.md`
 - `AGENTS.md`
 - `SYNC/`
 - `TASKS/`
 - `reports/{RUN_ID}/`
+- `reports/projects/`
 
 ## Non-goals
 What we explicitly do NOT do.

@@ -1,4 +1,5 @@
 import os
+import json
 import shutil
 import stat
 import subprocess
@@ -52,46 +53,35 @@ def write_state(repo: Path, run_id: str) -> None:
     )
 
 
-def write_min_pass_answer(path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        "\n".join(
-            [
-                "## 终点一致",
-                "自动化、自我迭代、涌现智能是一致终点，这次动作用于保证学习同频并支撑后续执行闭环。",
-                "",
-                "## 阶段一致",
-                "当前阶段是同频治理，下一阶段是稳定自动化推进，切换以门禁和证据为条件。",
-                "",
-                "## 上轮停止原因与恢复状态",
-                "上轮属于 tool_or_script_error，当前已恢复到 main 并可继续推进。",
-                "",
-                "## 边界与非目标",
-                "边界是流程门禁和证据链，non-goals 是不改业务策略和交易逻辑。",
-                "",
-                "## 近况与最近提交",
-                "最近 PR 与 RUN_ID 已更新，当前近况是同频考试机制落地。",
-                "",
-                "## 下一步单命令",
-                "命令：tools/qf handoff",
-                "",
-                "## 失败回退命令",
-                "命令：tools/qf resume RUN_ID=run-current",
-                "",
-                "## 学习更新清单",
-                "复习考试题面、模板与评分规则。",
-                "",
-            ]
-        ),
-        encoding="utf-8",
+def write_min_pass_answer(path: Path, rubric_file: Path) -> None:
+    rubric = json.loads(rubric_file.read_text(encoding="utf-8"))
+    checks = rubric.get("checks", [])
+    seen: set[str] = set()
+    lines: list[str] = []
+    body = (
+        "本段回答覆盖项目背景、阶段、workflow、entites、生命周期、branch/PR、review、summary、decision、"
+        "自动化与优化，并给出证据路径：AGENTS.md、docs/WORKFLOW.md、docs/PROJECT_GUIDE.md、docs/ENTITIES.md、"
+        "TASKS/STATE.md、TASKS/QUEUE.md、reports/run-current/summary.md、reports/run-current/decision.md；"
+        "同时包含关键词：CURRENT_RUN_ID、插件、独立、codex、learn、ready、init、do、产品、架构、研发、测试、"
+        "方向、保存、多角色、生命周期、偏离、下一步命令、orient、choose、council、arbiter、推理、"
+        "conversation.md、decision.md、自动化、优先级、优化。"
     )
+    for item in checks:
+        section = str(item.get("section", "")).strip()
+        if not section or section in seen:
+            continue
+        seen.add(section)
+        lines.extend([f"## {section}", body, ""])
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
 def test_qf_exam_defaults_to_current_run_id(tmp_path: Path) -> None:
     repo = setup_repo(tmp_path)
     write_state(repo, "run-current")
     answer = repo / "reports" / "run-current" / "onboard_answer.md"
-    write_min_pass_answer(answer)
+    write_min_pass_answer(answer, repo / "SYNC" / "EXAM_RUBRIC.json")
 
     res = run(["bash", "tools/qf", "exam"], cwd=repo)
     assert res.returncode == 0, res.stdout + res.stderr
@@ -103,7 +93,7 @@ def test_qf_exam_supports_custom_paths(tmp_path: Path) -> None:
     repo = setup_repo(tmp_path)
     write_state(repo, "run-current")
     answer = repo / "reports" / "run-current" / "answer-custom.md"
-    write_min_pass_answer(answer)
+    write_min_pass_answer(answer, repo / "SYNC" / "EXAM_RUBRIC.json")
 
     res = run(
         [

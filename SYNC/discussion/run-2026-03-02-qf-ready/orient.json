@@ -1,7 +1,7 @@
 {
   "project_id": "project-0",
   "run_id": "run-2026-03-02-qf-ready",
-  "created_at_utc": "2026-03-03T04:31:33.991950+00:00",
+  "created_at_utc": "2026-03-03T16:36:19.372873+00:00",
   "discussion_mode": true,
   "task_file": "TASKS/TASK-qf-ready.md",
   "open_queue_items": 0,
@@ -31,7 +31,7 @@
         "tools/qf",
         "tests/"
       ],
-      "score": 1680,
+      "score": 1738,
       "priority_rank": 1,
       "priority": "P0"
     },
@@ -51,7 +51,7 @@
         "SYNC/",
         "docs/WORKFLOW.md"
       ],
-      "score": 994,
+      "score": 1080,
       "priority_rank": 2,
       "priority": "P1"
     },
@@ -72,7 +72,7 @@
         "AGENTS.md",
         "SYNC/"
       ],
-      "score": 850,
+      "score": 930,
       "priority_rank": 3,
       "priority": "P2"
     },
@@ -92,7 +92,7 @@
         "tests/",
         "docs/WORKFLOW.md"
       ],
-      "score": 632,
+      "score": 666,
       "priority_rank": 4,
       "priority": "P3"
     },
@@ -111,7 +111,7 @@
         "tools/qf",
         "reports/<RUN_ID>/"
       ],
-      "score": 274,
+      "score": 302,
       "priority_rank": 5,
       "priority": "P4"
     }

@@ -1,21 +1,21 @@
 # Session 总结
 
 RUN_ID: `run-2026-03-02-qf-ready`
-Generated At: 2026-03-02T13:03:59.804962+00:00
+Generated At: 2026-03-03T16:10:38.989119+00:00
 
 ## 本次沟通主线
-- head: `42d266c`
+- head: `24b1772`
 - working_tree: `dirty`
-- blocked by gh auth invalid token during ship; evidence and mistakes recorded; waiting re-auth then resume ship
+- post-cleanup verified; discussion contract switched to ready-strong-brief; awaiting /plan deep review
 
 ## 关键结论
 - ready 门禁：已通过。
-- 当前目标：Close stale queue in-progress/unchecked leftovers and set session state to done.
-- 最近执行：orient/orient_generated (ok) orient_file=SYNC/discussion/run-2026-03-02-qf-ready/orient.json;orient_md=SYNC/discussion/run-2026-03-02-qf-ready/orient...(truncated)
+- 当前目标：把 `ready` 升级为“先判定会话状态、再给方向、确认后执行”的决策中枢，并将讨论态与执行态证据彻底分层。
+- 最近执行：slice/slice_generated (ok) execution_contract=reports/run-2026-03-02-qf-ready/execution_contract.json;slice_state=reports/run-2026-03-02-qf-ready/s...(truncated)
 - 交付状态：step=branch_prepared, pr=
 
 ## 少量思考摘要
-- 最近出现失败事件，建议先 `tools/qf resume` 处理恢复，再继续新任务。
+- 当前信息链完整，建议保持“短总结 + 证据链接”节奏，避免文档噪音。
 
 ## 下一步（单条）
 - tools/qf do queue-next

@@ -30,6 +30,7 @@ PROXY_URL=http://127.0.0.1:7890 ./tools/start.sh
 - `docs/WORKFLOW.md`
 - `docs/ENTITIES.md`
 - `docs/PROJECT_GUIDE.md`
+- `docs/CODEX_CLI_OPERATION.md`
 
 ## Repo layout
 - `TASKS/`: queue and task contracts

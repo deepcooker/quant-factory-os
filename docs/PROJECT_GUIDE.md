@@ -12,6 +12,79 @@
 
 ---
 
+## 同频标准问答（v2026-03）
+> 用途：作为 learn/考试的标准答案基线。新会话必须能回答这些问题并给出证据路径。
+
+1. 项目是做什么的，最终要什么，怎么开发
+- 答：这是一个“自举式智能工厂操作系统”，目标是自动化执行、证据学习、自我迭代和多智能协作；开发方式是 task 驱动 + gate 驱动 + evidence 驱动。
+- 证据：`README.md`、`AGENTS.md`、`docs/WORKFLOW.md`、`docs/PROJECT_GUIDE.md`。
+
+2. 阶段目标与当前阶段
+- 答：阶段从基座硬化到学习系统、训练系统、自我升级、多智能协作，再到接入具体项目；当前重点是同频学习与流程自动化增强。
+- 证据：本文件 Stage 路线图、`TASKS/QUEUE.md`、`TASKS/STATE.md`、`reports/<RUN_ID>/summary.md`。
+
+3. 基建完成后首个项目如何落地（插件还是独立）
+- 答：当前优先独立项目（orchestrator 与业务仓分离）；插件化在基座稳定后再做分发形态。
+- 证据：本文件 A2（架构选择）与 A3/A4（跨 repo 指针与集成合同）。
+
+4. GPT 网页端与 Codex CLI 如何同频
+- 答：GPT 负责策略/评审/对抗，Codex CLI 负责本地执行/验证/落证据；统一流程是 `init -> learn -> ready -> discuss/execute -> review -> ship`。
+- 证据：`AGENTS.md`、`docs/WORKFLOW.md`、`tools/qf`。
+
+5. 当前宪法是什么，是否可优化
+- 答：宪法是 `AGENTS.md` 硬规则（task syscall、evidence memory、流程门禁、文档新鲜度门禁）；方向正确，需持续优化 learn 的可见锚点和自动化体验。
+- 证据：`AGENTS.md`。
+
+6. 当前工作流是什么
+- 答：会话状态机为 `init -> sync -> learn -> ready -> orient/choose -> council/arbiter -> slice -> do -> review -> ship`，讨论态与执行态分层。
+- 证据：`docs/WORKFLOW.md`、`SYNC/READ_ORDER.md`。
+
+7. 如何查未完成任务与最新批次
+- 答：`TASKS/STATE.md` 看当前指针，`TASKS/QUEUE.md` 看待办与切片，`reports/<RUN_ID>/` 和 `SYNC/discussion/<RUN_ID>/` 看当前证据与讨论。
+- 证据：`TASKS/STATE.md`、`TASKS/QUEUE.md`、`reports/`。
+
+8. 如何追最近 session 与源文件
+- 答：先看 `summary.md`/`decision.md`，再看 `conversation.md` 与对应 JSON 产物；若结论不一致，以证据文件和已合并 PR 为准。
+- 证据：`SYNC/READ_ORDER.md`、`reports/<RUN_ID>/summary.md`、`reports/<RUN_ID>/decision.md`、`reports/<RUN_ID>/conversation.md`。
+
+9. 基建项目讨论流程
+- 答：`orient -> choose -> council -> arbiter -> slice`，以多角色独立评审后再收敛。
+- 证据：`docs/WORKFLOW.md`、`tools/qf`。
+
+10. 基建代码实施流程与角色独立思考
+- 答：实施链路是 `do -> verify -> review -> ship`；角色是产品/架构/研发/测试，独立性通过 `council` 独立输出与 `arbiter` 统一裁决保证。
+- 证据：`docs/WORKFLOW.md`、`SYNC/discussion/<RUN_ID>/council.json`、`reports/<RUN_ID>/execution_contract.json`。
+
+11. task/pr/run/project 定义与生命周期
+- 答：task 是合同，pr 是交付，run 是证据命名空间，project 是上层命名空间；由 STATE/QUEUE 驱动生命周期。
+- 证据：`docs/ENTITIES.md`、`AGENTS.md`、`docs/WORKFLOW.md`。
+
+12. 准备完成后从哪步开始需求方向讨论
+- 答：从 `orient` 开始，确认后 `choose`，然后 `council/arbiter/slice`；方向草案在 `SYNC/discussion/<RUN_ID>/`，确认结果在 `reports/<RUN_ID>/orient_choice.json`。
+- 证据：`docs/WORKFLOW.md`、`tools/qf`。
+
+13. 分支与代码管理是否满足
+- 答：规则是一 task 一分支一 PR，PR 标题包含 RUN_ID，正文包含 Why/What/Verify/Evidence；总体满足，仍需持续优化 ship/re-auth 摩擦。
+- 证据：`AGENTS.md`、`tools/ship.sh`、`TASKS/QUEUE.md`。
+
+14. 每次任务完成后必须做什么
+- 答：`make verify`、更新 `summary.md/decision.md`、运行 review、同步 owner docs（规则变更时）并再 ship。
+- 证据：`AGENTS.md`、`docs/WORKFLOW.md`。
+
+15. 若目标是“简单、爽用、自动化高”，必须优化哪些
+- 答：P0 同频可信（learn 模型口述+问答+锚点）；P1 组合入口低摩擦；P2 文档自动更新与失败自恢复。
+- 证据：`tools/qf`、`docs/WORKFLOW.md`、`AGENTS.md`。
+
+16. Codex 实操标准
+- 答：版本、参数、事件流、证据落盘必须可复现。建议命令：`codex --search --ask-for-approval never exec --sandbox read-only --json ...`（讨论）与 `--sandbox workspace-write --ask-for-approval on-request`（执行）。
+- 证据：`docs/CODEX_CLI_OPERATION.md`、`reports/<RUN_ID>/codex_exec.events.jsonl`。
+
+17. 拉回主线判断
+- 答：任何不能提升“同频质量、门禁质量、执行闭环质量”的动作都属于偏离；偏离后应回到当前 RUN 目标并执行唯一下一步命令。
+- 证据：`TASKS/STATE.md`、`reports/<RUN_ID>/conversation.md`、`reports/<RUN_ID>/decision.md`。
+
+---
+
 ## 0. 一句话北极星（你最终要什么）
 quant-factory-os 是一个“自举式智能工厂操作系统”：它能**自动执行任务**、能**从证据链与错题本学习变强**、能**训练/引导新的智能体加入并理解因果链**、能**自我迭代升级工具与流程**、最终能**多智能协作形成涌现智能**，并把这些能力用于任何项目（最初是量化策略工厂，最终是通用项目底座）。
 

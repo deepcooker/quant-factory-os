@@ -58,4 +58,5 @@
 - 新/陌生 agent 上岗前，建议先走同频考试流程：
   - `/plan` 题面：`SYNC/EXAM_PLAN_PROMPT.md`
   - 答题模板：`SYNC/EXAM_ANSWER_TEMPLATE.md`
+  - 题型：v2 深度问卷（15+2）
   - 自动评分：`tools/sync_exam.py` + `SYNC/EXAM_RUBRIC.json`

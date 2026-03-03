@@ -10,6 +10,7 @@ This document describes the expected workflow for changes in this repository.
 - Execution details owner: `docs/WORKFLOW.md` (this file)
 - Entity definitions owner: `docs/ENTITIES.md`
 - Strategy/vision owner: `docs/PROJECT_GUIDE.md`
+- Codex operation owner: `docs/CODEX_CLI_OPERATION.md`
 
 ## Session lifecycle state machine (single source)
 - `S0 Environment`: `tools/qf init`
@@ -35,6 +36,25 @@ This document describes the expected workflow for changes in this repository.
   - Output: `reports/projects/{project_id}/session/learn.json` + `reports/projects/{project_id}/session/learn.md`.
   - Output visibility: prints `LEARN_STEP[<i>/<n>]` stage markers.
   - Optional stdout mirror: `tools/qf learn -log` writes `reports/projects/{project_id}/session/learn.stdout.log` (or `LOG=<path>`).
+  - Optional model sync (Codex real interaction):
+    - `MODEL_SYNC=0|auto|1` (default `auto`)
+    - strict mode: `MODEL_SYNC=1` (learn fails if model sync fails)
+    - `PLAN_MODE=strong|basic` (default `strong`)
+    - timeout/model override: `MODEL_TIMEOUT_SEC=<n>` (default 180), `MODEL=<slug>`
+    - model artifacts:
+      - `learn.model.prompt.txt`
+      - `learn.model.raw.txt`
+      - `learn.model.json`
+      - `learn.model.events.jsonl`
+      - `learn.model.stderr.log`
+  - Required learn anchors:
+    - `LEARN_MAINLINE`, `LEARN_CURRENT_STAGE`, `LEARN_NEXT_STEP`, `LEARN_REQUIRED_FILES_READ_LIST`
+    - when model sync passes:
+      - `LEARN_MODEL_MAINLINE`, `LEARN_MODEL_CURRENT_STAGE`, `LEARN_MODEL_NEXT_STEP`, `LEARN_MODEL_FILES_READ_LIST`
+    - when `PLAN_MODE=strong` and model sync passes:
+      - `LEARN_MODEL_PLAN_GOAL`, `LEARN_MODEL_PLAN_NON_GOAL`, `LEARN_MODEL_PLAN_REBUTTAL`, `LEARN_MODEL_PLAN_DECISION_STOP`
+      - `LEARN_MODEL_ORAL_PROJECT`, `LEARN_MODEL_ORAL_CONSTITUTION`, `LEARN_MODEL_ORAL_EVIDENCE`, `LEARN_MODEL_ORAL_SESSION`
+      - `LEARN_MODEL_ORAL_CURRENT_FOCUS`, `LEARN_MODEL_ORAL_NEXT_ACTION`, `LEARN_MODEL_ORAL_EXAM_QA_COUNT`
   - Purpose: materialize onboarding understanding (project/constitution/workflow/skills/session) with exam evidence.
 - `S2 Ready gate`: `tools/qf ready`
   - Input: restatement fields (goal/scope/acceptance/steps/stop)
@@ -175,6 +195,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - Do not rely on chat/session memory; rely only on repo memory:
   `TASKS/STATE.md`, `TASKS/QUEUE.md`, `reports/{RUN_ID}/`.
 - First read owner entrypoint: `SYNC/READ_ORDER.md`.
+- Codex 参数/模式参考：`docs/CODEX_CLI_OPERATION.md`。
 - Preferred entrypoint: `tools/qf` (`init/sync/learn/ready/orient/choose/council/arbiter/slice/execute/do/review/resume`).
 - Compatibility wrappers: `tools/enter.sh` and `tools/onboard.sh` forward to `tools/qf`.
 - 1) 运行 `tools/qf init`（自动 stash 可恢复 + sync main + doctor + onboard）。
@@ -185,7 +206,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - 3) 按 `SYNC/READ_ORDER.md` 顺序完成阅读与复述。
 - 3.1) 运行 `tools/qf sync` 固化同频证据（读文件清单/项目总况/治理入口/当前阶段/下一步）。
 - 3.2) 新/陌生 agent 建议先完成同频考试：
-  - `/plan` 题面：`SYNC/EXAM_PLAN_PROMPT.md`
+  - v2 深度题面：`SYNC/EXAM_PLAN_PROMPT.md`（15+2 问卷）
   - 按 `SYNC/EXAM_ANSWER_TEMPLATE.md` 输出到 `reports/{RUN_ID}/onboard_answer.md`
   - 用 `tools/sync_exam.py` 评分，结果写入 `reports/{RUN_ID}/sync_exam_result.json`
   - 低摩擦首选：`tools/qf exam-auto`（默认缺答卷会自动填答并直接评分）

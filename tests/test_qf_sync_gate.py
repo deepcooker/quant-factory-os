@@ -7,10 +7,14 @@ from pathlib import Path
 
 
 def run(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
+    merged_env = os.environ.copy()
+    merged_env.setdefault("QF_LEARN_MODEL_SYNC", "0")
+    if env:
+        merged_env.update(env)
     return subprocess.run(
         cmd,
         cwd=cwd,
-        env=env,
+        env=merged_env,
         check=False,
         capture_output=True,
         text=True,
@@ -50,6 +54,7 @@ def seed_sync_required_files(repo: Path, run_id: str) -> None:
         "AGENTS.md": "# AGENTS\n",
         "docs/WORKFLOW.md": "# WORKFLOW\n",
         "docs/ENTITIES.md": "# ENTITIES\n",
+        "docs/CODEX_CLI_OPERATION.md": "# CODEX\n",
         "docs/PROJECT_GUIDE.md": "## 0. 一句话北极星（你最终要什么）\n系统目标是自动化 -> 自我迭代 -> 涌现智能。\n",
         "TASKS/QUEUE.md": "# QUEUE\n",
         "TASKS/TASK-auto.md": "\n".join(
@@ -279,6 +284,21 @@ def test_qf_learn_generates_report_and_step_markers(tmp_path: Path) -> None:
     assert obj["learn_passed"] is True
     assert obj["project_id"] == "project-0"
     assert obj.get("scope") == "session"
+
+
+def test_qf_learn_accepts_model_sync_arg_without_run_id_conflict(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+    run_id = "run-sync"
+    seed_sync_required_files(repo, run_id)
+
+    res = run(
+        ["bash", "tools/qf", "learn", f"RUN_ID={run_id}", "REQUIRE_EXAM=0", "MODEL_SYNC=0"],
+        cwd=repo,
+    )
+    assert res.returncode == 0, res.stdout + res.stderr
+    combined = res.stdout + res.stderr
+    assert "run-id mismatch" not in combined
+    assert "LEARN_MODEL_SYNC_MODE:" not in combined
 
 
 def test_qf_learn_session_mode_without_run_context(tmp_path: Path) -> None:

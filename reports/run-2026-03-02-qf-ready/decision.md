@@ -110,3 +110,37 @@ RUN_ID: `run-2026-03-02-qf-ready`
 - Rejected:
   - soft-archive approach in this iteration (still leaves navigation and review noise).
   - deleting test source files (would reduce regression guardrails for upcoming workflow refactor).
+
+## Iteration Decision: learn 强同频必须“真实模型交互 + 可见锚点 + 严格门禁”
+- Chosen:
+  - 在 `tools/qf learn` 增加真实 Codex 模型交互链路，并保存 prompt/raw/json/events/stderr 全部证据。
+  - 默认 `MODEL_SYNC=auto`，在 `MODEL_SYNC=1` 下强制失败即阻断 learn。
+  - 强模式要求输出 `plan_protocol + oral_restate + oral_exam`，并在控制台打印 `LEARN_MODEL_PLAN_*` 与 `LEARN_MODEL_ORAL_*`。
+  - 对 `codex exec` 非零退出（如 rollout recorder 关闭异常）采用“结果文件+schema校验”判定，而非仅看退出码。
+- Rejected:
+  - 仅依赖本地脚本拼接 learn 内容（不可证明模型同频）。
+  - 仅依赖退出码判定模型同步是否成功（在当前环境下会误判）。
+
+## Iteration Decision: 同频考试升级为 15+2 深度问卷（v2）
+- Chosen:
+  - 用你的 15+2 问卷替换旧考试模板与评分规则。
+  - 要求每题包含证据路径；推理问题必须写依据。
+  - `pass_score` 提升为 85，强化上岗门槛。
+- Rejected:
+  - 保留旧“8段模板”并只做局部修补（覆盖不足）。
+
+## Iteration Decision: 旧答卷自动迁移
+- Chosen:
+  - `exam-auto` 在自动模式下检测旧格式答卷并自动重填，避免 learn 自动流程被历史文件卡住。
+- Rejected:
+  - 强制人工先删除旧答卷再重跑（体验差，自动化不足）。
+
+## Iteration Decision: Codex 操作手册入库并纳入必读链
+- Chosen:
+  - 新增 `docs/CODEX_CLI_OPERATION.md`，统一讨论/执行模式与参数语义。
+  - 将该文件纳入 sync/learn 必读链与文档 owner map。
+- Rejected:
+  - 把 Codex 参数经验分散在聊天或临时报告中（不可持续复用）。
+
+## Stop Reason
+- task_done
