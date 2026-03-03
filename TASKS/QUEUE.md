@@ -12,7 +12,8 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
-- [>] TODO Title: docs cleanup: PROJECT_GUIDE 仅保留问答 + 新增财富系统新建项目引导  Picked: run-2026-03-04-docs-cleanup-project-guide 2026-03-04T02:01:25+0800
+- [x] TODO Title: docs cleanup: PROJECT_GUIDE 仅保留问答 + 新增财富系统新建项目引导  Picked: run-2026-03-04-docs-cleanup-project-guide 2026-03-04T02:01:25+0800
+  Done: PR #158, RUN_ID=run-2026-03-04-docs-cleanup-project-guide
   Goal: 把同频入口压缩成“问题-标准回答”格式，并单独提供财富系统项目落地引导文档，降低新会话学习噪音。
   Scope: `docs/PROJECT_GUIDE.md`, `docs/WEALTH_SYSTEM_NEW_PROJECT_GUIDE.md`, `reports/{RUN_ID}/`
   Acceptance:
