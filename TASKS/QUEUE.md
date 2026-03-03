@@ -12,6 +12,16 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [x] TODO Title: docs cleanup: PROJECT_GUIDE 仅保留问答 + 新增财富系统新建项目引导  Picked: run-2026-03-04-docs-cleanup-project-guide 2026-03-04T02:01:25+0800
+  Done: PR #158, RUN_ID=run-2026-03-04-docs-cleanup-project-guide
+  Goal: 把同频入口压缩成“问题-标准回答”格式，并单独提供财富系统项目落地引导文档，降低新会话学习噪音。
+  Scope: `docs/PROJECT_GUIDE.md`, `docs/WEALTH_SYSTEM_NEW_PROJECT_GUIDE.md`, `reports/{RUN_ID}/`
+  Acceptance:
+  - [ ] `docs/PROJECT_GUIDE.md` 仅保留问答条目（问题+回答+证据），不保留其他叙述章节
+  - [ ] 新增财富系统新建项目引导文件并包含可执行步骤清单
+  - [ ] Command(s) pass: `make verify`
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
 - [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - core delivery  Picked: run-2026-03-02-slice-next-p0-ready-run-core-delivery 2026-03-02T15:55:55+0800
   Done: PR #150, RUN_ID=run-2026-03-02-slice-next-p0-ready-run-core-delivery
   Goal: 避免把历史中断状态混入新需求，先做生命周期分流。
