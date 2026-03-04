@@ -236,6 +236,8 @@ Before any implementation, you MUST complete init and pass readiness checks:
      `tools/qf snapshot NOTE="decision + next step"` to persist session fallback in repo.
    - `tools/qf do` / `tools/qf resume` must keep execution traces in
      `reports/<RUN_ID>/execution.jsonl` (default redaction on).
+   - `tools/qf resume` may auto-stash dirty workspace before `checkout main` using
+     `qf-resume-cleanup-run-<RUN_ID>-wip-*` to avoid self-blocking sync.
 6) If restatement is missing or unclear, STOP and do not modify code.
 
 ## 9) Governance policy (Default)

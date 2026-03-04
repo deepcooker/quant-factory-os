@@ -48,6 +48,7 @@ def test_qf_stash_clean_preview_and_apply(tmp_path: Path) -> None:
     create_stash(repo, "manual-note-keep", "b")
     create_stash(repo, "qf-init-wip-2", "c")
     create_stash(repo, "resume-cleanup-run-3", "d")
+    create_stash(repo, "qf-resume-cleanup-run-4", "e")
 
     preview = run(["bash", "tools/qf", "stash-clean", "preview", "KEEP=1"], cwd=repo)
     assert preview.returncode == 0, preview.stdout + preview.stderr
@@ -64,6 +65,7 @@ def test_qf_stash_clean_preview_and_apply(tmp_path: Path) -> None:
     assert "ship-wip-" not in out
     assert "qf-init-wip-" not in out
     assert "resume-cleanup-run-" not in out
+    assert "qf-resume-cleanup-run-" not in out
     assert "manual-note-keep" in out
 
 
