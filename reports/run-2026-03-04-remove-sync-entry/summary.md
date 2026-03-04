@@ -12,6 +12,9 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
   - removed `tests/test_run_a9_dryrun.py` and `tests/test_run_a9_probe.py`
   - added merged minimal test module `tests/task_qf.py`
 - Followed request to drop sync-related gate tests by removing `tests/test_qf_sync_gate.py`.
+- Merged all remaining `tests/test_*.py` modules into minimal `tests/task_*.py` modules:
+  - added: `task_codex.py`, `task_docs.py`, `task_enter.py`, `task_observe.py`, `task_run.py`, `task_ship.py`, `task_start.py`, `task_task.py`, `task_view.py`
+  - removed remaining split tests under `tests/test_*.py`
 
 ## Commands / Outputs
 - `tools/view.sh TASKS/STATE.md`
@@ -22,6 +25,17 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
 - Updated file: `AGENTS.md`
 - `git rm -f tests/test_run_a9_dryrun.py tests/test_run_a9_probe.py tests/test_qf_current_run.py tests/test_qf_execute.py tests/test_qf_execution_log.py tests/test_qf_handoff.py tests/test_qf_orient_and_do.py tests/test_qf_plan_clean.py tests/test_qf_ready_gate.py tests/test_qf_review.py tests/test_qf_stash_clean.py tests/test_qf_sync_gate.py`
 - Added file: `tests/task_qf.py`
+- `git rm -f tests/test_*.py`
+- Added files:
+  - `tests/task_codex.py`
+  - `tests/task_docs.py`
+  - `tests/task_enter.py`
+  - `tests/task_observe.py`
+  - `tests/task_run.py`
+  - `tests/task_ship.py`
+  - `tests/task_start.py`
+  - `tests/task_task.py`
+  - `tests/task_view.py`
 - Verify attempt:
   - `pytest -q tests/task_qf.py` -> command not found
   - `python3 -m pytest -q tests/task_qf.py` -> `No module named pytest`
