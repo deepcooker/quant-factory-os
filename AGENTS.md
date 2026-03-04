@@ -43,10 +43,11 @@ Use ONLY these unless task explicitly authorizes more:
 - pytest -q
 
 Notes:
-- Primary agent entrypoint is `tools/qf` (`init/sync/ready/orient/choose/council/arbiter/slice/execute/do/review/resume`).
+- Primary agent entrypoint is `tools/qf` (`init/sync/learn/ready/orient/choose/council/arbiter/slice/discuss/execute/do/review/resume`).
 - Sync gate command: `tools/qf sync` (auto reading + sync report).
 - `tools/enter.sh` and `tools/onboard.sh` are compatibility wrappers.
 - Discussion drafts live in `SYNC/discussion/<RUN_ID>/`; execution evidence lives in `reports/<RUN_ID>/`.
+- `tools/qf plan` is queue proposal tooling only (`TASKS/TODO_PROPOSAL.md`), not Codex interactive `/plan`.
 
 ## Single source map
 - Session entrypoint owner: `SYNC/READ_ORDER.md`
@@ -77,6 +78,15 @@ Notes:
 4) Run `make verify` until green.
 5) Write decision + update summary (what changed / why / risks / verify commands).
 6) Ship via `tools/ship.sh` or `make ship` (if defined).
+
+## 5.1) Plan/Execute boundary (Hard)
+- Complex changes MUST follow `Plan -> Confirm -> Execute`.
+- Codex `/plan` (interactive slash command) is for planning protocol; execution starts only after confirmation.
+- `tools/qf plan` does not satisfy planning gate; it only generates queue suggestions.
+- `tools/qf do`/`tools/qf execute TARGET=do` remain blocked unless required gate artifacts exist.
+- `/compact` is not mandatory after every task; run it when context grows large or before switching to a new milestone.
+- Before `/compact` (and before `/quit`), persist repo evidence with:
+  `tools/qf snapshot NOTE="decision + next step"`.
 
 ## 6) Failure protocol
 If stuck or tests fail:

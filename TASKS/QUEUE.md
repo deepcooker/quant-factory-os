@@ -12,6 +12,16 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [ ] TODO Title: plan-execute governance: /plan 与 qf plan 去歧义 + /compact 策略落地  Picked: run-2026-03-04-plan-execute-governance 2026-03-04T12:44:21+0800
+  Goal: 统一 Plan->Confirm->Execute 语义，明确 `/plan`、`tools/qf plan`、`/compact` 的边界与触发规则。
+  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `docs/CODEX_CLI_OPERATION.md`, `docs/PROJECT_GUIDE.md`, `TASKS/STATE.md`, `reports/{RUN_ID}/`
+  Acceptance:
+  - [ ] 文档明确区分：Codex `/plan` 与 `tools/qf plan`
+  - [ ] 文档写清 Plan->Confirm->Execute 的触发点
+  - [ ] 文档写清 `/compact` 的触发规则（非每 task 强制）
+  - [ ] Command(s) pass: `make verify`
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
 - [x] TODO Title: docs governance cleanup: 同频文档全量清理与边界重定义  Picked: run-2026-03-04-docs-governance-cleanup 2026-03-04T02:17:41+0800
   Done: PR #159, RUN_ID=run-2026-03-04-docs-governance-cleanup
   Goal: 统一 AGENTS/README/docs/SYNC 的职责边界，删除噪声与重复，细化同频标准，形成可执行且可审计的文档体系。
