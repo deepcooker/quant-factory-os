@@ -12,7 +12,8 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
-- [ ] TODO Title: plan-execute governance: /plan 与 qf plan 去歧义 + /compact 策略落地  Picked: run-2026-03-04-plan-execute-governance 2026-03-04T12:44:21+0800
+- [x] TODO Title: plan-execute governance: /plan 与 qf plan 去歧义 + /compact 策略落地  Picked: run-2026-03-04-plan-execute-governance 2026-03-04T12:44:21+0800
+  Done: PR #160, RUN_ID=run-2026-03-04-plan-execute-governance
   Goal: 统一 Plan->Confirm->Execute 语义，明确 `/plan`、`tools/qf plan`、`/compact` 的边界与触发规则。
   Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `docs/CODEX_CLI_OPERATION.md`, `docs/PROJECT_GUIDE.md`, `TASKS/STATE.md`, `reports/{RUN_ID}/`
   Acceptance:

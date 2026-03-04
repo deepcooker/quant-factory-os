@@ -24,6 +24,9 @@ RUN_ID: `run-2026-03-04-plan-execute-governance`
 - Updated strategy Q&A truth source:
   - `docs/PROJECT_GUIDE.md`
   - added explicit Q/A for `/plan` vs `tools/qf plan` vs `/compact`
+- Closeout sync after merge:
+  - `TASKS/QUEUE.md` marked this item as done with `PR #160`
+  - `TASKS/STATE.md` moved to `CURRENT_STATUS: done`
 
 ## Commands / Outputs
 - `make evidence RUN_ID=run-2026-03-04-plan-execute-governance`
@@ -34,6 +37,8 @@ RUN_ID: `run-2026-03-04-plan-execute-governance`
   - confirmed non-interactive `exec --json`, sandbox and approval flags
 - `make verify`
   - `123 passed in 51.08s`
+- `make verify` (closeout sync)
+  - `123 passed in 51.48s`
 
 ## Notes
 - Official docs were cross-checked for:
