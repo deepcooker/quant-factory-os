@@ -12,7 +12,8 @@
 ```bash
 codex --search --ask-for-approval never exec --sandbox read-only --json
 ```
-用途：只读分析、方案讨论、同频口述，不改仓库文件。
+用途：只读分析、方案讨论、同频口述，不改仓库文件。  
+注意：`read-only` 下不能执行会写入仓库证据的命令（如 `tools/qf learn/ready`）。
 
 ### 2.2 执行模式（可写）
 ```bash
@@ -29,7 +30,13 @@ codex --search --ask-for-approval on-request exec --sandbox workspace-write --js
 - `exec --json`：输出 JSONL 事件流，可审计 tool 调用/命令执行/消息。
 - `--output-last-message <file>`：把最终模型消息写入文件。
 
-## 4. 项目内标准同频动作（Codex）
+## 4. Plan -> Confirm -> Execute（本项目约定）
+1. 先做交互规划：使用 Codex `/plan`（interactive slash command）。
+2. 产出并确认六段包：`goal/non_goal/evidence/alternatives/rebuttal/decision_stop_condition`。
+3. 确认后再进入执行链路（`discuss/execute/do`）。
+4. 去歧义：`tools/qf plan` 是队列提案工具，不是 `/plan`。
+
+## 5. 项目内标准同频动作（Codex）
 1. `tools/qf init`
 2. `tools/qf learn MODEL_SYNC=1 PLAN_MODE=strong -log`
 3. `tools/qf ready`
@@ -37,7 +44,12 @@ codex --search --ask-for-approval on-request exec --sandbox workspace-write --js
 5. `tools/qf execute TARGET=do CONFIRM_CONTRACT=1`（执行）
 6. `tools/qf review STRICT=1 AUTO_FIX=1`
 
-## 5. 事件流证据落盘模板
+## 6. /compact 使用规则
+- `/compact` 不是每个 task 的硬门禁。
+- 推荐触发点：里程碑完成后、切换到新子任务前、退出会话前。
+- 固定顺序：先 `tools/qf snapshot NOTE="..."`，再 `/compact`。
+
+## 7. 事件流证据落盘模板
 ```bash
 mkdir -p reports/<RUN_ID>
 set +e
@@ -51,12 +63,12 @@ set -e
 echo CODEX_EXEC_RC:$rc
 ```
 
-## 6. 已观测到的现实行为（本机）
+## 8. 已观测到的现实行为（本机）
 - 在本机环境中，`codex exec --json` 可能出现 `Failed to shutdown rollout recorder`，导致返回码非 0。
 - 即使返回码非 0，`events.jsonl` 与 `output-last-message` 可能已经完整生成。
 - 因此本项目在 learn 模型同频中采用“结果文件+schema 校验”作为通过依据，而不是单看退出码。
 
-## 7. 官方参考
+## 9. 官方参考
 - CLI 参考：`https://developers.openai.com/codex/cli/reference`
 - CLI 功能：`https://developers.openai.com/codex/cli/features`
 - slash 命令：`https://developers.openai.com/codex/cli/slash-commands`

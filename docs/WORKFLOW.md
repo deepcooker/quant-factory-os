@@ -71,6 +71,11 @@ This document describes the expected workflow for changes in this repository.
   - Resolution persistence: `abandon-new` is stored in `ready.json` for the same RUN to avoid repeated prompts on subsequent `ready`.
   - Ready also writes discussion brief to `SYNC/discussion/{RUN_ID}/ready_brief.json|md`.
   - Gate: `tools/qf do` must fail without valid `ready.json`.
+- `S2.4 Plan protocol gate` (discussion-first, required for complex changes)
+  - Interactive planning command: Codex `/plan` (not `tools/qf plan`).
+  - Required output packet (strong): goal/non-goal/evidence/alternatives/rebuttal/decision+stop-condition.
+  - Confirmation: plan must be explicitly accepted before entering execution target.
+  - Evidence sink: record final accepted plan into run evidence (`direction_contract` / `execution_contract` / `decision.md`).
 - `S2.5 Direction gate`: `tools/qf orient` + `tools/qf choose`
   - Input: `docs/PROJECT_GUIDE.md` + governance docs + state/evidence.
   - Output:
@@ -97,6 +102,9 @@ This document describes the expected workflow for changes in this repository.
 - `S2.9 Discuss shortcut`: `tools/qf discuss`
   - Purpose: one command to run discussion chain (`orient/choose/council/arbiter/slice`) and stop before execution.
   - Default target: `prepare` (prints `EXECUTE_STATUS: prepared` + next do command).
+- `tools/qf plan [N]` (legacy helper)
+  - Purpose: generate `TASKS/TODO_PROPOSAL.md` queue suggestions only.
+  - Non-goal: this command is not the planning gate and does not authorize execution.
 - `S3 Execute`: `tools/qf do queue-next`
   - Input: valid gates (`ready.json` + `orient_choice.json` + `council.json` + `execution_contract.json` + `slice_state.json`)
   - Output: task pick + evidence skeleton + execution trace updates
@@ -153,6 +161,10 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - For anti-loss fallback, store concise session checkpoints in
   `reports/{RUN_ID}/conversation.md` via:
   - `tools/qf snapshot RUN_ID=<run-id> NOTE="decision/next-step summary"`
+- `/compact` policy:
+  - Use when conversation/context becomes large or when moving to a new milestone.
+  - Not a mandatory "every task" gate.
+  - Always snapshot first, then compact.
 - `tools/qf do` / `tools/qf resume` 自动记录执行轨迹到
   `reports/{RUN_ID}/execution.jsonl`（默认脱敏，可审计）。
 - `tools/qf sync` / `tools/qf ready` / `tools/qf orient` / `tools/qf choose` /

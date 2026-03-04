@@ -208,6 +208,8 @@
     - 讨论模式：`codex --sandbox read-only --ask-for-approval never --search`
     - 执行模式：`codex --sandbox workspace-write --ask-for-approval on-request --search`
     - 非交互审计：`codex exec --json ...`
+    - 规划协议：先用 Codex `/plan`，确认后再进入执行链路
+    - 去歧义：`tools/qf plan` 仅生成队列提案，不等于 `/plan`
   - 当前已确认版本：`codex-cli 0.106.0`
   - 操作手册：`docs/CODEX_CLI_OPERATION.md`
   - 相关文件：`AGENTS.md`、`docs/WORKFLOW.md`、`tools/qf`
@@ -228,3 +230,15 @@
   - `SYNC/SESSION_LATEST.md`
   - `TASKS/STATE.md`
   - `reports/run-2026-03-02-qf-ready/decision.md`
+
+### 18. `/plan`、`tools/qf plan`、`/compact` 应该怎么用，什么时候用？
+- 回答：
+  - `Codex /plan`：讨论协议命令，用于进入“先规划后执行”的模式；适合复杂需求收敛。
+  - `tools/qf plan`：本地队列提案工具，生成 `TASKS/TODO_PROPOSAL.md`，不构成执行许可。
+  - 推荐顺序：`/plan -> 确认 -> tools/qf discuss/execute/do`。
+  - `/compact`：用于上下文过大时压缩，不要求每个 task 强制执行。
+  - `/compact` 前必须先落仓库证据：`tools/qf snapshot NOTE="decision + next step"`。
+- 证据文件：
+  - `docs/CODEX_CLI_OPERATION.md`
+  - `docs/WORKFLOW.md`
+  - `AGENTS.md`
