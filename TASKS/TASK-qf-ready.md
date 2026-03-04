@@ -15,7 +15,7 @@ PRIORITY: P1
 - `docs/CODEX_CLI_OPERATION.md`
 - `README.md`
 - `AGENTS.md`
-- `SYNC/`
+- `chatlogs/sync/`
 - `TASKS/`
 - `reports/{RUN_ID}/`
 - `reports/projects/`

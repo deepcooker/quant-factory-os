@@ -11,7 +11,7 @@ PRIORITY: P1
 - `AGENTS.md`
 - `README.md`
 - `docs/`
-- `SYNC/`
+- `chatlogs/sync/`
 - `reports/{RUN_ID}/`
 
 ## Non-goals

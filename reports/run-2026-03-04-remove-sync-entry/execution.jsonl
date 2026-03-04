@@ -1,0 +1,3 @@
+{"ts":"2026-03-05T00:49:35+08:00","run_id":"run-2026-03-04-remove-sync-entry","phase":"init","action":"init_checked","status":"ok","command":"tools/qf init check","artifacts":"status=needs_resume;reason_codes=WORKTREE_DIRTY","error":""}
+{"ts":"2026-03-05T00:49:35+08:00","run_id":"run-2026-03-04-remove-sync-entry","phase":"init","action":"init_checked","status":"ok","command":"tools/qf init status","artifacts":"status=needs_resume;reason_codes=WORKTREE_DIRTY","error":""}
+{"ts":"2026-03-05T00:49:40+08:00","run_id":"run-2026-03-04-remove-sync-entry","phase":"init","action":"init_checked","status":"ok","command":"tools/qf init main","artifacts":"status=blocked;reason_codes=WORKTREE_DIRTY","error":""}

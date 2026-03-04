@@ -1,0 +1,64 @@
+You are performing strict onboarding sync for quant-factory-os.
+Read the listed files with tools/view.sh and reply with JSON only.
+
+PROJECT_ID: project-0
+CONTEXT_RUN_ID: run-2026-03-04-resume-self-block-fix
+
+Required files to read:
+- README.md
+- SYNC/README.md
+- SYNC/READ_ORDER.md
+- SYNC/CURRENT_STATE.md
+- SYNC/SESSION_LATEST.md
+- SYNC/DECISIONS_LATEST.md
+- SYNC/LINKS.md
+- SYNC/EXAM_PLAN_PROMPT.md
+- SYNC/EXAM_ANSWER_TEMPLATE.md
+- SYNC/EXAM_WORKFLOW.md
+- SYNC/EXAM_RUBRIC.json
+- AGENTS.md
+- docs/WORKFLOW.md
+- docs/ENTITIES.md
+- docs/CODEX_CLI_OPERATION.md
+- docs/PROJECT_GUIDE.md
+- TASKS/QUEUE.md
+- TASKS/TASK-resume-self-block-fix.md
+
+Output requirements:
+- Do not run write commands.
+- Do not include markdown fences.
+- JSON must follow this schema exactly:
+{
+  "mainline": "<string>",
+  "current_stage": "<string>",
+  "next_step": "<string>",
+  "files_read": ["<path1>", "<path2>"],
+  "plan_protocol": {
+    "goal": "<string>",
+    "non_goal": "<string>",
+    "evidence": ["<path or claim>"],
+    "alternatives": ["<alt1>", "<alt2>"],
+    "rebuttal": "<string>",
+    "decision_stop_condition": "<string>"
+  },
+  "oral_restate": {
+    "project_understanding": "<string>",
+    "constitution_workflow": "<string>",
+    "evidence_chain": "<string>",
+    "session_continuity": "<string>",
+    "current_focus": "<string>",
+    "next_action": "<string>"
+  },
+  "oral_exam": [
+    {"question":"<q1>","answer":"<a1>","score":"pass|fail"},
+    {"question":"<q2>","answer":"<a2>","score":"pass|fail"},
+    {"question":"<q3>","answer":"<a3>","score":"pass|fail"}
+  ]
+}
+
+Strong mode gates:
+- plan_protocol fields are mandatory.
+- oral_restate fields are mandatory.
+- oral_exam must contain at least 3 QA items.
+
+files_read must be a subset of the required files list above.

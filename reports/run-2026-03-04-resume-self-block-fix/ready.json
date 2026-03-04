@@ -1,7 +1,7 @@
 {
   "project_id": "project-0",
   "run_id": "run-2026-03-04-resume-self-block-fix",
-  "created_at_utc": "2026-03-04T06:40:11.330742+00:00",
+  "created_at_utc": "2026-03-04T07:34:33.104926+00:00",
   "constitution_read": true,
   "workflow_read": true,
   "sync_gate": {
@@ -39,7 +39,7 @@
       "summary_exists": true,
       "conversation_exists": true,
       "execution_exists": true,
-      "ship_state_exists": false
+      "ship_state_exists": true
     },
     "session_continuity": "ready_to_continue",
     "current_stage": {

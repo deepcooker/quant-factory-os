@@ -17,7 +17,7 @@ PROXY_URL=http://127.0.0.1:7890 ./tools/start.sh
 ```
 
 ## Single source map
-- Session entrypoint owner: `SYNC/READ_ORDER.md`
+- Session entrypoint owner: `AGENTS.md` + `docs/PROJECT_GUIDE.md`
 - Hard rules owner: `AGENTS.md`
 - Execution workflow owner: `docs/WORKFLOW.md`
 - Entity definitions owner: `docs/ENTITIES.md`
@@ -27,22 +27,22 @@ PROXY_URL=http://127.0.0.1:7890 ./tools/start.sh
 - `README.md` is index-only.
 - Rules live in `AGENTS.md`.
 - Process/state machine lives in `docs/WORKFLOW.md`.
-- Session sync snapshots live in `SYNC/*`.
+- Session/讨论草稿 live in `chatlogs/discussion/*` (non-source-of-truth).
 
 ## Primary docs
-- `SYNC/README.md`
-- `SYNC/READ_ORDER.md`
 - `AGENTS.md`
 - `docs/WORKFLOW.md`
 - `docs/ENTITIES.md`
 - `docs/PROJECT_GUIDE.md`
 - `docs/CODEX_CLI_OPERATION.md`
+- `docs/LEARN_EXAM_RUBRIC.json`
+- `docs/LEARN_EXAM_ANSWER_TEMPLATE.md`
 
 ## Repo layout
 - `TASKS/`: queue and task contracts
 - `reports/`: per-RUN evidence
 - `docs/`: canonical docs
-- `SYNC/`: cross-session handoff entry layer
+- `chatlogs/`: local chat/discussion artifacts
 - `tools/`: execution scripts
 - `tests/`: guardrail tests
 

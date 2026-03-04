@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_RUBRIC = Path("SYNC/EXAM_RUBRIC.json")
+DEFAULT_RUBRIC = Path("docs/LEARN_EXAM_RUBRIC.json")
 
 
 @dataclass
@@ -195,7 +195,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--rubric-file",
         default=str(DEFAULT_RUBRIC),
-        help="Rubric json file path. Default: SYNC/EXAM_RUBRIC.json",
+        help="Rubric json file path. Default: docs/LEARN_EXAM_RUBRIC.json",
     )
     p.add_argument(
         "--output-file",

@@ -1,7 +1,7 @@
 # PROJECT_GUIDE.md
 
 ## 同频入口导航（先看）
-- 启动阅读顺序真相源：`SYNC/READ_ORDER.md`
+- 启动阅读顺序真相源：`AGENTS.md` + `docs/PROJECT_GUIDE.md`
 - 详细状态机和每步输入输出：`docs/WORKFLOW.md`
 - Codex 参数与命令实践：`docs/CODEX_CLI_OPERATION.md`
 - 策略问答与项目认知：`docs/PROJECT_GUIDE.md`
@@ -64,8 +64,8 @@
     - `tools/qf learn MODEL_SYNC=1 PLAN_MODE=strong -log`
     - `tools/qf ready`
   - 必读文件清单：
-    - `SYNC/READ_ORDER.md`
     - `AGENTS.md`
+    - `docs/PROJECT_GUIDE.md`
     - `docs/WORKFLOW.md`
     - `docs/ENTITIES.md`
     - `TASKS/STATE.md`
@@ -87,9 +87,9 @@
 ### 6. 这个项目当前工作流是什么样的？
 - 回答：
   - 工作流说明位置：`docs/WORKFLOW.md`。
-  - 主流程：`init -> sync -> learn -> ready -> orient -> choose -> council -> arbiter -> slice -> do -> review -> ship`。
+  - 主流程：`init -> learn -> ready -> orient -> choose -> council -> arbiter -> slice -> do -> review -> ship`。
   - 子流程：
-    - 同频子流程：`init/sync/learn/ready`
+    - 同频子流程：`init/learn/ready`
     - 讨论子流程：`orient/choose/council/arbiter/slice`
     - 执行子流程：`do/review/ship`
   - 操作指南位置：`AGENTS.md`（硬规则）+ `docs/WORKFLOW.md`（状态机）+ `docs/CODEX_CLI_OPERATION.md`（CLI实践）。
@@ -113,13 +113,12 @@
 
 ### 8. 你查了最近的session说了什么，你是从哪里查的？
 - 回答：
-  - 查阅路径：`SYNC/SESSION_LATEST.md`、`SYNC/CURRENT_STATE.md`、`reports/<RUN_ID>/conversation.md`、`summary.md`、`decision.md`。
+  - 查阅路径：`TASKS/STATE.md`、`reports/<RUN_ID>/conversation.md`、`summary.md`、`decision.md`。
   - 最近 session 摘要：主线是“强化 learn 同频、明确 codex 与模型交互证据、压缩流程摩擦并保持文档实时更新”。
   - 如果你认为不对：回到源证据文件逐条核对，以 `conversation.md + decision.md + 已合并PR` 为准。
   - 是否偏离主线判断：凡是不能提升“同频可信度/执行闭环/证据可审计”的动作都算偏离。
 - 证据文件：
-  - `SYNC/SESSION_LATEST.md`
-  - `SYNC/CURRENT_STATE.md`
+  - `TASKS/STATE.md`
   - `reports/run-2026-03-02-qf-ready/conversation.md`
   - `reports/run-2026-03-02-qf-ready/decision.md`
 
@@ -144,7 +143,7 @@
 - 证据文件：
   - `docs/WORKFLOW.md`
   - `tools/qf`
-  - `SYNC/discussion/<RUN_ID>/council.json`
+  - `chatlogs/discussion/<RUN_ID>/council.json`
   - `reports/<RUN_ID>/execution_contract.json`
 
 ### 11. 项目基建里的task，pr，run，product 的都是什么意思，还有其他的概念吗，他们的生命周期管理是怎么样的？
@@ -164,14 +163,14 @@
 - 回答：
   - 从 `orient` 开始；随后 `choose -> council -> arbiter -> slice`。
   - 最新方向存储：
-    - 草案：`SYNC/discussion/<RUN_ID>/orient.md|json`
+    - 草案：`chatlogs/discussion/<RUN_ID>/orient.md|json`
     - 选择结果：`reports/<RUN_ID>/orient_choice.json`
     - 收敛合同：`reports/<RUN_ID>/execution_contract.json|md`
   - 需求讨论需要多角色；与代码实施角色相关但职责不同（讨论是决策层，实施是执行层）。
 - 证据文件：
   - `docs/WORKFLOW.md`
   - `AGENTS.md`
-  - `SYNC/discussion/`
+  - `chatlogs/discussion/`
   - `reports/<RUN_ID>/`
 
 ### 13. 我们分支代码的管理是怎么样的，现在满足需求吗？
@@ -234,7 +233,7 @@
   - 偏离判定：任何不能增强这三项的动作都是偏离。
   - 接下来动作：先保证 `PROJECT_GUIDE` 成为高质量问答真相源，再用该真相源驱动 learn 与考试，最后继续收敛流程自动化。
 - 证据文件：
-  - `SYNC/SESSION_LATEST.md`
+  - `TASKS/STATE.md`
   - `TASKS/STATE.md`
   - `reports/run-2026-03-02-qf-ready/decision.md`
 
