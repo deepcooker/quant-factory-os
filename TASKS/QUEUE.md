@@ -12,7 +12,8 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
-- [>] TODO Title: qf resume reliability: avoid self-block on checkout main  Picked: run-2026-03-04-resume-self-block-fix 2026-03-04T14:23:57+0800
+- [x] TODO Title: qf resume reliability: avoid self-block on checkout main  Picked: run-2026-03-04-resume-self-block-fix 2026-03-04T14:23:57+0800
+  Done: PR #163, RUN_ID=run-2026-03-04-resume-self-block-fix
   Goal: 修复 `tools/qf resume` 在收尾同步阶段因自身写日志导致工作区变脏而卡住 `git checkout main` 的问题。
   Scope: `tools/qf`, `tests/`, `AGENTS.md`, `docs/WORKFLOW.md`, `TASKS/STATE.md`, `reports/{RUN_ID}/`
   Acceptance:
