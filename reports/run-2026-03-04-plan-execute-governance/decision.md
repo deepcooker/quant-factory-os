@@ -25,4 +25,5 @@ RUN_ID: `run-2026-03-04-plan-execute-governance`
 - Rollback plan:
   - Revert this RUN’s doc diffs and restore previous `TASKS/STATE.md` pointer.
 - Stop reason:
-  - `needs_human_decision` (whether to proceed with follow-up script-level refactor in next run)
+  - `task_done`
+  - Follow-up remains optional: script-level rename/hard-gate for `tools/qf plan`.
