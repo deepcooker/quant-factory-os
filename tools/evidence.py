@@ -19,6 +19,23 @@ def _git(cmd: list[str], cwd: Path) -> str | None:
         return None
 
 
+def _state_task_for_run(repo: Path, run_id: str) -> str | None:
+    state = repo / "TASKS" / "STATE.md"
+    if not state.exists():
+        return None
+    current_run = None
+    current_task = None
+    for raw in state.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if line.startswith("CURRENT_RUN_ID:"):
+            current_run = line.split(":", 1)[1].strip()
+        elif line.startswith("CURRENT_TASK_FILE:"):
+            current_task = line.split(":", 1)[1].strip()
+    if current_run == run_id and current_task:
+        return current_task
+    return None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run-id", required=True)
@@ -30,6 +47,10 @@ def main() -> int:
 
     meta = {
         "run_id": args.run_id,
+        "task_id": os.getenv("TASK_ID") or _state_task_for_run(repo, args.run_id) or "",
+        "stop_reason": os.getenv("STOP_REASON") or "",
+        "commands_run": [],
+        "artifacts": [],
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "cwd": str(repo),
         "user": os.getenv("USER") or os.getenv("USERNAME") or "unknown",

@@ -11,8 +11,10 @@ PRIORITY: P1
 ## Scope (Required)
 - `AGENTS.md`
 - `docs/WORKFLOW.md`
+- `docs/ENTITIES.md`
 - `docs/CODEX_CLI_OPERATION.md`
 - `docs/PROJECT_GUIDE.md`
+- `tools/evidence.py`
 - `TASKS/QUEUE.md`
 - `TASKS/STATE.md`
 - `reports/{RUN_ID}/`

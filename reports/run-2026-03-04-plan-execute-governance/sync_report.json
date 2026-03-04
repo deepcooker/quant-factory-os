@@ -1,0 +1,380 @@
+{
+  "project_id": "project-0",
+  "run_id": "run-2026-03-04-plan-execute-governance",
+  "created_at_utc": "2026-03-04T05:50:10.862299+00:00",
+  "sync_passed": true,
+  "required_files": [
+    "README.md",
+    "SYNC/README.md",
+    "SYNC/READ_ORDER.md",
+    "SYNC/CURRENT_STATE.md",
+    "SYNC/SESSION_LATEST.md",
+    "SYNC/DECISIONS_LATEST.md",
+    "SYNC/LINKS.md",
+    "SYNC/EXAM_PLAN_PROMPT.md",
+    "SYNC/EXAM_ANSWER_TEMPLATE.md",
+    "SYNC/EXAM_WORKFLOW.md",
+    "SYNC/EXAM_RUBRIC.json",
+    "AGENTS.md",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/CODEX_CLI_OPERATION.md",
+    "docs/PROJECT_GUIDE.md",
+    "TASKS/STATE.md",
+    "TASKS/QUEUE.md"
+  ],
+  "missing_required_files": [],
+  "files_read": [
+    {
+      "path": "README.md",
+      "required": true,
+      "exists": true,
+      "bytes": 1171,
+      "lines": 52,
+      "sha256": "8664631f9586236f11471ee9926b1079c4e7c835c446a7a437ab1098f03c099c",
+      "preview": "# quant-factory-os"
+    },
+    {
+      "path": "SYNC/README.md",
+      "required": true,
+      "exists": true,
+      "bytes": 4131,
+      "lines": 64,
+      "sha256": "b00747cf4d0bbd25f328b5d1cf1a325adac1cba9736f03c8afdd24e6c87088b7",
+      "preview": "# 同频入口"
+    },
+    {
+      "path": "SYNC/READ_ORDER.md",
+      "required": true,
+      "exists": true,
+      "bytes": 2033,
+      "lines": 51,
+      "sha256": "6eed4e8afe9d34b17f8fc30bc57388254be785fcbbb75fbbddda0f740eb40154",
+      "preview": "# 阅读顺序"
+    },
+    {
+      "path": "SYNC/CURRENT_STATE.md",
+      "required": true,
+      "exists": true,
+      "bytes": 1239,
+      "lines": 26,
+      "sha256": "79bc5dbef317ab11fbba8a8cb9b798e37a2688882e1ca188abc989a329f13925",
+      "preview": "# 当前状态"
+    },
+    {
+      "path": "SYNC/SESSION_LATEST.md",
+      "required": true,
+      "exists": true,
+      "bytes": 1089,
+      "lines": 22,
+      "sha256": "e6b6474e2e61b247dad18333479d5b529f6838d8462c248d747f21cbc93d583c",
+      "preview": "# Session 总结（Latest）"
+    },
+    {
+      "path": "SYNC/DECISIONS_LATEST.md",
+      "required": true,
+      "exists": true,
+      "bytes": 1333,
+      "lines": 24,
+      "sha256": "e04f4d280efc9bb1745dcdf2353647e2a4fff99151524f5bd6812bbbb7f69c29",
+      "preview": "# 最新决策"
+    },
+    {
+      "path": "SYNC/LINKS.md",
+      "required": true,
+      "exists": true,
+      "bytes": 696,
+      "lines": 28,
+      "sha256": "d5aa24648789c3483410c825684f4737b537d37c245715c5e162af57e8a7fdad",
+      "preview": "# 索引链接"
+    },
+    {
+      "path": "SYNC/EXAM_PLAN_PROMPT.md",
+      "required": true,
+      "exists": true,
+      "bytes": 1331,
+      "lines": 37,
+      "sha256": "8c7892c4f2296bc73a030c90ec6e7d676dc9493a1177025507daec655ad471af",
+      "preview": "# /plan 同频深度考试题面（v2）"
+    },
+    {
+      "path": "SYNC/EXAM_ANSWER_TEMPLATE.md",
+      "required": true,
+      "exists": true,
+      "bytes": 2720,
+      "lines": 91,
+      "sha256": "a582e664a3394772ac242460cbb789f86b2571f1e4ba425cad57e15565ca8835",
+      "preview": "# 同频考试答题模板（v2）"
+    },
+    {
+      "path": "SYNC/EXAM_WORKFLOW.md",
+      "required": true,
+      "exists": true,
+      "bytes": 777,
+      "lines": 32,
+      "sha256": "820d6874def6d19ee20b7012de2a1daebef704315f6d4a01f74629f69a8f1561",
+      "preview": "# 同频考试工作流（v2）"
+    },
+    {
+      "path": "SYNC/EXAM_RUBRIC.json",
+      "required": true,
+      "exists": true,
+      "bytes": 6047,
+      "lines": 193,
+      "sha256": "d305a538b9fefb4fd92ea299b21eb8fc77cefdfb98071e5982447ead7aa583ea",
+      "preview": "{"
+    },
+    {
+      "path": "AGENTS.md",
+      "required": true,
+      "exists": true,
+      "bytes": 13673,
+      "lines": 242,
+      "sha256": "b3dcc2d6056b384c048e27d4e05c38edde650a2ef25f2bba2f0d50f94f4cccb5",
+      "preview": "# AGENTS.md (Hard Rules for Codex / Agents)"
+    },
+    {
+      "path": "docs/WORKFLOW.md",
+      "required": true,
+      "exists": true,
+      "bytes": 19332,
+      "lines": 287,
+      "sha256": "3cca46296ff3d4bb32a3a8fa4639c0da31481ab3163c227c0268fccabe973a8f",
+      "preview": "# WORKFLOW"
+    },
+    {
+      "path": "docs/ENTITIES.md",
+      "required": true,
+      "exists": true,
+      "bytes": 4595,
+      "lines": 107,
+      "sha256": "e6bfcaab226b32a93d67974a2bbdfbb6c6c140cc4bfa637cc81835d31828bb3c",
+      "preview": "# ENTITIES"
+    },
+    {
+      "path": "docs/CODEX_CLI_OPERATION.md",
+      "required": true,
+      "exists": true,
+      "bytes": 3348,
+      "lines": 77,
+      "sha256": "bbf7d1252b77160688fec9925b4c517438013a3d06f48f4008bf18c35c23db30",
+      "preview": "# CODEX_CLI_OPERATION"
+    },
+    {
+      "path": "docs/PROJECT_GUIDE.md",
+      "required": true,
+      "exists": true,
+      "bytes": 12769,
+      "lines": 244,
+      "sha256": "68559881f0aff094df01d62f327a9b91d2dcaa8fb94ef30a02d49db9d79234ce",
+      "preview": "# PROJECT_GUIDE.md"
+    },
+    {
+      "path": "TASKS/STATE.md",
+      "required": true,
+      "exists": true,
+      "bytes": 2197,
+      "lines": 210,
+      "sha256": "289207fc51262ad7a4089998f359337462c245e5bbed4151e2f1b94beeaf063c",
+      "preview": "# STATE"
+    },
+    {
+      "path": "TASKS/QUEUE.md",
+      "required": true,
+      "exists": true,
+      "bytes": 34879,
+      "lines": 488,
+      "sha256": "63b54f35dd589691c49d2a74b2ca2424d0fe72c10a65b87c22df05788873fff0",
+      "preview": "# QUEUE"
+    },
+    {
+      "path": "TASKS/TASK-plan-execute-governance.md",
+      "required": false,
+      "exists": true,
+      "bytes": 1720,
+      "lines": 49,
+      "sha256": "d2f1129a6c3061ba49ab430eb40e82d3fe12cdcf050db52ac68a157b6c529039",
+      "preview": "# TASK: plan-execute governance: /plan 与 qf plan 去歧义 + /compact 策略落地"
+    },
+    {
+      "path": "reports/run-2026-03-04-plan-execute-governance/handoff.md",
+      "required": false,
+      "exists": true,
+      "bytes": 745,
+      "lines": 24,
+      "sha256": "f749f794760e8489640172dfab5218f72b50cf169ed7a22965b2982d7ebc4edc",
+      "preview": "# Session 总结"
+    },
+    {
+      "path": "reports/run-2026-03-04-plan-execute-governance/conversation.md",
+      "required": false,
+      "exists": true,
+      "bytes": 168,
+      "lines": 6,
+      "sha256": "8971cde933b18c8abb22a4f85db5d71f3dc2026c381df1d196a37408deac8404",
+      "preview": "## 2026-03-04T12:48:40+08:00"
+    },
+    {
+      "path": "reports/run-2026-03-04-plan-execute-governance/decision.md",
+      "required": false,
+      "exists": true,
+      "bytes": 1444,
+      "lines": 29,
+      "sha256": "412b59cf84eb82c0ddaeed1a22f13e9dfc1b2ad027b35a8d50239660a4347ed4",
+      "preview": "# Decision"
+    },
+    {
+      "path": "reports/run-2026-03-04-plan-execute-governance/summary.md",
+      "required": false,
+      "exists": true,
+      "bytes": 1851,
+      "lines": 49,
+      "sha256": "172d744b318d9e94aa4d195071bd61777d853ca9a407831a910c138aff326984",
+      "preview": "# Summary"
+    },
+    {
+      "path": "reports/run-2026-03-04-plan-execute-governance/orient_choice.json",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "reports/run-2026-03-04-plan-execute-governance/direction_contract.json",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "reports/run-2026-03-04-plan-execute-governance/execution_contract.json",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "reports/run-2026-03-04-plan-execute-governance/slice_state.json",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "reports/run-2026-03-04-plan-execute-governance/drift_review.json",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "reports/run-2026-03-04-plan-execute-governance/drift_review.md",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "SYNC/discussion/run-2026-03-04-plan-execute-governance/ready_brief.json",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "SYNC/discussion/run-2026-03-04-plan-execute-governance/ready_brief.md",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "SYNC/discussion/run-2026-03-04-plan-execute-governance/orient.json",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "SYNC/discussion/run-2026-03-04-plan-execute-governance/orient.md",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "SYNC/discussion/run-2026-03-04-plan-execute-governance/council.json",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "SYNC/discussion/run-2026-03-04-plan-execute-governance/council.md",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    },
+    {
+      "path": "SYNC/discussion/run-2026-03-04-plan-execute-governance/drift_todo.md",
+      "required": false,
+      "exists": false,
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "",
+      "preview": ""
+    }
+  ],
+  "project_overview": {
+    "summary": "quant-factory-os is the governance/execution base for quant engineering.",
+    "north_star": "quant-factory-os is an evidence-driven operating system for quant engineering."
+  },
+  "governance": {
+    "constitution": "AGENTS.md",
+    "workflow": "docs/WORKFLOW.md",
+    "entities": "docs/ENTITIES.md"
+  },
+  "skill_lookup": {
+    "primary": "AGENTS.md (Skills section)",
+    "fallback": "/root/.codex/skills/.system/*/SKILL.md"
+  },
+  "current_stage": {
+    "current_project_id": "project-0",
+    "current_run_id": "run-2026-03-04-plan-execute-governance",
+    "current_task_file": "TASKS/TASK-plan-execute-governance.md",
+    "current_status": "done"
+  },
+  "session_handoff": {
+    "continuity": "ready_to_continue",
+    "has_handoff": true,
+    "has_decision": true,
+    "has_summary": true
+  },
+  "next_command": "tools/qf learn",
+  "next_command_low_friction": "tools/qf learn"
+}

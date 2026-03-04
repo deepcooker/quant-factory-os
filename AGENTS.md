@@ -8,15 +8,24 @@ This repo is an OS for quant engineering. Agents MUST obey these rules.
 - Prefer deterministic scripts + evidence, not long chat.
 
 ## 1) Entry: Tasks are syscall
-- All work MUST start from a task file under /TASKS.
+- All implementation work MUST start from a task file under /TASKS.
+- Pure read-only discussion/investigation is allowed without a task only when no repo mutation happens (no file edits, no generated artifacts, no ship).
+- Before any repo mutation, you MUST create/select an active TASK + RUN_ID.
 - If no task is provided, pick the next unchecked item in QUEUE.md and create a TASK file first.
-- Never change code without an active task ID and RUN_ID.
+- Never change code/docs without an active task ID and RUN_ID.
 
 ## 2) Output: Evidence is memory
 For each task you MUST create/update:
 - reports/<RUN_ID>/meta.json
 - reports/<RUN_ID>/summary.md
 - reports/<RUN_ID>/decision.md
+
+`meta.json` minimum fields (gate-level):
+- `run_id`
+- `task_id`
+- `stop_reason`
+- `commands_run`
+- `artifacts`
 
 Optional:
 - reports/<RUN_ID>/samples/*.csv.gz
@@ -60,6 +69,7 @@ Notes:
 ## Documentation boundary (Hard)
 - `README.md`: index only; do not duplicate hard rules/process details.
 - `AGENTS.md`: hard constraints/gates only; do not store historical run narratives.
+- Keep `AGENTS.md` light: only contract rules + owner pointers. Detailed state machine/options belong to `docs/WORKFLOW.md` and `docs/CODEX_CLI_OPERATION.md`.
 - `docs/WORKFLOW.md`: executable state machine only (step semantics, gate dependencies).
 - `docs/ENTITIES.md`: entity dictionary only.
 - `docs/PROJECT_GUIDE.md`: onboarding Q&A truth source only.
@@ -78,6 +88,10 @@ Notes:
 4) Run `make verify` until green.
 5) Write decision + update summary (what changed / why / risks / verify commands).
 6) Ship via `tools/ship.sh` or `make ship` (if defined).
+
+Gate predicates (minimum):
+- Ready gate requires valid `sync_report.json` + learn report + `ready.json`.
+- Execute gate requires `ready.json`, `orient_choice.json`, `council.json`, `execution_contract.json`, `slice_state.json`.
 
 ## 5.1) Plan/Execute boundary (Hard)
 - Complex changes MUST follow `Plan -> Confirm -> Execute`.
@@ -114,6 +128,7 @@ If stuck or tests fail:
 
 ## 8) Session init gate (Mandatory, once per session)
 Before any implementation, you MUST complete init and pass readiness checks:
+- Detailed step input/output and command options are owned by `docs/WORKFLOW.md`; this section defines mandatory gates only.
 1) Run `tools/qf init` (environment prep only; this is NOT readiness pass).
    - Visible progress markers are required: `INIT_STEP[<i>/<n>]`.
    - `init` must not silently clean `reports/run-*-pick-candidate` directories.
@@ -236,6 +251,9 @@ Before any implementation, you MUST complete init and pass readiness checks:
 - Minimum required updates per process change:
   - `AGENTS.md` (hard rule layer)
   - `docs/WORKFLOW.md` (execution/state-machine layer)
+  - `docs/ENTITIES.md` when schema/field semantics change
+  - `docs/CODEX_CLI_OPERATION.md` when Codex mode/command guidance changes
+  - `docs/PROJECT_GUIDE.md` when strategy/Q&A baseline changes
   - `SYNC/*` entry docs if startup/order semantics changed
   - `TASKS/STATE.md` current pointers if active run/task changed
   - `reports/<RUN_ID>/summary.md` + `reports/<RUN_ID>/decision.md` evidence
