@@ -5,7 +5,7 @@ Standard start
 This document describes the expected workflow for changes in this repository.
 
 ## Document ownership
-- Session entrypoint owner: `SYNC/READ_ORDER.md`
+- Session entrypoint owner: `AGENTS.md` + `docs/PROJECT_GUIDE.md`
 - Hard rules owner: `AGENTS.md`
 - Execution details owner: `docs/WORKFLOW.md` (this file)
 - Entity definitions owner: `docs/ENTITIES.md`
@@ -19,24 +19,23 @@ This document describes the expected workflow for changes in this repository.
   - Exit: before any mutation, bind to active `TASKS/TASK-*.md` + `RUN_ID`.
 - `S0 Environment`: `tools/qf init`
   - Input: local repo checkout
-  - Output: synced main + doctor checks + onboard summary
+  - Output: environment/readiness diagnosis only (account/version/branch/diff/run-context/last-change evidence)
   - Note: this is environment preparation only, not readiness pass.
   - Output visibility: prints `INIT_STEP[<i>/<n>]` stage markers.
-  - Safety: no implicit cleanup of `reports/run-*-pick-candidate` directories.
+  - Safety: no automatic stash/sync/handoff side effects.
   - Boundary: init does not create a new business `RUN_ID`; it uses `CURRENT_RUN_ID` when present, otherwise session context only.
   - Project context: reads `CURRENT_PROJECT_ID` from `TASKS/STATE.md` (defaults to `project-0`).
-  - Continuing runs: auto-handoff is executed by default (`QF_INIT_AUTO_HANDOFF=1`).
+  - Modes:
+    - default (`tools/qf init`): check + recommendation output (`INIT_STATUS` + `INIT_NEXT`)
+    - `-status`: status-only query, suppress resume reminder text
+    - `-main`: strict mode, requires main-oriented clean state; otherwise non-zero exit
 - `S1 Handoff`: `tools/qf handoff`
   - Input: `CURRENT_RUN_ID` (or explicit RUN_ID)
   - Output: `reports/{RUN_ID}/handoff.md`
   - Note: this is context reconstruction only, not readiness pass.
   - Format: concise session summary (main thread, key conclusions, small reflection, one next command).
-- `S1.5 Sync Evidence`: `tools/qf sync`
-  - Input: `SYNC/READ_ORDER.md` + required governance/startup files.
-  - Output: `reports/{RUN_ID}/sync_report.json` + `reports/{RUN_ID}/sync_report.md`.
-  - Gate: marks whether required sync files are all present/readable (`sync_passed`).
 - `S1.6 Learn Gate`: `tools/qf learn`
-  - Input: valid sync report; optional exam auto-flow (`tools/qf exam-auto`).
+  - Input: required owner docs (`AGENTS.md` + `docs/PROJECT_GUIDE.md` + workflow/entities/state/queue); optional exam auto-flow (`tools/qf exam-auto`).
   - Output: `reports/projects/{project_id}/session/learn.json` + `reports/projects/{project_id}/session/learn.md`.
   - Output visibility: prints `LEARN_STEP[<i>/<n>]` stage markers.
   - Optional stdout mirror: `tools/qf learn -log` writes `reports/projects/{project_id}/session/learn.stdout.log` (or `LOG=<path>`).
@@ -65,15 +64,14 @@ This document describes the expected workflow for changes in this repository.
   - Output: `reports/{RUN_ID}/ready.json`
   - Output visibility: prints `READY_STEP[<i>/<n>]` stage markers.
   - Machine-readable stream (optional): `QF_EVENT_STREAM=1` emits JSONL step events to stdout.
-  - Learn dependency: `QF_READY_REQUIRE_LEARN=auto` (default) enforces learn gate when sync gate is enabled.
+  - Learn dependency: `QF_READY_REQUIRE_LEARN=auto` (default) enforces learn gate by default.
     - auto recovery: `QF_READY_AUTO_LEARN=1` auto-runs `tools/qf learn` when learn evidence is missing/expired.
-  - Sync dependency: requires valid `sync_report.json`; default auto-runs `tools/qf sync` if missing (`QF_READY_AUTO_SYNC=1`).
   - Low-friction mode: fields auto-fill from active task contract by default (`QF_READY_AUTO=1`).
   - Exit resolution gate: if unresolved run context is detected, must choose:
     - `DECISION=resume-close` (run `tools/qf resume`)
     - `DECISION=abandon-new` (continue new direction cycle)
   - Resolution persistence: `abandon-new` is stored in `ready.json` for the same RUN to avoid repeated prompts on subsequent `ready`.
-  - Ready also writes discussion brief to `SYNC/discussion/{RUN_ID}/ready_brief.json|md`.
+  - Ready also writes discussion brief to `chatlogs/discussion/{RUN_ID}/ready_brief.json|md`.
   - Gate: `tools/qf do` must fail without valid `ready.json`.
 - `S2.4 Plan protocol gate` (discussion-first, required for complex changes)
   - Interactive planning command: Codex `/plan` (not `tools/qf plan`).
@@ -83,15 +81,15 @@ This document describes the expected workflow for changes in this repository.
 - `S2.5 Direction gate`: `tools/qf orient` + `tools/qf choose`
   - Input: `docs/PROJECT_GUIDE.md` + governance docs + state/evidence.
   - Output:
-    - discussion draft: `SYNC/discussion/{RUN_ID}/orient.json|md`
+    - discussion draft: `chatlogs/discussion/{RUN_ID}/orient.json|md`
     - confirmed decision: `reports/{RUN_ID}/orient_choice.json`
     - direction contract: `reports/{RUN_ID}/direction_contract.json|md`
   - Purpose: confirm direction/priority before execution queue pick.
 - `S2.6 Council gate`: `tools/qf council`
   - Input: `orient_choice.json` + `direction_contract.json`
-  - Output: `SYNC/discussion/{RUN_ID}/council.json|md`
+  - Output: `chatlogs/discussion/{RUN_ID}/council.json|md`
   - Purpose: product/architect/dev/qa independent review before convergence.
-  - Rule: council output must be evidence-based (sync/ready/scope/verify/docs/queue pressure checks), not static templates.
+  - Rule: council output must be evidence-based (learn/ready/scope/verify/docs/queue pressure checks), not static templates.
 - `S2.7 Arbiter gate`: `tools/qf arbiter`
   - Input: `council.json` + `direction_contract.json`
   - Output: `reports/{RUN_ID}/execution_contract.json|md`
@@ -126,7 +124,7 @@ This document describes the expected workflow for changes in this repository.
   - Auto mode: `QF_EXECUTE_AUTO_CHOOSE=1 tools/qf execute` uses orient recommended option and continues through `council->arbiter->slice->do`.
 - `S3.5 Review`: `tools/qf review`
   - Input: run evidence (`summary/decision/ready/choice/contract`) and optional flags (`AUTO_FIX`, `STRICT`).
-  - Output: `reports/{RUN_ID}/drift_review.json|md`; blockers additionally write `SYNC/discussion/{RUN_ID}/drift_todo.md`.
+  - Output: `reports/{RUN_ID}/drift_review.json|md`; blockers additionally write `chatlogs/discussion/{RUN_ID}/drift_todo.md`.
   - Gate: strict mode blockers must be resolved before ship.
 - `S4 Ship`: `tools/ship.sh` (or `make ship`)
   - Input: verified diff + in-scope task contract
@@ -183,11 +181,11 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   `reports/{RUN_ID}/execution.jsonl`（默认脱敏，可审计）。
 - `tools/qf resume` 在同步回 `main` 前若检测到脏工作区，会自动 stash
   `qf-resume-cleanup-run-{RUN_ID}-wip-*`，避免因自身日志写入导致 checkout 自阻塞。
-- `tools/qf sync` / `tools/qf ready` / `tools/qf orient` / `tools/qf choose` /
+- `tools/qf ready` / `tools/qf orient` / `tools/qf choose` /
   `tools/qf council` / `tools/qf arbiter` / `tools/qf slice` 默认写入
   `reports/{RUN_ID}/conversation.md` checkpoint（可用 `QF_AUTO_CONVERSATION=0` 关闭）。
 - Discussion drafts are intentionally separated from execution evidence:
-  - pre-confirmation drafts in `SYNC/discussion/{RUN_ID}/`
+  - pre-confirmation drafts in `chatlogs/discussion/{RUN_ID}/`
   - post-confirmation execution evidence in `reports/{RUN_ID}/`
 - 断线恢复建议先生成接班摘要：
   - `tools/qf handoff RUN_ID=<run-id>` -> `reports/{RUN_ID}/handoff.md`
@@ -204,15 +202,13 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   (`summary.md`, `decision.md`, `MISTAKES/`) or in `TASKS/STATE.md`, not in chat.
 - `TASKS/STATE.md` is the source-of-truth for `CURRENT_PROJECT_ID` and `CURRENT_RUN_ID`.
 
-## Sync completion criteria (must be true before execution)
+## Readiness completion criteria (must be true before execution)
 - `tools/qf init` completed successfully.
-- `tools/qf handoff` completed for continuing runs (auto by init unless explicitly disabled).
-- `tools/qf sync` produced valid `reports/{RUN_ID}/sync_report.json`.
 - `tools/qf learn` produced valid `reports/projects/{project_id}/session/learn.json` (`RUN_ID` optional).
 - `tools/qf ready` produced `reports/{RUN_ID}/ready.json`.
-- `tools/qf orient` produced `SYNC/discussion/{RUN_ID}/orient.json`.
+- `tools/qf orient` produced `chatlogs/discussion/{RUN_ID}/orient.json`.
 - `tools/qf choose` produced `reports/{RUN_ID}/orient_choice.json`.
-- `tools/qf council` produced `SYNC/discussion/{RUN_ID}/council.json`.
+- `tools/qf council` produced `chatlogs/discussion/{RUN_ID}/council.json`.
 - `tools/qf arbiter` produced `reports/{RUN_ID}/execution_contract.json`.
 - `tools/qf slice` produced `reports/{RUN_ID}/slice_state.json`.
 - `tools/qf do queue-next` requires all gates above and then picks via `tools/task.sh --next`.
@@ -222,31 +218,30 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 ## Codex session startup checklist
 - Do not rely on chat/session memory; rely only on repo memory:
   `TASKS/STATE.md`, `TASKS/QUEUE.md`, `reports/{RUN_ID}/`.
-- First read owner entrypoint: `SYNC/READ_ORDER.md`.
+- First read owner entrypoint: `AGENTS.md` + `docs/PROJECT_GUIDE.md`.
 - Codex 参数/模式参考：`docs/CODEX_CLI_OPERATION.md`。
-- Preferred entrypoint: `tools/qf` (`init/sync/learn/ready/orient/choose/council/arbiter/slice/execute/do/review/resume`).
+- Preferred entrypoint: `tools/qf` (`init/learn/ready/orient/choose/council/arbiter/slice/execute/do/review/resume`).
 - Compatibility wrappers: `tools/enter.sh` and `tools/onboard.sh` forward to `tools/qf`.
-- 1) 运行 `tools/qf init`（自动 stash 可恢复 + sync main + doctor + onboard）。
+- 1) 运行 `tools/qf init`（环境体检；不自动改工作区，不自动 handoff）。
+- 1.1) 只看状态可用：`tools/qf init -status`（抑制 resume 提示文案）。
+- 1.2) 强制 main 约束可用：`tools/qf init -main`（不满足即失败）。
 - 1.0) 若希望在终端消费结构化日志，可设置 `QF_EVENT_STREAM=1`（stdout 会追加 JSONL 事件）。
-- 1.1) 可选清理历史临时 stash：先预览 `tools/qf stash-clean`，确认后执行 `tools/qf stash-clean apply KEEP=0`。
-- 2) 若为接力会话（`CURRENT_RUN_ID` 已存在），`tools/qf init` 默认自动执行 `handoff`。
-- 2.1) 如需手动控制，可用：`QF_INIT_AUTO_HANDOFF=0 tools/qf init` 后再手动 `tools/qf handoff`。
-- 3) 按 `SYNC/READ_ORDER.md` 顺序完成阅读与复述。
-- 3.1) 运行 `tools/qf sync` 固化同频证据（读文件清单/项目总况/治理入口/当前阶段/下一步）。
-- 3.2) 新/陌生 agent 建议先完成同频考试：
-  - v2 深度题面：`SYNC/EXAM_PLAN_PROMPT.md`（15+2 问卷）
-  - 按 `SYNC/EXAM_ANSWER_TEMPLATE.md` 输出到 `reports/{RUN_ID}/onboard_answer.md`
-  - 用 `tools/sync_exam.py` 评分，结果写入 `reports/{RUN_ID}/sync_exam_result.json`
+- 2) 若 `INIT_STATUS=needs_resume`/`blocked`，先执行 `tools/qf resume RUN_ID=<run-id>` 处理收尾问题。
+- 2.1) `handoff` 改为显式动作：`tools/qf handoff RUN_ID=<run-id>`（按需调用）。
+- 3) 按顺序阅读并复述：`AGENTS.md` -> `docs/PROJECT_GUIDE.md` -> `docs/WORKFLOW.md` -> `docs/ENTITIES.md` -> `TASKS/STATE.md` -> `TASKS/QUEUE.md`。
+- 3.1) 新/陌生 agent 建议先完成 learn 考试：
+  - 题面模板：`docs/LEARN_EXAM_ANSWER_TEMPLATE.md`
+  - 评分标准：`docs/LEARN_EXAM_RUBRIC.json`
   - 低摩擦首选：`tools/qf exam-auto`（默认缺答卷会自动填答并直接评分）
   - 手动模式：`tools/qf exam-auto AUTO_FILL=0`（只落模板，不自动填答）
   - 兼容命令：`tools/qf exam`（只做评分，不自动生成答卷）
-- 3.3) 运行 `tools/qf learn` 固化“上岗学习”证据（项目+宪法+工作流+技能+session+考试），默认打印分步日志。
+- 3.2) 运行 `tools/qf learn` 固化“上岗学习”证据（项目+宪法+工作流+技能+session+考试），默认打印分步日志。
   - `RUN_ID` 可选：
-    - 有 `RUN_ID`/`CURRENT_RUN_ID`：复用该 run 的 `sync/exam` 证据。
+    - 有 `RUN_ID`/`CURRENT_RUN_ID`：复用该 run 的执行证据。
     - 无 run 上下文：进入 `session-direct-read`，直接读取必读文档并生成 learn 证据（不隐式绑定历史 run）。
   - `project_id` 默认来自 `TASKS/STATE.md: CURRENT_PROJECT_ID`（缺省 `project-0`），也可通过环境变量覆盖：`PROJECT_ID` / `QF_PROJECT_ID`。
     - 无 run 上下文且不存在 session exam 结果时，会打印 `LEARN_EXAM_BYPASS_NO_RUN_CONTEXT: true` 并降级为“仅文档同频门禁”。
-- 4) 运行 `tools/qf ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`，默认可自动填充；默认缺失 learn/sync 时可自动补跑）。
+- 4) 运行 `tools/qf ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`，默认可自动填充；默认缺失 learn 时可自动补跑）。
 - 4.0) 若 `ready` 提示 unresolved run context，先二选一：
   - `tools/qf resume RUN_ID=<run-id>`（收尾）
   - `tools/qf ready RUN_ID=<run-id> DECISION=abandon-new`（明确抛弃旧上下文后继续）
@@ -287,7 +282,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - Minimum documentation set for process changes:
   - `AGENTS.md`
   - `docs/WORKFLOW.md`
-  - `SYNC/*` startup docs if order/semantics changed
+  - `docs/PROJECT_GUIDE.md` and `docs/LEARN_EXAM_*` when onboarding/learn semantics changed
   - `TASKS/STATE.md` pointers if run/task context changed
   - `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
 - If documentation is stale, do not ship.

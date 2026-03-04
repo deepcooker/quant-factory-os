@@ -1,262 +1,156 @@
 # AGENTS.md (Hard Rules for Codex / Agents)
 
-This repo is an OS for quant engineering. Agents MUST obey these rules.
+This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc chat.
 
 ## 0) Scope
-- You work ONLY inside this repository.
+- Work only inside this repository.
 - Never invent data. Never assume prod access.
-- Prefer deterministic scripts + evidence, not long chat.
+- No secrets in files, logs, or commits.
 
-## 1) Entry: Tasks are syscall
-- All implementation work MUST start from a task file under /TASKS.
-- Pure read-only discussion/investigation is allowed without a task only when no repo mutation happens (no file edits, no generated artifacts, no ship).
-- Before any repo mutation, you MUST create/select an active TASK + RUN_ID.
-- If no task is provided, pick the next unchecked item in QUEUE.md and create a TASK file first.
-- Never change code/docs without an active task ID and RUN_ID.
+## 1) Entry Rule: Task + Run are mandatory
+- All implementation starts from `TASKS/TASK-*.md`.
+- If user did not give a task, pick next unchecked item in `TASKS/QUEUE.md` and create/select a task first.
+- Never edit code/docs without active `TASK_ID` + `RUN_ID` from `TASKS/STATE.md`.
 
-## 2) Output: Evidence is memory
-For each task you MUST create/update:
-- reports/<RUN_ID>/meta.json
-- reports/<RUN_ID>/summary.md
-- reports/<RUN_ID>/decision.md
+## 2) Core onboarding principle (mainline anchor)
+- Session startup is anchored by:
+  - `AGENTS.md` (hard contract)
+  - `docs/PROJECT_GUIDE.md` (learning curriculum + Socratic question bank + mainline anchor)
+- If the session drifts, return to `docs/PROJECT_GUIDE.md` questions and re-answer from evidence before coding.
 
-`meta.json` minimum fields (gate-level):
+## 3) Single source map (owner files)
+- Hard rules: `AGENTS.md`
+- Project cognition / Q&A anchor: `docs/PROJECT_GUIDE.md`
+- Execution state machine: `docs/WORKFLOW.md`
+- Entity dictionary: `docs/ENTITIES.md`
+- Codex CLI operations: `docs/CODEX_CLI_OPERATION.md`
+- Current active pointers: `TASKS/STATE.md`
+- Queue intent: `TASKS/QUEUE.md`
+- Run evidence: `reports/<RUN_ID>/`
+- Discussion drafts (non-governance): `chatlogs/discussion/<RUN_ID>/`
+
+## 4) Mandatory session gate (once per session)
+Before any implementation:
+1. `tools/qf init`
+2. `tools/qf learn -log`
+3. `tools/qf ready`
+
+`init` detailed step definitions, mode semantics (`-status` / `-main`), and output fields are owned by `docs/WORKFLOW.md` (`S0 Environment`). `AGENTS.md` keeps only gate-level contract.
+
+Required visible progress:
+- `INIT_STEP[<i>/<n>]`
+- `LEARN_STEP[<i>/<n>]`
+- `READY_STEP[<i>/<n>]`
+
+`learn` pass criteria (minimum):
+- Must print:
+  - `LEARN_MAINLINE`
+  - `LEARN_CURRENT_STAGE`
+  - `LEARN_NEXT_STEP`
+  - `LEARN_REQUIRED_FILES_READ_LIST`
+- When model sync is enabled and passes, must also print:
+  - `LEARN_MODEL_MAINLINE`
+  - `LEARN_MODEL_CURRENT_STAGE`
+  - `LEARN_MODEL_NEXT_STEP`
+  - `LEARN_MODEL_FILES_READ_LIST`
+- In strict plan mode (`PLAN_MODE=strong`), model output must include plan packet and oral packet anchors defined in `docs/WORKFLOW.md`.
+
+No coding until this gate is complete.
+
+## 5) Working mode: Plan -> Confirm -> Execute
+- Complex work must follow `Plan -> Confirm -> Execute`.
+- Codex interactive `/plan` is planning protocol, not execution.
+- `tools/qf plan` only drafts queue proposals; it does not open execute gate.
+- `/compact` is milestone-based, not mandatory every task. Use before context grows too large or before switching milestone.
+
+## 6) Workflow skeleton
+1. Read task acceptance criteria.
+2. `make evidence RUN_ID=<RUN_ID>`
+3. Implement smallest safe diff.
+4. `make verify` until green.
+5. Update run evidence.
+6. Ship.
+
+Discussion-first recommended lane:
+- `tools/qf discuss TARGET=prepare`
+- `tools/qf choose OPTION=<id>`
+- `tools/qf council`
+- `tools/qf arbiter`
+- `tools/qf slice`
+- `tools/qf do queue-next` (or `tools/qf execute TARGET=do`)
+
+Execution gate artifacts required before `do`:
+- `reports/<RUN_ID>/ready.json`
+- `reports/<RUN_ID>/orient_choice.json`
+- `chatlogs/discussion/<RUN_ID>/council.json`
+- `reports/<RUN_ID>/execution_contract.json`
+- `reports/<RUN_ID>/slice_state.json`
+
+## 7) Evidence is memory (hard gate)
+Each run must update:
+- `reports/<RUN_ID>/meta.json`
+- `reports/<RUN_ID>/summary.md`
+- `reports/<RUN_ID>/decision.md`
+
+`meta.json` minimum fields:
 - `run_id`
 - `task_id`
 - `stop_reason`
 - `commands_run`
 - `artifacts`
 
-Optional:
-- reports/<RUN_ID>/samples/*.csv.gz
-- MISTAKES/<RUN_ID>.md (only if failure)
+Optional failure memory:
+- `MISTAKES/<RUN_ID>.md`
 
-## 3) Constraints (Data / Size / Secrets)
-- Never write or commit secrets. Never print secrets.
-- Never commit production data. Use synthetic or reduced samples only.
-- Hard limits:
-  - Any single generated file <= 5MB
-  - Any table-like output <= 500 rows unless explicitly requested by task
+## 8) Allowed commands (default)
+Use only these unless task explicitly authorizes more:
+- `tools/qf`
+- `tools/doctor.sh`
+- `tools/enter.sh`
+- `tools/task.sh`
+- `tools/ship.sh`
+- `tools/view.sh`
+- `make evidence RUN_ID=...`
+- `make verify`
+- `make slice RUN_ID=... DAY=... SYMBOLS=... START=... END=...`
+- `pytest -q`
 
-## 4) Allowed Commands (Default)
-Use ONLY these unless task explicitly authorizes more:
-- tools/qf
-- tools/doctor.sh
-- tools/enter.sh
-- tools/task.sh
-- tools/ship.sh
-- tools/view.sh
-- make evidence RUN_ID=...
-- make verify
-- make slice RUN_ID=... DAY=... SYMBOLS=... START=... END=...
-- pytest -q
+## 9) Reading policy (hard)
+- Long file reading must use `tools/view.sh` in chunks.
+- `rg` / `grep` are allowed only for locating text with short output (line hits/snippets), not for full-file reading.
+- Do not use `cat` / `sed` / `awk` to dump large files; use `tools/view.sh` chunked reading instead.
 
-Notes:
-- Primary agent entrypoint is `tools/qf` (`init/sync/learn/ready/orient/choose/council/arbiter/slice/discuss/execute/do/review/resume`).
-- Sync gate command: `tools/qf sync` (auto reading + sync report).
-- `tools/enter.sh` and `tools/onboard.sh` are compatibility wrappers.
-- Discussion drafts live in `SYNC/discussion/<RUN_ID>/`; execution evidence lives in `reports/<RUN_ID>/`.
-- `tools/qf plan` is queue proposal tooling only (`TASKS/TODO_PROPOSAL.md`), not Codex interactive `/plan`.
+## 10) Constraints
+- No secrets.
+- No production data.
+- Any generated single file <= 5MB unless task says otherwise.
+- Table-like output <= 500 rows unless task says otherwise.
 
-## Single source map
-- Session entrypoint owner: `SYNC/READ_ORDER.md`
-- Hard rules owner: `AGENTS.md`
-- Execution workflow owner: `docs/WORKFLOW.md`
-- Entity definitions owner: `docs/ENTITIES.md`
-- Strategy/vision owner: `docs/PROJECT_GUIDE.md`
-- Codex operation owner: `docs/CODEX_CLI_OPERATION.md`
+## 11) Failure protocol
+If blocked or verify fails:
+- Record failing command + minimal logs in `reports/<RUN_ID>/summary.md`.
+- Write stop reason in `reports/<RUN_ID>/decision.md`:
+  - `task_done`
+  - `needs_human_decision`
+  - `infra_network`
+  - `infra_quota_or_auth`
+  - `tool_or_script_error`
+  - `verify_failed`
+  - `external_blocked`
+- Add regression test when applicable.
 
-## Documentation boundary (Hard)
-- `README.md`: index only; do not duplicate hard rules/process details.
-- `AGENTS.md`: hard constraints/gates only; do not store historical run narratives.
-- Keep `AGENTS.md` light: only contract rules + owner pointers. Detailed state machine/options belong to `docs/WORKFLOW.md` and `docs/CODEX_CLI_OPERATION.md`.
-- `docs/WORKFLOW.md`: executable state machine only (step semantics, gate dependencies).
-- `docs/ENTITIES.md`: entity dictionary only.
-- `docs/PROJECT_GUIDE.md`: onboarding Q&A truth source only.
-- `SYNC/*`: current session sync layer only (current state/decisions/links/exam), no strategy duplication.
-- `reports/<RUN_ID>/*`: run-scoped evidence only.
-- If a topic appears in multiple places, keep full definition only in the owner file; other files must link, not re-define.
-- Placeholder or stale docs without active owner/update path must be removed.
+## 12) Documentation freshness gate
+If process/rule/tool behavior changes in a run, update in the same run:
+- `AGENTS.md`
+- `docs/WORKFLOW.md`
+- `docs/CODEX_CLI_OPERATION.md` (if CLI usage/flags changed)
+- `docs/PROJECT_GUIDE.md` (if learning/Q&A anchor changed)
+- `TASKS/STATE.md` (if active pointers changed)
+- `reports/<RUN_ID>/summary.md` and `reports/<RUN_ID>/decision.md`
 
-## Reading policy
-- 长文件阅读必须使用 tools/view.sh 分段查看，不得直接使用 sed/cat/rg/grep/awk。
+No doc update, no ship.
 
-## 5) Workflow (Must follow)
-1) Read TASKS/<task>.md and confirm acceptance criteria.
-2) Run `make evidence RUN_ID=<RUN_ID>` (creates evidence skeleton).
-3) Implement change in smallest diff possible.
-4) Run `make verify` until green.
-5) Write decision + update summary (what changed / why / risks / verify commands).
-6) Ship via `tools/ship.sh` or `make ship` (if defined).
-
-Gate predicates (minimum):
-- Ready gate requires valid `sync_report.json` + learn report + `ready.json`.
-- Execute gate requires `ready.json`, `orient_choice.json`, `council.json`, `execution_contract.json`, `slice_state.json`.
-
-## 5.1) Plan/Execute boundary (Hard)
-- Complex changes MUST follow `Plan -> Confirm -> Execute`.
-- Codex `/plan` (interactive slash command) is for planning protocol; execution starts only after confirmation.
-- `tools/qf plan` does not satisfy planning gate; it only generates queue suggestions.
-- `tools/qf do`/`tools/qf execute TARGET=do` remain blocked unless required gate artifacts exist.
-- `/compact` is not mandatory after every task; run it when context grows large or before switching to a new milestone.
-- Before `/compact` (and before `/quit`), persist repo evidence with:
-  `tools/qf snapshot NOTE="decision + next step"`.
-
-## 6) Failure protocol
-If stuck or tests fail:
-- Capture the failing command + minimal logs in reports/<RUN_ID>/summary.md
-- Write MISTAKES/<RUN_ID>.md with:
-  - symptom, root cause hypothesis, fix, guardrail test suggestion
-  - process category: thinking_error / decision_error / execution_error / verification_error / recovery_error / business_error
-- Add/strengthen a test to prevent regression.
-- Treat mistakes as end-to-end process memory, not only business/domain errors.
-- When pausing/stopping a run, record one stop reason in `reports/<RUN_ID>/decision.md`:
-  - task_done
-  - needs_human_decision
-  - infra_network
-  - infra_quota_or_auth
-  - tool_or_script_error
-  - verify_failed
-  - external_blocked
-
-## 7) PR discipline (Single-user but strict)
-- One task -> one branch -> one PR
-- PR title MUST include RUN_ID
-- PR body MUST include:
-  - Why / What / Verify
-  - Evidence paths
-
-## 8) Session init gate (Mandatory, once per session)
-Before any implementation, you MUST complete init and pass readiness checks:
-- Detailed step input/output and command options are owned by `docs/WORKFLOW.md`; this section defines mandatory gates only.
-1) Run `tools/qf init` (environment prep only; this is NOT readiness pass).
-   - Visible progress markers are required: `INIT_STEP[<i>/<n>]`.
-   - `init` must not silently clean `reports/run-*-pick-candidate` directories.
-   - `init` must not create a new business `RUN_ID`; run ownership starts at `learn/ready` (or existing `CURRENT_RUN_ID`).
-   - Optional machine stream: set `QF_EVENT_STREAM=1` to emit JSONL step events to stdout.
-2) If `CURRENT_RUN_ID` exists, run `tools/qf handoff` (context summary only; this is NOT readiness pass).
-   - `tools/qf init` auto-runs this step by default for continuing runs.
-   - To disable auto-handoff for one run: `QF_INIT_AUTO_HANDOFF=0 tools/qf init`
-3) Read, in order:
-   - `SYNC/READ_ORDER.md`
-   - files listed in `SYNC/READ_ORDER.md` (strict order)
-   - then run `tools/qf sync` to materialize read evidence (`sync_report.json/.md`)
-   - exam package is v2 deep questionnaire (`SYNC/EXAM_PLAN_PROMPT.md`, `SYNC/EXAM_ANSWER_TEMPLATE.md`, `SYNC/EXAM_WORKFLOW.md`, `SYNC/EXAM_RUBRIC.json`)
-4) Restate and get confirmation before coding:
-   - Goal (1 sentence)
-   - Scope (exact paths)
-   - Acceptance (verify/evidence/scope)
-   - Execution steps (evidence -> implement -> verify -> reports -> ship)
-   - Stop condition (finish and wait)
-5) Record readiness gate:
-   - `CURRENT_PROJECT_ID` + `CURRENT_RUN_ID` source-of-truth is `TASKS/STATE.md`.
-   - default `project_id` is `project-0` when missing.
-  - Run `tools/qf learn` before `ready` to complete onboarding learning gate:
-    - output: `reports/projects/<project_id>/session/learn.json|md` (project-scoped session memory)
-    - model sync (Codex real interaction) options:
-      - `MODEL_SYNC=0|auto|1` (or `QF_LEARN_MODEL_SYNC`), default `auto`
-      - `MODEL_SYNC=1` is strict mode: learn fails if model sync fails
-      - `PLAN_MODE=strong|basic` (or `QF_LEARN_PLAN_MODE`), default `strong`
-      - timeout/model override: `MODEL_TIMEOUT_SEC=<n>` (default 180), `MODEL=<slug>`
-      - invocation profile: `codex --search --ask-for-approval never exec --sandbox read-only --json --output-last-message ...`
-      - model artifacts:
-        - `reports/projects/<project_id>/session/learn.model.prompt.txt`
-        - `reports/projects/<project_id>/session/learn.model.raw.txt`
-        - `reports/projects/<project_id>/session/learn.model.json`
-        - `reports/projects/<project_id>/session/learn.model.events.jsonl`
-        - `reports/projects/<project_id>/session/learn.model.stderr.log`
-    - `RUN_ID` is optional for `learn`:
-      - with `RUN_ID`/`CURRENT_RUN_ID`: uses run-scoped sync/exam evidence.
-      - without run context: enters `session-direct-read` mode (reads required docs directly; no implicit fallback to latest historical run).
-      - without run context and no session exam result, exam requirement is downgraded for that learn pass (`LEARN_EXAM_BYPASS_NO_RUN_CONTEXT: true`).
-    - optional stdout log mirror: `tools/qf learn -log` -> `reports/projects/<project_id>/session/learn.stdout.log` (or `LOG=<path>`)
-    - Visible progress markers are required: `LEARN_STEP[<i>/<n>]`.
-    - learn anchors are required in stdout:
-      - `LEARN_MAINLINE`
-      - `LEARN_CURRENT_STAGE`
-      - `LEARN_NEXT_STEP`
-      - `LEARN_REQUIRED_FILES_READ_LIST`
-      - when model sync passes: `LEARN_MODEL_MAINLINE`, `LEARN_MODEL_CURRENT_STAGE`, `LEARN_MODEL_NEXT_STEP`, `LEARN_MODEL_FILES_READ_LIST`
-      - when `PLAN_MODE=strong` and model sync passes:
-        - `LEARN_MODEL_PLAN_GOAL`
-        - `LEARN_MODEL_PLAN_NON_GOAL`
-        - `LEARN_MODEL_PLAN_REBUTTAL`
-        - `LEARN_MODEL_PLAN_DECISION_STOP`
-        - `LEARN_MODEL_ORAL_PROJECT`
-        - `LEARN_MODEL_ORAL_CONSTITUTION`
-        - `LEARN_MODEL_ORAL_EVIDENCE`
-        - `LEARN_MODEL_ORAL_SESSION`
-        - `LEARN_MODEL_ORAL_CURRENT_FOCUS`
-        - `LEARN_MODEL_ORAL_NEXT_ACTION`
-        - `LEARN_MODEL_ORAL_EXAM_QA_COUNT`
-    - Optional machine stream: set `QF_EVENT_STREAM=1` to emit JSONL step events to stdout.
-  - Run `tools/qf ready` (or `tools/qf ready RUN_ID=<run-id>` for explicit override).
-  - Visible progress markers are required: `READY_STEP[<i>/<n>]`.
-  - Optional machine stream: set `QF_EVENT_STREAM=1` to emit JSONL step events to stdout.
-  - `tools/qf ready` enforces learn gate by default when sync gate is enabled (`QF_READY_REQUIRE_LEARN=auto`).
-    - auto recovery: `QF_READY_AUTO_LEARN=1` allows `ready` to auto-run `tools/qf learn` when missing/expired.
-  - If unresolved run context is detected, `ready` MUST stop and require decision:
-    - `DECISION=resume-close` (go close via `tools/qf resume`)
-    - `DECISION=abandon-new` (explicitly continue as new direction cycle)
-  - Resolution memory: after `DECISION=abandon-new`, the same RUN keeps this decision in `ready.json` and should not re-prompt on every `ready`.
-   - `tools/qf ready` requires valid `reports/<RUN_ID>/sync_report.json`; by default it auto-runs `tools/qf sync` when missing (`QF_READY_AUTO_SYNC=1`).
-  - `tools/qf ready` auto-fills restatement from active task contract by default.
-  - To force manual-only input: `QF_READY_AUTO=0 tools/qf ready`
-  - `tools/qf do` MUST fail if no valid `reports/<RUN_ID>/ready.json`.
-  - After ready, orientation drafts are generated under `SYNC/discussion/<RUN_ID>/orient.json|md`.
-  - Confirm direction with `tools/qf choose OPTION=<id>`:
-    - confirmation result goes to `reports/<RUN_ID>/orient_choice.json`
-    - direction contract goes to `reports/<RUN_ID>/direction_contract.json|md`
-  - Generate independent multi-role reviews via `tools/qf council`.
-  - Converge to execution contract via `tools/qf arbiter`:
-    - output: `reports/<RUN_ID>/execution_contract.json|md`
-  - Slice execution contract to queue tasks via `tools/qf slice`:
-    - output: `reports/<RUN_ID>/slice_state.json`
-    - queue insertion: `TASKS/QUEUE.md` (idempotent by slice marker)
-  - Discussion-first shortcut (recommended): `tools/qf discuss`
-    - default target is `prepare` (generates council/contract/slice, does not execute do)
-    - next command is explicit `tools/qf do queue-next`
-  - Queue pick policy (`tools/task.sh --next`):
-    - prefer unchecked item whose `Slice: run_id=<CURRENT_RUN_ID>` matches `TASKS/STATE.md`
-    - fallback to first unchecked item when no matching slice exists
-  - Low-friction orchestrator (optional): `tools/qf execute`
-    - default: stops at choose if no `OPTION` confirmed
-    - for `TARGET=do`, execution requires contract confirmation evidence:
-      - one-shot confirm: `tools/qf execute RUN_ID=<run-id> PROJECT_ID=<project-id> CONFIRM_CONTRACT=1 TARGET=do`
-      - auto confirm mode: `QF_EXECUTE_AUTO_CONFIRM_CONTRACT=1 tools/qf execute`
-    - auto mode: `QF_EXECUTE_AUTO_CHOOSE=1 tools/qf execute` auto-picks recommended option then runs `council->arbiter->slice->do`
-  - `tools/qf do` MUST fail if any required gate is missing:
-    - `reports/<RUN_ID>/orient_choice.json`
-    - `SYNC/discussion/<RUN_ID>/council.json`
-    - `reports/<RUN_ID>/execution_contract.json`
-    - `reports/<RUN_ID>/slice_state.json`
-  - After execution, run `tools/qf review` (or rely on `tools/qf do` auto-review checkpoint) and resolve drift blockers before ship.
-  - Keep conversation evidence fresh: `tools/qf sync|ready|orient|choose|council|arbiter|slice` should append checkpoint notes into `reports/<RUN_ID>/conversation.md` (unless explicitly disabled).
-   - At major checkpoints (and before `/quit`), run:
-     `tools/qf snapshot NOTE="decision + next step"` to persist session fallback in repo.
-   - `tools/qf do` / `tools/qf resume` must keep execution traces in
-     `reports/<RUN_ID>/execution.jsonl` (default redaction on).
-   - `tools/qf resume` may auto-stash dirty workspace before `checkout main` using
-     `qf-resume-cleanup-run-<RUN_ID>-wip-*` to avoid self-blocking sync.
-6) If restatement is missing or unclear, STOP and do not modify code.
-
-## 9) Governance policy (Default)
-- This repo is PR-driven and local-verify-first.
-- Required before ship: local `make verify` is green and recorded in reports.
-- Do not rely on GitHub Actions queues as required path.
-- `.github/workflows/*.yml|*.yaml` is blocked by default in `tools/ship.sh`.
-  To allow intentionally for one run:
-  - `SHIP_ALLOW_WORKFLOWS=1 tools/ship.sh "<msg>"`
-
-## 10) Documentation freshness gate (Hard rule)
-- Any process/rule/tooling behavior change in this repo MUST update owner docs in the same RUN.
-- Minimum required updates per process change:
-  - `AGENTS.md` (hard rule layer)
-  - `docs/WORKFLOW.md` (execution/state-machine layer)
-  - `docs/ENTITIES.md` when schema/field semantics change
-  - `docs/CODEX_CLI_OPERATION.md` when Codex mode/command guidance changes
-  - `docs/PROJECT_GUIDE.md` when strategy/Q&A baseline changes
-  - `SYNC/*` entry docs if startup/order semantics changed
-  - `TASKS/STATE.md` current pointers if active run/task changed
-  - `reports/<RUN_ID>/summary.md` + `reports/<RUN_ID>/decision.md` evidence
-- No doc update, no ship.
+## 13) PR discipline
+- One task -> one branch -> one PR.
+- PR title must include `RUN_ID`.
+- PR body must include: Why / What / Verify / Evidence paths.

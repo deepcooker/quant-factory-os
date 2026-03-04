@@ -23,7 +23,7 @@ SLICE_STATE_FILE=""
 usage() {
   cat <<'EOF'
 Usage:
-  tools/qf init
+  tools/qf init [-status|-main]
   tools/qf onboard RUN_ID
   tools/qf sync [RUN_ID=<run-id>]
   tools/qf learn [RUN_ID=<context-run-id>] [AUTO_EXAM=0|1] [REQUIRE_EXAM=0|1] [TTL_DAYS=<n>] [MODEL_SYNC=auto|0|1] [PLAN_MODE=strong|basic] [MODEL_TIMEOUT_SEC=<sec>] [MODEL=<slug>] [-log] [LOG=<path>]
@@ -692,8 +692,8 @@ docs_paths = [
     "AGENTS.md",
     "TASKS/STATE.md",
     "TASKS/QUEUE.md",
-    f"reports/{run_id}/sync_report.json",
-    f"SYNC/discussion/{run_id}/ready_brief.json",
+    f"reports/projects/{project_id}/session/learn.json",
+    f"chatlogs/discussion/{run_id}/ready_brief.json",
 ]
 docs_blob = "\n".join(read_text(p) for p in docs_paths)
 queue_text = read_text("TASKS/QUEUE.md")
@@ -725,9 +725,9 @@ directions = [
         "benefit": "降低同频误差，提升决策速度。",
         "risk": "摘要质量受输入文档完整性影响。",
         "cost": "S",
-        "dependencies": ["SYNC/READ_ORDER.md", "reports/<RUN_ID>/sync_report.json"],
-        "scope_hint": ["tools/qf", "SYNC/", "docs/WORKFLOW.md"],
-        "score": score_for(78, ["sync", "ready", "workflow", "constitution", "evidence"]),
+        "dependencies": ["AGENTS.md", "docs/PROJECT_GUIDE.md", "reports/projects/<PROJECT_ID>/session/learn.json"],
+        "scope_hint": ["tools/qf", "docs/PROJECT_GUIDE.md", "docs/WORKFLOW.md"],
+        "score": score_for(78, ["learn", "ready", "workflow", "constitution", "evidence"]),
     },
     {
         "id": "discussion-execution-split",
@@ -736,8 +736,8 @@ directions = [
         "benefit": "保持 report 可审计且低噪声。",
         "risk": "需要清晰迁移边界。",
         "cost": "M",
-        "dependencies": ["SYNC/discussion/", "reports/<RUN_ID>/"],
-        "scope_hint": ["tools/qf", "docs/WORKFLOW.md", "AGENTS.md", "SYNC/"],
+        "dependencies": ["chatlogs/discussion/", "reports/<RUN_ID>/"],
+        "scope_hint": ["tools/qf", "docs/WORKFLOW.md", "AGENTS.md", "chatlogs/discussion/"],
         "score": score_for(76, ["discussion", "report", "confirm", "evidence", "orient"]),
     },
     {
@@ -841,7 +841,7 @@ resolve_orient_file_for_run() {
     printf ""
     return 1
   fi
-  draft_file="SYNC/discussion/${run_id}/orient.json"
+  draft_file="chatlogs/discussion/${run_id}/orient.json"
   if [[ -f "$draft_file" ]]; then
     printf "%s" "$draft_file"
     return 0
@@ -862,7 +862,7 @@ resolve_council_file_for_run() {
     printf ""
     return 1
   fi
-  council_file="SYNC/discussion/${run_id}/council.json"
+  council_file="chatlogs/discussion/${run_id}/council.json"
   if [[ -f "$council_file" ]]; then
     printf "%s" "$council_file"
     return 0
@@ -991,7 +991,7 @@ if not isinstance(scope_hint, list):
     scope_hint = []
 scope = [clean(x).replace("`", "") for x in scope_hint if clean(x)]
 if not scope:
-    scope = ["tools/qf", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "SYNC/", "TASKS/", "reports/{RUN_ID}/"]
+    scope = ["tools/qf", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
 scope_line = ", ".join(f"`{x}`" for x in scope)
 
 title = f"contract-next: {title_raw}"
@@ -1105,21 +1105,11 @@ run_id, project_id, task_file, current_status, sync_file, sync_md = sys.argv[1:]
 
 required_files = [
     "README.md",
-    "SYNC/README.md",
-    "SYNC/READ_ORDER.md",
-    "SYNC/CURRENT_STATE.md",
-    "SYNC/SESSION_LATEST.md",
-    "SYNC/DECISIONS_LATEST.md",
-    "SYNC/LINKS.md",
-    "SYNC/EXAM_PLAN_PROMPT.md",
-    "SYNC/EXAM_ANSWER_TEMPLATE.md",
-    "SYNC/EXAM_WORKFLOW.md",
-    "SYNC/EXAM_RUBRIC.json",
     "AGENTS.md",
+    "docs/PROJECT_GUIDE.md",
     "docs/WORKFLOW.md",
     "docs/ENTITIES.md",
     "docs/CODEX_CLI_OPERATION.md",
-    "docs/PROJECT_GUIDE.md",
     "TASKS/STATE.md",
     "TASKS/QUEUE.md",
 ]
@@ -1136,13 +1126,13 @@ optional_files = [
     f"reports/{run_id}/slice_state.json",
     f"reports/{run_id}/drift_review.json",
     f"reports/{run_id}/drift_review.md",
-    f"SYNC/discussion/{run_id}/ready_brief.json",
-    f"SYNC/discussion/{run_id}/ready_brief.md",
-    f"SYNC/discussion/{run_id}/orient.json",
-    f"SYNC/discussion/{run_id}/orient.md",
-    f"SYNC/discussion/{run_id}/council.json",
-    f"SYNC/discussion/{run_id}/council.md",
-    f"SYNC/discussion/{run_id}/drift_todo.md",
+    f"chatlogs/discussion/{run_id}/ready_brief.json",
+    f"chatlogs/discussion/{run_id}/ready_brief.md",
+    f"chatlogs/discussion/{run_id}/orient.json",
+    f"chatlogs/discussion/{run_id}/orient.md",
+    f"chatlogs/discussion/{run_id}/council.json",
+    f"chatlogs/discussion/{run_id}/council.md",
+    f"chatlogs/discussion/{run_id}/drift_todo.md",
 ]
 
 
@@ -1255,10 +1245,10 @@ if not learn_exists:
     learn_exists = learn_marker_matches_project(learn_legacy_path, state_project_id)
 ready_exists = Path(f"reports/{run_id}/ready.json").is_file()
 choose_exists = Path(f"reports/{run_id}/orient_choice.json").is_file()
-council_exists = Path(f"SYNC/discussion/{run_id}/council.json").is_file()
+council_exists = Path(f"chatlogs/discussion/{run_id}/council.json").is_file()
 execution_contract_exists = Path(f"reports/{run_id}/execution_contract.json").is_file()
 slice_exists = Path(f"reports/{run_id}/slice_state.json").is_file()
-orient_draft_path = Path(f"SYNC/discussion/{run_id}/orient.json")
+orient_draft_path = Path(f"chatlogs/discussion/{run_id}/orient.json")
 orient_legacy_path = Path(f"reports/{run_id}/orient.json")
 orient_path = orient_draft_path if orient_draft_path.is_file() else orient_legacy_path
 recommended_option = ""
@@ -1591,20 +1581,14 @@ cmd_learn() {
     echo "LEARN_CONTEXT_RUN_ID: (none)"
   fi
 
-  emit_step "learn" 2 "$learn_steps_total" "ensure sync evidence"
+  emit_step "learn" 2 "$learn_steps_total" "resolve onboarding evidence (sync optional)"
   if [[ -n "$context_run_id" ]]; then
     sync_report_file="$(resolve_sync_file_for_run "$context_run_id" || true)"
-    if [[ -z "$sync_report_file" ]]; then
-      echo "LEARN_SYNC_AUTO_RUN: tools/qf sync RUN_ID=${context_run_id}"
-      cmd_sync "RUN_ID=${context_run_id}"
-      sync_report_file="$(resolve_sync_file_for_run "$context_run_id" || true)"
+    if [[ -n "$sync_report_file" ]]; then
+      echo "LEARN_SYNC_MODE: run-evidence"
+    else
+      echo "LEARN_SYNC_MODE: run-direct-read"
     fi
-    if [[ -z "$sync_report_file" ]]; then
-      echo "ERROR: learn requires valid sync report for context run ${context_run_id}." >&2
-      echo "Run: tools/qf sync RUN_ID=${context_run_id}" >&2
-      exit 1
-    fi
-    echo "LEARN_SYNC_MODE: run-evidence"
   else
     sync_report_file=""
     echo "LEARN_SYNC_MODE: session-direct-read"
@@ -1700,29 +1684,16 @@ exam_obj = read_json(exam_file)
 has_sync_report = bool(sync_obj)
 default_required_files = [
     "README.md",
-    "SYNC/README.md",
-    "SYNC/READ_ORDER.md",
-    "SYNC/CURRENT_STATE.md",
-    "SYNC/SESSION_LATEST.md",
-    "SYNC/DECISIONS_LATEST.md",
-    "SYNC/LINKS.md",
-    "SYNC/EXAM_PLAN_PROMPT.md",
-    "SYNC/EXAM_ANSWER_TEMPLATE.md",
-    "SYNC/EXAM_WORKFLOW.md",
-    "SYNC/EXAM_RUBRIC.json",
     "AGENTS.md",
+    "docs/PROJECT_GUIDE.md",
     "docs/WORKFLOW.md",
     "docs/ENTITIES.md",
     "docs/CODEX_CLI_OPERATION.md",
-    "docs/PROJECT_GUIDE.md",
     "TASKS/STATE.md",
     "TASKS/QUEUE.md",
 ]
 
-required_files = sync_obj.get("required_files") if has_sync_report else default_required_files
-if not isinstance(required_files, list):
-    required_files = []
-required_files = ordered_unique([str(x) for x in required_files])
+required_files = default_required_files
 required_files_for_digest = [x for x in required_files if x != "TASKS/STATE.md"]
 
 if has_sync_report and isinstance(sync_obj.get("missing_required_files"), list):
@@ -2323,8 +2294,8 @@ cmd_ready() {
   local ready_brief_md=""
   local orient_file=""
   local orient_md=""
-  local require_sync="${QF_READY_REQUIRE_SYNC:-1}"
-  local auto_sync="${QF_READY_AUTO_SYNC:-1}"
+  local require_sync="${QF_READY_REQUIRE_SYNC:-0}"
+  local auto_sync="${QF_READY_AUTO_SYNC:-0}"
   local require_learn_raw="${QF_READY_REQUIRE_LEARN:-auto}"
   local require_learn="${QF_READY_REQUIRE_LEARN:-auto}"
   local auto_learn="${QF_READY_AUTO_LEARN:-1}"
@@ -2370,11 +2341,7 @@ cmd_ready() {
 
   case "${require_learn_raw,,}" in
     auto)
-      if [[ "$require_sync" == "1" ]]; then
-        require_learn="1"
-      else
-        require_learn="0"
-      fi
+      require_learn="1"
       ;;
     1|true|yes|y)
       require_learn="1"
@@ -2401,7 +2368,7 @@ cmd_ready() {
     learn_report_file="$(resolve_learn_file_for_project "$project_id" || true)"
     if [[ -z "$learn_report_file" && "$auto_learn" == "1" ]]; then
       echo "LEARN_AUTO_RUN: tools/qf learn"
-      cmd_learn "RUN_ID=${run_id}" "PROJECT_ID=${project_id}"
+      cmd_learn "RUN_ID=${run_id}" "PROJECT_ID=${project_id}" "REQUIRE_EXAM=0"
       learn_report_file="$(resolve_learn_file_for_project "$project_id" || true)"
     fi
     if [[ -z "$learn_report_file" ]]; then
@@ -2412,9 +2379,9 @@ cmd_ready() {
     fi
   fi
 
-  emit_step "ready" 3 "$ready_steps_total" "enforce sync gate (auto-sync if missing)"
+  emit_step "ready" 3 "$ready_steps_total" "resolve sync report (optional compatibility)"
+  sync_report_file="$(resolve_sync_file_for_run "$run_id" || true)"
   if [[ "$require_sync" == "1" ]]; then
-    sync_report_file="$(resolve_sync_file_for_run "$run_id" || true)"
     if [[ -z "$sync_report_file" && "$auto_sync" == "1" ]]; then
       echo "SYNC_AUTO_RUN: tools/qf sync RUN_ID=${run_id}"
       cmd_sync "RUN_ID=${run_id}"
@@ -2515,7 +2482,7 @@ cmd_ready() {
 
   mkdir -p "reports/${run_id}"
   ready_file="reports/${run_id}/ready.json"
-  discussion_dir="SYNC/discussion/${run_id}"
+  discussion_dir="chatlogs/discussion/${run_id}"
   ready_brief_json="${discussion_dir}/ready_brief.json"
   ready_brief_md="${discussion_dir}/ready_brief.md"
   orient_file="${discussion_dir}/orient.json"
@@ -2780,16 +2747,16 @@ cmd_orient() {
     current_status="active"
   fi
 
-  orient_file="SYNC/discussion/${run_id}/orient.json"
-  orient_md="SYNC/discussion/${run_id}/orient.md"
-  mkdir -p "SYNC/discussion/${run_id}"
+  orient_file="chatlogs/discussion/${run_id}/orient.json"
+  orient_md="chatlogs/discussion/${run_id}/orient.md"
+  mkdir -p "chatlogs/discussion/${run_id}"
   if ! generate_orient_draft "$run_id" "$project_id" "$task_file" "$orient_file" "$orient_md"; then
     echo "ERROR: orient generation failed." >&2
     exit 1
   fi
 
   append_execution_event "$run_id" "orient" "orient_generated" "ok" "tools/qf orient RUN_ID=${run_id}" "orient_file=${orient_file};orient_md=${orient_md}" ""
-  append_conversation_checkpoint "$run_id" "orient" "orientation draft updated in SYNC/discussion; recommended option ready for choose"
+  append_conversation_checkpoint "$run_id" "orient" "orientation draft updated in chatlogs/discussion; recommended option ready for choose"
   update_state_current "$run_id" "$task_file" "$current_status" "$project_id"
   echo "ORIENT_FILE: ${orient_file}"
   echo "ORIENT_MD: ${orient_md}"
@@ -3086,9 +3053,9 @@ cmd_council() {
     exit 1
   fi
 
-  council_json="SYNC/discussion/${run_id}/council.json"
-  council_md="SYNC/discussion/${run_id}/council.md"
-  mkdir -p "SYNC/discussion/${run_id}"
+  council_json="chatlogs/discussion/${run_id}/council.json"
+  council_md="chatlogs/discussion/${run_id}/council.md"
+  mkdir -p "chatlogs/discussion/${run_id}"
 
   if command -v python3 >/dev/null 2>&1; then
     py_bin="python3"
@@ -3146,7 +3113,7 @@ title = str(contract.get("selected_title", "")).strip() or "confirmed direction"
 goal = str(contract.get("execution_goal", "")).strip()
 scope = normalize_scope(contract.get("scope_hint"))
 if not scope:
-    scope = ["tools/qf", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "SYNC/", "TASKS/", "reports/{RUN_ID}/"]
+    scope = ["tools/qf", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
 
 delivery_contract = contract.get("delivery_contract") or {}
 quality_gates = delivery_contract.get("quality_gates") or []
@@ -3156,12 +3123,12 @@ steps = delivery_contract.get("steps") or []
 if not isinstance(steps, list):
     steps = []
 
-sync_obj = read_json(f"reports/{run_id}/sync_report.json")
+learn_obj = read_json(f"reports/projects/{project_id}/session/learn.json")
 ready_obj = read_json(f"reports/{run_id}/ready.json")
 queue_text = read_text("TASKS/QUEUE.md")
 queue_open_items = len(re.findall(r"^- \[ \] ", queue_text, flags=re.M))
 
-sync_passed = bool(sync_obj.get("sync_passed")) if sync_obj else False
+learn_passed = bool(learn_obj.get("learn_passed")) if learn_obj else False
 ready_passed = bool(ready_obj.get("restatement_passed")) if ready_obj else False
 goal_clear = len(goal) >= 24
 scope_present = len(scope) > 0
@@ -3173,10 +3140,10 @@ queue_pressure_ok = queue_open_items <= 20
 
 checks = [
     {
-        "id": "sync_gate",
-        "label": "sync report is available and passed",
-        "status": check_status(sync_passed, "block"),
-        "detail": "sync_report.json missing or sync_passed=false" if not sync_passed else "ok",
+        "id": "learn_gate",
+        "label": "learn report is available and passed",
+        "status": check_status(learn_passed, "block"),
+        "detail": "learn.json missing or learn_passed=false" if not learn_passed else "ok",
     },
     {
         "id": "ready_gate",
@@ -3250,13 +3217,13 @@ if not docs_gate:
 product_refs = ["goal_clarity", "queue_pressure", "docs_gate"]
 
 architect_concerns = []
-if not sync_passed:
-    architect_concerns.append("sync evidence missing; state continuity risk")
+if not learn_passed:
+    architect_concerns.append("learn evidence missing; onboarding continuity risk")
 if not ready_passed:
     architect_concerns.append("ready gate missing; lifecycle invariant is broken")
 if not scope_present or not scope_bounded:
     architect_concerns.append("scope boundary is unclear or too broad")
-architect_refs = ["sync_gate", "ready_gate", "scope_present", "scope_bounded"]
+architect_refs = ["learn_gate", "ready_gate", "scope_present", "scope_bounded"]
 
 dev_concerns = []
 if not steps_bounded:
@@ -3497,7 +3464,7 @@ council = read_json(council_file)
 
 scope = normalize_scope(direction.get("scope_hint"))
 if not scope:
-    scope = ["tools/qf", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "SYNC/", "TASKS/", "reports/{RUN_ID}/"]
+    scope = ["tools/qf", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
 
 title = str(direction.get("selected_title", "")).strip() or "confirmed direction"
 goal = str(direction.get("execution_goal", "")).strip() or "Deliver the confirmed direction with minimal safe tasks."
@@ -3569,7 +3536,7 @@ if blockers or warnings or role_conditions:
             "task_id": "slice-2",
             "title": f"{title} - close council conditions",
             "goal": "Resolve cross-role concerns raised by council before/while executing.",
-            "scope": ["tools/qf", "tests/", "SYNC/", "reports/{RUN_ID}/"],
+            "scope": ["tools/qf", "tests/", "chatlogs/discussion/", "reports/{RUN_ID}/"],
             "acceptance": concern_acceptance or ["no open council conditions"],
         }
     )
@@ -3592,7 +3559,7 @@ tasks.append(
         "task_id": "slice-3",
         "title": f"{title} - evidence and docs alignment",
         "goal": "Keep evidence and owner docs aligned with final behavior of this direction.",
-        "scope": ["AGENTS.md", "docs/WORKFLOW.md", "SYNC/", "reports/{RUN_ID}/"],
+        "scope": ["AGENTS.md", "docs/WORKFLOW.md", "chatlogs/discussion/", "reports/{RUN_ID}/"],
         "acceptance": [
             "owner docs updated in same run when behavior/rules changed",
             "tools/qf review STRICT=1 AUTO_FIX=1 passes",
@@ -3781,7 +3748,7 @@ for raw in tasks:
         scope = []
     scope = [str(x).strip().replace("`", "") for x in scope if str(x).strip()]
     if not scope:
-        scope = ["tools/qf", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "SYNC/", "TASKS/", "reports/{RUN_ID}/"]
+        scope = ["tools/qf", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
     scope_line = ", ".join(f"`{x}`" for x in scope)
     acceptance = raw.get("acceptance") or []
     if not isinstance(acceptance, list):
@@ -4009,7 +3976,7 @@ PY
   fi
 
   emit_step "execute" 4 "$execute_steps_total" "run council review"
-  if [[ ! -f "SYNC/discussion/${run_id}/council.json" ]]; then
+  if [[ ! -f "chatlogs/discussion/${run_id}/council.json" ]]; then
     echo "EXECUTE_STEP: council"
     cmd_council "RUN_ID=${run_id}" "PROJECT_ID=${project_id}"
   fi
@@ -4201,7 +4168,7 @@ non_blocking = non_blocking == "1"
 
 run_dir = Path("reports") / run_id
 run_dir.mkdir(parents=True, exist_ok=True)
-sync_discussion = Path("SYNC/discussion") / run_id
+sync_discussion = Path("chatlogs/discussion") / run_id
 sync_discussion.mkdir(parents=True, exist_ok=True)
 
 summary_path = run_dir / "summary.md"
@@ -4638,10 +4605,10 @@ convo_tail = tail_lines(convo_file, 20)
 notes = extract_notes(convo_tail, 3)
 
 choice_file = f"reports/{run_id}/orient_choice.json"
-council_file = f"SYNC/discussion/{run_id}/council.json"
+council_file = f"chatlogs/discussion/{run_id}/council.json"
 execution_contract_file = f"reports/{run_id}/execution_contract.json"
 slice_state_file = f"reports/{run_id}/slice_state.json"
-orient_file = f"SYNC/discussion/{run_id}/orient.json"
+orient_file = f"chatlogs/discussion/{run_id}/orient.json"
 
 if not ready:
     next_cmd = "tools/qf ready"
@@ -4974,7 +4941,7 @@ if not obj.get("restatement_passed"):
 sync_gate = obj.get("sync_gate") or {}
 required_flag = sync_gate.get("required")
 if required_flag is None:
-    require_sync = os.environ.get("QF_READY_REQUIRE_SYNC", "1") == "1"
+    require_sync = os.environ.get("QF_READY_REQUIRE_SYNC", "0") == "1"
 else:
     require_sync = bool(required_flag)
 if require_sync:
@@ -5121,127 +5088,239 @@ cleanup_pick_candidate_dirs() {
 }
 
 cmd_init() {
+  local init_mode="check"
   local init_context_id="${RUN_ID:-session-$(date +%Y%m%d-%H%M%S)-init}"
-  local init_auto_handoff="${QF_INIT_AUTO_HANDOFF:-1}"
-  local knowledge_file="docs/CHANGELOG_KNOWLEDGE.md"
-  local knowledge_ttl_days="${QF_KNOWLEDGE_TTL_DAYS:-14}"
-  local last_review=""
-  local now_epoch=""
-  local reviewed_epoch=""
-  local age_days=""
-  local latest_handoff_run=""
   local current_run_id=""
   local current_project_id=""
-  local handoff_done=0
-  local py_bin=""
-  local init_steps_total=8
+  local current_task_file=""
+  local current_status=""
+  local init_steps_total=7
+  local gh_status="missing"
+  local gh_version="(not installed)"
+  local codex_version="(not installed)"
+  local git_version=""
+  local python_version="(missing)"
+  local branch=""
+  local upstream=""
+  local remote_url=""
+  local ahead_count="n/a"
+  local behind_count="n/a"
+  local git_dir=""
+  local git_op_reason=""
+  local init_status="ok"
+  local next_cmd="tools/qf learn"
+  local reason_codes_text="none"
+  local worktree_dirty=0
+  local staged_count=0
+  local unstaged_count=0
+  local untracked_count=0
+  local show_resume_hint=1
+  local commit_head="(none)"
+  local commit_time="(none)"
+  local commit_subject="(none)"
+  local line=""
+  local -a reason_codes=()
+  local -a diff_preview=()
+  local -a commit_files=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -status)
+        init_mode="status"
+        ;;
+      -main)
+        init_mode="main"
+        ;;
+      *)
+        echo "ERROR: unknown init option: $1" >&2
+        usage
+        exit 2
+        ;;
+    esac
+    shift
+  done
+  if [[ "$init_mode" == "status" ]]; then
+    show_resume_hint=0
+  fi
 
   current_run_id="$(resolve_state_current_run_id || true)"
   current_project_id="$(resolve_state_current_project_id || true)"
+  current_task_file="$(state_field_value "CURRENT_TASK_FILE")"
+  current_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$current_status" ]]; then
+    current_status="active"
+  fi
   if [[ -n "$current_run_id" ]]; then
     init_context_id="$current_run_id"
   fi
 
-  emit_step "init" 1 "$init_steps_total" "prepare run context"
+  emit_step "init" 1 "$init_steps_total" "resolve mode and run context"
+  echo "INIT_MODE: ${init_mode}"
   echo "INIT_CONTEXT_ID: ${init_context_id}"
   echo "INIT_PROJECT_ID: ${current_project_id:-$DEFAULT_PROJECT_ID}"
+  echo "INIT_TASK_FILE: ${current_task_file:-"(none)"}"
+  echo "INIT_TASK_STATUS: ${current_status}"
   if [[ -n "$current_run_id" ]]; then
     echo "INIT_RUN_ID_SOURCE: CURRENT_RUN_ID"
+    echo "INIT_RUN_ID: ${current_run_id}"
   else
     echo "INIT_RUN_ID_SOURCE: session-context-only (init does not create business RUN_ID)"
+    echo "INIT_RUN_ID: (none)"
   fi
-  emit_step "init" 2 "$init_steps_total" "workspace guard (auto-stash when dirty)"
-  auto_stash_if_dirty "init"
-  emit_step "init" 3 "$init_steps_total" "sync main branch"
-  sync_main "${current_run_id:-$init_context_id}"
-  emit_step "init" 4 "$init_steps_total" "run doctor checks"
-  bash tools/doctor.sh
-  emit_step "init" 5 "$init_steps_total" "generate onboard summary"
-  cmd_onboard "$init_context_id"
-  emit_step "init" 6 "$init_steps_total" "check knowledge TTL"
-  if [[ -f "$knowledge_file" ]]; then
-    last_review="$(awk '/^- Date: `/ { gsub(/^- Date: `/, "", $0); gsub(/`$/, "", $0); print; exit }' "$knowledge_file" || true)"
-    if [[ -n "$last_review" ]]; then
-      now_epoch="$(date +%s)"
-      reviewed_epoch="$(date -d "$last_review" +%s 2>/dev/null || true)"
-      if [[ -n "$reviewed_epoch" ]]; then
-        age_days="$(( (now_epoch - reviewed_epoch) / 86400 ))"
-        if [[ "$age_days" -gt "$knowledge_ttl_days" ]]; then
-          echo "⚠️ Knowledge TTL exceeded: last review ${last_review} (${age_days}d > ${knowledge_ttl_days}d)."
-          echo "   建议先执行 knowledge-sync 任务再继续开发。"
-        else
-          echo "Knowledge review age: ${age_days}d (ttl=${knowledge_ttl_days}d)"
-        fi
-      fi
+
+  emit_step "init" 2 "$init_steps_total" "print account and tool versions"
+  if command -v gh >/dev/null 2>&1; then
+    gh_version="$(gh --version | head -n1 || true)"
+    if gh auth status -h github.com >/dev/null 2>&1; then
+      gh_status="logged_in"
+    else
+      gh_status="not_logged_in"
+    fi
+  fi
+  if command -v codex >/dev/null 2>&1; then
+    codex_version="$(codex --version 2>/dev/null | head -n1 || true)"
+  fi
+  git_version="$(git --version 2>/dev/null || true)"
+  if command -v python3 >/dev/null 2>&1; then
+    python_version="$(python3 --version 2>/dev/null || true)"
+  elif command -v python >/dev/null 2>&1; then
+    python_version="$(python --version 2>/dev/null || true)"
+  fi
+  echo "INIT_GH_STATUS: ${gh_status}"
+  echo "INIT_GH_VERSION: ${gh_version}"
+  echo "INIT_CODEX_VERSION: ${codex_version}"
+  echo "INIT_GIT_VERSION: ${git_version}"
+  echo "INIT_PYTHON_VERSION: ${python_version}"
+
+  emit_step "init" 3 "$init_steps_total" "print branch and remote status"
+  branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")"
+  remote_url="$(git remote get-url origin 2>/dev/null || echo "(missing)")"
+  upstream="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)"
+  if [[ -n "$upstream" ]]; then
+    read -r behind_count ahead_count < <(git rev-list --left-right --count "${upstream}...HEAD" 2>/dev/null || printf "n/a n/a\n")
+  fi
+  echo "INIT_BRANCH: ${branch}"
+  echo "INIT_REMOTE_ORIGIN: ${remote_url}"
+  echo "INIT_UPSTREAM: ${upstream:-"(none)"}"
+  echo "INIT_AHEAD_COUNT: ${ahead_count}"
+  echo "INIT_BEHIND_COUNT: ${behind_count}"
+  if [[ "$branch" != "main" ]]; then
+    reason_codes+=("BRANCH_NOT_MAIN")
+  fi
+
+  emit_step "init" 4 "$init_steps_total" "inspect worktree and git operation state"
+  git_dir="$(git rev-parse --git-dir 2>/dev/null || echo ".git")"
+  if [[ -f "${git_dir}/MERGE_HEAD" ]]; then
+    git_op_reason="merge_in_progress"
+  elif [[ -d "${git_dir}/rebase-merge" || -d "${git_dir}/rebase-apply" ]]; then
+    git_op_reason="rebase_in_progress"
+  elif [[ -f "${git_dir}/CHERRY_PICK_HEAD" ]]; then
+    git_op_reason="cherry_pick_in_progress"
+  elif [[ -f "${git_dir}/REVERT_HEAD" ]]; then
+    git_op_reason="revert_in_progress"
+  fi
+  if [[ -n "$git_op_reason" ]]; then
+    reason_codes+=("GIT_OPERATION_IN_PROGRESS")
+  fi
+  if is_dirty; then
+    worktree_dirty=1
+    reason_codes+=("WORKTREE_DIRTY")
+  fi
+  staged_count="$(git diff --cached --name-only | wc -l | tr -d '[:space:]')"
+  unstaged_count="$(git diff --name-only | wc -l | tr -d '[:space:]')"
+  untracked_count="$(git ls-files --others --exclude-standard | wc -l | tr -d '[:space:]')"
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    diff_preview+=("$line")
+  done < <(git status --short | head -n 20)
+  echo "INIT_GIT_OPERATION: ${git_op_reason:-none}"
+  echo "INIT_DIFF_SUMMARY: staged=${staged_count},unstaged=${unstaged_count},untracked=${untracked_count}"
+  if [[ "${#diff_preview[@]}" -gt 0 ]]; then
+    echo "INIT_DIFF_FILES_START"
+    for line in "${diff_preview[@]}"; do
+      echo "${line}"
+    done
+    echo "INIT_DIFF_FILES_END"
+  else
+    echo "INIT_DIFF_FILES: (clean)"
+  fi
+
+  emit_step "init" 5 "$init_steps_total" "print current run/task pointer"
+  echo "INIT_RUN_CONTEXT: project_id=${current_project_id:-$DEFAULT_PROJECT_ID},run_id=${current_run_id:-"(none)"},task=${current_task_file:-"(none)"},status=${current_status}"
+
+  emit_step "init" 6 "$init_steps_total" "print last change evidence"
+  if [[ "$worktree_dirty" -eq 1 ]]; then
+    echo "INIT_LAST_CHANGE_SOURCE: worktree"
+    if [[ "${#diff_preview[@]}" -gt 0 ]]; then
+      echo "INIT_LAST_CHANGE_FILES_START"
+      for line in "${diff_preview[@]}"; do
+        echo "${line}"
+      done
+      echo "INIT_LAST_CHANGE_FILES_END"
     fi
   else
-    echo "⚠️ Missing ${knowledge_file}; recommend creating weekly knowledge-sync task."
+    commit_head="$(git rev-parse --short HEAD 2>/dev/null || echo "(none)")"
+    commit_time="$(git log -1 --pretty=%cI 2>/dev/null || echo "(none)")"
+    commit_subject="$(git log -1 --pretty=%s 2>/dev/null || echo "(none)")"
+    echo "INIT_LAST_CHANGE_SOURCE: last_commit"
+    echo "INIT_LAST_COMMIT: ${commit_head}"
+    echo "INIT_LAST_COMMIT_TIME: ${commit_time}"
+    echo "INIT_LAST_COMMIT_SUBJECT: ${commit_subject}"
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      commit_files+=("$line")
+    done < <(git show --name-only --pretty=format: HEAD 2>/dev/null | sed '/^$/d' | head -n 20)
+    if [[ "${#commit_files[@]}" -gt 0 ]]; then
+      echo "INIT_LAST_COMMIT_FILES_START"
+      for line in "${commit_files[@]}"; do
+        echo "${line}"
+      done
+      echo "INIT_LAST_COMMIT_FILES_END"
+    fi
   fi
 
-  if command -v python3 >/dev/null 2>&1; then
-    py_bin="python3"
-  elif command -v python >/dev/null 2>&1; then
-    py_bin="python"
+  emit_step "init" 7 "$init_steps_total" "evaluate status and print next action"
+  if [[ "${#reason_codes[@]}" -gt 0 ]]; then
+    reason_codes_text="$(IFS=,; echo "${reason_codes[*]}")"
   fi
-  if [[ -n "$py_bin" ]]; then
-    latest_handoff_run="$("$py_bin" - <<'PY'
-from pathlib import Path
-root = Path("reports")
-if not root.exists():
-    raise SystemExit(0)
-cands = []
-for d in root.glob("run-*"):
-    if not d.is_dir():
-        continue
-    hits = [d / "execution.jsonl", d / "conversation.md", d / "ship_state.json"]
-    mt = 0.0
-    ok = False
-    for p in hits:
-        if p.exists():
-            ok = True
-            mt = max(mt, p.stat().st_mtime)
-    if ok:
-        cands.append((mt, d.name))
-if cands:
-    cands.sort(reverse=True)
-    print(cands[0][1])
-PY
-)"
+  if [[ "$init_mode" == "main" && "${#reason_codes[@]}" -gt 0 ]]; then
+    init_status="blocked"
+  elif [[ "${#reason_codes[@]}" -gt 0 ]]; then
+    init_status="needs_resume"
+  fi
+  if [[ "$init_status" != "ok" ]]; then
+    if [[ -n "$current_run_id" ]]; then
+      next_cmd="tools/qf resume RUN_ID=${current_run_id}"
+    else
+      next_cmd="tools/qf resume"
+    fi
+  fi
+  echo "INIT_STATUS: ${init_status}"
+  echo "INIT_REASON_CODES: ${reason_codes_text}"
+  echo "INIT_NEXT: ${next_cmd}"
+  if [[ "$init_status" != "ok" && "$show_resume_hint" -eq 1 ]]; then
+    echo "INIT_HINT: repository state indicates unfinished/abnormal previous cycle; run resume before new work."
+  elif [[ "$init_mode" == "status" ]]; then
+    echo "INIT_HINT: status-only mode, no resume reminder emitted."
   fi
 
-  emit_step "init" 7 "$init_steps_total" "handoff for CURRENT_RUN_ID (if enabled)"
-  if [[ -n "$current_run_id" && "$init_auto_handoff" == "1" ]]; then
-    echo "AUTO_HANDOFF: tools/qf handoff RUN_ID=${current_run_id}"
-    cmd_handoff "RUN_ID=${current_run_id}"
-    handoff_done=1
-  fi
-  emit_step "init" 8 "$init_steps_total" "finalize and print next commands"
   if [[ -n "$current_run_id" ]]; then
-    echo "INIT_RUN_ID: $current_run_id"
-    append_execution_event "$current_run_id" "init" "init_completed" "ok" "tools/qf init" "onboard_file=reports/${init_context_id}/onboard.md" ""
+    append_execution_event "$current_run_id" "init" "init_checked" "ok" "tools/qf init ${init_mode}" "status=${init_status};reason_codes=${reason_codes_text}" ""
   else
-    echo "INIT_RUN_ID: (none)"
     echo "INIT_EXECUTION_EVENT: skipped (no CURRENT_RUN_ID)"
   fi
-  echo "== 下一步建议 =="
-  if [[ "$handoff_done" -eq 1 ]]; then
-    echo "0) handoff completed for CURRENT_RUN_ID=${current_run_id}"
-  elif [[ -n "$current_run_id" ]]; then
-    echo "0) tools/qf handoff RUN_ID=${current_run_id}"
-    echo "CURRENT_RUN_ID: ${current_run_id}"
-  elif [[ -n "$latest_handoff_run" ]]; then
-    echo "0) tools/qf handoff RUN_ID=${latest_handoff_run}"
+  if [[ "$init_mode" == "main" && "$init_status" != "ok" ]]; then
+    exit 1
   fi
-  echo "1) tools/qf learn"
-  echo "2) tools/qf ready"
-  echo "3) tools/qf orient"
-  echo "4) tools/qf choose OPTION=<id>"
-  echo "5) tools/qf council"
-  echo "6) tools/qf arbiter"
-  echo "7) tools/qf slice"
-  echo "8) tools/qf discuss"
-  echo "9) tools/qf do queue-next"
-  echo "10) tools/qf execute"
+  if [[ "$init_mode" == "check" ]]; then
+    echo "== 建议流程 =="
+    echo "1) tools/qf learn"
+    echo "2) tools/qf ready"
+    echo "3) tools/qf discuss TARGET=prepare"
+    echo "4) tools/qf do queue-next"
+  else
+    echo "== 状态查询完成 =="
+  fi
 }
 
 cmd_plan() {
@@ -5556,7 +5635,7 @@ text = f"""## 问答 1：项目使命、背景、目标、最终结果、开发�
 
 ## 问答 4：GPT 网页端（大脑）与 Codex CLI（手脚）如何同频，是否一致，操作顺序与优化
 - 回答：原则一致但职责不同：GPT做策略/评审，Codex做执行/验证。顺序是 init -> learn -> ready -> discuss/execute -> review/ship。建议优化 learn 的模型同频证据和失败语义。
-- 同频操作指南路径：`docs/WORKFLOW.md`、`SYNC/EXAM_WORKFLOW.md`
+- 同频操作指南路径：`docs/WORKFLOW.md`、`docs/PROJECT_GUIDE.md`
 - 证据文件路径：`AGENTS.md`、`tools/qf`、`reports/{run_id}/conversation.md`
 
 ## 问答 5：当前项目“宪法”是什么、是否合理、可优化点
@@ -5564,18 +5643,18 @@ text = f"""## 问答 1：项目使命、背景、目标、最终结果、开发�
 - 证据文件路径：`AGENTS.md`
 
 ## 问答 6：当前工作流是什么（总流程/子流程/操作指南/涉及文件）
-- 回答：总流程是 init -> sync -> learn -> ready -> orient/choose -> council/arbiter -> slice -> do -> review -> ship；子流程包含讨论态与执行态分层。
+- 回答：总流程是 init -> learn -> ready -> orient/choose -> council/arbiter -> slice -> do -> review -> ship；子流程包含讨论态与执行态分层。
 - 操作指南路径：`docs/WORKFLOW.md`
-- 证据文件路径：`docs/WORKFLOW.md`、`SYNC/READ_ORDER.md`、`tools/qf`
+- 证据文件路径：`docs/WORKFLOW.md`、`docs/PROJECT_GUIDE.md`、`AGENTS.md`
 
 ## 问答 7：未完成任务与最新讨论批次是什么，如何查询
-- 回答：通过 `TASKS/STATE.md` 看当前 run/task，通过 `TASKS/QUEUE.md` 看未完成项，通过 `reports/<RUN_ID>/` 与 `SYNC/discussion/<RUN_ID>/` 看最新批次讨论。
+- 回答：通过 `TASKS/STATE.md` 看当前 run/task，通过 `TASKS/QUEUE.md` 看未完成项，通过 `reports/<RUN_ID>/` 与 `chatlogs/discussion/<RUN_ID>/` 看最新批次讨论。
 - 操作指南路径：`docs/WORKFLOW.md#Codex-session-startup-checklist`
 - 证据文件路径：`TASKS/STATE.md`、`TASKS/QUEUE.md`、`reports/{run_id}/conversation.md`
 
 ## 问答 8：最近 session 说了什么，从哪里查，如何追溯源文件，是否偏离主线
 - 回答：先看 summary/decision/conversation，再回看具体产物文件与脚本。当前主线是强化 learn 同频和自动化编排，不应偏离到无关细节。
-- 操作指南路径：`SYNC/READ_ORDER.md`
+- 操作指南路径：`AGENTS.md` + `docs/PROJECT_GUIDE.md`
 - 最近 session 总结路径：`reports/{run_id}/summary.md`
 - 源文件路径：`reports/{run_id}/conversation.md`、`reports/{run_id}/decision.md`
 - 偏离判断：若改动不能提升同频、门禁或执行闭环，即判定偏离。
@@ -5583,12 +5662,12 @@ text = f"""## 问答 1：项目使命、背景、目标、最终结果、开发�
 ## 问答 9：基建项目“讨论”应使用的流程
 - 回答：采用 orient -> choose -> council -> arbiter -> slice 的讨论收敛流，再进入 do。
 - 操作指南路径：`docs/WORKFLOW.md`
-- 证据文件路径：`tools/qf`、`SYNC/discussion/{run_id}/`
+- 证据文件路径：`tools/qf`、`chatlogs/discussion/{run_id}/`
 
 ## 问答 10：基建项目“代码实施”流程、角色定义、独立思考保障、当前实现状态
 - 回答：实施流程是 do + verify + review + ship；角色为产品/架构/研发/测试，独立思考通过 council 分角色输出与 arbiter 统一裁决保障。
 - 操作手册路径：`docs/WORKFLOW.md`
-- 证据文件路径：`tools/qf`、`SYNC/discussion/{run_id}/council.json`
+- 证据文件路径：`tools/qf`、`chatlogs/discussion/{run_id}/council.json`
 
 ## 问答 11：task / pr / run / project 等概念与生命周期管理
 - 回答：task 是合同，run 是证据命名空间，pr 是交付单元，project 是上层项目命名空间；生命周期由 STATE/QUEUE 与 reports 协同推进。
@@ -5596,8 +5675,8 @@ text = f"""## 问答 1：项目使命、背景、目标、最终结果、开发�
 - 证据文件路径：`docs/ENTITIES.md`、`TASKS/STATE.md`
 
 ## 问答 12：准备工作完成后，需求方向讨论从哪一步开始，如何保存与多角色协作
-- 回答：从 orient 开始；方向保存于 `SYNC/discussion/<RUN_ID>/orient.*` 与 `reports/<RUN_ID>/orient_choice.json`；多角色通过 council/arbiter 收敛。
-- 方向保存位置：`SYNC/discussion/{run_id}/orient.json`、`reports/{run_id}/orient_choice.json`
+- 回答：从 orient 开始；方向保存于 `chatlogs/discussion/<RUN_ID>/orient.*` 与 `reports/<RUN_ID>/orient_choice.json`；多角色通过 council/arbiter 收敛。
+- 方向保存位置：`chatlogs/discussion/{run_id}/orient.json`、`reports/{run_id}/orient_choice.json`
 - 讨论流程与入口：`tools/qf discuss` 或分步命令
 - 证据文件路径：`docs/WORKFLOW.md`、`tools/qf`
 
@@ -5640,7 +5719,7 @@ cmd_exam() {
   local explicit_run_id="${RUN_ID:-}"
   local run_id=""
   local answer_file=""
-  local rubric_file="${SYNC_EXAM_RUBRIC_FILE:-SYNC/EXAM_RUBRIC.json}"
+  local rubric_file="${SYNC_EXAM_RUBRIC_FILE:-docs/LEARN_EXAM_RUBRIC.json}"
   local output_file=""
   local py_bin=""
   local arg=""
@@ -5728,9 +5807,9 @@ cmd_exam_auto() {
   local explicit_run_id="${RUN_ID:-}"
   local run_id=""
   local answer_file=""
-  local rubric_file="${SYNC_EXAM_RUBRIC_FILE:-SYNC/EXAM_RUBRIC.json}"
+  local rubric_file="${SYNC_EXAM_RUBRIC_FILE:-docs/LEARN_EXAM_RUBRIC.json}"
   local output_file=""
-  local template_file="${SYNC_EXAM_TEMPLATE_FILE:-SYNC/EXAM_ANSWER_TEMPLATE.md}"
+  local template_file="${SYNC_EXAM_TEMPLATE_FILE:-docs/LEARN_EXAM_ANSWER_TEMPLATE.md}"
   local auto_fill="${QF_EXAM_AUTO_FILL:-1}"
   local arg=""
   local command_line=""
