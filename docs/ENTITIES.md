@@ -57,6 +57,12 @@ Minimal entity dictionary for existing repository objects and constraints.
   - `meta.json`: run metadata scaffold (`make evidence`).
   - `summary.md`: what changed + commands/outputs + notes.
   - `decision.md`: why/options/risks.
+- `meta.json` minimum gate fields:
+  - `run_id`
+  - `task_id`
+  - `stop_reason`
+  - `commands_run`
+  - `artifacts`
 - Minimum requirement: every task must create/update all three (`AGENTS.md`).
 - Project/session learning evidence:
   - `reports/projects/<PROJECT_ID>/session/learn.json|md|learn.stdout.log`.

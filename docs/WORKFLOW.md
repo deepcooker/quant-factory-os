@@ -13,6 +13,10 @@ This document describes the expected workflow for changes in this repository.
 - Codex operation owner: `docs/CODEX_CLI_OPERATION.md`
 
 ## Session lifecycle state machine (single source)
+- `S-1 Discussion-only` (optional)
+  - Allowed only for read-only clarification/investigation.
+  - Constraint: no repo mutation (no file edits, no generated artifacts, no ship).
+  - Exit: before any mutation, bind to active `TASKS/TASK-*.md` + `RUN_ID`.
 - `S0 Environment`: `tools/qf init`
   - Input: local repo checkout
   - Output: synced main + doctor checks + onboard summary
@@ -130,6 +134,16 @@ This document describes the expected workflow for changes in this repository.
 - `S5 Learn`: reports/mistakes updates
   - Input: execution and verification outcomes
   - Output: durable memory for next session handoff.
+
+## Evidence minimum fields
+- Required run evidence files: `reports/{RUN_ID}/meta.json`, `summary.md`, `decision.md`.
+- `meta.json` minimum gate fields:
+  - `run_id`
+  - `task_id`
+  - `stop_reason`
+  - `commands_run`
+  - `artifacts`
+- Full schema ownership: `docs/ENTITIES.md`.
 
 ## Status snapshot rule
 Before each ship, record `/status` output in the evidence for the active RUN_ID.

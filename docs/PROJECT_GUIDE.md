@@ -1,5 +1,12 @@
 # PROJECT_GUIDE.md
 
+## 同频入口导航（先看）
+- 启动阅读顺序真相源：`SYNC/READ_ORDER.md`
+- 详细状态机和每步输入输出：`docs/WORKFLOW.md`
+- Codex 参数与命令实践：`docs/CODEX_CLI_OPERATION.md`
+- 策略问答与项目认知：`docs/PROJECT_GUIDE.md`
+- 概念定义：`docs/ENTITIES.md`
+
 ## 问答
 
 ### 1. 整个项目是做什么的，背景，目标是什么，我最终要什么，我是用什么开发方式来完成这个项目的？
