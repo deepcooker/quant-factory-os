@@ -12,6 +12,15 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [>] TODO Title: qf resume reliability: avoid self-block on checkout main  Picked: run-2026-03-04-resume-self-block-fix 2026-03-04T14:23:57+0800
+  Goal: 修复 `tools/qf resume` 在收尾同步阶段因自身写日志导致工作区变脏而卡住 `git checkout main` 的问题。
+  Scope: `tools/qf`, `tests/`, `AGENTS.md`, `docs/WORKFLOW.md`, `TASKS/STATE.md`, `reports/{RUN_ID}/`
+  Acceptance:
+  - [ ] `tools/qf resume` 在 merged PR 场景不会因 `execution.jsonl/ship_state.json` 自阻塞
+  - [ ] 新增回归测试覆盖此场景并通过
+  - [ ] Command(s) pass: `make verify`
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
 - [x] TODO Title: plan-execute governance: /plan 与 qf plan 去歧义 + /compact 策略落地  Picked: run-2026-03-04-plan-execute-governance 2026-03-04T12:44:21+0800
   Done: PR #160, RUN_ID=run-2026-03-04-plan-execute-governance
   Goal: 统一 Plan->Confirm->Execute 语义，明确 `/plan`、`tools/qf plan`、`/compact` 的边界与触发规则。

@@ -5391,7 +5391,7 @@ cmd_do() {
 is_qf_stash_cleanup_candidate() {
   local subject="${1:-}"
   case "$subject" in
-    *": ship-wip-"*|*": qf-init-wip-"*|*": resume-cleanup-run-"*|*": tmp-ship-cleanup-"*)
+    *": ship-wip-"*|*": qf-init-wip-"*|*": resume-cleanup-run-"*|*": qf-resume-cleanup-run-"*|*": tmp-ship-cleanup-"*)
       return 0
       ;;
     *)
@@ -6001,6 +6001,14 @@ cmd_resume() {
         exit 1
       }
     fi
+  fi
+
+  # Resume may append execution logs/ship state during retries. Auto-stash dirty
+  # changes before switching back to main to avoid self-blocking checkout.
+  if ! auto_stash_if_dirty "resume-cleanup-run-${run_id}"; then
+    append_execution_event "$run_id" "resume" "resume_autostash_failed" "fail" "auto_stash_if_dirty resume-cleanup-run-${run_id}" "" "workspace dirty and autostash disabled"
+    print_resume_cmd "$run_id"
+    exit 1
   fi
 
   run_with_retry_capture "resume_sync_checkout_main" git checkout main || {

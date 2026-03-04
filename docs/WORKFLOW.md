@@ -181,6 +181,8 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   - Always snapshot first, then compact.
 - `tools/qf do` / `tools/qf resume` 自动记录执行轨迹到
   `reports/{RUN_ID}/execution.jsonl`（默认脱敏，可审计）。
+- `tools/qf resume` 在同步回 `main` 前若检测到脏工作区，会自动 stash
+  `qf-resume-cleanup-run-{RUN_ID}-wip-*`，避免因自身日志写入导致 checkout 自阻塞。
 - `tools/qf sync` / `tools/qf ready` / `tools/qf orient` / `tools/qf choose` /
   `tools/qf council` / `tools/qf arbiter` / `tools/qf slice` 默认写入
   `reports/{RUN_ID}/conversation.md` checkpoint（可用 `QF_AUTO_CONVERSATION=0` 关闭）。

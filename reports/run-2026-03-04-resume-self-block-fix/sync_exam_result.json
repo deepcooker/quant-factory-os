@@ -1,0 +1,150 @@
+{
+  "schema": "sync_exam_result.v1",
+  "run_id": "run-2026-03-04-resume-self-block-fix",
+  "answer_file": "reports/run-2026-03-04-resume-self-block-fix/onboard_answer.md",
+  "rubric_file": "SYNC/EXAM_RUBRIC.json",
+  "passed": true,
+  "score": 100.0,
+  "pass_score": 85,
+  "total_weight": 110,
+  "gained_weight": 110,
+  "failed_checks": [],
+  "checks": [
+    {
+      "id": "q1_mission",
+      "title": "项目使命与开发方式",
+      "section": "问答 1：项目使命、背景、目标、最终结果、开发方式",
+      "passed": true,
+      "weight": 8,
+      "reason": "ok"
+    },
+    {
+      "id": "q2_stage",
+      "title": "阶段与进度",
+      "section": "问答 2：阶段性目标、当前阶段、各阶段已完成事项",
+      "passed": true,
+      "weight": 7,
+      "reason": "ok"
+    },
+    {
+      "id": "q3_project_landing",
+      "title": "基建后首个项目落地",
+      "section": "问答 3：基建完成后第一个项目如何落地（插件 vs 独立项目）与同频承接方法",
+      "passed": true,
+      "weight": 7,
+      "reason": "ok"
+    },
+    {
+      "id": "q4_brain_hand",
+      "title": "GPT 与 Codex 同频",
+      "section": "问答 4：GPT 网页端（大脑）与 Codex CLI（手脚）如何同频，是否一致，操作顺序与优化",
+      "passed": true,
+      "weight": 8,
+      "reason": "ok"
+    },
+    {
+      "id": "q5_constitution",
+      "title": "宪法",
+      "section": "问答 5：当前项目“宪法”是什么、是否合理、可优化点",
+      "passed": true,
+      "weight": 6,
+      "reason": "ok"
+    },
+    {
+      "id": "q6_workflow",
+      "title": "工作流",
+      "section": "问答 6：当前工作流是什么（总流程/子流程/操作指南/涉及文件）",
+      "passed": true,
+      "weight": 8,
+      "reason": "ok"
+    },
+    {
+      "id": "q7_open_tasks",
+      "title": "未完成任务查询",
+      "section": "问答 7：未完成任务与最新讨论批次是什么，如何查询",
+      "passed": true,
+      "weight": 6,
+      "reason": "ok"
+    },
+    {
+      "id": "q8_session_trace",
+      "title": "session 追溯",
+      "section": "问答 8：最近 session 说了什么，从哪里查，如何追溯源文件，是否偏离主线",
+      "passed": true,
+      "weight": 7,
+      "reason": "ok"
+    },
+    {
+      "id": "q9_discussion_flow",
+      "title": "讨论流程",
+      "section": "问答 9：基建项目“讨论”应使用的流程",
+      "passed": true,
+      "weight": 5,
+      "reason": "ok"
+    },
+    {
+      "id": "q10_execution_flow",
+      "title": "实施流程与角色",
+      "section": "问答 10：基建项目“代码实施”流程、角色定义、独立思考保障、当前实现状态",
+      "passed": true,
+      "weight": 7,
+      "reason": "ok"
+    },
+    {
+      "id": "q11_entities",
+      "title": "实体与生命周期",
+      "section": "问答 11：task / pr / run / project 等概念与生命周期管理",
+      "passed": true,
+      "weight": 6,
+      "reason": "ok"
+    },
+    {
+      "id": "q12_direction_start",
+      "title": "需求方向入口",
+      "section": "问答 12：准备工作完成后，需求方向讨论从哪一步开始，如何保存与多角色协作",
+      "passed": true,
+      "weight": 5,
+      "reason": "ok"
+    },
+    {
+      "id": "q13_branch_policy",
+      "title": "分支管理",
+      "section": "问答 13：分支与代码管理策略，当前是否满足需求",
+      "passed": true,
+      "weight": 4,
+      "reason": "ok"
+    },
+    {
+      "id": "q14_after_task",
+      "title": "任务完成后动作",
+      "section": "问答 14：每次任务完成后必须做什么",
+      "passed": true,
+      "weight": 4,
+      "reason": "ok"
+    },
+    {
+      "id": "q15_automation",
+      "title": "爽用与自动化优化",
+      "section": "问答 15：如果目标是“简单、爽用、自动化高”，当前必须优化的点",
+      "passed": true,
+      "weight": 6,
+      "reason": "ok"
+    },
+    {
+      "id": "skill_codex",
+      "title": "Codex 实操技能",
+      "section": "实操技能 1：Codex 正确打开方式、版本、项目内用法、样例与实操结果",
+      "passed": true,
+      "weight": 8,
+      "reason": "ok"
+    },
+    {
+      "id": "return_mainline",
+      "title": "拉回主线",
+      "section": "拉回主线 2：是否偏离当前最重要任务，原因，下一步动作",
+      "passed": true,
+      "weight": 8,
+      "reason": "ok"
+    }
+  ]
+}

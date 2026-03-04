@@ -1,0 +1,53 @@
+{
+  "project_id": "project-0",
+  "run_id": "run-2026-03-04-resume-self-block-fix",
+  "created_at_utc": "2026-03-04T06:40:11.330742+00:00",
+  "constitution_read": true,
+  "workflow_read": true,
+  "sync_gate": {
+    "required": true,
+    "sync_report_file": "reports/run-2026-03-04-resume-self-block-fix/sync_report.json",
+    "sync_passed": true
+  },
+  "learn_gate": {
+    "required": true,
+    "learn_report_file": "reports/projects/project-0/session/learn.json",
+    "learn_passed": true
+  },
+  "restatement_passed": true,
+  "restatement": {
+    "goal": "修复 `tools/qf resume` 在 merged PR 收尾时可能被自身产生的工作区改动卡住（`git checkout main` 失败），确保可稳定完成收尾同步。",
+    "scope": "tools/qf, tests/, AGENTS.md, docs/WORKFLOW.md, TASKS/STATE.md, reports/{RUN_ID}/",
+    "acceptance": "修复后 tools/qf resume 在 merged PR 场景不因自身日志写入而阻塞 checkout main; 增加回归测试，覆盖“resume 前工作区因执行日志变脏”的场景; Command(s) pass: make verify; Evidence updated: reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md",
+    "steps": "evidence -> implement -> verify -> reports -> ship",
+    "stop_condition": "finish and wait for next instruction; if blocked, record stop reason in decision.md"
+  },
+  "prior_run_resolution": {
+    "required": false,
+    "decision": "continue"
+  },
+  "understanding": {
+    "project_summary": "quant-factory-os is the governance/execution base for quant engineering.",
+    "project_goal": "quant-factory-os is an evidence-driven operating system for quant engineering.",
+    "constitution_interpretation": "约束是任务驱动、证据优先、scope 严格、文档新鲜度硬门禁。",
+    "workflow_interpretation": "流程以门禁推进：sync 同频 -> ready 上岗 -> orient/choose 定方向 -> council/arbiter 收敛 -> slice 拆解 -> do 执行 -> verify/review/ship 收尾。",
+    "evidence_chain": {
+      "learn_report_file": "reports/projects/project-0/session/learn.json",
+      "sync_report_file": "reports/run-2026-03-04-resume-self-block-fix/sync_report.json",
+      "ready_file": "reports/run-2026-03-04-resume-self-block-fix/ready.json",
+      "decision_exists": true,
+      "summary_exists": true,
+      "conversation_exists": true,
+      "execution_exists": true,
+      "ship_state_exists": false
+    },
+    "session_continuity": "ready_to_continue",
+    "current_stage": {
+      "current_project_id": "project-0",
+      "current_run_id": "run-2026-03-04-resume-self-block-fix",
+      "current_task_file": "TASKS/TASK-resume-self-block-fix.md",
+      "current_status": "active"
+    },
+    "suggested_next_step": "tools/qf orient RUN_ID=run-2026-03-04-resume-self-block-fix"
+  }
+}

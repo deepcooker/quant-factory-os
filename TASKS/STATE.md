@@ -1,10 +1,15 @@
 # STATE
 
 CURRENT_PROJECT_ID: project-0
-CURRENT_RUN_ID: run-2026-03-04-plan-execute-governance
-CURRENT_TASK_FILE: TASKS/TASK-plan-execute-governance.md
-CURRENT_STATUS: done
-CURRENT_UPDATED_AT: 2026-03-04T06:13:52+00:00
+CURRENT_RUN_ID: run-2026-03-04-resume-self-block-fix
+CURRENT_TASK_FILE: TASKS/TASK-resume-self-block-fix.md
+CURRENT_STATUS: active
+CURRENT_UPDATED_AT: 2026-03-04T06:41:18+00:00
+
+
+
+
+
 
 
 

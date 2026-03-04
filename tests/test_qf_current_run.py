@@ -199,10 +199,14 @@ def test_qf_resume_uses_merged_pr_lookup_without_create(tmp_path: Path) -> None:
         ),
         encoding="utf-8",
     )
+    add_state = run(["git", "add", "TASKS/STATE.md", "reports/run-current/ship_state.json"], cwd=repo)
+    assert add_state.returncode == 0, add_state.stdout + add_state.stderr
+    state_commit = run(["git", "commit", "-m", "state for resume test"], cwd=repo)
+    assert state_commit.returncode == 0, state_commit.stdout + state_commit.stderr
 
     bin_dir = repo / "bin"
     bin_dir.mkdir(parents=True, exist_ok=True)
-    gh_log = repo / "gh.log"
+    gh_log = tmp_path / "gh.log"
     (bin_dir / "gh").write_text(
         "\n".join(
             [
@@ -244,3 +248,100 @@ def test_qf_resume_uses_merged_pr_lookup_without_create(tmp_path: Path) -> None:
     gh_calls = gh_log.read_text(encoding="utf-8")
     assert "pr list" in gh_calls
     assert "pr create" not in gh_calls
+
+
+def test_qf_resume_autostash_before_checkout_main_when_dirty(tmp_path: Path) -> None:
+    repo = setup_repo(tmp_path)
+
+    checkout_main = run(["git", "checkout", "-b", "main"], cwd=repo)
+    assert checkout_main.returncode == 0, checkout_main.stdout + checkout_main.stderr
+
+    exec_file = repo / "reports" / "run-current" / "execution.jsonl"
+    exec_file.parent.mkdir(parents=True, exist_ok=True)
+    (repo / "README.md").write_text("seed\n", encoding="utf-8")
+    exec_file.write_text('{"seed":1}\n', encoding="utf-8")
+    add_seed = run(["git", "add", "README.md", str(exec_file.relative_to(repo))], cwd=repo)
+    assert add_seed.returncode == 0, add_seed.stdout + add_seed.stderr
+    seed_commit = run(["git", "commit", "-m", "seed"], cwd=repo)
+    assert seed_commit.returncode == 0, seed_commit.stdout + seed_commit.stderr
+
+    origin = tmp_path / "origin.git"
+    clone_bare = run(["git", "clone", "--bare", "--no-hardlinks", str(repo), str(origin)], cwd=tmp_path)
+    assert clone_bare.returncode == 0, clone_bare.stdout + clone_bare.stderr
+    add_remote = run(["git", "remote", "add", "origin", str(origin)], cwd=repo)
+    assert add_remote.returncode == 0, add_remote.stdout + add_remote.stderr
+
+    feature_branch = "chore/resume-dirty"
+    checkout_feature = run(["git", "checkout", "-b", feature_branch], cwd=repo)
+    assert checkout_feature.returncode == 0, checkout_feature.stdout + checkout_feature.stderr
+
+    write_state(repo, "run-current")
+    run_dir = repo / "reports" / "run-current"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "ship_state.json").write_text(
+        "\n".join(
+            [
+                "{",
+                '  "run_id": "run-current",',
+                f'  "branch": "{feature_branch}",',
+                '  "commit": "seed",',
+                '  "pr_url": "",',
+                '  "step": "branch_prepared",',
+                '  "last_error": "",',
+                '  "msg": "resume dirty test",',
+                '  "updated_at": "2026-03-04T00:00:00+08:00"',
+                "}",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    exec_file.write_text(exec_file.read_text(encoding="utf-8") + '{"dirty":1}\n', encoding="utf-8")
+
+    bin_dir = repo / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    gh_log = repo / "gh.log"
+    (bin_dir / "gh").write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "set -euo pipefail",
+                f"echo \"$*\" >> \"{gh_log}\"",
+                "if [[ \"${1:-}\" == \"pr\" && \"${2:-}\" == \"list\" ]]; then",
+                "  echo \"https://github.com/example/repo/pull/456\"",
+                "  exit 0",
+                "fi",
+                "if [[ \"${1:-}\" == \"pr\" && \"${2:-}\" == \"view\" ]]; then",
+                "  echo \"MERGED\"",
+                "  exit 0",
+                "fi",
+                "if [[ \"${1:-}\" == \"pr\" && \"${2:-}\" == \"merge\" ]]; then",
+                "  exit 0",
+                "fi",
+                "if [[ \"${1:-}\" == \"auth\" && \"${2:-}\" == \"status\" ]]; then",
+                "  exit 0",
+                "fi",
+                "exit 0",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    os.chmod(bin_dir / "gh", os.stat(bin_dir / "gh").st_mode | stat.S_IXUSR)
+
+    env = os.environ.copy()
+    env["PATH"] = f"{bin_dir}:{env['PATH']}"
+    res = run(["bash", "tools/qf", "resume", "RUN_ID=run-current"], cwd=repo, env=env)
+    assert res.returncode == 0, res.stdout + res.stderr
+    combined = res.stdout + res.stderr
+    assert "resume done: run-current" in combined
+    assert "Detected local changes. Stashing as: qf-resume-cleanup-run-run-current-wip-" in combined
+
+    stash_list = run(["git", "stash", "list"], cwd=repo)
+    assert stash_list.returncode == 0, stash_list.stdout + stash_list.stderr
+    assert "qf-resume-cleanup-run-run-current-wip-" in stash_list.stdout
+
+    branch_name = run(["git", "branch", "--show-current"], cwd=repo)
+    assert branch_name.returncode == 0
+    assert branch_name.stdout.strip() == "main"
