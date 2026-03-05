@@ -95,13 +95,13 @@ def main(argv: list[str]) -> int:
     contract_json = Path(f"reports/{run_id}/direction_contract.json")
     if not choice_file.is_file():
         print("ERROR: direction gate not satisfied.", file=sys.stderr)
-        print(f"Run: tools/ops orient RUN_ID={run_id}", file=sys.stderr)
-        print(f"Then: tools/ops choose RUN_ID={run_id} OPTION=<id>", file=sys.stderr)
-        print("Then retry: tools/ops do queue-next", file=sys.stderr)
+        print(f"Run: python3 tools/ops_orient.py RUN_ID={run_id}", file=sys.stderr)
+        print(f"Then: python3 tools/ops_choose.py RUN_ID={run_id} OPTION=<id>", file=sys.stderr)
+        print("Then retry: bash tools/ops_legacy.sh do queue-next", file=sys.stderr)
         return 1
     if not contract_json.is_file():
         print(f"ERROR: missing direction contract: {contract_json}", file=sys.stderr)
-        print(f"Run: tools/ops choose RUN_ID={run_id} OPTION=<id>", file=sys.stderr)
+        print(f"Run: python3 tools/ops_choose.py RUN_ID={run_id} OPTION=<id>", file=sys.stderr)
         return 1
 
     council_json = Path(f"chatlogs/discussion/{run_id}/council.json")
@@ -113,7 +113,7 @@ def main(argv: list[str]) -> int:
     goal = str(contract.get("execution_goal", "")).strip()
     scope = normalize_scope(contract.get("scope_hint"))
     if not scope:
-        scope = ["tools/ops", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
+        scope = ["tools/ops_*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
 
     delivery_contract = contract.get("delivery_contract") or {}
     quality_gates = delivery_contract.get("quality_gates") or []
@@ -294,7 +294,7 @@ def main(argv: list[str]) -> int:
         "roles": roles,
         "disagreements": disagreements,
         "consensus_rule": "independent evidence review first, arbiter convergence second",
-        "next_command": f"tools/ops arbiter RUN_ID={run_id}",
+        "next_command": f"python3 tools/ops_arbiter.py RUN_ID={run_id}",
     }
     council_json.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -329,13 +329,13 @@ def main(argv: list[str]) -> int:
             lines.append(f"- {d}")
     else:
         lines.append("- none")
-    lines.extend(["", "## Next Command", f"- `tools/ops arbiter RUN_ID={run_id}`", ""])
+    lines.extend(["", "## Next Command", f"- `python3 tools/ops_arbiter.py RUN_ID={run_id}`", ""])
     council_md.write_text("\n".join(lines), encoding="utf-8")
 
     print(f"COUNCIL_ROLES: {len(roles)}")
     print(f"COUNCIL_WARNINGS: {warn_count}")
     print(f"COUNCIL_BLOCKERS: {block_count}")
-    print(f"COUNCIL_NEXT_COMMAND: tools/ops arbiter RUN_ID={run_id}")
+    print(f"COUNCIL_NEXT_COMMAND: python3 tools/ops_arbiter.py RUN_ID={run_id}")
     print(f"COUNCIL_PROJECT_ID: {project_id}")
 
     task_file = state_field_value("CURRENT_TASK_FILE")
@@ -345,7 +345,7 @@ def main(argv: list[str]) -> int:
         "council",
         "council_generated",
         "ok",
-        f"tools/ops council RUN_ID={run_id}",
+        f"python3 tools/ops_council.py RUN_ID={run_id}",
         f"choice_file={choice_file};council={council_json}",
         "",
     )

@@ -15,39 +15,39 @@ This document describes the expected workflow for changes in this repository.
 
 ## Session lifecycle state machine (single source)
 - Runtime dispatcher note:
-  - `tools/ops` is the stable CLI entrypoint (Python thin dispatcher).
-  - Python-first commands currently include: `init/learn/ready/orient/choose/council/arbiter/slice`.
-  - Non-migrated commands are temporarily compatibility-routed via `tools/ops_legacy.sh`.
+  - No single main entrypoint is required.
+  - Python-first commands: `ops_init/ops_learn/ops_ready/ops_orient/ops_choose/ops_council/ops_arbiter/ops_slice`.
+  - Non-migrated commands run via `bash tools/ops_legacy.sh <subcommand>`.
 - `S-1 Discussion-only` (optional)
   - Allowed only for read-only clarification/investigation.
   - Constraint: no repo mutation (no file edits, no generated artifacts, no ship).
   - Exit: before any mutation, bind to active `TASKS/TASK-*.md` + `RUN_ID`.
-- `S0 Environment`: `tools/ops init`
+- `S0 Environment`: `python3 tools/ops_init.py`
   - Input: local repo checkout
   - Output: environment/readiness diagnosis only (account/version/branch/diff/run-context/last-change evidence)
-  - Implementation: Python-first (`tools/ops_init.py`), `tools/ops` keeps CLI wrapper only.
+  - Implementation: Python-first (`tools/ops_init.py`).
   - Note: this is environment preparation only, not readiness pass.
   - Output visibility: prints `INIT_STEP[<i>/<n>]` stage markers.
   - Safety: no automatic stash/sync/handoff side effects.
   - Boundary: init does not create a new business `RUN_ID`; it uses `CURRENT_RUN_ID` when present, otherwise session context only.
   - Project context: reads `CURRENT_PROJECT_ID` from `TASKS/STATE.md` (defaults to `project-0`).
   - Modes:
-    - default (`tools/ops init`): check + recommendation output (`INIT_STATUS` + `INIT_NEXT`)
+    - default (`python3 tools/ops_init.py`): check + recommendation output (`INIT_STATUS` + `INIT_NEXT`)
     - `-status`: status-only query, suppress resume reminder text
     - `-main`: strict mode, requires main-oriented clean state; otherwise non-zero exit
-- `S1 Handoff`: `tools/ops handoff`
+- `S1 Handoff`: `bash tools/ops_legacy.sh handoff`
   - Input: `CURRENT_RUN_ID` (or explicit RUN_ID)
   - Output: `reports/{RUN_ID}/handoff.md`
   - Note: this is context reconstruction only, not readiness pass.
   - Format: concise session summary (main thread, key conclusions, small reflection, one next command).
-- `S1.6 Learn Gate`: `tools/ops learn`
+- `S1.6 Learn Gate`: `python3 tools/ops_learn.py`
   - Input: required owner docs (`AGENTS.md` + `docs/PROJECT_GUIDE.md` + workflow + codex playbook + state).
   - Output: `learn/{project_id}.json` + `learn/{project_id}.md`.
-  - Implementation: Python-first (`tools/ops_learn.py`), `tools/ops` keeps CLI wrapper only.
+  - Implementation: Python-first (`tools/ops_learn.py`).
   - Output visibility: prints `LEARN_STEP[<i>/<n>]` stage markers.
-  - Stdout mirror is enabled by default: `tools/ops learn` writes `learn/{project_id}.stdout.log`.
-    - one-shot disable: `QF_LEARN_LOG=0 tools/ops learn`
-    - custom log path: `tools/ops learn LOG=<path>`
+  - Stdout mirror is enabled by default: `python3 tools/ops_learn.py` writes `learn/{project_id}.stdout.log`.
+    - one-shot disable: `QF_LEARN_LOG=0 python3 tools/ops_learn.py`
+    - custom log path: `python3 tools/ops_learn.py LOG=<path>`
   - Model sync is mandatory (Codex real interaction):
     - enforced mode: `MODEL_SYNC=1`
     - enforced plan protocol: `PLAN_MODE=strong`
@@ -75,71 +75,71 @@ This document describes the expected workflow for changes in this repository.
     - optional human-readable console block:
       - `LEARN_READOUT_BEGIN` ... `LEARN_READOUT_END`
   - Purpose: materialize onboarding understanding (project/constitution/workflow/skills/session) with mandatory model-sync evidence.
-- `S2 Ready gate`: `tools/ops ready`
+- `S2 Ready gate`: `python3 tools/ops_ready.py`
   - Input: restatement fields (goal/scope/acceptance/steps/stop)
   - Output: `reports/{RUN_ID}/ready.json`
-  - Implementation: Python-first (`tools/ops_ready.py`), `tools/ops` keeps CLI wrapper only.
+  - Implementation: Python-first (`tools/ops_ready.py`).
   - Output visibility: prints `READY_STEP[<i>/<n>]` stage markers.
   - Machine-readable stream (optional): `QF_EVENT_STREAM=1` emits JSONL step events to stdout.
   - Learn dependency: `QF_READY_REQUIRE_LEARN=auto` (default) enforces learn gate by default.
-    - auto recovery: `QF_READY_AUTO_LEARN=1` auto-runs `tools/ops learn` when learn evidence is missing/expired.
+    - auto recovery: `QF_READY_AUTO_LEARN=1` auto-runs `python3 tools/ops_learn.py` when learn evidence is missing/expired.
   - Low-friction mode: fields auto-fill from active task contract by default (`QF_READY_AUTO=1`).
   - Exit resolution gate: if unresolved run context is detected, must choose:
-    - `DECISION=resume-close` (run `tools/ops resume`)
+    - `DECISION=resume-close` (run `bash tools/ops_legacy.sh resume`)
     - `DECISION=abandon-new` (continue new direction cycle)
   - Resolution persistence: `abandon-new` is stored in `ready.json` for the same RUN to avoid repeated prompts on subsequent `ready`.
   - Ready also writes discussion brief to `chatlogs/discussion/{RUN_ID}/ready_brief.json|md`.
-  - Gate: `tools/ops do` must fail without valid `ready.json`.
+  - Gate: `bash tools/ops_legacy.sh do` must fail without valid `ready.json`.
 - `S2.4 Plan protocol gate` (discussion-first, required for complex changes)
-  - Interactive planning command: Codex `/plan` (not `tools/ops plan`).
+  - Interactive planning command: Codex `/plan` (not `bash tools/ops_legacy.sh plan`).
   - Required output packet (strong): goal/non-goal/evidence/alternatives/rebuttal/decision+stop-condition.
   - Confirmation: plan must be explicitly accepted before entering execution target.
   - Evidence sink: record final accepted plan into run evidence (`direction_contract` / `execution_contract` / `decision.md`).
-- `S2.5 Direction gate`: `tools/ops orient` + `tools/ops choose`
+- `S2.5 Direction gate`: `python3 tools/ops_orient.py` + `python3 tools/ops_choose.py`
   - Input: `docs/PROJECT_GUIDE.md` + governance docs + state/evidence.
   - Output:
     - discussion draft: `chatlogs/discussion/{RUN_ID}/orient.json|md`
     - confirmed decision: `reports/{RUN_ID}/orient_choice.json`
     - direction contract: `reports/{RUN_ID}/direction_contract.json|md`
   - Purpose: confirm direction/priority before execution queue pick.
-- `S2.6 Council gate`: `tools/ops council`
+- `S2.6 Council gate`: `python3 tools/ops_council.py`
   - Input: `orient_choice.json` + `direction_contract.json`
   - Output: `chatlogs/discussion/{RUN_ID}/council.json|md`
   - Purpose: product/architect/dev/qa independent review before convergence.
   - Rule: council output must be evidence-based (learn/ready/scope/verify/docs/queue pressure checks), not static templates.
-- `S2.7 Arbiter gate`: `tools/ops arbiter`
+- `S2.7 Arbiter gate`: `python3 tools/ops_arbiter.py`
   - Input: `council.json` + `direction_contract.json`
   - Output: `reports/{RUN_ID}/execution_contract.json|md`
   - Purpose: converge independent views into one executable contract.
   - Rule: execution slices must reflect council blockers/warnings/role conditions.
-- `S2.8 Slice gate`: `tools/ops slice`
+- `S2.8 Slice gate`: `python3 tools/ops_slice.py`
   - Input: `execution_contract.json`
   - Output:
     - `reports/{RUN_ID}/slice_state.json`
     - queue insertion into `TASKS/QUEUE.md` (idempotent by slice marker)
   - Purpose: turn contract into smallest executable queue tasks.
-- `S2.9 Discuss shortcut`: `tools/ops discuss`
+- `S2.9 Discuss shortcut`: `bash tools/ops_legacy.sh discuss`
   - Purpose: one command to run discussion chain (`orient/choose/council/arbiter/slice`) and stop before execution.
   - Default target: `prepare` (prints `EXECUTE_STATUS: prepared` + next do command).
-- `tools/ops plan [N]` (legacy helper)
+- `bash tools/ops_legacy.sh plan [N]` (legacy helper)
   - Purpose: generate `TASKS/TODO_PROPOSAL.md` queue suggestions only.
   - Non-goal: this command is not the planning gate and does not authorize execution.
-- `S3 Execute`: `tools/ops do queue-next`
+- `S3 Execute`: `bash tools/ops_legacy.sh do queue-next`
   - Input: valid gates (`ready.json` + `orient_choice.json` + `council.json` + `execution_contract.json` + `slice_state.json`)
   - Output: task pick + evidence skeleton + execution trace updates
   - Task pick command: `tools/task.sh --next` (no `plan 20` dependency in critical path)
   - Queue pick policy: prefer unchecked item whose `Slice: run_id=<CURRENT_RUN_ID>` matches `TASKS/STATE.md`; fallback to first unchecked item.
-  - Auto checkpoint: runs `tools/ops review RUN_ID=<picked-run> AUTO_FIX=1 NON_BLOCKING=1` to emit drift report early.
-- `S2.5~S3 Orchestrator (optional)`: `tools/ops execute`
+  - Auto checkpoint: runs `bash tools/ops_legacy.sh review RUN_ID=<picked-run> AUTO_FIX=1 NON_BLOCKING=1` to emit drift report early.
+- `S2.5~S3 Orchestrator (optional)`: `bash tools/ops_legacy.sh execute`
   - Purpose: low-friction single command to advance gate chain and execute.
   - Output visibility: prints `EXECUTE_STEP[<i>/<n>]` stage markers.
   - Default behavior: if no confirmed option, stop with actionable choose command.
   - Contract confirm gate for execution:
     - `TARGET=do` requires `reports/{RUN_ID}/execution_contract_confirm.json`.
-    - quick confirm command: `tools/ops execute RUN_ID=<run-id> PROJECT_ID=<project-id> CONFIRM_CONTRACT=1 TARGET=do`.
-    - automation mode: `QF_EXECUTE_AUTO_CONFIRM_CONTRACT=1 tools/ops execute`.
-  - Auto mode: `QF_EXECUTE_AUTO_CHOOSE=1 tools/ops execute` uses orient recommended option and continues through `council->arbiter->slice->do`.
-- `S3.5 Review`: `tools/ops review`
+    - quick confirm command: `bash tools/ops_legacy.sh execute RUN_ID=<run-id> PROJECT_ID=<project-id> CONFIRM_CONTRACT=1 TARGET=do`.
+    - automation mode: `QF_EXECUTE_AUTO_CONFIRM_CONTRACT=1 bash tools/ops_legacy.sh execute`.
+  - Auto mode: `QF_EXECUTE_AUTO_CHOOSE=1 bash tools/ops_legacy.sh execute` uses orient recommended option and continues through `council->arbiter->slice->do`.
+- `S3.5 Review`: `bash tools/ops_legacy.sh review`
   - Input: run evidence (`summary/decision/ready/choice/contract`) and optional flags (`AUTO_FIX`, `STRICT`).
   - Output: `reports/{RUN_ID}/drift_review.json|md`; blockers additionally write `chatlogs/discussion/{RUN_ID}/drift_todo.md`.
   - Gate: strict mode blockers must be resolved before ship.
@@ -189,23 +189,23 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
     - `START_SESSION_LOG_FILE=/abs/path/session.log` set explicit log file path
 - For anti-loss fallback, store concise session checkpoints in
   `reports/{RUN_ID}/conversation.md` via:
-  - `tools/ops snapshot RUN_ID=<run-id> NOTE="decision/next-step summary"`
+  - `bash tools/ops_legacy.sh snapshot RUN_ID=<run-id> NOTE="decision/next-step summary"`
 - `/compact` policy:
   - Use when conversation/context becomes large or when moving to a new milestone.
   - Not a mandatory "every task" gate.
   - Always snapshot first, then compact.
-- `tools/ops do` / `tools/ops resume` 自动记录执行轨迹到
+- `bash tools/ops_legacy.sh do` / `bash tools/ops_legacy.sh resume` 自动记录执行轨迹到
   `reports/{RUN_ID}/execution.jsonl`（默认脱敏，可审计）。
-- `tools/ops resume` 在同步回 `main` 前若检测到脏工作区，会自动 stash
+- `bash tools/ops_legacy.sh resume` 在同步回 `main` 前若检测到脏工作区，会自动 stash
   `ops-resume-cleanup-run-{RUN_ID}-wip-*`，避免因自身日志写入导致 checkout 自阻塞。
-- `tools/ops ready` / `tools/ops orient` / `tools/ops choose` /
-  `tools/ops council` / `tools/ops arbiter` / `tools/ops slice` 默认写入
+- `python3 tools/ops_ready.py` / `python3 tools/ops_orient.py` / `python3 tools/ops_choose.py` /
+  `python3 tools/ops_council.py` / `python3 tools/ops_arbiter.py` / `python3 tools/ops_slice.py` 默认写入
   `reports/{RUN_ID}/conversation.md` checkpoint（可用 `QF_AUTO_CONVERSATION=0` 关闭）。
 - Discussion drafts are intentionally separated from execution evidence:
   - pre-confirmation drafts in `chatlogs/discussion/{RUN_ID}/`
   - post-confirmation execution evidence in `reports/{RUN_ID}/`
 - 断线恢复建议先生成接班摘要：
-  - `tools/ops handoff RUN_ID=<run-id>` -> `reports/{RUN_ID}/handoff.md`
+  - `bash tools/ops_legacy.sh handoff RUN_ID=<run-id>` -> `reports/{RUN_ID}/handoff.md`
 - Repo memory is limited to: `docs/` (rules), `TASKS/STATE.md` (current state),
   `reports/{RUN_ID}/decision.md` (key decisions), and `MISTAKES/` (postmortems
   when enabled).
@@ -220,57 +220,66 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - `TASKS/STATE.md` is the source-of-truth for `CURRENT_PROJECT_ID` and `CURRENT_RUN_ID`.
 
 ## Readiness completion criteria (must be true before execution)
-- `tools/ops init` completed successfully.
-- `tools/ops learn` produced valid `learn/{project_id}.json` (model sync mandatory; `RUN_ID` not required).
-- `tools/ops ready` produced `reports/{RUN_ID}/ready.json`.
-- `tools/ops orient` produced `chatlogs/discussion/{RUN_ID}/orient.json`.
-- `tools/ops choose` produced `reports/{RUN_ID}/orient_choice.json`.
-- `tools/ops council` produced `chatlogs/discussion/{RUN_ID}/council.json`.
-- `tools/ops arbiter` produced `reports/{RUN_ID}/execution_contract.json`.
-- `tools/ops slice` produced `reports/{RUN_ID}/slice_state.json`.
-- `tools/ops do queue-next` requires all gates above and then picks via `tools/task.sh --next`.
+- `python3 tools/ops_init.py` completed successfully.
+- `python3 tools/ops_learn.py` produced valid `learn/{project_id}.json` (model sync mandatory; `RUN_ID` not required).
+- `python3 tools/ops_ready.py` produced `reports/{RUN_ID}/ready.json`.
+- `python3 tools/ops_orient.py` produced `chatlogs/discussion/{RUN_ID}/orient.json`.
+- `python3 tools/ops_choose.py` produced `reports/{RUN_ID}/orient_choice.json`.
+- `python3 tools/ops_council.py` produced `chatlogs/discussion/{RUN_ID}/council.json`.
+- `python3 tools/ops_arbiter.py` produced `reports/{RUN_ID}/execution_contract.json`.
+- `python3 tools/ops_slice.py` produced `reports/{RUN_ID}/slice_state.json`.
+- `bash tools/ops_legacy.sh do queue-next` requires all gates above and then picks via `tools/task.sh --next`.
 - `tools/task.sh --next` prioritizes queue blocks that match `CURRENT_RUN_ID` slice marker before generic first-unchecked fallback.
-- Optional shortcut: `tools/ops execute` can run the same chain with explicit/auto option strategy.
+- Optional shortcut: `bash tools/ops_legacy.sh execute` can run the same chain with explicit/auto option strategy.
 
 ## Codex session startup checklist
 - Do not rely on chat/session memory; rely only on repo memory:
   `TASKS/STATE.md`, `TASKS/QUEUE.md`, `reports/{RUN_ID}/`.
 - First read owner entrypoint: `AGENTS.md` + `docs/PROJECT_GUIDE.md`.
 - Codex 参数/模式参考：`CODEX_CLI_PLAYBOOK.md`。
-- Preferred entrypoint: `tools/ops` (`init/learn/ready/orient/choose/council/arbiter/slice/execute/do/review/resume`).
-- Compatibility wrappers: `tools/enter.sh` and `tools/onboard.sh` forward to `tools/ops`.
-- 1) 运行 `tools/ops init`（环境体检；不自动改工作区，不自动 handoff）。
-- 1.1) 只看状态可用：`tools/ops init -status`（抑制 resume 提示文案）。
-- 1.2) 强制 main 约束可用：`tools/ops init -main`（不满足即失败）。
+- Preferred entrypoint set:
+  - `python3 tools/ops_init.py`
+  - `python3 tools/ops_learn.py`
+  - `python3 tools/ops_ready.py`
+  - `python3 tools/ops_orient.py`
+  - `python3 tools/ops_choose.py`
+  - `python3 tools/ops_council.py`
+  - `python3 tools/ops_arbiter.py`
+  - `python3 tools/ops_slice.py`
+  - `bash tools/ops_legacy.sh <subcommand>` for legacy commands.
+- Compatibility wrappers: `tools/enter.sh` and `tools/onboard.sh`.
+- 1) 运行 `python3 tools/ops_init.py`（环境体检；不自动改工作区，不自动 handoff）。
+- 1.1) 只看状态可用：`python3 tools/ops_init.py -status`（抑制 resume 提示文案）。
+- 1.2) 强制 main 约束可用：`python3 tools/ops_init.py -main`（不满足即失败）。
 - 1.0) 若希望在终端消费结构化日志，可设置 `QF_EVENT_STREAM=1`（stdout 会追加 JSONL 事件）。
-- 2) 若 `INIT_STATUS=needs_resume`/`blocked`，先执行 `tools/ops resume RUN_ID=<run-id>` 处理收尾问题。
-- 2.1) `handoff` 改为显式动作：`tools/ops handoff RUN_ID=<run-id>`（按需调用）。
+- 2) 若 `INIT_STATUS=needs_resume`/`blocked`，先执行 `bash tools/ops_legacy.sh resume RUN_ID=<run-id>` 处理收尾问题。
+- 2.1) `handoff` 改为显式动作：`bash tools/ops_legacy.sh handoff RUN_ID=<run-id>`（按需调用）。
 - 3) 按顺序阅读并复述：`AGENTS.md` -> `docs/PROJECT_GUIDE.md` -> `docs/WORKFLOW.md` -> `docs/ENTITIES.md` -> `TASKS/STATE.md` -> `TASKS/QUEUE.md`。
-- 3.1) 运行 `tools/ops learn` 固化“上岗学习”证据（项目+宪法+工作流+技能+session），默认打印分步日志。
+- 3.1) 运行 `python3 tools/ops_learn.py` 固化“上岗学习”证据（项目+宪法+工作流+技能+session），默认打印分步日志。
   - `project_id` 默认来自 `TASKS/STATE.md: CURRENT_PROJECT_ID`（缺省 `project-0`），也可通过环境变量覆盖：`PROJECT_ID` / `QF_PROJECT_ID`。
   - 模型同频是硬门禁（不可降级）：`MODEL_SYNC=1` + `PLAN_MODE=strong`。
   - `learn` 会强制校验模型 `files_read` 覆盖必读文件清单。
-- 4) 运行 `tools/ops ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`，默认可自动填充；默认缺失 learn 时可自动补跑）。
+- 4) 运行 `python3 tools/ops_ready.py` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`，默认可自动填充；默认缺失 learn 时可自动补跑）。
 - 4.0) 若 `ready` 提示 unresolved run context，先二选一：
-  - `tools/ops resume RUN_ID=<run-id>`（收尾）
-  - `tools/ops ready RUN_ID=<run-id> DECISION=abandon-new`（明确抛弃旧上下文后继续）
-- 4.1) 运行 `tools/ops orient` 生成方向候选与优先级（L1 方向层）。
-- 4.2) 运行 `tools/ops choose OPTION=<id>` 确认方向后再进入执行层（L2）。
-- 4.2.1) 运行 `tools/ops council` 生成产品/架构/研发/测试独立评审结果（讨论态）。
-- 4.2.2) 运行 `tools/ops arbiter` 收敛为统一执行契约（执行态）。
-- 4.2.3) 运行 `tools/ops slice` 把执行契约拆成最小 queue tasks（幂等入队）。
-- 4.2.4) 低摩擦讨论收敛可用：`tools/ops discuss`（默认停在 prepare，不直接 do）。
-- 4.3) 在关键决策点执行 `tools/ops snapshot NOTE="..."`，把“本轮结论/下一步”写入仓库证据，避免会话丢失。
-- 5) 运行 `tools/ops do queue-next` 领取下一枪（内部强制 ready + choose + council + arbiter + slice 前置；并自动产出一次 non-blocking drift review）。
-- 5.0) 低摩擦可选：`tools/ops execute`
+  - `bash tools/ops_legacy.sh resume RUN_ID=<run-id>`（收尾）
+  - `python3 tools/ops_ready.py RUN_ID=<run-id> DECISION=abandon-new`（明确抛弃旧上下文后继续）
+- 4.1) 运行 `python3 tools/ops_orient.py` 生成方向候选与优先级（L1 方向层）。
+- 4.2) 运行 `python3 tools/ops_choose.py OPTION=<id>` 确认方向后再进入执行层（L2）。
+- 4.2.1) 运行 `python3 tools/ops_council.py` 生成产品/架构/研发/测试独立评审结果（讨论态）。
+- 4.2.2) 运行 `python3 tools/ops_arbiter.py` 收敛为统一执行契约（执行态）。
+- 4.2.3) 运行 `python3 tools/ops_slice.py` 把执行契约拆成最小 queue tasks（幂等入队）。
+- 4.2.4) 低摩擦讨论收敛可用：`bash tools/ops_legacy.sh discuss`（默认停在 prepare，不直接 do）。
+- 4.3) 在关键决策点执行 `bash tools/ops_legacy.sh snapshot NOTE="..."`，把“本轮结论/下一步”写入仓库证据，避免会话丢失。
+- 5) 运行 `bash tools/ops_legacy.sh do queue-next` 领取下一枪（内部强制 ready + choose + council + arbiter + slice 前置；并自动产出一次 non-blocking drift review）。
+- 5.0) 低摩擦可选：`bash tools/ops_legacy.sh execute`
   - 默认在缺少方向确认时停在 choose（保留人工确认）
-  - 自动推进模式：`QF_EXECUTE_AUTO_CHOOSE=1 tools/ops execute`
-- 5.1) 需求执行完成后，显式运行 `tools/ops review RUN_ID=<run-id> STRICT=1 AUTO_FIX=1`，清空 blocker 后再 ship。
+  - 自动推进模式：`QF_EXECUTE_AUTO_CHOOSE=1 bash tools/ops_legacy.sh execute`
+- 5.1) 需求执行完成后，显式运行 `bash tools/ops_legacy.sh review RUN_ID=<run-id> STRICT=1 AUTO_FIX=1`，清空 blocker 后再 ship。
 - 6) Expand that item into `TASKS/TASK-*.md` (from template), then run:
   implement minimal diff -> `make verify` -> update reports -> `tools/task.sh` ship.
 - Ship failure recovery: `tools/ship.sh` writes `reports/{RUN_ID}/ship_state.json`
-  at key steps. On push/PR/merge/sync failure, run `tools/ops resume RUN_ID=...`.
-- `tools/ops resume` 会先检查是否已存在同分支的已合并 PR；若已合并则跳过重复 `pr create/merge`，直接执行本地 `main` 同步收尾。
+  at key steps. On push/PR/merge/sync failure, run `bash tools/ops_legacy.sh resume RUN_ID=...`.
+- `bash tools/ops_legacy.sh resume` 会先检查是否已存在同分支的已合并 PR；若已合并则跳过重复 `pr create/merge`，直接执行本地 `main` 同步收尾。
 - Ship success behavior: after merge, ship auto-syncs local `main` to `origin/main`.
 - 7) On failure, write failure reason, repro, and next step in
   `reports/{RUN_ID}/summary.md` + `reports/{RUN_ID}/decision.md` (and `MISTAKES/`

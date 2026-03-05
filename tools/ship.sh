@@ -158,7 +158,7 @@ EOF
 
 print_resume_cmd() {
   if [[ -n "${run_id:-}" ]]; then
-    echo "恢复命令：tools/ops resume RUN_ID=${run_id}"
+    echo "恢复命令：bash tools/ops_legacy.sh resume RUN_ID=${run_id}"
   fi
 }
 

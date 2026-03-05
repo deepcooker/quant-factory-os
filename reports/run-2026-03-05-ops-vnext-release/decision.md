@@ -15,3 +15,16 @@ RUN_ID: `run-2026-03-05-ops-vnext-release`
 
 ## Stop reason
 - task_done
+
+
+## Incremental decision (no single ops entrypoint)
+### Why
+- Single dispatcher `tools/ops` is unnecessary overhead for current development-design stage.
+
+### Decision
+- Remove `tools/ops` from the default workflow and delete the dispatcher file.
+- Use direct Python scripts for migrated commands and `tools/ops_legacy.sh` for legacy commands.
+
+### Risk / rollback
+- Risk: old notes that mention `tools/ops` may become stale.
+- Rollback: restore `tools/ops` thin dispatcher from git history if needed.

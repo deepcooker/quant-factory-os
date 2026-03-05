@@ -17,5 +17,5 @@ STATUS: active
 ## Acceptance
 - [ ] 历史 `TASKS/TASK-*` 与 `reports/*` 已清理
 - [ ] `TASKS/STATE.md`、`TASKS/QUEUE.md` 为新版本最小骨架
-- [ ] `tools/ops` 主入口可用，`tools/ops init -status` 可运行
+- [ ] 无单一主入口，直连脚本可用（至少 `python3 tools/ops_init.py -status` 可运行）
 - [ ] 变更已提交并创建 PR

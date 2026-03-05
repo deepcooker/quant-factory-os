@@ -66,7 +66,7 @@ def main(argv: list[str]) -> int:
     contract_md = Path(f"reports/{run_id}/direction_contract.md")
     if not orient_file or not Path(orient_file).is_file():
         print(f"ERROR: missing orientation file for run: {run_id}", file=sys.stderr)
-        print(f"Run: tools/ops orient RUN_ID={run_id}", file=sys.stderr)
+        print(f"Run: python3 tools/ops_orient.py RUN_ID={run_id}", file=sys.stderr)
         return 1
 
     obj = json.loads(Path(orient_file).read_text(encoding="utf-8"))
@@ -141,7 +141,7 @@ def main(argv: list[str]) -> int:
             ],
         },
         "role_reviews": role_reviews,
-        "next_command": f"tools/ops council RUN_ID={obj.get('run_id') or ''}",
+        "next_command": f"python3 tools/ops_council.py RUN_ID={obj.get('run_id') or ''}",
     }
     out = {
         "project_id": project_id,
@@ -155,7 +155,7 @@ def main(argv: list[str]) -> int:
         "discussion_confirmed": True,
         "contract_json": str(contract_json),
         "contract_md": str(contract_md),
-        "next_command": f"tools/ops council RUN_ID={obj.get('run_id')}",
+        "next_command": f"python3 tools/ops_council.py RUN_ID={obj.get('run_id')}",
     }
     choice_file.parent.mkdir(parents=True, exist_ok=True)
     choice_file.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -192,12 +192,12 @@ def main(argv: list[str]) -> int:
         lines.append(f"- step: {st}")
     for gate in contract["delivery_contract"]["quality_gates"]:
         lines.append(f"- gate: {gate}")
-    lines.extend(["", "## Next Command", f"- `tools/ops council RUN_ID={obj.get('run_id')}`", ""])
+    lines.extend(["", "## Next Command", f"- `python3 tools/ops_council.py RUN_ID={obj.get('run_id')}`", ""])
     contract_md.write_text("\n".join(lines), encoding="utf-8")
 
     print(f"CHOOSE_OPTION: {selected}")
     print(f"CHOOSE_TITLE: {picked.get('title', '')}")
-    print(f"CHOOSE_NEXT_COMMAND: tools/ops council RUN_ID={obj.get('run_id')}")
+    print(f"CHOOSE_NEXT_COMMAND: python3 tools/ops_council.py RUN_ID={obj.get('run_id')}")
     print(f"CHOOSE_CONTRACT_JSON: {contract_json}")
     print(f"CHOOSE_CONTRACT_MD: {contract_md}")
     print(f"CHOOSE_PROJECT_ID: {project_id}")
@@ -209,7 +209,7 @@ def main(argv: list[str]) -> int:
         "orient",
         "orient_chosen",
         "ok",
-        f"tools/ops choose RUN_ID={run_id} OPTION={option}",
+        f"python3 tools/ops_choose.py RUN_ID={run_id} OPTION={option}",
         f"choice_file={choice_file};contract={contract_json}",
         "",
     )

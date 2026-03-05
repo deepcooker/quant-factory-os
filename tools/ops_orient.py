@@ -61,7 +61,7 @@ def main(argv: list[str]) -> int:
         "orient",
         "orient_generated",
         "ok",
-        f"tools/ops orient RUN_ID={run_id}",
+        f"python3 tools/ops_orient.py RUN_ID={run_id}",
         f"orient_file={orient_file};orient_md={orient_md}",
         "",
     )

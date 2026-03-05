@@ -86,12 +86,12 @@ def main(argv: list[str]) -> int:
     direction_contract = Path(f"reports/{run_id}/direction_contract.json")
     if not council_file.is_file():
         print("ERROR: council gate not satisfied.", file=sys.stderr)
-        print(f"Run: tools/ops council RUN_ID={run_id}", file=sys.stderr)
-        print(f"Then: tools/ops arbiter RUN_ID={run_id}", file=sys.stderr)
+        print(f"Run: python3 tools/ops_council.py RUN_ID={run_id}", file=sys.stderr)
+        print(f"Then: python3 tools/ops_arbiter.py RUN_ID={run_id}", file=sys.stderr)
         return 1
     if not direction_contract.is_file():
         print(f"ERROR: missing direction contract: {direction_contract}", file=sys.stderr)
-        print(f"Run: tools/ops choose RUN_ID={run_id} OPTION=<id>", file=sys.stderr)
+        print(f"Run: python3 tools/ops_choose.py RUN_ID={run_id} OPTION=<id>", file=sys.stderr)
         return 1
 
     out_json = Path(f"reports/{run_id}/execution_contract.json")
@@ -103,7 +103,7 @@ def main(argv: list[str]) -> int:
 
     scope = normalize_scope(direction.get("scope_hint"))
     if not scope:
-        scope = ["tools/ops", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
+        scope = ["tools/ops_*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
 
     title = str(direction.get("selected_title", "")).strip() or "confirmed direction"
     goal = str(direction.get("execution_goal", "")).strip() or "Deliver the confirmed direction with minimal safe tasks."
@@ -166,7 +166,7 @@ def main(argv: list[str]) -> int:
                 "task_id": "slice-2",
                 "title": f"{title} - close council conditions",
                 "goal": "Resolve cross-role concerns raised by council before/while executing.",
-                "scope": ["tools/ops", "tests/", "chatlogs/discussion/", "reports/{RUN_ID}/"],
+                "scope": ["tools/ops_*.py", "tests/", "chatlogs/discussion/", "reports/{RUN_ID}/"],
                 "acceptance": concern_acceptance or ["no open council conditions"],
             }
         )
@@ -176,7 +176,7 @@ def main(argv: list[str]) -> int:
                 "task_id": "slice-2",
                 "title": f"{title} - enforce guardrail tests",
                 "goal": "Add or refine guardrail tests to lock behavior of the selected direction.",
-                "scope": ["tests/", "tools/ops"],
+                "scope": ["tests/", "tools/ops_*.py"],
                 "acceptance": [
                     "critical path regression tests added or refreshed",
                     "failure-path assertions are explicit and actionable",
@@ -192,7 +192,7 @@ def main(argv: list[str]) -> int:
             "scope": ["AGENTS.md", "docs/WORKFLOW.md", "chatlogs/discussion/", "reports/{RUN_ID}/"],
             "acceptance": [
                 "owner docs updated in same run when behavior/rules changed",
-                "tools/ops review STRICT=1 AUTO_FIX=1 passes",
+                "bash tools/ops_legacy.sh review STRICT=1 AUTO_FIX=1 passes",
                 "decision records accepted tradeoffs and residual risks",
             ],
         }
@@ -219,7 +219,7 @@ def main(argv: list[str]) -> int:
         },
         "role_conditions": role_conditions,
         "tasks": tasks,
-        "next_command": f"tools/ops slice RUN_ID={run_id}",
+        "next_command": f"python3 tools/ops_slice.py RUN_ID={run_id}",
     }
     out_json.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -252,13 +252,13 @@ def main(argv: list[str]) -> int:
         lines.append("  - acceptance:")
         for a in t["acceptance"]:
             lines.append(f"    - {a}")
-    lines.extend(["", "## Next Command", f"- `tools/ops slice RUN_ID={run_id}`", ""])
+    lines.extend(["", "## Next Command", f"- `python3 tools/ops_slice.py RUN_ID={run_id}`", ""])
     out_md.write_text("\n".join(lines), encoding="utf-8")
 
     print(f"ARBITER_TASKS: {len(tasks)}")
     print(f"ARBITER_BLOCKERS: {len(blockers)}")
     print(f"ARBITER_WARNINGS: {len(warnings)}")
-    print(f"ARBITER_NEXT_COMMAND: tools/ops slice RUN_ID={run_id}")
+    print(f"ARBITER_NEXT_COMMAND: python3 tools/ops_slice.py RUN_ID={run_id}")
     print(f"ARBITER_PROJECT_ID: {project_id}")
 
     task_file = state_field_value("CURRENT_TASK_FILE")
@@ -268,7 +268,7 @@ def main(argv: list[str]) -> int:
         "arbiter",
         "arbiter_generated",
         "ok",
-        f"tools/ops arbiter RUN_ID={run_id}",
+        f"python3 tools/ops_arbiter.py RUN_ID={run_id}",
         f"council_file={council_file};execution_contract={out_json}",
         "",
     )

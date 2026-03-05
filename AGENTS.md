@@ -32,16 +32,13 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 
 ## 4) Mandatory session gate (once per session)
 Before any implementation:
-1. `tools/ops init`
-   - Runtime implementation is Python-first (`tools/ops_init.py`); `tools/ops` is the CLI wrapper.
-2. `tools/ops learn`
-3. `tools/ops ready`
-   - Runtime implementation is Python-first (`tools/ops_ready.py`); `tools/ops` is the CLI wrapper.
+1. `python3 tools/ops_init.py`
+2. `python3 tools/ops_learn.py`
+3. `python3 tools/ops_ready.py`
 
-`tools/ops` runtime note:
-- `tools/ops` is a Python thin dispatcher.
-- Python-first commands: `init/learn/ready/orient/choose/council/arbiter/slice`.
-- Remaining commands are compatibility-routed to `tools/ops_legacy.sh` until fully migrated.
+Runtime note:
+- Python-first commands: `ops_init/ops_learn/ops_ready/ops_orient/ops_choose/ops_council/ops_arbiter/ops_slice`.
+- Remaining commands are compatibility-routed via `bash tools/ops_legacy.sh <subcommand>`.
 
 `init` detailed step definitions, mode semantics (`-status` / `-main`), and output fields are owned by `docs/WORKFLOW.md` (`S0 Environment`). `AGENTS.md` keeps only gate-level contract.
 
@@ -51,7 +48,7 @@ Required visible progress:
 - `READY_STEP[<i>/<n>]`
 
 `learn` pass criteria (minimum):
-- Runtime implementation is Python-first (`tools/ops_learn.py`); `tools/ops` is the CLI wrapper.
+- Runtime implementation is Python-first (`tools/ops_learn.py`).
 - Must print:
   - `LEARN_MAINLINE`
   - `LEARN_CURRENT_STAGE`
@@ -76,7 +73,7 @@ No coding until this gate is complete.
 ## 5) Working mode: Plan -> Confirm -> Execute
 - Complex work must follow `Plan -> Confirm -> Execute`.
 - Codex interactive `/plan` is planning protocol, not execution.
-- `tools/ops plan` only drafts queue proposals; it does not open execute gate.
+- `bash tools/ops_legacy.sh plan` only drafts queue proposals; it does not open execute gate.
 - `/compact` is milestone-based, not mandatory every task. Use before context grows too large or before switching milestone.
 
 ## 6) Workflow skeleton
@@ -88,12 +85,12 @@ No coding until this gate is complete.
 6. Ship.
 
 Discussion-first recommended lane:
-- `tools/ops discuss TARGET=prepare`
-- `tools/ops choose OPTION=<id>`
-- `tools/ops council`
-- `tools/ops arbiter`
-- `tools/ops slice`
-- `tools/ops do queue-next` (or `tools/ops execute TARGET=do`)
+- `bash tools/ops_legacy.sh discuss TARGET=prepare`
+- `python3 tools/ops_choose.py OPTION=<id>`
+- `python3 tools/ops_council.py`
+- `python3 tools/ops_arbiter.py`
+- `python3 tools/ops_slice.py`
+- `bash tools/ops_legacy.sh do queue-next` (or `bash tools/ops_legacy.sh execute TARGET=do`)
 
 Execution gate artifacts required before `do`:
 - `reports/<RUN_ID>/ready.json`
@@ -120,7 +117,15 @@ Optional failure memory:
 
 ## 8) Allowed commands (default)
 Use only these unless task explicitly authorizes more:
-- `tools/ops`
+- `python3 tools/ops_init.py`
+- `python3 tools/ops_learn.py`
+- `python3 tools/ops_ready.py`
+- `python3 tools/ops_orient.py`
+- `python3 tools/ops_choose.py`
+- `python3 tools/ops_council.py`
+- `python3 tools/ops_arbiter.py`
+- `python3 tools/ops_slice.py`
+- `bash tools/ops_legacy.sh ...`
 - `tools/doctor.sh`
 - `tools/enter.sh`
 - `tools/task.sh`

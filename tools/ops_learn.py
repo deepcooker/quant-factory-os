@@ -346,7 +346,7 @@ def build_base_learn(project_id: str, ttl_days: int, learn_file: Path, learn_md:
         "context_digest": context_digest,
         "context_files": [x["path"] for x in context_entries],
         "skill_files": [x["path"] for x in skill_entries],
-        "next_command": "tools/ops ready",
+        "next_command": "python3 tools/ops_ready.py",
     }
     write_json(learn_file, obj)
 
@@ -461,7 +461,7 @@ def generate_prompt(learn_file: Path, prompt_file: Path, project_id: str, plan_m
             "Output requirements:",
             "- Do not run write commands.",
             "- Execute only minimal read/shell commands needed to gather evidence from the required files.",
-            "- Do not call tools/ops init/learn/ready inside this model-sync pass.",
+            "- Do not call python3 tools/ops_init.py/learn/ready inside this model-sync pass.",
             "- Do not include markdown fences.",
             "- JSON must follow this schema exactly:",
         ]
@@ -1090,7 +1090,7 @@ def main(argv: list[str]) -> int:
     print(f"LEARN_MODEL_JSON_FILE: {model_json_file}")
     print(f"LEARN_MODEL_EVENTS_FILE: {model_events_file}")
     print(f"LEARN_MODEL_STDERR_FILE: {model_stderr_file}")
-    print("LEARN_NEXT_COMMAND: tools/ops ready")
+    print("LEARN_NEXT_COMMAND: python3 tools/ops_ready.py")
     return 0
 
 

@@ -483,7 +483,7 @@ def generate_orient_draft(run_id: str, project_id: str, task_file: str, orient_f
             "risk": "增加一次显式确认步骤。",
             "cost": "S",
             "dependencies": ["TASKS/STATE.md", "reports/<RUN_ID>/ship_state.json"],
-            "scope_hint": ["tools/ops", "tests/"],
+            "scope_hint": ["tools/ops_*.py", "tests/"],
             "score": score_for(82, ["ready", "resume", "stop reason", "run", "state"]),
         },
         {
@@ -494,7 +494,7 @@ def generate_orient_draft(run_id: str, project_id: str, task_file: str, orient_f
             "risk": "摘要质量受输入文档完整性影响。",
             "cost": "S",
             "dependencies": ["AGENTS.md", "docs/PROJECT_GUIDE.md", "learn/<PROJECT_ID>.json"],
-            "scope_hint": ["tools/ops", "docs/PROJECT_GUIDE.md", "docs/WORKFLOW.md"],
+            "scope_hint": ["tools/ops_*.py", "docs/PROJECT_GUIDE.md", "docs/WORKFLOW.md"],
             "score": score_for(78, ["learn", "ready", "workflow", "constitution", "evidence"]),
         },
         {
@@ -505,7 +505,7 @@ def generate_orient_draft(run_id: str, project_id: str, task_file: str, orient_f
             "risk": "需要清晰迁移边界。",
             "cost": "M",
             "dependencies": ["chatlogs/discussion/", "reports/<RUN_ID>/"],
-            "scope_hint": ["tools/ops", "docs/WORKFLOW.md", "AGENTS.md", "chatlogs/discussion/"],
+            "scope_hint": ["tools/ops_*.py", "docs/WORKFLOW.md", "AGENTS.md", "chatlogs/discussion/"],
             "score": score_for(76, ["discussion", "report", "confirm", "evidence", "orient"]),
         },
         {
@@ -516,7 +516,7 @@ def generate_orient_draft(run_id: str, project_id: str, task_file: str, orient_f
             "risk": "初期输出可能偏模板化。",
             "cost": "M",
             "dependencies": ["orient choice", "task contract"],
-            "scope_hint": ["tools/ops", "reports/<RUN_ID>/"],
+            "scope_hint": ["tools/ops_*.py", "reports/<RUN_ID>/"],
             "score": score_for(70, ["product", "architect", "dev", "qa", "review", "contract"]),
         },
         {
@@ -527,7 +527,7 @@ def generate_orient_draft(run_id: str, project_id: str, task_file: str, orient_f
             "risk": "规则过严会增加时间成本。",
             "cost": "M",
             "dependencies": ["reports/<RUN_ID>/summary.md", "reports/<RUN_ID>/decision.md"],
-            "scope_hint": ["tools/ops", "tests/", "docs/WORKFLOW.md"],
+            "scope_hint": ["tools/ops_*.py", "tests/", "docs/WORKFLOW.md"],
             "score": score_for(66, ["review", "drift", "summary", "decision", "verify"]),
         },
     ]
@@ -543,7 +543,7 @@ def generate_orient_draft(run_id: str, project_id: str, task_file: str, orient_f
         item["priority"] = f"P{idx}"
 
     recommended = directions[0]["id"] if directions else ""
-    next_cmd = f"tools/ops choose RUN_ID={run_id} OPTION={recommended}" if recommended else f"tools/ops choose RUN_ID={run_id} OPTION=<id>"
+    next_cmd = f"python3 tools/ops_choose.py RUN_ID={run_id} OPTION={recommended}" if recommended else f"python3 tools/ops_choose.py RUN_ID={run_id} OPTION=<id>"
     obj = {
         "project_id": project_id,
         "run_id": run_id,
@@ -711,7 +711,7 @@ def write_ready_and_brief(
             "evidence_chain": evidence_chain,
             "session_continuity": session_handoff.get("continuity", "unknown"),
             "current_stage": current_stage,
-            "suggested_next_step": f"tools/ops orient RUN_ID={run_id}",
+            "suggested_next_step": f"python3 tools/ops_orient.py RUN_ID={run_id}",
         },
     }
     Path(ready_file).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -810,7 +810,7 @@ def main(argv: list[str]) -> int:
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "ready")
     if not run_id:
         eprint("ERROR: ready requires RUN_ID (from explicit arg/env or TASKS/STATE.md CURRENT_RUN_ID).")
-        eprint("Usage: tools/ops ready [RUN_ID=<run-id>] [DECISION=resume-close|abandon-new]")
+        eprint("Usage: python3 tools/ops_ready.py [RUN_ID=<run-id>] [DECISION=resume-close|abandon-new]")
         return 2
     project_id = resolve_project_id_for_cmd(args["explicit_project_id"], "ready")
     continue_decision = args["continue_decision"]
@@ -828,8 +828,8 @@ def main(argv: list[str]) -> int:
     if require_learn == "1":
         learn_report_file = resolve_learn_file_for_project(project_id)
         if not learn_report_file and auto_learn == "1":
-            print("LEARN_AUTO_RUN: tools/ops learn")
-            cp = run_cmd(["bash", "tools/ops", "learn", f"PROJECT_ID={project_id}"])
+            print("LEARN_AUTO_RUN: python3 tools/ops_learn.py")
+            cp = run_cmd(["python3", "tools/ops_learn.py", f"PROJECT_ID={project_id}"])
             if cp.stdout:
                 sys.stdout.write(cp.stdout)
             if cp.stderr:
@@ -839,16 +839,16 @@ def main(argv: list[str]) -> int:
             learn_report_file = resolve_learn_file_for_project(project_id)
         if not learn_report_file:
             eprint("ERROR: learn gate not satisfied.")
-            eprint(f"Run: tools/ops learn PROJECT_ID={project_id}")
-            eprint(f"Then retry: tools/ops ready RUN_ID={run_id}")
+            eprint(f"Run: python3 tools/ops_learn.py PROJECT_ID={project_id}")
+            eprint(f"Then retry: python3 tools/ops_ready.py RUN_ID={run_id}")
             return 1
 
     emit_step(3, ready_steps_total, "resolve sync report (optional compatibility)")
     sync_report_file = resolve_sync_file_for_run(run_id)
     if require_sync == "1":
         if not sync_report_file and auto_sync == "1":
-            print(f"SYNC_AUTO_RUN: tools/ops sync RUN_ID={run_id}")
-            cp = run_cmd(["bash", "tools/ops", "sync", f"RUN_ID={run_id}"])
+            print(f"SYNC_AUTO_RUN: bash tools/ops_legacy.sh sync RUN_ID={run_id}")
+            cp = run_cmd(["bash", "tools/ops_legacy.sh", "sync", f"RUN_ID={run_id}"])
             if cp.stdout:
                 sys.stdout.write(cp.stdout)
             if cp.stderr:
@@ -858,8 +858,8 @@ def main(argv: list[str]) -> int:
             sync_report_file = resolve_sync_file_for_run(run_id)
         if not sync_report_file:
             eprint(f"ERROR: sync gate not satisfied for run {run_id}.")
-            eprint(f"Run: tools/ops sync RUN_ID={run_id}")
-            eprint(f"Then retry: tools/ops ready RUN_ID={run_id}")
+            eprint(f"Run: bash tools/ops_legacy.sh sync RUN_ID={run_id}")
+            eprint(f"Then retry: python3 tools/ops_ready.py RUN_ID={run_id}")
             return 1
 
     emit_step(4, ready_steps_total, "load task/state and detect unresolved run context")
@@ -882,12 +882,12 @@ def main(argv: list[str]) -> int:
             print("READY_NEEDS_DECISION: true")
             print(f"READY_DECISION_REASON: unresolved run context detected for {run_id} (CURRENT_STATUS={state_status})")
             print("READY_DECISION_OPTIONS: resume-close | abandon-new")
-            print(f"READY_NEXT_1: tools/ops resume RUN_ID={run_id}")
-            print(f"READY_NEXT_2: tools/ops ready RUN_ID={run_id} DECISION=abandon-new")
+            print(f"READY_NEXT_1: bash tools/ops_legacy.sh resume RUN_ID={run_id}")
+            print(f"READY_NEXT_2: python3 tools/ops_ready.py RUN_ID={run_id} DECISION=abandon-new")
             return 1
         if continue_decision == "resume-close":
             print("READY_DECISION: resume-close")
-            print(f"READY_NEXT_COMMAND: tools/ops resume RUN_ID={run_id}")
+            print(f"READY_NEXT_COMMAND: bash tools/ops_legacy.sh resume RUN_ID={run_id}")
             return 1
         if continue_decision != "abandon-new":
             eprint(f"ERROR: invalid DECISION={continue_decision}. expected resume-close or abandon-new.")
@@ -960,7 +960,7 @@ def main(argv: list[str]) -> int:
         "ready",
         "ready_passed",
         "ok",
-        "tools/ops ready",
+        "python3 tools/ops_ready.py",
         f"ready_file={ready_file};learn_report={learn_report_file};sync_report={sync_report_file};task_file={task_file};brief={ready_brief_md};orient={orient_file}",
         "",
     )

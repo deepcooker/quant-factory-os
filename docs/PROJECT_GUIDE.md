@@ -63,9 +63,9 @@
     - GPT 网页端：负责策略、评审、反驳、方向选择（大脑层）。
     - Codex CLI：负责本地执行、改动、验证、证据落盘（执行层）。
   - 同频操作顺序：
-    - `tools/ops init`
-    - `tools/ops learn`（默认强制 `MODEL_SYNC=1` + `PLAN_MODE=strong`，默认输出日志）
-    - `tools/ops ready`
+    - `python3 tools/ops_init.py`
+    - `python3 tools/ops_learn.py`（默认强制 `MODEL_SYNC=1` + `PLAN_MODE=strong`，默认输出日志）
+    - `python3 tools/ops_ready.py`
   - 必读文件清单：
     - `AGENTS.md`
     - `docs/PROJECT_GUIDE.md`
@@ -145,7 +145,9 @@
   - 实现现状：已实现基础版（流程与产物齐备），并行执行能力仍可继续增强。
 - 证据文件：
   - `docs/WORKFLOW.md`
-  - `tools/ops`
+  - `tools/ops_orient.py`
+  - `tools/ops_council.py`
+  - `tools/ops_arbiter.py`
   - `chatlogs/discussion/<RUN_ID>/council.json`
   - `reports/<RUN_ID>/execution_contract.json`
 
@@ -206,7 +208,9 @@
 - 证据文件：
   - `AGENTS.md`
   - `docs/WORKFLOW.md`
-  - `tools/ops`
+  - `tools/ops_init.py`
+  - `tools/ops_learn.py`
+  - `tools/ops_ready.py`
 
 ## 实操技能
 
@@ -218,10 +222,10 @@
     - 执行模式：`codex --sandbox workspace-write --ask-for-approval on-request --search`
     - 非交互审计：`codex exec --json ...`
     - 规划协议：先用 Codex `/plan`，确认后再进入执行链路
-    - 去歧义：`tools/ops plan` 仅生成队列提案，不等于 `/plan`
+    - 去歧义：`bash tools/ops_legacy.sh plan` 仅生成队列提案，不等于 `/plan`
   - 当前已确认版本：`codex-cli 0.106.0`
   - 操作手册：`CODEX_CLI_PLAYBOOK.md`
-  - 相关文件：`AGENTS.md`、`docs/WORKFLOW.md`、`tools/ops`
+  - 相关文件：`AGENTS.md`、`docs/WORKFLOW.md`、`tools/ops_*.py`、`tools/ops_legacy.sh`
   - 样例证据：`test_codex/artifacts/exec_json.events.jsonl`
 - 证据文件：
   - `CODEX_CLI_PLAYBOOK.md`
