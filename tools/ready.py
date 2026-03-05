@@ -806,29 +806,17 @@ def main(argv: list[str]) -> int:
         return 2
     project_id = resolve_project_id_for_cmd(args["explicit_project_id"], "ready")
     continue_decision = args["continue_decision"]
-    ready_steps_total = 12
+    ready_steps_total = 10
 
     emit_step(1, ready_steps_total, "resolve run context")
 
     require_sync = parse_bool_flag(os.environ.get("QF_READY_REQUIRE_SYNC", "0"), "QF_READY_REQUIRE_SYNC")
     auto_sync = parse_bool_flag(os.environ.get("QF_READY_AUTO_SYNC", "0"), "QF_READY_AUTO_SYNC")
     require_learn = parse_bool_flag(os.environ.get("QF_READY_REQUIRE_LEARN", "auto"), "QF_READY_REQUIRE_LEARN", allow_auto=True, auto_as="1")
-    auto_learn = parse_bool_flag(os.environ.get("QF_READY_AUTO_LEARN", "1"), "QF_READY_AUTO_LEARN")
-
-    emit_step(2, ready_steps_total, "enforce learn gate (auto-learn if missing)")
+    emit_step(2, ready_steps_total, "enforce learn gate")
     learn_report_file = ""
     if require_learn == "1":
         learn_report_file = resolve_learn_file_for_project(project_id)
-        if not learn_report_file and auto_learn == "1":
-            print("LEARN_AUTO_RUN: python3 tools/learn.py")
-            cp = run_cmd(["python3", "tools/learn.py"])
-            if cp.stdout:
-                sys.stdout.write(cp.stdout)
-            if cp.stderr:
-                sys.stderr.write(cp.stderr)
-            if cp.returncode != 0:
-                return int(cp.returncode)
-            learn_report_file = resolve_learn_file_for_project(project_id)
         if not learn_report_file:
             eprint("ERROR: learn gate not satisfied.")
             eprint("Run: python3 tools/learn.py")
@@ -897,84 +885,80 @@ def main(argv: list[str]) -> int:
         scope_default = f"Follow declared scope in {task_file}" if task_file else "Follow active task scope"
     if not acceptance_default:
         acceptance_default = "make verify; update reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md; keep scope clean"
-    steps_default = "evidence -> implement -> verify -> reports -> ship"
     stop_default = "finish and wait for next instruction; if blocked, record stop reason in decision.md"
 
-    emit_step(7, ready_steps_total, "capture restatement fields")
+    emit_step(7, ready_steps_total, "capture minimal ready contract")
     goal = resolve_ready_field("QF_READY_GOAL", "Goal (one sentence): ", goal_default)
     scope = resolve_ready_field("QF_READY_SCOPE", "Scope (exact paths): ", scope_default)
     acceptance = resolve_ready_field("QF_READY_ACCEPTANCE", "Acceptance (verify/evidence/scope): ", acceptance_default)
-    steps = resolve_ready_field("QF_READY_STEPS", "Execution steps: ", steps_default)
     stop = resolve_ready_field("QF_READY_STOP", "Stop condition: ", stop_default)
-    if not all([goal, scope, acceptance, steps, stop]):
+    if not all([goal, scope, acceptance, stop]):
         eprint("ERROR: ready fields cannot be empty.")
         return 1
 
     Path(f"reports/{run_id}").mkdir(parents=True, exist_ok=True)
     ready_file = f"reports/{run_id}/ready.json"
-    discussion_dir = f"chatlogs/discussion/{run_id}"
-    ready_brief_json = f"{discussion_dir}/ready_brief.json"
-    ready_brief_md = f"{discussion_dir}/ready_brief.md"
-    orient_file = f"{discussion_dir}/orient.json"
-    orient_md = f"{discussion_dir}/orient.md"
-    Path(discussion_dir).mkdir(parents=True, exist_ok=True)
+    emit_step(8, ready_steps_total, "write minimal ready.json")
+    ready_obj = {
+        "schema": "qf_ready.v2",
+        "project_id": project_id,
+        "run_id": run_id,
+        "task_file": task_file,
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "learn_gate": {
+            "required": require_learn == "1",
+            "learn_report_file": learn_report_file,
+            "passed": bool(learn_report_file) if require_learn == "1" else True,
+        },
+        "sync_gate": {
+            "required": require_sync == "1",
+            "sync_report_file": sync_report_file,
+            "passed": bool(sync_report_file) if require_sync == "1" else True,
+        },
+        "prior_run_resolution": {
+            "required": bool(resolution_required),
+            "decision": continue_decision,
+        },
+        "contract": {
+            "goal": goal,
+            "scope": scope,
+            "acceptance": acceptance,
+            "stop_condition": stop,
+        },
+        "next_command": "python3 tools/orient.py",
+    }
+    Path(ready_file).write_text(json.dumps(ready_obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-    emit_step(8, ready_steps_total, "write ready artifacts (ready.json + ready brief)")
-    write_ready_and_brief(
-        ready_file,
-        run_id,
-        project_id,
-        goal,
-        scope,
-        acceptance,
-        steps,
-        stop,
-        learn_report_file,
-        require_learn,
-        sync_report_file,
-        require_sync,
-        resolution_required,
-        continue_decision,
-        ready_brief_json,
-        ready_brief_md,
-    )
-
-    emit_step(9, ready_steps_total, "generate orientation draft")
-    try:
-        generate_orient_draft(run_id, project_id, task_file, orient_file, orient_md)
-    except Exception:
-        eprint("ERROR: failed to generate orientation draft from ready.")
-        return 1
-
-    emit_step(10, ready_steps_total, "append execution/conversation checkpoints")
+    emit_step(9, ready_steps_total, "append ready checkpoint and update state")
     append_execution_event(
         run_id,
         "ready",
         "ready_passed",
         "ok",
         "python3 tools/ready.py",
-        f"ready_file={ready_file};learn_report={learn_report_file};sync_report={sync_report_file};task_file={task_file};brief={ready_brief_md};orient={orient_file}",
+        f"ready_file={ready_file};learn_report={learn_report_file};sync_report={sync_report_file};task_file={task_file}",
         "",
     )
-    append_conversation_checkpoint(run_id, "ready", f"ready gate passed; brief={ready_brief_md}; orient={orient_file}")
+    append_conversation_checkpoint(run_id, "ready", "ready gate passed; next step orient")
 
-    emit_step(11, ready_steps_total, "update TASKS/STATE pointer")
+    emit_step(10, ready_steps_total, "print minimal ready outputs")
     update_state_current(run_id, state_field_value("CURRENT_TASK_FILE"), "active", project_id)
-
-    emit_step(12, ready_steps_total, "print output artifacts")
     print(f"READY_PROJECT_ID: {project_id}")
-    print(f"READY_FILE: {ready_file}")
     print(f"READY_RUN_ID: {run_id}")
+    if task_file:
+        print(f"READY_TASK_FILE: {task_file}")
+    print(f"READY_LEARN_STATUS: {'pass' if learn_report_file or require_learn == '0' else 'fail'}")
+    print(f"READY_DECISION: {continue_decision}")
+    print(f"READY_GOAL: {goal}")
+    print(f"READY_SCOPE: {scope}")
+    print(f"READY_ACCEPTANCE: {acceptance}")
+    print(f"READY_STOP: {stop}")
+    print(f"READY_FILE: {ready_file}")
     if learn_report_file:
         print(f"READY_LEARN_REPORT: {learn_report_file}")
     if sync_report_file:
         print(f"READY_SYNC_REPORT: {sync_report_file}")
-    if task_file:
-        print(f"READY_TASK_FILE: {task_file}")
-    print(f"READY_DISCUSSION_BRIEF_JSON: {ready_brief_json}")
-    print(f"READY_DISCUSSION_BRIEF_MD: {ready_brief_md}")
-    print(f"READY_ORIENT_FILE: {orient_file}")
-    print(f"READY_ORIENT_MD: {orient_md}")
+    print("READY_NEXT_COMMAND: python3 tools/orient.py")
     return 0
 
 
