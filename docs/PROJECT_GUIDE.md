@@ -1,9 +1,12 @@
 # PROJECT_GUIDE.md
 
 ## 同频入口导航（先看）
-- 启动阅读顺序真相源：`SYNC/READ_ORDER.md`
+- 启动阅读顺序真相源：`AGENTS.md` + `docs/PROJECT_GUIDE.md`
 - 详细状态机和每步输入输出：`docs/WORKFLOW.md`
-- Codex 参数与命令实践：`docs/CODEX_CLI_OPERATION.md`
+- Codex 参数与命令实践：`CODEX_CLI_PLAYBOOK.md`
+- Codex 事实审计与测试证据：`CODEX_CLI_SOURCE_AUDIT.md`
+- Codex 默认流程与避坑：`CODEX_CLI_PLAYBOOK.md`
+- Codex 一键 smoke：`test_codex/smoke.sh`
 - 策略问答与项目认知：`docs/PROJECT_GUIDE.md`
 - 概念定义：`docs/ENTITIES.md`
 
@@ -61,11 +64,11 @@
     - Codex CLI：负责本地执行、改动、验证、证据落盘（执行层）。
   - 同频操作顺序：
     - `tools/qf init`
-    - `tools/qf learn MODEL_SYNC=1 PLAN_MODE=strong -log`
+    - `tools/qf learn`（默认强制 `MODEL_SYNC=1` + `PLAN_MODE=strong`，默认输出日志）
     - `tools/qf ready`
   - 必读文件清单：
-    - `SYNC/READ_ORDER.md`
     - `AGENTS.md`
+    - `docs/PROJECT_GUIDE.md`
     - `docs/WORKFLOW.md`
     - `docs/ENTITIES.md`
     - `TASKS/STATE.md`
@@ -74,7 +77,7 @@
 - 证据文件：
   - `AGENTS.md`
   - `docs/WORKFLOW.md`
-  - `docs/CODEX_CLI_OPERATION.md`
+  - `CODEX_CLI_PLAYBOOK.md`
 
 ### 5. 这个项目当前的宪法是什么样的？
 - 回答：
@@ -87,16 +90,16 @@
 ### 6. 这个项目当前工作流是什么样的？
 - 回答：
   - 工作流说明位置：`docs/WORKFLOW.md`。
-  - 主流程：`init -> sync -> learn -> ready -> orient -> choose -> council -> arbiter -> slice -> do -> review -> ship`。
+  - 主流程：`init -> learn -> ready -> orient -> choose -> council -> arbiter -> slice -> do -> review -> ship`。
   - 子流程：
-    - 同频子流程：`init/sync/learn/ready`
+    - 同频子流程：`init/learn/ready`
     - 讨论子流程：`orient/choose/council/arbiter/slice`
     - 执行子流程：`do/review/ship`
-  - 操作指南位置：`AGENTS.md`（硬规则）+ `docs/WORKFLOW.md`（状态机）+ `docs/CODEX_CLI_OPERATION.md`（CLI实践）。
+  - 操作指南位置：`AGENTS.md`（硬规则）+ `docs/WORKFLOW.md`（状态机）+ `CODEX_CLI_PLAYBOOK.md`（CLI实践）。
 - 证据文件：
   - `docs/WORKFLOW.md`
   - `AGENTS.md`
-  - `docs/CODEX_CLI_OPERATION.md`
+  - `CODEX_CLI_PLAYBOOK.md`
 
 ### 7. 我们现在的项目有没有未完成的任务呢，最新的批次在讨论什么问题，你是怎么查的？
 - 回答：
@@ -113,13 +116,12 @@
 
 ### 8. 你查了最近的session说了什么，你是从哪里查的？
 - 回答：
-  - 查阅路径：`SYNC/SESSION_LATEST.md`、`SYNC/CURRENT_STATE.md`、`reports/<RUN_ID>/conversation.md`、`summary.md`、`decision.md`。
+  - 查阅路径：`TASKS/STATE.md`、`reports/<RUN_ID>/conversation.md`、`summary.md`、`decision.md`。
   - 最近 session 摘要：主线是“强化 learn 同频、明确 codex 与模型交互证据、压缩流程摩擦并保持文档实时更新”。
   - 如果你认为不对：回到源证据文件逐条核对，以 `conversation.md + decision.md + 已合并PR` 为准。
   - 是否偏离主线判断：凡是不能提升“同频可信度/执行闭环/证据可审计”的动作都算偏离。
 - 证据文件：
-  - `SYNC/SESSION_LATEST.md`
-  - `SYNC/CURRENT_STATE.md`
+  - `TASKS/STATE.md`
   - `reports/run-2026-03-02-qf-ready/conversation.md`
   - `reports/run-2026-03-02-qf-ready/decision.md`
 
@@ -144,7 +146,7 @@
 - 证据文件：
   - `docs/WORKFLOW.md`
   - `tools/qf`
-  - `SYNC/discussion/<RUN_ID>/council.json`
+  - `chatlogs/discussion/<RUN_ID>/council.json`
   - `reports/<RUN_ID>/execution_contract.json`
 
 ### 11. 项目基建里的task，pr，run，product 的都是什么意思，还有其他的概念吗，他们的生命周期管理是怎么样的？
@@ -164,14 +166,14 @@
 - 回答：
   - 从 `orient` 开始；随后 `choose -> council -> arbiter -> slice`。
   - 最新方向存储：
-    - 草案：`SYNC/discussion/<RUN_ID>/orient.md|json`
+    - 草案：`chatlogs/discussion/<RUN_ID>/orient.md|json`
     - 选择结果：`reports/<RUN_ID>/orient_choice.json`
     - 收敛合同：`reports/<RUN_ID>/execution_contract.json|md`
   - 需求讨论需要多角色；与代码实施角色相关但职责不同（讨论是决策层，实施是执行层）。
 - 证据文件：
   - `docs/WORKFLOW.md`
   - `AGENTS.md`
-  - `SYNC/discussion/`
+  - `chatlogs/discussion/`
   - `reports/<RUN_ID>/`
 
 ### 13. 我们分支代码的管理是怎么样的，现在满足需求吗？
@@ -218,13 +220,14 @@
     - 规划协议：先用 Codex `/plan`，确认后再进入执行链路
     - 去歧义：`tools/qf plan` 仅生成队列提案，不等于 `/plan`
   - 当前已确认版本：`codex-cli 0.106.0`
-  - 操作手册：`docs/CODEX_CLI_OPERATION.md`
+  - 操作手册：`CODEX_CLI_PLAYBOOK.md`
   - 相关文件：`AGENTS.md`、`docs/WORKFLOW.md`、`tools/qf`
-  - 样例证据：`reports/run-2026-03-02-qf-ready/codex_exec.check.events.jsonl`
+  - 样例证据：`test_codex/artifacts/exec_json.events.jsonl`
 - 证据文件：
-  - `docs/CODEX_CLI_OPERATION.md`
-  - `reports/run-2026-03-02-qf-ready/codex_exec.check.events.jsonl`
-  - `reports/run-2026-03-02-qf-ready/codex_exec.check.last.txt`
+  - `CODEX_CLI_PLAYBOOK.md`
+  - `CODEX_CLI_SOURCE_AUDIT.md`
+  - `test_codex/artifacts/exec_json.events.jsonl`
+  - `test_codex/artifacts/exec_basic_last_message.txt`
 
 ## 拉回主线
 
@@ -234,18 +237,5 @@
   - 偏离判定：任何不能增强这三项的动作都是偏离。
   - 接下来动作：先保证 `PROJECT_GUIDE` 成为高质量问答真相源，再用该真相源驱动 learn 与考试，最后继续收敛流程自动化。
 - 证据文件：
-  - `SYNC/SESSION_LATEST.md`
   - `TASKS/STATE.md`
-  - `reports/run-2026-03-02-qf-ready/decision.md`
-
-### 18. `/plan`、`tools/qf plan`、`/compact` 应该怎么用，什么时候用？
-- 回答：
-  - `Codex /plan`：讨论协议命令，用于进入“先规划后执行”的模式；适合复杂需求收敛。
-  - `tools/qf plan`：本地队列提案工具，生成 `TASKS/TODO_PROPOSAL.md`，不构成执行许可。
-  - 推荐顺序：`/plan -> 确认 -> tools/qf discuss/execute/do`。
-  - `/compact`：用于上下文过大时压缩，不要求每个 task 强制执行。
-  - `/compact` 前必须先落仓库证据：`tools/qf snapshot NOTE="decision + next step"`。
-- 证据文件：
-  - `docs/CODEX_CLI_OPERATION.md`
-  - `docs/WORKFLOW.md`
-  - `AGENTS.md`
+  - `reports/run-2026-03-04-remove-sync-entry/decision.md`

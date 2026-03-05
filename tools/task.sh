@@ -136,7 +136,7 @@ for item in scope_hint:
     if s:
         scope.append(s)
 if not scope:
-    scope = ["tools/qf", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "SYNC/", "TASKS/", "reports/{RUN_ID}/"]
+    scope = ["tools/qf", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
 scope_line = ", ".join(f"`{x}`" for x in scope)
 
 print("\t".join([run_id, title, goal, option, scope_line]))

@@ -12,6 +12,16 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 ## Queue
 
+- [x] TODO Title: remove sync entry: collapse onboarding to AGENTS + PROJECT_GUIDE and move SYNC to chatlogs  Picked: run-2026-03-04-remove-sync-entry 2026-03-04T15:35:07+0800
+  Goal: 移除 `SYNC` 作为流程入口与核心依赖，让同频主入口收敛到 `AGENTS.md + docs/PROJECT_GUIDE.md`，并清理流程内所有 `SYNC` 入口依赖。
+  Scope: `tools/qf`, `tools/sync_exam.py`, `tests/`, `AGENTS.md`, `README.md`, `docs/WORKFLOW.md`, `docs/PROJECT_GUIDE.md`, `docs/LEARN_EXAM_*`, `TASKS/STATE.md`, `TASKS/QUEUE.md`, `chatlogs/`
+  Acceptance:
+  - [ ] `tools/qf init -> learn -> ready` 不再依赖 `SYNC` 目录入口
+  - [ ] 讨论草稿路径稳定为 `chatlogs/discussion/{RUN_ID}/`
+  - [ ] 主流程与 owner 文档不再引用 `SYNC/*` / `chatlogs/sync/*`
+  - [ ] Command(s) pass: `make verify`
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
 - [x] TODO Title: qf resume reliability: avoid self-block on checkout main  Picked: run-2026-03-04-resume-self-block-fix 2026-03-04T14:23:57+0800
   Done: PR #163, RUN_ID=run-2026-03-04-resume-self-block-fix
   Goal: 修复 `tools/qf resume` 在收尾同步阶段因自身写日志导致工作区变脏而卡住 `git checkout main` 的问题。
@@ -36,7 +46,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 - [x] TODO Title: docs governance cleanup: 同频文档全量清理与边界重定义  Picked: run-2026-03-04-docs-governance-cleanup 2026-03-04T02:17:41+0800
   Done: PR #159, RUN_ID=run-2026-03-04-docs-governance-cleanup
   Goal: 统一 AGENTS/README/docs/SYNC 的职责边界，删除噪声与重复，细化同频标准，形成可执行且可审计的文档体系。
-  Scope: `AGENTS.md`, `README.md`, `docs/`, `SYNC/`, `reports/{RUN_ID}/`
+  Scope: `AGENTS.md`, `README.md`, `docs/`, `chatlogs/sync/`, `reports/{RUN_ID}/`
   Acceptance:
   - [ ] 形成“保留/删除/合并/细化”清单并落地到文档
   - [ ] 明确并写入边界规则：哪个问题归哪个 owner 文档
@@ -79,7 +89,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 - [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment
   Goal: Keep evidence and owner docs aligned with final behavior of this direction.
-  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `SYNC/`, `reports/{RUN_ID}/`
+  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `chatlogs/sync/`, `reports/{RUN_ID}/`
   Acceptance:
   - [ ] owner docs updated in same run when behavior/rules changed
   - [ ] tools/qf review STRICT=1 AUTO_FIX=1 passes
@@ -113,7 +123,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 - [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment  Picked: run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment 2026-03-02T16:04:02+0800
   Done: PR #153, RUN_ID=run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment
   Goal: Keep evidence and owner docs aligned with final behavior of this direction.
-  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `SYNC/`, `reports/{RUN_ID}/`
+  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `chatlogs/sync/`, `reports/{RUN_ID}/`
   Acceptance:
   - [ ] owner docs updated in same run when behavior/rules changed
   - [ ] tools/qf review STRICT=1 AUTO_FIX=1 passes
@@ -147,7 +157,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 - [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment  Picked: run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment 2026-03-02T15:45:17+0800
   Goal: Keep evidence and owner docs aligned with final behavior of this direction.
-  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `SYNC/`, `reports/{RUN_ID}/`
+  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `chatlogs/sync/`, `reports/{RUN_ID}/`
   Acceptance:
   - [ ] owner docs updated in same run when behavior/rules changed
   - [ ] tools/qf review STRICT=1 AUTO_FIX=1 passes
@@ -180,7 +190,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 - [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment
   Goal: Keep evidence and owner docs aligned with final behavior of this direction.
-  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `SYNC/`, `reports/{RUN_ID}/`
+  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `chatlogs/sync/`, `reports/{RUN_ID}/`
   Acceptance:
   - [ ] owner docs updated in same run when behavior/rules changed
   - [ ] tools/qf review STRICT=1 AUTO_FIX=1 passes
@@ -212,7 +222,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 
 - [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment  Picked: run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment 2026-03-02T14:33:10+0800
   Goal: Keep evidence and owner docs aligned with final behavior of this direction.
-  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `SYNC/`, `reports/{RUN_ID}/`
+  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `chatlogs/sync/`, `reports/{RUN_ID}/`
   Acceptance:
   - [ ] owner docs updated in same run when behavior/rules changed
   - [ ] tools/qf review STRICT=1 AUTO_FIX=1 passes
@@ -235,7 +245,7 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 - [x] TODO Title: qf ready 讨论执行分离 + 强认知输出 + 多角色评审闭环  Picked: run-2026-03-02-qf-ready 2026-03-02T12:58:05+0800
   Done: PR #155, RUN_ID=run-2026-03-02-qf-ready
   Goal: 把 `ready` 升级为“先判定会话状态、再给方向、确认后执行”的决策中枢，并将讨论态与执行态证据彻底分层。
-  Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `AGENTS.md`, `SYNC/`, `TASKS/`, `reports/{RUN_ID}/`
+  Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `AGENTS.md`, `chatlogs/sync/`, `TASKS/`, `reports/{RUN_ID}/`
   Acceptance:
   - [ ] `tools/qf ready` 在检测到上次 run 非完成态时，必须先给出“收尾（resume-close）/抛弃并新开（abandon-new）”决策，不得直接进入新方向。
   - [ ] `ready` 输出固定包含：项目目标解读、宪法/工作流解读、证据链状态、session 承接状态、风险/阻塞、建议下一步。
@@ -247,18 +257,18 @@ Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
 - [x] TODO Title: qf 做强模式 v1：L1方向层 + do/plan 稳定性修复 + 文档强门禁  Picked: run-2026-03-02-qf-v1-l1-do-plan 2026-03-02T12:18:09+0800
   Done: local verify passed, RUN_ID=run-2026-03-02-qf-v1-l1-do-plan
   Goal: 把 `ready->plan->do` 升级为“先方向确认后执行”的做强模式入口，并修复 `do/plan` 的低摩擦稳定性问题。
-  Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `AGENTS.md`, `SYNC/`, `TASKS/`, `reports/{RUN_ID}/`
+  Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `AGENTS.md`, `chatlogs/sync/`, `TASKS/`, `reports/{RUN_ID}/`
   Acceptance:
   - [x] 新增 L1 方向层入口（`orient/choose` 或等价命令）：基于 `docs/PROJECT_GUIDE.md` + `docs/*` + state/evidence 生成多方向候选与优先级，并落证据文件。
   - [x] `tools/qf do queue-next` 不再因内部日志写入导致 pull 前工作区变脏；失败时仍保留可恢复命令。
   - [x] `tools/qf do` 的 auto-plan 与 pick 链路修复：内部自动 plan 后能继续 pick，不再出现“proposal missing”断链。
   - [x] Queue 为空时提供“回到方向层确认”的明确下一步，不是直接死路。
-  - [x] `make verify` 通过；owner 文档（`AGENTS.md`/`docs/WORKFLOW.md`/`SYNC/*`）与本 RUN evidence 同步更新。
+  - [x] `make verify` 通过；owner 文档（`AGENTS.md`/`docs/WORKFLOW.md`/`chatlogs/sync/*`）与本 RUN evidence 同步更新。
 
 - [x] TODO Title: qf sync 自动同频 + ready 硬门禁 + 对话证据自动更新  Picked: run-2026-03-01-qf-sync-ready 2026-03-01T01:30:01+0800
   Done: local verify passed, RUN_ID=run-2026-03-01-qf-sync-ready
   Goal: 把同频阶段做成高自动化闭环：自动读取必读链路、自动生成同频报告、ready 强制校验同频完成，并在关键命令自动更新会话证据。
-  Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `AGENTS.md`, `SYNC/`, `TASKS/`, `reports/{RUN_ID}/`
+  Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `AGENTS.md`, `chatlogs/sync/`, `TASKS/`, `reports/{RUN_ID}/`
   Acceptance:
   - [x] 新增 `tools/qf sync`：自动读取必读文件并落盘 `reports/{RUN_ID}/sync_report.json` 与 `sync_report.md`，包含“已读文件清单、项目总况、宪法、工作流、技能查找入口、当前任务阶段、会话承接状态、下一条命令”。
   - [x] `tools/qf ready` 在缺失有效同频报告时不得通过；默认自动补跑同频后再写 `ready.json`（可通过开关关闭自动补跑）。

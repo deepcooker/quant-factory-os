@@ -1,7 +1,7 @@
 # Session Onboard
 
 RUN_ID: `run-2026-03-04-resume-self-block-fix`
-Generated At: 2026-03-04T14:24:46+08:00
+Generated At: 2026-03-04T15:31:39+08:00
 
 ## 宪法/硬规则入口
 - AGENTS.md
@@ -18,6 +18,7 @@ Generated At: 2026-03-04T14:24:46+08:00
 - docs/PROJECT_GUIDE.md#强制复述模板
 
 ## 最近 decision 入口列表
+- reports/run-2026-03-04-resume-self-block-fix/decision.md
 - reports/run-2026-03-04-plan-execute-governance/decision.md
 - reports/run-2026-03-04-docs-governance-cleanup/decision.md
 - reports/run-2026-03-04-docs-cleanup-project-guide/decision.md
