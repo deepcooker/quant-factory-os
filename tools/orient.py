@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -40,100 +39,128 @@ def parse_args(argv: list[str]) -> dict[str, str]:
     return {"explicit_run_id": explicit_run_id, "explicit_project_id": explicit_project_id}
 
 
-def generate_orient_draft(run_id: str, project_id: str, task_file: str, orient_file: str, orient_md: str) -> None:
-    def count_open_queue_items(text: str) -> int:
-        return len(re.findall(r"^- \[ \] ", text, flags=re.M))
+def read_json(path: str) -> dict[str, Any]:
+    p = Path(path)
+    if not p.is_file():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
 
-    docs_paths = [
-        "docs/PROJECT_GUIDE.md",
-        "docs/WORKFLOW.md",
-        "docs/ENTITIES.md",
-        "AGENTS.md",
-        "TASKS/STATE.md",
-        "TASKS/QUEUE.md",
-        f"learn/{project_id}.json",
-        f"reports/{run_id}/ready.json",
-    ]
-    docs_blob = "\n".join(read_text(p) for p in docs_paths)
-    queue_text = read_text("TASKS/QUEUE.md")
-    open_items = count_open_queue_items(queue_text)
-    low = docs_blob.lower()
 
-    def score_for(base: int, keywords: list[str]) -> int:
-        s = base
-        for k in keywords:
-            s += low.count(k.lower()) * 2
+def split_scope(scope_text: str) -> list[str]:
+    out: list[str] = []
+    for raw in str(scope_text).split(","):
+        item = raw.strip().replace("`", "")
+        if item:
+            out.append(item)
+    return out
+
+
+def short_text(text: str, limit: int = 140) -> str:
+    s = " ".join(str(text).split())
+    if len(s) <= limit:
         return s
+    return s[: limit - 3].rstrip() + "..."
 
-    directions: list[dict[str, Any]] = [
-        {
-            "id": "ready-exit-resolution",
-            "title": "P0: ready 先处理未收尾 run（收尾/抛弃）",
-            "why": "避免把历史中断状态混入新需求，先做生命周期分流。",
-            "benefit": "减少混乱上下文和重复执行。",
-            "risk": "增加一次显式确认步骤。",
-            "cost": "S",
-            "dependencies": ["TASKS/STATE.md", "reports/<RUN_ID>/ship_state.json"],
-            "scope_hint": ["tools/*.py", "tests/"],
-            "score": score_for(82, ["ready", "resume", "stop reason", "run", "state"]),
-        },
-        {
-            "id": "ready-strong-brief",
-            "title": "P1: ready 输出最强认知摘要与证据链",
-            "why": "ready 通过后立即给出项目理解、宪法解读、工作流和下一步建议。",
-            "benefit": "降低同频误差，提升决策速度。",
-            "risk": "摘要质量受输入文档完整性影响。",
-            "cost": "S",
-            "dependencies": ["AGENTS.md", "docs/PROJECT_GUIDE.md", "learn/<PROJECT_ID>.json"],
-            "scope_hint": ["tools/*.py", "docs/PROJECT_GUIDE.md", "docs/WORKFLOW.md"],
-            "score": score_for(78, ["learn", "ready", "workflow", "constitution", "evidence"]),
-        },
-        {
-            "id": "discussion-execution-split",
-            "title": "P1: 讨论态与执行态证据分层",
-            "why": "未确认方案只写讨论区，确认后再写 reports 执行证据。",
-            "benefit": "保持 report 可审计且低噪声。",
-            "risk": "需要清晰迁移边界。",
-            "cost": "M",
-            "dependencies": ["chatlogs/discussion/", "reports/<RUN_ID>/"],
-            "scope_hint": ["tools/*.py", "docs/WORKFLOW.md", "AGENTS.md", "chatlogs/discussion/"],
-            "score": score_for(76, ["discussion", "report", "confirm", "evidence", "orient"]),
-        },
-        {
-            "id": "council-contract",
-            "title": "P2: 多角色评审博弈 -> 统一执行契约",
-            "why": "产品/架构/研发/测试独立评审，再收敛成单一 contract。",
-            "benefit": "减少单视角偏差，提高执行稳定性。",
-            "risk": "初期输出可能偏模板化。",
-            "cost": "M",
-            "dependencies": ["orient choice", "task contract"],
-            "scope_hint": ["tools/*.py", "reports/<RUN_ID>/"],
-            "score": score_for(70, ["product", "architect", "dev", "qa", "review", "contract"]),
-        },
-        {
-            "id": "post-exec-drift-review",
-            "title": "P2: 执行后偏差审计与自动修复",
-            "why": "需求完成后自动检查目标/实现/测试/文档偏差并回补。",
-            "benefit": "形成闭环，减少累计偏差。",
-            "risk": "规则过严会增加时间成本。",
-            "cost": "M",
-            "dependencies": ["reports/<RUN_ID>/summary.md", "reports/<RUN_ID>/decision.md"],
-            "scope_hint": ["tools/*.py", "tests/", "docs/WORKFLOW.md"],
-            "score": score_for(66, ["review", "drift", "summary", "decision", "verify"]),
-        },
-    ]
 
-    if open_items == 0:
-        for item in directions:
-            if item["id"] in {"discussion-execution-split", "ready-strong-brief"}:
-                item["score"] += 6
+def generate_orient_draft(run_id: str, project_id: str, task_file: str, orient_file: str, orient_md: str) -> None:
+    ready_obj = read_json(f"reports/{run_id}/ready.json")
+    summary_text = read_text(f"reports/{run_id}/summary.md")
+    decision_text = read_text(f"reports/{run_id}/decision.md")
+    state_text = read_text("TASKS/STATE.md")
+    queue_text = read_text("TASKS/QUEUE.md")
+    learn_obj = read_json(f"learn/{project_id}.json")
 
-    directions.sort(key=lambda x: x["score"], reverse=True)
+    contract = ready_obj.get("contract") or {}
+    goal = str(contract.get("goal", "")).strip()
+    acceptance = str(contract.get("acceptance", "")).strip()
+    scope_hint = split_scope(str(contract.get("scope", "")).strip())
+    if not scope_hint:
+        scope_hint = ["tools/*.py", "tests/", "docs/", "TASKS/", "reports/"]
+
+    open_items = queue_text.count("- [ ] ")
+    learn_focus = ""
+    model_sync = learn_obj.get("model_sync") if isinstance(learn_obj, dict) else {}
+    if isinstance(model_sync, dict):
+        result = model_sync.get("result") or {}
+        if isinstance(result, dict):
+            oral_summary = result.get("oral_summary") or {}
+            if isinstance(oral_summary, dict):
+                learn_focus = str(oral_summary.get("current_focus", "")).strip()
+    if not learn_focus:
+        learn_focus = "继续围绕当前 active run 收敛 learn 主线、流程边界和日常使用体验。"
+
+    summary_lower = summary_text.lower()
+    decision_lower = decision_text.lower()
+    ready_lower = f"{goal} {acceptance}".lower()
+
+    directions: list[dict[str, Any]] = []
+
+    directions.append(
+        {
+            "id": "learn-daily-ergonomics",
+            "title": "P0: 收敛 learn 的日常同频体验",
+            "why": short_text(
+                f"当前 ready 合同和 run 证据都把重点放在 learn 主线、PROJECT_GUIDE 驱动和流程降噪；下一轮最合理的方向是继续压输出噪音并稳住日常使用体验。"
+            ),
+            "risk": "如果只追求更短输出，可能削弱主线回拉和证据覆盖。",
+            "scope_hint": ["tools/learn.py", "docs/PROJECT_GUIDE.md", "docs/WORKFLOW.md", "AGENTS.md"],
+        }
+    )
+
+    directions.append(
+        {
+            "id": "discussion-chain-hardening",
+            "title": "P1: 继续收敛讨论链边界",
+            "why": short_text(
+                "当前 run 已经把 ready 收成纯门禁、orient 从 ready 解耦；下一步自然是继续把 orient/choose/council/arbiter/slice 的对象边界和输出责任彻底理顺。"
+            ),
+            "risk": "如果只改边界不验证链路，可能出现流程看起来更清楚但真实执行断链。",
+            "scope_hint": ["tools/orient.py", "tools/choose.py", "tools/council.py", "tools/arbiter.py", "tools/slice_task.py", "docs/WORKFLOW.md", "docs/ENTITIES.md"],
+        }
+    )
+
+    directions.append(
+        {
+            "id": "execution-path-ergonomics",
+            "title": "P2: 收敛执行链的人体工学",
+            "why": short_text(
+                "如果当前重点从讨论边界转向真正落地，那么最值得做的是把 do/review/ship 的提示、失败恢复和证据更新体验继续压顺。"
+            ),
+            "risk": "若过早进入执行链优化，可能掩盖讨论层对象模型仍未完全稳定的问题。",
+            "scope_hint": ["tools/legacy.sh", "tools/task.sh", "tools/ship.sh", "docs/WORKFLOW.md", "reports/"],
+        }
+    )
+
+    if "orient" in ready_lower or "council" in ready_lower or "arbiter" in ready_lower:
+        directions[1]["why"] = short_text(
+            "当前合同已经明确讨论链是下一阶段重点，所以优先方向应是继续把 orient/choose/council/arbiter/slice 的输入输出和状态边界彻底做稳。"
+        )
+    if "learn" in ready_lower or "project_guide" in ready_lower or "主线" in goal:
+        directions[0]["why"] = short_text(
+            f"当前合同直接把 learn 和 PROJECT_GUIDE 同频列为增量重点；结合最新 learn focus，下一步最合理的是继续收敛强同频输出和主线回拉体验：{learn_focus}"
+        )
+    if "ship" in summary_lower or "review" in decision_lower or "verify" in ready_lower:
+        directions[2]["why"] = short_text(
+            "当前证据已经反复触及 verify/review/ship 约束；如果要往执行层推进，最合理的是优先压顺执行链的人体工学与失败恢复。"
+        )
+
+    recommended_idx = 0
+    if "learn" in ready_lower or "project_guide" in ready_lower or "主线" in goal:
+        recommended_idx = 0
+    elif "orient" in ready_lower or "council" in ready_lower or "arbiter" in ready_lower:
+        recommended_idx = 1
+    elif "ship" in ready_lower or "verify" in ready_lower or open_items > 3:
+        recommended_idx = 2
+
     for idx, item in enumerate(directions):
         item["priority_rank"] = idx + 1
         item["priority"] = f"P{idx}"
+        item["recommended"] = idx == recommended_idx
 
-    recommended = directions[0]["id"] if directions else ""
+    recommended = directions[recommended_idx]["id"] if directions else ""
     next_cmd = f"python3 tools/choose.py RUN_ID={run_id} OPTION={recommended}" if recommended else f"python3 tools/choose.py RUN_ID={run_id} OPTION=<id>"
     obj = {
         "project_id": project_id,
@@ -142,7 +169,14 @@ def generate_orient_draft(run_id: str, project_id: str, task_file: str, orient_f
         "discussion_mode": True,
         "task_file": task_file,
         "open_queue_items": open_items,
-        "inputs": docs_paths,
+        "inputs": [
+            "reports/<RUN_ID>/ready.json",
+            "TASKS/STATE.md",
+            "TASKS/QUEUE.md",
+            "reports/<RUN_ID>/summary.md",
+            "reports/<RUN_ID>/decision.md",
+            "learn/<PROJECT_ID>.json",
+        ],
         "directions": directions,
         "recommended_option": recommended,
         "next_command": next_cmd,
@@ -162,21 +196,19 @@ def generate_orient_draft(run_id: str, project_id: str, task_file: str, orient_f
         "## Direction Options",
     ]
     for item in directions:
-        lines.append(f"- id=`{item['id']}` | priority=`{item['priority']}` | score={item['score']}")
+        lines.append(f"- id=`{item['id']}` | priority=`{item['priority']}` | recommended=`{str(item['recommended']).lower()}`")
         lines.append(f"  - title: {item['title']}")
         lines.append(f"  - why: {item['why']}")
-        lines.append(f"  - benefit: {item['benefit']}")
         lines.append(f"  - risk: {item['risk']}")
-        lines.append(f"  - cost: {item['cost']}")
-        lines.append(f"  - dependencies: {', '.join(item['dependencies'])}")
+        lines.append(f"  - scope_hint: {', '.join(item['scope_hint'])}")
     lines.extend(["", "## Recommended", f"- `{recommended}`", "", "## Next Command", f"- `{next_cmd}`", ""])
     Path(orient_md).write_text("\n".join(lines), encoding="utf-8")
 
     print(f"ORIENT_OPTIONS: {len(directions)}")
-    for idx, item in enumerate(directions[:5], start=1):
+    for idx, item in enumerate(directions[:3], start=1):
         print(
             f"ORIENT_OPTION_{idx}: id={item['id']} | priority={item['priority']} | "
-            f"benefit={item['benefit']} | risk={item['risk']} | cost={item['cost']}"
+            f"recommended={str(item['recommended']).lower()} | risk={item['risk']}"
         )
     print(f"ORIENT_RECOMMENDED: {recommended}")
     print(f"ORIENT_NEXT_COMMAND: {next_cmd}")

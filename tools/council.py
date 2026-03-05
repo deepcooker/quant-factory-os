@@ -129,7 +129,11 @@ def main(argv: list[str]) -> int:
     queue_open_items = len(re.findall(r"^- \[ \] ", queue_text, flags=re.M))
 
     learn_passed = bool(learn_obj.get("learn_passed")) if learn_obj else False
-    ready_passed = bool(ready_obj.get("restatement_passed")) if ready_obj else False
+    ready_contract = ready_obj.get("contract") if isinstance(ready_obj, dict) else {}
+    ready_learn_gate = ready_obj.get("learn_gate") if isinstance(ready_obj, dict) else {}
+    ready_passed = bool(ready_contract) and (
+        not isinstance(ready_learn_gate, dict) or bool(ready_learn_gate.get("passed", False))
+    )
     goal_clear = len(goal) >= 24
     scope_present = len(scope) > 0
     scope_bounded = len(scope) <= 8 if scope_present else False
@@ -149,7 +153,7 @@ def main(argv: list[str]) -> int:
             "id": "ready_gate",
             "label": "ready gate is passed",
             "status": check_status(ready_passed, "block"),
-            "detail": "ready.json missing or restatement_passed=false" if not ready_passed else "ok",
+            "detail": "ready.json missing or minimal ready contract invalid" if not ready_passed else "ok",
         },
         {
             "id": "goal_clarity",
