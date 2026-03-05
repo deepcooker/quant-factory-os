@@ -177,3 +177,24 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
 - Risk: behavior drift between Python implementation and legacy Bash body over time.
 - Mitigation: Python path is primary and validated by real command runs (`ready`, `ready DECISION=...`).
 - Rollback: remove `cmd_ready` delegation line to return to legacy Bash path.
+
+## Incremental decision (make orient/choose/council/arbiter/slice Python-first)
+### Why
+- You asked for Python as the primary implementation language and Bash as a thin wrapper.
+- Discussion-to-execution transition (`orient -> choose -> council -> arbiter -> slice`) was still embedded in the large Bash script.
+- Migrating this chain reduces maintenance complexity and is the prerequisite for eventually removing monolithic `tools/qf`.
+
+### Decision
+- Introduce dedicated Python command implementations:
+  - `tools/qf_orient.py`
+  - `tools/qf_choose.py`
+  - `tools/qf_council.py`
+  - `tools/qf_arbiter.py`
+  - `tools/qf_slice.py`
+- Keep `tools/qf` as compatibility entrypoint that delegates these commands to Python first.
+- Preserve all current artifact paths and gate semantics to avoid workflow breakage.
+
+### Risk / rollback
+- Risk: temporary divergence between Python and legacy Bash fallback branches.
+- Mitigation: Python path is executed first and validated by real command chain + `make verify`.
+- Rollback: remove per-command delegation lines in `tools/qf` to restore legacy Bash handlers.

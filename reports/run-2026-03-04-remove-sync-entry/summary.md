@@ -239,3 +239,32 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
 - `tools/qf ready` -> pass
 - `tools/qf ready DECISION=abandon-new` -> pass
 - `make verify` -> pass (`19 passed`)
+
+## Incremental update (orient/choose/council/arbiter/slice Python-first)
+- Added new Python runtime implementations:
+  - `tools/qf_orient.py`
+  - `tools/qf_choose.py`
+  - `tools/qf_council.py`
+  - `tools/qf_arbiter.py`
+  - `tools/qf_slice.py`
+- Converted `tools/qf` command handlers to delegate Python first for:
+  - `cmd_orient`
+  - `cmd_choose`
+  - `cmd_council`
+  - `cmd_arbiter`
+  - `cmd_slice`
+- Preserved behavior/output contracts:
+  - discussion artifacts in `chatlogs/discussion/<RUN_ID>/...`
+  - contract artifacts in `reports/<RUN_ID>/...`
+  - queue slicing markers in `TASKS/QUEUE.md`
+  - execution/conversation checkpoints and `TASKS/STATE.md` updates.
+
+### Verify (this update)
+- `python3 -m py_compile tools/qf_orient.py tools/qf_choose.py tools/qf_council.py tools/qf_arbiter.py tools/qf_slice.py` -> pass
+- `bash -n tools/qf` -> pass
+- `tools/qf orient RUN_ID=run-2026-03-04-remove-sync-entry` -> pass
+- `tools/qf choose RUN_ID=run-2026-03-04-remove-sync-entry` -> pass
+- `tools/qf council RUN_ID=run-2026-03-04-remove-sync-entry` -> pass
+- `tools/qf arbiter RUN_ID=run-2026-03-04-remove-sync-entry` -> pass
+- `tools/qf slice RUN_ID=run-2026-03-04-remove-sync-entry` -> pass
+- `make verify` -> pass (`19 passed`)

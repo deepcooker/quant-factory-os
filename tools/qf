@@ -2979,6 +2979,17 @@ PY
 }
 
 cmd_orient() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+  if [[ -n "$py_bin" && -f "tools/qf_orient.py" ]]; then
+    "$py_bin" tools/qf_orient.py "$@"
+    return $?
+  fi
+
   local run_id=""
   local explicit_run_id=""
   local explicit_project_id="${QF_PROJECT_ID:-${PROJECT_ID:-}}"
@@ -3040,6 +3051,17 @@ cmd_orient() {
 }
 
 cmd_choose() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+  if [[ -n "$py_bin" && -f "tools/qf_choose.py" ]]; then
+    "$py_bin" tools/qf_choose.py "$@"
+    return $?
+  fi
+
   local run_id=""
   local explicit_run_id=""
   local explicit_project_id="${QF_PROJECT_ID:-${PROJECT_ID:-}}"
@@ -3279,6 +3301,17 @@ PY
 }
 
 cmd_council() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+  if [[ -n "$py_bin" && -f "tools/qf_council.py" ]]; then
+    "$py_bin" tools/qf_council.py "$@"
+    return $?
+  fi
+
   local run_id=""
   local explicit_run_id=""
   local explicit_project_id="${QF_PROJECT_ID:-${PROJECT_ID:-}}"
@@ -3642,6 +3675,17 @@ PY
 }
 
 cmd_arbiter() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+  if [[ -n "$py_bin" && -f "tools/qf_arbiter.py" ]]; then
+    "$py_bin" tools/qf_arbiter.py "$@"
+    return $?
+  fi
+
   local run_id=""
   local explicit_run_id=""
   local explicit_project_id="${QF_PROJECT_ID:-${PROJECT_ID:-}}"
@@ -3924,6 +3968,17 @@ PY
 }
 
 cmd_slice() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+  if [[ -n "$py_bin" && -f "tools/qf_slice.py" ]]; then
+    "$py_bin" tools/qf_slice.py "$@"
+    return $?
+  fi
+
   local run_id=""
   local explicit_run_id=""
   local explicit_project_id="${QF_PROJECT_ID:-${PROJECT_ID:-}}"
