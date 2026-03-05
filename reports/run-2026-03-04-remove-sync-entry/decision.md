@@ -129,3 +129,19 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
 - Risk: `slash` transport can fail on hosts without PTY support.
 - Mitigation: `PLAN_TRANSPORT=auto` default keeps learn usable and still strict.
 - Rollback: set `QF_LEARN_PLAN_TRANSPORT=exec` permanently and remove slash branch if operationally unnecessary.
+
+## Incremental decision (make learn Python-first, keep Bash as wrapper)
+### Why
+- You requested Python as primary logic runtime and Bash as thin shell.
+- Current learn behavior had already moved to mixed Bash+inline-Python and became hard to maintain.
+- Python-first implementation gives deterministic parsing/validation and easier future migration of other commands.
+
+### Decision
+- Introduce `tools/qf_learn.py` as the canonical implementation for `tools/qf learn`.
+- Keep `tools/qf` as CLI wrapper that delegates to Python first for compatibility.
+- Preserve existing argument/env surface and gate semantics to avoid workflow breakage.
+
+### Risk / rollback
+- Risk: wrapper/implementation drift if both paths evolve independently.
+- Mitigation: Python-first path executes by default; Bash body remains compatibility fallback only.
+- Rollback: remove delegation line in `cmd_learn` to return to legacy Bash body.

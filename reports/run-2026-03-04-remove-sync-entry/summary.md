@@ -165,3 +165,29 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
   - observed `LEARN_MODEL_SYNC_REASON: no-pty-for-slash`
   - stderr evidence: `learn/project-0.model.stderr.log`
 - `make verify` -> pass (`19 passed`)
+
+## Incremental update (learn Python-first implementation)
+- Added new Python runtime implementation: `tools/qf_learn.py`.
+- Converted `tools/qf` `cmd_learn` to delegate to Python first; Bash now keeps compatibility wrapper/fallback role.
+- Kept CLI contract compatible (same env vars and args), including:
+  - `PROJECT_ID=...`, `TTL_DAYS=...`, `MODEL_SYNC=1`, `PLAN_MODE=strong`
+  - `PLAN_TRANSPORT=auto|slash|exec`, `MODEL_TIMEOUT_SEC=...`, `MODEL=...`
+  - `-log` / `LOG=<path>`
+- Preserved strong learn outputs and gates:
+  - `LEARN_STEP[1/4..4/4]`
+  - model plan/oral/anchor/practice anchors
+  - `LEARN_MODEL_ORAL_EXAM_QID1..N`
+  - strict failure for `PLAN_TRANSPORT=slash` when host has no PTY devices.
+- Improved `-log` streaming behavior:
+  - child learn process now runs with `PYTHONUNBUFFERED=1`
+  - console and log file receive line-by-line output in near real-time.
+- Updated docs:
+  - `docs/WORKFLOW.md` records Python-first learn implementation.
+  - `AGENTS.md` records Python-first runtime note in learn gate criteria.
+
+### Verify (this update)
+- `python3 -m py_compile tools/qf_learn.py` -> pass
+- `bash -n tools/qf` -> pass
+- `tools/qf learn MODEL_TIMEOUT_SEC=120 -log` -> pass
+- `tools/qf learn PLAN_TRANSPORT=slash MODEL_TIMEOUT_SEC=20` -> expected fail (`no-pty-for-slash`)
+- `make verify` -> pass (`19 passed`)

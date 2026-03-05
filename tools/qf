@@ -1391,6 +1391,17 @@ PY
 }
 
 cmd_learn() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+  if [[ -n "$py_bin" && -f "tools/qf_learn.py" ]]; then
+    "$py_bin" tools/qf_learn.py "$@"
+    return $?
+  fi
+
   local explicit_project_id="${QF_PROJECT_ID:-${PROJECT_ID:-}}"
   local project_id=""
   local token=""

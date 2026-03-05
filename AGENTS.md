@@ -44,6 +44,7 @@ Required visible progress:
 - `READY_STEP[<i>/<n>]`
 
 `learn` pass criteria (minimum):
+- Runtime implementation is Python-first (`tools/qf_learn.py`); `tools/qf` is the CLI wrapper.
 - Must print:
   - `LEARN_MAINLINE`
   - `LEARN_CURRENT_STAGE`

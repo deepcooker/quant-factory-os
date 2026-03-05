@@ -38,6 +38,7 @@ This document describes the expected workflow for changes in this repository.
 - `S1.6 Learn Gate`: `tools/qf learn`
   - Input: required owner docs (`AGENTS.md` + `docs/PROJECT_GUIDE.md` + workflow + codex playbook + state).
   - Output: `learn/{project_id}.json` + `learn/{project_id}.md`.
+  - Implementation: Python-first (`tools/qf_learn.py`), `tools/qf` keeps CLI wrapper only.
   - Output visibility: prints `LEARN_STEP[<i>/<n>]` stage markers.
   - Stdout mirror is enabled by default: `tools/qf learn` writes `learn/{project_id}.stdout.log`.
     - one-shot disable: `QF_LEARN_LOG=0 tools/qf learn`
