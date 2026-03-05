@@ -60,6 +60,8 @@ This document describes the expected workflow for changes in this repository.
       - `LEARN_MODEL_ORAL_CURRENT_FOCUS`, `LEARN_MODEL_ORAL_NEXT_ACTION`, `LEARN_MODEL_ORAL_EXAM_QA_COUNT`
       - `LEARN_MODEL_ANCHOR_QUESTION_ID`, `LEARN_MODEL_ANCHOR_STATUS`, `LEARN_MODEL_ANCHOR_DRIFT_DETAIL`, `LEARN_MODEL_ANCHOR_RETURN_ACTION`
       - `LEARN_MODEL_PRACTICE_COMMAND_COUNT`, `LEARN_MODEL_PRACTICE_SAMPLE_1` (and optional more samples)
+    - optional human-readable console block:
+      - `LEARN_READOUT_BEGIN` ... `LEARN_READOUT_END`
   - Purpose: materialize onboarding understanding (project/constitution/workflow/skills/session) with mandatory model-sync evidence.
 - `S2 Ready gate`: `tools/qf ready`
   - Input: restatement fields (goal/scope/acceptance/steps/stop)

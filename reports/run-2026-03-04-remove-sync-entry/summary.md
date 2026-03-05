@@ -104,3 +104,14 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
 - `tools/qf learn PROJECT_ID=project-0 MODEL_TIMEOUT_SEC=120` -> pass
   - includes new anchor/practice stdout fields
 - `tools/qf ready` -> pass (new learn gate accepted)
+
+## Incremental update (learn console readability)
+- Added a human-readable readout block in `tools/qf learn` output (no gate semantics changed):
+  - `LEARN_READOUT_BEGIN` ... `LEARN_READOUT_END`
+  - includes mainline/current stage/next step/oral focus/anchor/practice summary
+- Existing machine anchors and strict validation remain unchanged.
+
+### Verify (this update)
+- `bash -n tools/qf` -> pass
+- `tools/qf learn PROJECT_ID=project-0 MODEL_TIMEOUT_SEC=90` -> pass
+  - confirms `LEARN_READOUT_*` block is printed

@@ -2046,6 +2046,20 @@ if plan_mode == "strong":
         print(f"LEARN_MODEL_ORAL_EXAM_A{idx}: {a}")
         print(f"LEARN_MODEL_ORAL_EXAM_SCORE{idx}: {s}")
         idx += 1
+
+    # Human-readable short readout block for fast console scanning.
+    print("LEARN_READOUT_BEGIN")
+    print(f"LEARN_READOUT_MAINLINE: {' '.join(str(obj.get('mainline', '')).split())}")
+    print(f"LEARN_READOUT_CURRENT_STAGE: {' '.join(str(obj.get('current_stage', '')).split())}")
+    print(f"LEARN_READOUT_NEXT_STEP: {' '.join(str(obj.get('next_step', '')).split())}")
+    print(f"LEARN_READOUT_ORAL_PROJECT: {' '.join(str(oral.get('project_understanding', '')).split())}")
+    print(f"LEARN_READOUT_ORAL_CURRENT_FOCUS: {' '.join(str(oral.get('current_focus', '')).split())}")
+    print(f"LEARN_READOUT_ANCHOR: {' '.join(str(anchor.get('question_id', '')).split())} | {' '.join(str(anchor.get('status', '')).split())}")
+    print(f"LEARN_READOUT_ANCHOR_ACTION: {' '.join(str(anchor.get('return_to_mainline', '')).split())}")
+    print(f"LEARN_READOUT_PRACTICE_COUNT: {int(practice.get('command_execution_count', 0))}")
+    if samples:
+        print(f"LEARN_READOUT_PRACTICE_FIRST: {' '.join(str(samples[0]).split())}")
+    print("LEARN_READOUT_END")
 PY
     then
       model_sync_pass=1

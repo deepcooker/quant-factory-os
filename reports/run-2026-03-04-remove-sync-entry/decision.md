@@ -79,3 +79,16 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
 ### Risk / rollback
 - Risk: model occasionally under-fills new fields, making learn stricter and more failure-prone.
 - Rollback: relax parser requirements for `anchor_realign` / `practice` keys in `tools/qf` and `learn_file_is_valid`.
+
+## Incremental decision (console readability only)
+### Why
+- Current learn output contains complete anchors but is hard to scan quickly in terminal.
+- Requirement: keep strict gates unchanged while improving operator experience.
+
+### Decision
+- Add a concise readout section to stdout (`LEARN_READOUT_*`) after strong-mode anchors.
+- Keep all existing machine anchors and validation logic unchanged.
+
+### Risk / rollback
+- Risk: slightly longer stdout.
+- Rollback: remove `LEARN_READOUT_*` print block from `tools/qf` without affecting gates.
