@@ -35,12 +35,12 @@
     - Stage 4：多智能协作收敛
     - Stage 5：接入具体业务项目（如财富系统）
   - 当前阶段：Stage 0/1 交界，重点在“learn 同频可信度”和“流程自动化体验”。
-  - 已完成主成果：`qf` 流程链路、learn 模型同频锚点、ready 门禁、discuss/execute/review 基本闭环。
+  - 已完成主成果：`ops` 流程链路、learn 模型同频锚点、ready 门禁、discuss/execute/review 基本闭环。
 - 证据文件：
   - `docs/WORKFLOW.md`
   - `TASKS/STATE.md`
   - `TASKS/QUEUE.md`
-  - `reports/run-2026-03-02-qf-ready/summary.md`
+  - `reports/<RUN_ID>/summary.md`
 
 ### 3. 这个基建项目做完之后，它会作为基座的项目，我们接下来第一个项目将完成什么，你会怎么去落地，我们现在设计的结构是把这个变成一个插件好呢还是独立项目好，项目最难的是读懂和同频我的意图，你读了项目后，你准备用什么样的方式来接？
 - 回答：
@@ -53,7 +53,7 @@
   - `docs/WORKFLOW.md`
   - `docs/ENTITIES.md`
   - `AGENTS.md`
-  - `reports/run-2026-03-02-qf-ready/decision.md`
+  - `reports/<RUN_ID>/decision.md`
 - 说明：
   - “独立项目优先、插件后置”属于基于当前流程成熟度的工程推理，依据是现有门禁与证据机制的稳定性要求。
 
@@ -63,9 +63,9 @@
     - GPT 网页端：负责策略、评审、反驳、方向选择（大脑层）。
     - Codex CLI：负责本地执行、改动、验证、证据落盘（执行层）。
   - 同频操作顺序：
-    - `tools/qf init`
-    - `tools/qf learn`（默认强制 `MODEL_SYNC=1` + `PLAN_MODE=strong`，默认输出日志）
-    - `tools/qf ready`
+    - `tools/ops init`
+    - `tools/ops learn`（默认强制 `MODEL_SYNC=1` + `PLAN_MODE=strong`，默认输出日志）
+    - `tools/ops ready`
   - 必读文件清单：
     - `AGENTS.md`
     - `docs/PROJECT_GUIDE.md`
@@ -111,8 +111,8 @@
 - 证据文件：
   - `TASKS/STATE.md`
   - `TASKS/QUEUE.md`
-  - `reports/run-2026-03-02-qf-ready/summary.md`
-  - `reports/run-2026-03-02-qf-ready/decision.md`
+  - `reports/<RUN_ID>/summary.md`
+  - `reports/<RUN_ID>/decision.md`
 
 ### 8. 你查了最近的session说了什么，你是从哪里查的？
 - 回答：
@@ -122,8 +122,8 @@
   - 是否偏离主线判断：凡是不能提升“同频可信度/执行闭环/证据可审计”的动作都算偏离。
 - 证据文件：
   - `TASKS/STATE.md`
-  - `reports/run-2026-03-02-qf-ready/conversation.md`
-  - `reports/run-2026-03-02-qf-ready/decision.md`
+  - `reports/<RUN_ID>/conversation.md`
+  - `reports/<RUN_ID>/decision.md`
 
 ### 9. 基建项目讨论项目应该用哪个流程？
 - 回答：
@@ -145,7 +145,7 @@
   - 实现现状：已实现基础版（流程与产物齐备），并行执行能力仍可继续增强。
 - 证据文件：
   - `docs/WORKFLOW.md`
-  - `tools/qf`
+  - `tools/ops`
   - `chatlogs/discussion/<RUN_ID>/council.json`
   - `reports/<RUN_ID>/execution_contract.json`
 
@@ -206,7 +206,7 @@
 - 证据文件：
   - `AGENTS.md`
   - `docs/WORKFLOW.md`
-  - `tools/qf`
+  - `tools/ops`
 
 ## 实操技能
 
@@ -218,10 +218,10 @@
     - 执行模式：`codex --sandbox workspace-write --ask-for-approval on-request --search`
     - 非交互审计：`codex exec --json ...`
     - 规划协议：先用 Codex `/plan`，确认后再进入执行链路
-    - 去歧义：`tools/qf plan` 仅生成队列提案，不等于 `/plan`
+    - 去歧义：`tools/ops plan` 仅生成队列提案，不等于 `/plan`
   - 当前已确认版本：`codex-cli 0.106.0`
   - 操作手册：`CODEX_CLI_PLAYBOOK.md`
-  - 相关文件：`AGENTS.md`、`docs/WORKFLOW.md`、`tools/qf`
+  - 相关文件：`AGENTS.md`、`docs/WORKFLOW.md`、`tools/ops`
   - 样例证据：`test_codex/artifacts/exec_json.events.jsonl`
 - 证据文件：
   - `CODEX_CLI_PLAYBOOK.md`

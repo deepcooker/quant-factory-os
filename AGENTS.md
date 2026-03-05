@@ -32,16 +32,16 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 
 ## 4) Mandatory session gate (once per session)
 Before any implementation:
-1. `tools/qf init`
-   - Runtime implementation is Python-first (`tools/qf_init.py`); `tools/qf` is the CLI wrapper.
-2. `tools/qf learn`
-3. `tools/qf ready`
-   - Runtime implementation is Python-first (`tools/qf_ready.py`); `tools/qf` is the CLI wrapper.
+1. `tools/ops init`
+   - Runtime implementation is Python-first (`tools/ops_init.py`); `tools/ops` is the CLI wrapper.
+2. `tools/ops learn`
+3. `tools/ops ready`
+   - Runtime implementation is Python-first (`tools/ops_ready.py`); `tools/ops` is the CLI wrapper.
 
-`tools/qf` runtime note:
-- `tools/qf` is a thin dispatcher.
+`tools/ops` runtime note:
+- `tools/ops` is a Python thin dispatcher.
 - Python-first commands: `init/learn/ready/orient/choose/council/arbiter/slice`.
-- Remaining commands are compatibility-routed to `tools/qf_legacy.sh` until fully migrated.
+- Remaining commands are compatibility-routed to `tools/ops_legacy.sh` until fully migrated.
 
 `init` detailed step definitions, mode semantics (`-status` / `-main`), and output fields are owned by `docs/WORKFLOW.md` (`S0 Environment`). `AGENTS.md` keeps only gate-level contract.
 
@@ -51,7 +51,7 @@ Required visible progress:
 - `READY_STEP[<i>/<n>]`
 
 `learn` pass criteria (minimum):
-- Runtime implementation is Python-first (`tools/qf_learn.py`); `tools/qf` is the CLI wrapper.
+- Runtime implementation is Python-first (`tools/ops_learn.py`); `tools/ops` is the CLI wrapper.
 - Must print:
   - `LEARN_MAINLINE`
   - `LEARN_CURRENT_STAGE`
@@ -60,8 +60,9 @@ Required visible progress:
 - Model sync is mandatory (no downgrade path):
   - `MODEL_SYNC=1` only
   - `PLAN_MODE=strong` only
-  - `PLAN_TRANSPORT=auto|slash|exec` (default `auto`; selects slash when PTY is available, else exec)
-  - `QF_LEARN_PLAN_FALLBACK_EXEC` default is `0` (no silent fallback)
+  - `PLAN_TRANSPORT=auto|slash` (default `auto`; always enforces slash `/plan`)
+  - learn does not set model timeout; wait for model completion
+  - no `exec` fallback path is allowed in learn model sync
 - Must also print model anchors:
   - `LEARN_MODEL_MAINLINE`
   - `LEARN_MODEL_CURRENT_STAGE`
@@ -75,7 +76,7 @@ No coding until this gate is complete.
 ## 5) Working mode: Plan -> Confirm -> Execute
 - Complex work must follow `Plan -> Confirm -> Execute`.
 - Codex interactive `/plan` is planning protocol, not execution.
-- `tools/qf plan` only drafts queue proposals; it does not open execute gate.
+- `tools/ops plan` only drafts queue proposals; it does not open execute gate.
 - `/compact` is milestone-based, not mandatory every task. Use before context grows too large or before switching milestone.
 
 ## 6) Workflow skeleton
@@ -87,12 +88,12 @@ No coding until this gate is complete.
 6. Ship.
 
 Discussion-first recommended lane:
-- `tools/qf discuss TARGET=prepare`
-- `tools/qf choose OPTION=<id>`
-- `tools/qf council`
-- `tools/qf arbiter`
-- `tools/qf slice`
-- `tools/qf do queue-next` (or `tools/qf execute TARGET=do`)
+- `tools/ops discuss TARGET=prepare`
+- `tools/ops choose OPTION=<id>`
+- `tools/ops council`
+- `tools/ops arbiter`
+- `tools/ops slice`
+- `tools/ops do queue-next` (or `tools/ops execute TARGET=do`)
 
 Execution gate artifacts required before `do`:
 - `reports/<RUN_ID>/ready.json`
@@ -119,7 +120,7 @@ Optional failure memory:
 
 ## 8) Allowed commands (default)
 Use only these unless task explicitly authorizes more:
-- `tools/qf`
+- `tools/ops`
 - `tools/doctor.sh`
 - `tools/enter.sh`
 - `tools/task.sh`

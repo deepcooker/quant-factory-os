@@ -32,7 +32,7 @@ Minimal entity dictionary for existing repository objects and constraints.
   `run-<date>-<slug>` convention unless a stricter rule is added.
 
 ## CURRENT_RUN_ID
-- Definition: the default active run pointer for session handoff and qf commands.
+- Definition: the default active run pointer for session handoff and ops commands.
 - Source-of-truth: `TASKS/STATE.md`.
 - Related fields in `TASKS/STATE.md`:
   - `CURRENT_RUN_ID`
@@ -44,7 +44,7 @@ Minimal entity dictionary for existing repository objects and constraints.
   - fallback to latest evidence is allowed only as last resort with warning.
 
 ## CURRENT_PROJECT_ID
-- Definition: default active project pointer for qf commands.
+- Definition: default active project pointer for ops commands.
 - Source-of-truth: `TASKS/STATE.md`.
 - Defaulting rule: if missing, tools normalize to `project-0`.
 - Priority rule:

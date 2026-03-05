@@ -1,0 +1,22 @@
+{
+  "run_id": "run-2026-03-05-ops-vnext-release",
+  "task_id": "TASKS/TASK-vnext-release-cleanup.md",
+  "stop_reason": "task_done",
+  "commands_run": [
+    "rm -rf reports/* learn/* TASKS/TASK-*.md TASKS/TODO_PROPOSAL.md",
+    "rewrite TASKS/STATE.md",
+    "rewrite TASKS/QUEUE.md",
+    "add TASKS/TASK-vnext-release-cleanup.md",
+    "tools/ops -h",
+    "tools/ops init -status",
+    "python3 -m py_compile tools/ops tools/ops_*.py tests/task_ops.py tests/task_run.py tests/task_enter.py"
+  ],
+  "artifacts": [
+    "TASKS/STATE.md",
+    "TASKS/QUEUE.md",
+    "TASKS/TASK-vnext-release-cleanup.md",
+    "reports/run-2026-03-05-ops-vnext-release/summary.md",
+    "reports/run-2026-03-05-ops-vnext-release/decision.md",
+    "reports/run-2026-03-05-ops-vnext-release/meta.json"
+  ]
+}

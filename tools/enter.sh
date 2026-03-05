@@ -22,5 +22,5 @@ else
   export QF_AUTOSTASH=0
 fi
 
-echo "NOTICE: tools/enter.sh is deprecated; use tools/qf init"
-exec bash tools/qf init
+echo "NOTICE: tools/enter.sh is deprecated; use tools/ops init"
+exec bash tools/ops init

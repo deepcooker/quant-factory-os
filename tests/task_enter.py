@@ -16,6 +16,6 @@ def test_task_enter_wrapper_files_exist() -> None:
 def test_task_enter_wrapper_targets_qf() -> None:
     enter_text = (REPO_ROOT / "tools" / "enter.sh").read_text(encoding="utf-8")
     onboard_text = (REPO_ROOT / "tools" / "onboard.sh").read_text(encoding="utf-8")
-    assert "tools/qf init" in enter_text
-    assert "tools/qf onboard" in onboard_text
+    assert "tools/ops init" in enter_text
+    assert "tools/ops onboard" in onboard_text
 

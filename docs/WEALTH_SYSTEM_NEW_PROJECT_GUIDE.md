@@ -10,7 +10,7 @@
 - 一次端到端 dry-run 完成并记录可回放证据。
 
 ## 启动前置
-- 已完成基座同频：`tools/qf init -> tools/qf learn MODEL_SYNC=1 PLAN_MODE=strong -log -> tools/qf ready`
+- 已完成基座同频：`tools/ops init -> tools/ops learn MODEL_SYNC=1 PLAN_MODE=strong -log -> tools/ops ready`
 - 明确当前 `project_id`、`run_id` 与任务边界（以 `TASKS/STATE.md` 和任务文件为准）。
 - 仅允许在任务 scope 内改动。
 
@@ -54,9 +54,9 @@
 
 ### Step 6: 多角色评审收敛
 - 使用基座流程：
-  - `tools/qf discuss TARGET=prepare`
-  - `tools/qf choose OPTION=<id>`
-  - `tools/qf execute TARGET=do CONFIRM_CONTRACT=1`
+  - `tools/ops discuss TARGET=prepare`
+  - `tools/ops choose OPTION=<id>`
+  - `tools/ops execute TARGET=do CONFIRM_CONTRACT=1`
 - 要求产品/架构/测试/研发视角均有证据产出再收敛。
 
 ### Step 7: 回写与复盘

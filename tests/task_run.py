@@ -14,8 +14,7 @@ def test_task_run_state_file_exists() -> None:
 
 
 def test_task_run_scripts_reference_run_id() -> None:
-    qf_text = (REPO_ROOT / "tools" / "qf").read_text(encoding="utf-8")
+    ops_text = (REPO_ROOT / "tools" / "ops").read_text(encoding="utf-8")
     ship_text = (REPO_ROOT / "tools" / "ship.sh").read_text(encoding="utf-8")
-    assert "RUN_ID" in qf_text
+    assert "RUN_ID" in ops_text
     assert "run_id" in ship_text or "RUN_ID" in ship_text
-
