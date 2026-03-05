@@ -26,7 +26,7 @@ Usage:
   tools/qf init [-status|-main]
   tools/qf onboard RUN_ID
   tools/qf sync [RUN_ID=<run-id>]
-  tools/qf learn [PROJECT_ID=<project-id>] [TTL_DAYS=<n>] [MODEL_TIMEOUT_SEC=<sec>] [MODEL=<slug>] [-log] [LOG=<path>]
+  tools/qf learn [PROJECT_ID=<project-id>] [TTL_DAYS=<n>] [PLAN_TRANSPORT=auto|slash|exec] [MODEL_TIMEOUT_SEC=<sec>] [MODEL=<slug>] [-log] [LOG=<path>]
   tools/qf ready [RUN_ID=<run-id>] [DECISION=resume-close|abandon-new]
   tools/qf orient [RUN_ID=<run-id>]
   tools/qf choose [RUN_ID=<run-id>] OPTION=<id>
@@ -1401,6 +1401,13 @@ cmd_learn() {
   local model_sync_mode="1"
   local plan_mode_raw="${QF_LEARN_PLAN_MODE:-strong}"
   local plan_mode="strong"
+  local plan_transport_raw="${QF_LEARN_PLAN_TRANSPORT:-auto}"
+  local plan_transport="auto"
+  local plan_transport_effective="auto"
+  local plan_fallback_exec_raw="${QF_LEARN_PLAN_FALLBACK_EXEC:-0}"
+  local plan_fallback_exec="1"
+  local plan_transport_auto_reason=""
+  local pty_capable="0"
   local model_timeout_sec="${QF_LEARN_MODEL_TIMEOUT_SEC:-300}"
   local model_name="${QF_LEARN_MODEL:-${MODEL:-}}"
   local model_sync_pass=0
@@ -1435,6 +1442,9 @@ cmd_learn() {
         ;;
       PLAN_MODE=*)
         plan_mode_raw="${token#PLAN_MODE=}"
+        ;;
+      PLAN_TRANSPORT=*)
+        plan_transport_raw="${token#PLAN_TRANSPORT=}"
         ;;
       MODEL_TIMEOUT_SEC=*)
         model_timeout_sec="${token#MODEL_TIMEOUT_SEC=}"
@@ -1480,6 +1490,28 @@ cmd_learn() {
       exit 2
       ;;
   esac
+  case "${plan_transport_raw,,}" in
+    auto|slash|exec)
+      plan_transport="${plan_transport_raw,,}"
+      ;;
+    *)
+      echo "ERROR: invalid QF_LEARN_PLAN_TRANSPORT=${plan_transport_raw} (expected auto|slash|exec)." >&2
+      exit 2
+      ;;
+  esac
+  plan_transport_effective="$plan_transport"
+  case "${plan_fallback_exec_raw,,}" in
+    1|true|yes|y)
+      plan_fallback_exec="1"
+      ;;
+    0|false|no|n)
+      plan_fallback_exec="0"
+      ;;
+    *)
+      echo "ERROR: invalid QF_LEARN_PLAN_FALLBACK_EXEC=${plan_fallback_exec_raw} (expected 0|1)." >&2
+      exit 2
+      ;;
+  esac
   if [[ ! "$ttl_days" =~ ^[0-9]+$ || "$ttl_days" -lt 1 ]]; then
     echo "ERROR: invalid TTL_DAYS=${ttl_days} (expected positive integer)." >&2
     exit 2
@@ -1510,6 +1542,7 @@ cmd_learn() {
         "TTL_DAYS=${ttl_days}" \
         "MODEL_SYNC=${model_sync_mode}" \
         "PLAN_MODE=${plan_mode}" \
+        "PLAN_TRANSPORT=${plan_transport}" \
         "MODEL_TIMEOUT_SEC=${model_timeout_sec}" \
         ${model_name:+"MODEL=${model_name}"} 2>&1 | tee "$log_file"
     local log_rc=${PIPESTATUS[0]}
@@ -1768,7 +1801,45 @@ PY
   model_sync_reason="unknown"
   echo "LEARN_MODEL_SYNC_MODE: ${model_sync_mode}"
   echo "LEARN_MODEL_PLAN_MODE: ${plan_mode}"
+  echo "LEARN_MODEL_PLAN_TRANSPORT: ${plan_transport}"
   echo "LEARN_MODEL_TIMEOUT_SEC: ${model_timeout_sec}"
+  if [[ "$plan_transport" == "auto" || "$plan_transport" == "slash" ]]; then
+    if "$py_bin" - <<'PY'
+import pty
+try:
+    m, s = pty.openpty()
+except Exception:
+    raise SystemExit(1)
+import os
+os.close(m)
+os.close(s)
+PY
+    then
+      pty_capable="1"
+    else
+      pty_capable="0"
+    fi
+  fi
+  case "$plan_transport" in
+    auto)
+      if [[ "$pty_capable" == "1" ]]; then
+        plan_transport_effective="slash"
+        plan_transport_auto_reason="pty_available"
+      else
+        plan_transport_effective="exec"
+        plan_transport_auto_reason="no_pty_devices"
+      fi
+      ;;
+    slash)
+      plan_transport_effective="slash"
+      ;;
+    exec)
+      plan_transport_effective="exec"
+      ;;
+  esac
+  if [[ "$plan_transport" == "auto" ]]; then
+    echo "LEARN_MODEL_PLAN_TRANSPORT_AUTO_REASON: ${plan_transport_auto_reason}"
+  fi
 
     "$py_bin" - <<'PY' "$learn_file" "$model_prompt_file" "$project_id" "$plan_mode"
 import json
@@ -1807,9 +1878,9 @@ if plan_mode == "strong":
             '    "next_action": "<string>"',
             '  },',
             '  "oral_exam": [',
-            '    {"question":"<q1>","answer":"<a1>","score":"pass|fail"},',
-            '    {"question":"<q2>","answer":"<a2>","score":"pass|fail"},',
-            '    {"question":"<q3>","answer":"<a3>","score":"pass|fail"}',
+            '    {"question_id":"Q1","question":"<q1>","answer":"<a1>","score":"pass|fail"},',
+            '    {"question_id":"Q2","question":"<q2>","answer":"<a2>","score":"pass|fail"},',
+            '    {"question_id":"Q3","question":"<q3>","answer":"<a3>","score":"pass|fail"}',
             '  ],',
             '  "anchor_realign": {',
             '    "question_id": "<Q1..Q17 from PROJECT_GUIDE>",',
@@ -1832,6 +1903,8 @@ for path in required_files:
 lines.append("")
 lines.append("Output requirements:")
 lines.append("- Do not run write commands.")
+lines.append("- Execute only minimal read/shell commands needed to gather evidence from the required files.")
+lines.append("- Do not call tools/qf init/learn/ready inside this model-sync pass.")
 lines.append("- Do not include markdown fences.")
 lines.append("- JSON must follow this schema exactly:")
 lines.extend(schema_lines)
@@ -1840,7 +1913,7 @@ if plan_mode == "strong":
     lines.append("Strong mode gates:")
     lines.append("- plan_protocol fields are mandatory.")
     lines.append("- oral_restate fields are mandatory.")
-    lines.append("- oral_exam must contain at least 3 QA items.")
+    lines.append("- oral_exam must contain at least 3 QA items, each bound to PROJECT_GUIDE question ids (Q1..Q17).")
     lines.append("- anchor_realign must map to one PROJECT_GUIDE question id (Q1..Q17).")
     lines.append("")
 lines.append("files_read must be a subset of the required files list above.")
@@ -1849,9 +1922,193 @@ Path(prompt_file).write_text("\n".join(lines) + "\n", encoding="utf-8")
 PY
 
     set +e
-    if command -v timeout >/dev/null 2>&1; then
-      if [[ -n "$model_name" ]]; then
-        timeout "${model_timeout_sec}s" \
+    if [[ "$plan_transport_effective" == "slash" ]]; then
+      "$py_bin" - <<'PY' "$model_prompt_file" "$model_raw_file" "$model_events_file" "$model_stderr_file" "$model_timeout_sec" "$model_name"
+import json
+import os
+import pty
+import re
+import select
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+prompt_file, raw_file, events_file, stderr_file, timeout_sec, model_name = sys.argv[1:]
+timeout_sec = int(timeout_sec)
+
+try:
+    prompt_text = Path(prompt_file).read_text(encoding="utf-8", errors="replace")
+except Exception as exc:
+    Path(stderr_file).write_text(f"read prompt failed: {exc}\n", encoding="utf-8")
+    raise SystemExit(1)
+
+# Real slash-command transport: run interactive Codex with initial prompt
+# beginning with /plan, then extract JSON packet from TUI transcript.
+cli_prompt = "/plan\n" + prompt_text
+cmd = ["codex", "--sandbox", "read-only", "--ask-for-approval", "never", "--search", "--no-alt-screen"]
+if model_name:
+    cmd.extend(["-m", model_name])
+cmd.append(cli_prompt)
+
+try:
+    master, slave = pty.openpty()
+except Exception as exc:
+    Path(stderr_file).write_text(f"interactive slash /plan unavailable: {exc}\n", encoding="utf-8")
+    raise SystemExit(1)
+start = time.time()
+buf = b""
+stderr_lines = []
+submitted = False
+
+try:
+    proc = subprocess.Popen(cmd, stdin=slave, stdout=slave, stderr=slave, close_fds=True)
+finally:
+    try:
+        os.close(slave)
+    except OSError:
+        pass
+
+timed_out = False
+while True:
+    if proc.poll() is not None:
+        break
+    if not submitted and (time.time() - start) > 1.0:
+        try:
+            os.write(master, b"\r")
+            submitted = True
+        except Exception:
+            pass
+    r, _, _ = select.select([master], [], [], 0.2)
+    if r:
+        try:
+            chunk = os.read(master, 65536)
+        except OSError:
+            break
+        if not chunk:
+            break
+        buf += chunk
+    if time.time() - start > timeout_sec:
+        timed_out = True
+        try:
+            proc.terminate()
+        except Exception:
+            pass
+        break
+
+# Drain remaining output quickly.
+drain_deadline = time.time() + 2
+while time.time() < drain_deadline:
+    r, _, _ = select.select([master], [], [], 0.1)
+    if not r:
+        if proc.poll() is not None:
+            break
+        continue
+    try:
+        chunk = os.read(master, 65536)
+    except OSError:
+        break
+    if not chunk:
+        break
+    buf += chunk
+
+try:
+    os.close(master)
+except OSError:
+    pass
+
+raw_text = buf.decode("utf-8", errors="replace")
+Path(events_file).write_text(raw_text, encoding="utf-8")
+
+# Strip ANSI/OSC noise and recover JSON packet.
+plain = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", raw_text)
+plain = re.sub(r"\x1b\].*?(\x07|\x1b\\)", "", plain, flags=re.S)
+plain = plain.replace("\x1b", "")
+
+def collect_dict_candidates(text: str) -> list[dict]:
+    out: list[dict] = []
+    dec = json.JSONDecoder()
+    for i, ch in enumerate(text):
+        if ch != "{":
+            continue
+        try:
+            obj, _ = dec.raw_decode(text[i:])
+        except Exception:
+            continue
+        if isinstance(obj, dict):
+            out.append(obj)
+    return out
+
+required_keys = {"mainline", "current_stage", "next_step", "files_read"}
+strong_keys = {"plan_protocol", "oral_restate", "oral_exam", "anchor_realign"}
+candidates: list[dict] = []
+candidates.extend(collect_dict_candidates(plain))
+
+# Some terminals print one character per line in transcript; compacting whitespace
+# helps reconstruct model JSON for recovery.
+compact = re.sub(r"\s+", "", plain)
+if compact and compact != plain:
+    candidates.extend(collect_dict_candidates(compact))
+
+best_obj = None
+for obj in candidates:
+    if not required_keys.issubset(set(obj.keys())):
+        continue
+    if not strong_keys.issubset(set(obj.keys())):
+        continue
+    mainline = str(obj.get("mainline", "")).strip()
+    goal = str((obj.get("plan_protocol") or {}).get("goal", "")).strip()
+    files_read = obj.get("files_read") or []
+    looks_placeholder = (
+        mainline in ("", "<string>")
+        or goal in ("", "<string>")
+        or any("<" in str(x) and ">" in str(x) for x in files_read)
+    )
+    if looks_placeholder:
+        continue
+    best_obj = obj
+
+if timed_out:
+    stderr_lines.append("interactive slash /plan timed out (process terminated)\n")
+if proc.returncode not in (0, None):
+    stderr_lines.append(f"interactive slash /plan rc={proc.returncode}\n")
+
+if best_obj is None:
+    stderr_lines.append("no non-placeholder JSON object recovered from interactive /plan transcript\n")
+    Path(stderr_file).write_text("".join(stderr_lines), encoding="utf-8")
+    raise SystemExit(1)
+
+Path(raw_file).write_text(json.dumps(best_obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+Path(stderr_file).write_text("".join(stderr_lines), encoding="utf-8")
+
+# Soft-pass semantics: if JSON recovered, let upper layer continue parsing.
+raise SystemExit(0)
+PY
+      model_rc=$?
+    else
+      if command -v timeout >/dev/null 2>&1; then
+        if [[ -n "$model_name" ]]; then
+          timeout "${model_timeout_sec}s" \
+            codex --search --ask-for-approval never -m "$model_name" exec \
+              --sandbox read-only \
+              --json \
+              --output-last-message "$model_raw_file" - \
+              < "$model_prompt_file" \
+              > "$model_events_file" \
+              2> "$model_stderr_file"
+        else
+          timeout "${model_timeout_sec}s" \
+            codex --search --ask-for-approval never exec \
+              --sandbox read-only \
+              --json \
+              --output-last-message "$model_raw_file" - \
+              < "$model_prompt_file" \
+              > "$model_events_file" \
+              2> "$model_stderr_file"
+        fi
+        model_rc=$?
+      else
+        if [[ -n "$model_name" ]]; then
           codex --search --ask-for-approval never -m "$model_name" exec \
             --sandbox read-only \
             --json \
@@ -1859,8 +2116,7 @@ PY
             < "$model_prompt_file" \
             > "$model_events_file" \
             2> "$model_stderr_file"
-      else
-        timeout "${model_timeout_sec}s" \
+        else
           codex --search --ask-for-approval never exec \
             --sandbox read-only \
             --json \
@@ -1868,30 +2124,92 @@ PY
             < "$model_prompt_file" \
             > "$model_events_file" \
             2> "$model_stderr_file"
+        fi
+        model_rc=$?
       fi
-      model_rc=$?
-    else
-      if [[ -n "$model_name" ]]; then
-        codex --search --ask-for-approval never -m "$model_name" exec \
-          --sandbox read-only \
-          --json \
-          --output-last-message "$model_raw_file" - \
-          < "$model_prompt_file" \
-          > "$model_events_file" \
-          2> "$model_stderr_file"
+    fi
+    if [[ "$plan_transport_effective" == "slash" && "$model_rc" -eq 0 ]]; then
+      if ! "$py_bin" - <<'PY' "$model_raw_file"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+try:
+    obj = json.loads(path.read_text(encoding="utf-8"))
+except Exception:
+    raise SystemExit(1)
+
+required = {"mainline", "current_stage", "next_step", "files_read", "plan_protocol", "oral_restate", "oral_exam", "anchor_realign"}
+if not required.issubset(set(obj.keys())):
+    raise SystemExit(1)
+mainline = str(obj.get("mainline", "")).strip()
+goal = str((obj.get("plan_protocol") or {}).get("goal", "")).strip()
+files_read = obj.get("files_read") or []
+if mainline in ("", "<string>"):
+    raise SystemExit(1)
+if goal in ("", "<string>"):
+    raise SystemExit(1)
+if any("<" in str(x) and ">" in str(x) for x in files_read):
+    raise SystemExit(1)
+print("ok")
+PY
+      then
+        :
       else
-        codex --search --ask-for-approval never exec \
-          --sandbox read-only \
-          --json \
-          --output-last-message "$model_raw_file" - \
-          < "$model_prompt_file" \
-          > "$model_events_file" \
-          2> "$model_stderr_file"
+        echo "LEARN_MODEL_PLAN_SLASH_OUTPUT: invalid_or_placeholder"
+        model_rc=2
       fi
-      model_rc=$?
+    fi
+    if [[ "$plan_transport_effective" == "slash" && "$model_rc" -ne 0 && "$plan_fallback_exec" == "1" ]]; then
+      echo "LEARN_MODEL_PLAN_FALLBACK: exec"
+      if command -v timeout >/dev/null 2>&1; then
+        if [[ -n "$model_name" ]]; then
+          timeout "${model_timeout_sec}s" \
+            codex --search --ask-for-approval never -m "$model_name" exec \
+              --sandbox read-only \
+              --json \
+              --output-last-message "$model_raw_file" - \
+              < "$model_prompt_file" \
+              > "$model_events_file" \
+              2> "$model_stderr_file"
+        else
+          timeout "${model_timeout_sec}s" \
+            codex --search --ask-for-approval never exec \
+              --sandbox read-only \
+              --json \
+              --output-last-message "$model_raw_file" - \
+              < "$model_prompt_file" \
+              > "$model_events_file" \
+              2> "$model_stderr_file"
+        fi
+        model_rc=$?
+      else
+        if [[ -n "$model_name" ]]; then
+          codex --search --ask-for-approval never -m "$model_name" exec \
+            --sandbox read-only \
+            --json \
+            --output-last-message "$model_raw_file" - \
+            < "$model_prompt_file" \
+            > "$model_events_file" \
+            2> "$model_stderr_file"
+        else
+          codex --search --ask-for-approval never exec \
+            --sandbox read-only \
+            --json \
+            --output-last-message "$model_raw_file" - \
+            < "$model_prompt_file" \
+            > "$model_events_file" \
+            2> "$model_stderr_file"
+        fi
+        model_rc=$?
+      fi
+      plan_transport_effective="exec-fallback"
+      echo "LEARN_MODEL_PLAN_TRANSPORT_EFFECTIVE: ${plan_transport_effective}"
     fi
     set -e
 
+    echo "LEARN_MODEL_PLAN_TRANSPORT_EFFECTIVE: ${plan_transport_effective}"
     echo "LEARN_MODEL_SYNC_RC: ${model_rc}"
 
     if "$py_bin" - <<'PY' "$model_raw_file" "$model_json_file" "$plan_mode" "$learn_file" "$model_events_file"
@@ -1953,6 +2271,18 @@ if plan_mode == "strong":
             raise SystemExit(1)
     if not isinstance(exam, list) or len(exam) < 3:
         raise SystemExit(1)
+    for item in exam:
+        if not isinstance(item, dict):
+            raise SystemExit(1)
+        for key in ["question_id", "question", "answer", "score"]:
+            if key not in item:
+                raise SystemExit(1)
+        qid_exam = str(item.get("question_id", "")).strip().upper()
+        if not re.fullmatch(r"Q([1-9]|1[0-7])", qid_exam):
+            raise SystemExit(1)
+        score_exam = str(item.get("score", "")).strip().lower()
+        if score_exam not in ("pass", "fail"):
+            raise SystemExit(1)
     if not isinstance(anchor, dict):
         raise SystemExit(1)
     for key in ["question_id", "status", "drift_detail", "return_to_mainline"]:
@@ -1968,7 +2298,8 @@ if plan_mode == "strong":
 practice_commands = []
 events_path = Path(events_file)
 if events_path.is_file():
-    for raw_line in events_path.read_text(encoding="utf-8", errors="replace").splitlines():
+    events_text = events_path.read_text(encoding="utf-8", errors="replace")
+    for raw_line in events_text.splitlines():
         line = raw_line.strip()
         if not line:
             continue
@@ -1985,6 +2316,17 @@ if events_path.is_file():
         cmd = " ".join(str(raw_cmd or "").split()).strip()
         if cmd:
             practice_commands.append(cmd)
+    if not practice_commands:
+        # Interactive /plan transcript fallback: detect at least one actual tool run.
+        plain_events = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", events_text)
+        plain_events = re.sub(r"\x1b\].*?(\x07|\x1b\\)", "", plain_events, flags=re.S)
+        plain_events = plain_events.replace("\x1b", "")
+        for m in re.finditer(r"/bin/bash -lc [^\r\n]+", plain_events):
+            cmd = " ".join(m.group(0).split()).strip()
+            if cmd:
+                practice_commands.append(cmd)
+        if not practice_commands and ("Ran " in plain_events or "command_execution" in plain_events):
+            practice_commands.append("interactive_plan_tool_run_detected")
 if not practice_commands:
     raise SystemExit(1)
 practice_samples = []
@@ -2039,9 +2381,11 @@ if plan_mode == "strong":
     for item in exam:
         if not isinstance(item, dict):
             continue
+        qid = " ".join(str(item.get("question_id", "")).split())
         q = " ".join(str(item.get("question", "")).split())
         a = " ".join(str(item.get("answer", "")).split())
         s = " ".join(str(item.get("score", "")).split())
+        print(f"LEARN_MODEL_ORAL_EXAM_QID{idx}: {qid}")
         print(f"LEARN_MODEL_ORAL_EXAM_Q{idx}: {q}")
         print(f"LEARN_MODEL_ORAL_EXAM_A{idx}: {a}")
         print(f"LEARN_MODEL_ORAL_EXAM_SCORE{idx}: {s}")
@@ -2070,8 +2414,14 @@ PY
       model_sync_status="fail"
       if [[ "$model_rc" -eq 124 ]]; then
         model_sync_reason="timeout"
+      elif [[ "$model_rc" -eq 2 ]]; then
+        model_sync_reason="slash-output-invalid"
       elif [[ "$model_rc" -ne 0 ]]; then
-        model_sync_reason="codex-exit-${model_rc}"
+        if [[ -f "$model_stderr_file" ]] && grep -qiE "interactive slash /plan unavailable|out of pty devices|no pty" "$model_stderr_file"; then
+          model_sync_reason="no-pty-for-slash"
+        else
+          model_sync_reason="codex-exit-${model_rc}"
+        fi
       else
         model_sync_reason="schema-parse-failed"
       fi
@@ -2079,12 +2429,12 @@ PY
       echo "LEARN_MODEL_SYNC_REASON: ${model_sync_reason}"
     fi
 
-  "$py_bin" - <<'PY' "$learn_file" "$learn_md" "$model_sync_mode" "$plan_mode" "$model_sync_status" "$model_sync_reason" "$model_sync_pass" "$model_prompt_file" "$model_raw_file" "$model_json_file" "$model_events_file" "$model_stderr_file"
+  "$py_bin" - <<'PY' "$learn_file" "$learn_md" "$model_sync_mode" "$plan_mode" "$plan_transport_effective" "$model_sync_status" "$model_sync_reason" "$model_sync_pass" "$model_prompt_file" "$model_raw_file" "$model_json_file" "$model_events_file" "$model_stderr_file"
 import json
 import sys
 from pathlib import Path
 
-learn_file, learn_md, model_sync_mode, plan_mode, model_sync_status, model_sync_reason, model_sync_pass, prompt_file, raw_file, model_json_file, events_file, stderr_file = sys.argv[1:]
+learn_file, learn_md, model_sync_mode, plan_mode, plan_transport, model_sync_status, model_sync_reason, model_sync_pass, prompt_file, raw_file, model_json_file, events_file, stderr_file = sys.argv[1:]
 model_sync_pass = model_sync_pass == "1"
 path = Path(learn_file)
 obj = json.loads(path.read_text(encoding="utf-8"))
@@ -2092,6 +2442,7 @@ obj = json.loads(path.read_text(encoding="utf-8"))
 model_obj = {
     "mode": model_sync_mode,
     "plan_mode": plan_mode,
+    "plan_transport": plan_transport,
     "status": model_sync_status,
     "passed": model_sync_pass,
     "reason": model_sync_reason,

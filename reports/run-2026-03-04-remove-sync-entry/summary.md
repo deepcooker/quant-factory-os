@@ -132,3 +132,36 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
 - `tools/qf learn PROJECT_ID=project-0` -> pass
   - confirms `LEARN_LOG_FILE: learn/project-0.stdout.log`
   - confirms `LEARN_MODEL_TIMEOUT_SEC: 300`
+
+## Incremental update (learn /plan wrapper + QID-bound oral exam)
+- Reworked learn plan transport to be explicit and auditable:
+  - `PLAN_TRANSPORT=auto|slash|exec` supported (`auto` default)
+  - `auto` now checks PTY capability:
+    - PTY available -> `slash`
+    - no PTY devices -> `exec`
+  - console now prints:
+    - `LEARN_MODEL_PLAN_TRANSPORT`
+    - `LEARN_MODEL_PLAN_TRANSPORT_AUTO_REASON` (when auto)
+    - `LEARN_MODEL_PLAN_TRANSPORT_EFFECTIVE`
+- Strengthened model prompt contract:
+  - forbids calling `tools/qf init/learn/ready` during model-sync pass
+  - requires minimal read-only evidence gathering only
+- Upgraded strong oral exam schema:
+  - each `oral_exam` item must include `question_id`
+  - `question_id` must map to `Q1..Q17` in `docs/PROJECT_GUIDE.md`
+  - stdout now prints `LEARN_MODEL_ORAL_EXAM_QID1..N`
+- Updated owner docs to match behavior:
+  - `AGENTS.md` learn gate transport/strictness notes
+  - `docs/WORKFLOW.md` transport and QID anchor requirements
+
+### Verify (this update)
+- `bash -n tools/qf` -> pass
+- `tools/qf learn MODEL_TIMEOUT_SEC=120 -log` -> pass
+  - observed `LEARN_MODEL_PLAN_TRANSPORT: auto`
+  - observed `LEARN_MODEL_PLAN_TRANSPORT_AUTO_REASON: no_pty_devices`
+  - observed `LEARN_MODEL_PLAN_TRANSPORT_EFFECTIVE: exec`
+  - observed `LEARN_MODEL_ORAL_EXAM_QID1: Q1`, `QID2: Q2`, `QID3: Q6`
+- `tools/qf learn PLAN_TRANSPORT=slash MODEL_TIMEOUT_SEC=30` -> expected fail
+  - observed `LEARN_MODEL_SYNC_REASON: no-pty-for-slash`
+  - stderr evidence: `learn/project-0.model.stderr.log`
+- `make verify` -> pass (`19 passed`)

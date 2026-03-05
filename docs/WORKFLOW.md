@@ -45,6 +45,11 @@ This document describes the expected workflow for changes in this repository.
   - Model sync is mandatory (Codex real interaction):
     - enforced mode: `MODEL_SYNC=1`
     - enforced plan protocol: `PLAN_MODE=strong`
+    - transport control: `PLAN_TRANSPORT=auto|slash|exec` (default `auto`)
+      - `auto`: use interactive slash transport when PTY is available; otherwise fall back to non-interactive `exec`.
+      - `slash`: force interactive `/plan` transport (requires PTY support).
+      - `exec`: force non-interactive `codex exec` transport with the same strong plan schema.
+    - optional slash fallback: `QF_LEARN_PLAN_FALLBACK_EXEC=0|1` (default `0`)
     - timeout/model override: `MODEL_TIMEOUT_SEC=<n>` (default 300), `MODEL=<slug>`
     - model artifacts:
       - `learn/{project_id}.model.prompt.txt`
@@ -60,6 +65,7 @@ This document describes the expected workflow for changes in this repository.
       - `LEARN_MODEL_PLAN_GOAL`, `LEARN_MODEL_PLAN_NON_GOAL`, `LEARN_MODEL_PLAN_REBUTTAL`, `LEARN_MODEL_PLAN_DECISION_STOP`
       - `LEARN_MODEL_ORAL_PROJECT`, `LEARN_MODEL_ORAL_CONSTITUTION`, `LEARN_MODEL_ORAL_EVIDENCE`, `LEARN_MODEL_ORAL_SESSION`
       - `LEARN_MODEL_ORAL_CURRENT_FOCUS`, `LEARN_MODEL_ORAL_NEXT_ACTION`, `LEARN_MODEL_ORAL_EXAM_QA_COUNT`
+      - `LEARN_MODEL_ORAL_EXAM_QID1..N` (must map to `Q1..Q17` in `docs/PROJECT_GUIDE.md`)
       - `LEARN_MODEL_ANCHOR_QUESTION_ID`, `LEARN_MODEL_ANCHOR_STATUS`, `LEARN_MODEL_ANCHOR_DRIFT_DETAIL`, `LEARN_MODEL_ANCHOR_RETURN_ACTION`
       - `LEARN_MODEL_PRACTICE_COMMAND_COUNT`, `LEARN_MODEL_PRACTICE_SAMPLE_1` (and optional more samples)
     - optional human-readable console block:

@@ -52,11 +52,14 @@ Required visible progress:
 - Model sync is mandatory (no downgrade path):
   - `MODEL_SYNC=1` only
   - `PLAN_MODE=strong` only
+  - `PLAN_TRANSPORT=auto|slash|exec` (default `auto`; selects slash when PTY is available, else exec)
+  - `QF_LEARN_PLAN_FALLBACK_EXEC` default is `0` (no silent fallback)
 - Must also print model anchors:
   - `LEARN_MODEL_MAINLINE`
   - `LEARN_MODEL_CURRENT_STAGE`
   - `LEARN_MODEL_NEXT_STEP`
   - `LEARN_MODEL_FILES_READ_LIST`
+  - `LEARN_MODEL_ORAL_EXAM_QID1..N` (QIDs must map to `docs/PROJECT_GUIDE.md` Q1..Q17)
   - plan/oral packet anchors defined in `docs/WORKFLOW.md`
 
 No coding until this gate is complete.

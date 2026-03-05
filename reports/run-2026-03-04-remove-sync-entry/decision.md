@@ -107,3 +107,25 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
 ### Risk / rollback
 - Risk: default run writes one extra log file each learn invocation.
 - Rollback: revert `QF_LEARN_LOG` default to `0` and keep `-log` as manual opt-in.
+
+## Incremental decision (make /plan wrapper honest + deterministic)
+### Why
+- You required learn to be true same-frequency onboarding, not pseudo `/plan`.
+- In this environment PTY devices can be unavailable, so interactive slash transport may not run.
+- We need deterministic, visible transport behavior instead of silent ambiguity.
+
+### Decision
+- Introduce explicit transport control in learn:
+  - `PLAN_TRANSPORT=auto|slash|exec` (`auto` default)
+  - `auto` resolves to `slash` only when PTY is available; otherwise resolves to `exec`.
+- Keep strong plan protocol schema mandatory regardless of transport.
+- Surface transport truth in stdout:
+  - requested transport
+  - auto reason
+  - effective transport
+- Bind oral exam to `PROJECT_GUIDE` Q-bank by enforcing `question_id=Q1..Q17` per item.
+
+### Risk / rollback
+- Risk: `slash` transport can fail on hosts without PTY support.
+- Mitigation: `PLAN_TRANSPORT=auto` default keeps learn usable and still strict.
+- Rollback: set `QF_LEARN_PLAN_TRANSPORT=exec` permanently and remove slash branch if operationally unnecessary.
