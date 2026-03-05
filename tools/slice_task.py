@@ -100,6 +100,21 @@ def build_tasks_from_contract(contract: dict[str, Any]) -> list[dict[str, Any]]:
     return tasks
 
 
+def dedup_acceptance(items: list[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for raw in items:
+        item = " ".join(str(raw).split()).strip()
+        if not item:
+            continue
+        key = item.lower().replace("`", "")
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(item)
+    return out
+
+
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "slice")
@@ -166,6 +181,12 @@ def main(argv: list[str]) -> int:
         acceptance = [str(x).strip() for x in acceptance if str(x).strip()]
         if not acceptance:
             acceptance = ["slice acceptance placeholder"]
+        normalized = [a.lower().replace("`", "") for a in acceptance]
+        if not any("make verify" in a or "command(s) pass" in a for a in normalized):
+            acceptance.append("Command(s) pass: `make verify`")
+        if not any("summary.md" in a or "decision.md" in a or "evidence updated" in a for a in normalized):
+            acceptance.append("Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`")
+        acceptance = dedup_acceptance(acceptance)
 
         marker = f"Slice: run_id={run_id} task_id={task_id}"
         if marker in text:
@@ -180,8 +201,6 @@ def main(argv: list[str]) -> int:
         ]
         for a in acceptance:
             block.append(f"  - [ ] {a}")
-        block.append("  - [ ] Command(s) pass: `make verify`")
-        block.append("  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`")
         block.append(f"  {marker}")
         block.append("")
         blocks.append(block)
