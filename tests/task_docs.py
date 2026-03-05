@@ -13,8 +13,8 @@ def test_task_docs_owner_files_exist() -> None:
         REPO_ROOT / "docs" / "WORKFLOW.md",
         REPO_ROOT / "docs" / "PROJECT_GUIDE.md",
         REPO_ROOT / "docs" / "ENTITIES.md",
-        REPO_ROOT / "docs" / "CODEX_CLI_OPERATION.md",
+        REPO_ROOT / "CODEX_CLI_PLAYBOOK.md",
+        REPO_ROOT / "CODEX_CLI_SOURCE_AUDIT.md",
     ]
     missing = [str(path) for path in required if not path.exists()]
     assert not missing, f"missing docs: {missing}"
-

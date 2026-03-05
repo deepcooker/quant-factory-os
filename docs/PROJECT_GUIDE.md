@@ -3,7 +3,10 @@
 ## 同频入口导航（先看）
 - 启动阅读顺序真相源：`AGENTS.md` + `docs/PROJECT_GUIDE.md`
 - 详细状态机和每步输入输出：`docs/WORKFLOW.md`
-- Codex 参数与命令实践：`docs/CODEX_CLI_OPERATION.md`
+- Codex 参数与命令实践：`CODEX_CLI_PLAYBOOK.md`
+- Codex 事实审计与测试证据：`CODEX_CLI_SOURCE_AUDIT.md`
+- Codex 默认流程与避坑：`CODEX_CLI_PLAYBOOK.md`
+- Codex 一键 smoke：`test_codex/smoke.sh`
 - 策略问答与项目认知：`docs/PROJECT_GUIDE.md`
 - 概念定义：`docs/ENTITIES.md`
 
@@ -74,7 +77,7 @@
 - 证据文件：
   - `AGENTS.md`
   - `docs/WORKFLOW.md`
-  - `docs/CODEX_CLI_OPERATION.md`
+  - `CODEX_CLI_PLAYBOOK.md`
 
 ### 5. 这个项目当前的宪法是什么样的？
 - 回答：
@@ -92,11 +95,11 @@
     - 同频子流程：`init/learn/ready`
     - 讨论子流程：`orient/choose/council/arbiter/slice`
     - 执行子流程：`do/review/ship`
-  - 操作指南位置：`AGENTS.md`（硬规则）+ `docs/WORKFLOW.md`（状态机）+ `docs/CODEX_CLI_OPERATION.md`（CLI实践）。
+  - 操作指南位置：`AGENTS.md`（硬规则）+ `docs/WORKFLOW.md`（状态机）+ `CODEX_CLI_PLAYBOOK.md`（CLI实践）。
 - 证据文件：
   - `docs/WORKFLOW.md`
   - `AGENTS.md`
-  - `docs/CODEX_CLI_OPERATION.md`
+  - `CODEX_CLI_PLAYBOOK.md`
 
 ### 7. 我们现在的项目有没有未完成的任务呢，最新的批次在讨论什么问题，你是怎么查的？
 - 回答：
@@ -217,11 +220,11 @@
     - 规划协议：先用 Codex `/plan`，确认后再进入执行链路
     - 去歧义：`tools/qf plan` 仅生成队列提案，不等于 `/plan`
   - 当前已确认版本：`codex-cli 0.106.0`
-  - 操作手册：`docs/CODEX_CLI_OPERATION.md`
+  - 操作手册：`CODEX_CLI_PLAYBOOK.md`
   - 相关文件：`AGENTS.md`、`docs/WORKFLOW.md`、`tools/qf`
   - 样例证据：`reports/run-2026-03-02-qf-ready/codex_exec.check.events.jsonl`
 - 证据文件：
-  - `docs/CODEX_CLI_OPERATION.md`
+  - `CODEX_CLI_PLAYBOOK.md`
   - `reports/run-2026-03-02-qf-ready/codex_exec.check.events.jsonl`
   - `reports/run-2026-03-02-qf-ready/codex_exec.check.last.txt`
 
@@ -245,6 +248,6 @@
   - `/compact`：用于上下文过大时压缩，不要求每个 task 强制执行。
   - `/compact` 前必须先落仓库证据：`tools/qf snapshot NOTE="decision + next step"`。
 - 证据文件：
-  - `docs/CODEX_CLI_OPERATION.md`
+  - `CODEX_CLI_PLAYBOOK.md`
   - `docs/WORKFLOW.md`
   - `AGENTS.md`

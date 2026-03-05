@@ -23,7 +23,8 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 - Project cognition / Q&A anchor: `docs/PROJECT_GUIDE.md`
 - Execution state machine: `docs/WORKFLOW.md`
 - Entity dictionary: `docs/ENTITIES.md`
-- Codex CLI operations: `docs/CODEX_CLI_OPERATION.md`
+- Codex CLI operations: `CODEX_CLI_PLAYBOOK.md`
+- Codex CLI source audit: `CODEX_CLI_SOURCE_AUDIT.md`
 - Current active pointers: `TASKS/STATE.md`
 - Queue intent: `TASKS/QUEUE.md`
 - Run evidence: `reports/<RUN_ID>/`
@@ -143,7 +144,8 @@ If blocked or verify fails:
 If process/rule/tool behavior changes in a run, update in the same run:
 - `AGENTS.md`
 - `docs/WORKFLOW.md`
-- `docs/CODEX_CLI_OPERATION.md` (if CLI usage/flags changed)
+- `CODEX_CLI_PLAYBOOK.md` (if CLI usage/flags changed)
+- `CODEX_CLI_SOURCE_AUDIT.md` (if CLI behavior/evidence baseline changed)
 - `docs/PROJECT_GUIDE.md` (if learning/Q&A anchor changed)
 - `TASKS/STATE.md` (if active pointers changed)
 - `reports/<RUN_ID>/summary.md` and `reports/<RUN_ID>/decision.md`

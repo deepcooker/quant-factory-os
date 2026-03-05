@@ -10,7 +10,8 @@ This document describes the expected workflow for changes in this repository.
 - Execution details owner: `docs/WORKFLOW.md` (this file)
 - Entity definitions owner: `docs/ENTITIES.md`
 - Strategy/vision owner: `docs/PROJECT_GUIDE.md`
-- Codex operation owner: `docs/CODEX_CLI_OPERATION.md`
+- Codex operation owner: `CODEX_CLI_PLAYBOOK.md`
+- Codex operation audit owner: `CODEX_CLI_SOURCE_AUDIT.md`
 
 ## Session lifecycle state machine (single source)
 - `S-1 Discussion-only` (optional)
@@ -219,7 +220,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - Do not rely on chat/session memory; rely only on repo memory:
   `TASKS/STATE.md`, `TASKS/QUEUE.md`, `reports/{RUN_ID}/`.
 - First read owner entrypoint: `AGENTS.md` + `docs/PROJECT_GUIDE.md`.
-- Codex 参数/模式参考：`docs/CODEX_CLI_OPERATION.md`。
+- Codex 参数/模式参考：`CODEX_CLI_PLAYBOOK.md`。
 - Preferred entrypoint: `tools/qf` (`init/learn/ready/orient/choose/council/arbiter/slice/execute/do/review/resume`).
 - Compatibility wrappers: `tools/enter.sh` and `tools/onboard.sh` forward to `tools/qf`.
 - 1) 运行 `tools/qf init`（环境体检；不自动改工作区，不自动 handoff）。
@@ -288,7 +289,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - If documentation is stale, do not ship.
 
 ## Codex governance and automation
-- Session constitution and operation standard: `AGENTS.md` + `docs/CODEX_CLI_OPERATION.md`
+- Session constitution and operation standard: `AGENTS.md` + `CODEX_CLI_PLAYBOOK.md`
 - Default policy: PR-driven flow with local `make verify`; do not depend on GitHub Actions queues.
 - If automation is ever re-enabled, it must be explicitly requested and documented in task acceptance.
 - `tools/ship.sh` hard gate blocks `.github/workflows/*.yml|*.yaml` by default; explicit override required:

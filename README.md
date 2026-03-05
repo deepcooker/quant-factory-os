@@ -34,7 +34,8 @@ PROXY_URL=http://127.0.0.1:7890 ./tools/start.sh
 - `docs/WORKFLOW.md`
 - `docs/ENTITIES.md`
 - `docs/PROJECT_GUIDE.md`
-- `docs/CODEX_CLI_OPERATION.md`
+- `CODEX_CLI_PLAYBOOK.md`
+- `CODEX_CLI_SOURCE_AUDIT.md`
 - `docs/LEARN_EXAM_RUBRIC.json`
 - `docs/LEARN_EXAM_ANSWER_TEMPLATE.md`
 
