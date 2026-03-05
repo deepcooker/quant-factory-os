@@ -5372,6 +5372,17 @@ cleanup_pick_candidate_dirs() {
 }
 
 cmd_init() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+  if [[ -n "$py_bin" && -f "tools/qf_init.py" ]]; then
+    "$py_bin" tools/qf_init.py "$@"
+    return $?
+  fi
+
   local init_mode="check"
   local init_context_id="${RUN_ID:-session-$(date +%Y%m%d-%H%M%S)-init}"
   local current_run_id=""

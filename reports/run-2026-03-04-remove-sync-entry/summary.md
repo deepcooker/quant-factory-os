@@ -191,3 +191,27 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
 - `tools/qf learn MODEL_TIMEOUT_SEC=120 -log` -> pass
 - `tools/qf learn PLAN_TRANSPORT=slash MODEL_TIMEOUT_SEC=20` -> expected fail (`no-pty-for-slash`)
 - `make verify` -> pass (`19 passed`)
+
+## Incremental update (init Python-first implementation)
+- Added new Python runtime implementation: `tools/qf_init.py`.
+- Converted `tools/qf` `cmd_init` to delegate to Python first; Bash now keeps compatibility wrapper/fallback role.
+- Kept `init` CLI contract compatible:
+  - `tools/qf init`
+  - `tools/qf init -status`
+  - `tools/qf init -main`
+- Preserved output schema and behavior:
+  - `INIT_STEP[1/7..7/7]`
+  - same status fields (`INIT_STATUS`, `INIT_REASON_CODES`, `INIT_NEXT`, `INIT_HINT`)
+  - same mode behavior (`-status` suppress hint, `-main` strict non-zero on blocked)
+  - same recommendation block in default check mode.
+- Updated owner docs:
+  - `docs/WORKFLOW.md` S0 now records Python-first implementation.
+  - `AGENTS.md` mandatory gate notes init Python runtime.
+
+### Verify (this update)
+- `python3 -m py_compile tools/qf_init.py` -> pass
+- `bash -n tools/qf` -> pass
+- `tools/qf init -status` -> pass
+- `tools/qf init` -> pass
+- `tools/qf init -main` -> expected fail in dirty/non-main context (`RC=1`, `INIT_STATUS: blocked`)
+- `make verify` -> pass (`19 passed`)

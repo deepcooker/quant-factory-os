@@ -8,7 +8,11 @@
     "make verify",
     "tools/qf learn PLAN_TRANSPORT=slash MODEL_TIMEOUT_SEC=30 (expected fail on no PTY)",
     "python3 -m py_compile tools/qf_learn.py",
-    "tools/qf learn PLAN_TRANSPORT=slash MODEL_TIMEOUT_SEC=20 (expected fail on no PTY)"
+    "tools/qf learn PLAN_TRANSPORT=slash MODEL_TIMEOUT_SEC=20 (expected fail on no PTY)",
+    "python3 -m py_compile tools/qf_init.py",
+    "tools/qf init -status",
+    "tools/qf init",
+    "tools/qf init -main (expected blocked in dirty/non-main context)"
   ],
   "artifacts": [
     "learn/project-0.json",
@@ -21,7 +25,8 @@
     "learn/project-0.model.stderr.log",
     "tools/qf_learn.py",
     "AGENTS.md",
-    "docs/WORKFLOW.md"
+    "docs/WORKFLOW.md",
+    "tools/qf_init.py"
   ],
   "created_at_utc": "2026-03-04T07:36:12.983580+00:00",
   "cwd": "/root/quant-factory-os",

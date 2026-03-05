@@ -21,6 +21,7 @@ This document describes the expected workflow for changes in this repository.
 - `S0 Environment`: `tools/qf init`
   - Input: local repo checkout
   - Output: environment/readiness diagnosis only (account/version/branch/diff/run-context/last-change evidence)
+  - Implementation: Python-first (`tools/qf_init.py`), `tools/qf` keeps CLI wrapper only.
   - Note: this is environment preparation only, not readiness pass.
   - Output visibility: prints `INIT_STEP[<i>/<n>]` stage markers.
   - Safety: no automatic stash/sync/handoff side effects.

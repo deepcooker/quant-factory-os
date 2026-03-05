@@ -145,3 +145,19 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
 - Risk: wrapper/implementation drift if both paths evolve independently.
 - Mitigation: Python-first path executes by default; Bash body remains compatibility fallback only.
 - Rollback: remove delegation line in `cmd_learn` to return to legacy Bash body.
+
+## Incremental decision (make init Python-first, keep Bash as wrapper)
+### Why
+- You requested to standardize command logic in Python and keep Bash thin.
+- `init` is the session entry gate and must be stable, testable, and easy to extend.
+- Python implementation makes status computation/output contracts easier to maintain consistently.
+
+### Decision
+- Introduce `tools/qf_init.py` as the canonical implementation for `tools/qf init`.
+- Keep `tools/qf` as CLI wrapper that delegates to Python first for compatibility.
+- Preserve existing `init` flags and outputs (`check`, `-status`, `-main`) with no workflow contract change.
+
+### Risk / rollback
+- Risk: temporary divergence if both Python and legacy Bash branches are modified.
+- Mitigation: Python path is primary; Bash path remains fallback only.
+- Rollback: remove `cmd_init` delegation line to restore legacy Bash-only path.

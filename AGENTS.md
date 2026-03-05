@@ -33,6 +33,7 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 ## 4) Mandatory session gate (once per session)
 Before any implementation:
 1. `tools/qf init`
+   - Runtime implementation is Python-first (`tools/qf_init.py`); `tools/qf` is the CLI wrapper.
 2. `tools/qf learn`
 3. `tools/qf ready`
 
