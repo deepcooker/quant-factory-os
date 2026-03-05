@@ -33,3 +33,18 @@ RUN_ID: `run-2026-03-05-ops-vnext-release`
 - `python3 tools/ops_init.py -status` -> pass
 - `python3 -m py_compile tools/ops_*.py tests/task_ops.py tests/task_run.py tests/task_enter.py` -> pass
 - `bash -n tools/enter.sh tools/onboard.sh tools/start.sh tools/ops_legacy.sh tools/ship.sh tools/task.sh` -> pass
+
+
+## Incremental update (learn anti-water gates)
+- Upgraded learn practice gate: command evidence must prove `tools/view.sh` actually covered every required file.
+- Upgraded strong plan gate: `plan_protocol.evidence` must mention every required file.
+- Upgraded oral gate: `oral_exam` now requires at least 2 `pass` items.
+- Prompt updated to force file-grounded evidence format (`<path>#<section>: <concrete fact>`).
+
+### Verify (incremental)
+- `python3 -m py_compile tools/ops_learn.py tools/ops_ready.py tools/ops_init.py` -> pass
+- `python3 tools/ops_learn.py PLAN_TRANSPORT=exec -log` -> expected fail (`expected auto|slash`)
+- Source checks:
+  - `required files not actually viewed via tools/view.sh`
+  - `plan_protocol.evidence missing required files`
+  - `oral_exam insufficient passes`

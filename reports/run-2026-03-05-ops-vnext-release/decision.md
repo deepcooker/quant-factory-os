@@ -28,3 +28,17 @@ RUN_ID: `run-2026-03-05-ops-vnext-release`
 ### Risk / rollback
 - Risk: old notes that mention `tools/ops` may become stale.
 - Rollback: restore `tools/ops` thin dispatcher from git history if needed.
+
+
+## Incremental decision (learn evidence hardening)
+### Why
+- Existing learn gate could pass with weak command evidence and generic plan evidence, causing low-quality sync summaries.
+
+### Decision
+- Require `tools/view.sh`-based required-file coverage in practice evidence.
+- Require `plan_protocol.evidence` to cover every required file.
+- Require oral exam minimum pass threshold (>=2 pass).
+
+### Risk / rollback
+- Risk: stricter gate may fail more often when model output is incomplete.
+- Rollback: relax each gate in `tools/ops_learn.py` if needed.

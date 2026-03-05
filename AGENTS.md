@@ -60,6 +60,9 @@ Required visible progress:
   - `PLAN_TRANSPORT=auto|slash` (default `auto`; always enforces slash `/plan`)
   - learn does not set model timeout; wait for model completion
   - no `exec` fallback path is allowed in learn model sync
+  - practice evidence must show `tools/view.sh` coverage for every required file
+  - `plan_protocol.evidence` must cover every required file
+  - `oral_exam` must have at least 2 `pass` scores
 - Must also print model anchors:
   - `LEARN_MODEL_MAINLINE`
   - `LEARN_MODEL_CURRENT_STAGE`

@@ -473,13 +473,17 @@ def generate_prompt(learn_file: Path, prompt_file: Path, project_id: str, plan_m
             [
                 "Strong mode gates:",
                 "- plan_protocol fields are mandatory.",
+                "- plan_protocol.evidence must cover every required file at least once.",
                 "- oral_restate fields are mandatory.",
                 "- oral_exam must contain at least 3 QA items, each bound to PROJECT_GUIDE question ids (Q1..Q17).",
+                "- oral_exam must have at least 2 pass items.",
                 "- anchor_realign must map to one PROJECT_GUIDE question id (Q1..Q17).",
+                "- practice must include tools/view.sh reads for every required file.",
                 "",
             ]
         )
     lines.append("files_read must be a subset of the required files list above.")
+    lines.append('For evidence format, use: "<path>#<section>: <concrete fact>".')
     prompt_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -672,6 +676,21 @@ def parse_model_output(model_raw_file: Path, model_json_file: Path, plan_mode: s
         for key in ["goal", "non_goal", "evidence", "alternatives", "rebuttal", "decision_stop_condition"]:
             if key not in plan:
                 raise ValueError(f"plan_protocol missing {key}")
+        evidence = plan.get("evidence") or []
+        if not isinstance(evidence, list) or not evidence:
+            raise ValueError("plan_protocol.evidence invalid")
+        covered_evidence: set[str] = set()
+        for ev in evidence:
+            ev_text = str(ev).strip()
+            if not ev_text:
+                continue
+            for req in required_files:
+                req_abs = str(Path(req).resolve())
+                if req in ev_text or f"./{req}" in ev_text or req_abs in ev_text:
+                    covered_evidence.add(req)
+        missing_evidence = [p for p in required_files if p not in covered_evidence]
+        if missing_evidence:
+            raise ValueError(f"plan_protocol.evidence missing required files: {missing_evidence}")
         if not isinstance(oral, dict):
             raise ValueError("oral_restate missing")
         for key in ["project_understanding", "constitution_workflow", "evidence_chain", "session_continuity", "current_focus", "next_action"]:
@@ -691,6 +710,9 @@ def parse_model_output(model_raw_file: Path, model_json_file: Path, plan_mode: s
             score_exam = str(item.get("score", "")).strip().lower()
             if score_exam not in {"pass", "fail"}:
                 raise ValueError("oral_exam score invalid")
+        pass_count = sum(1 for item in exam if str(item.get("score", "")).strip().lower() == "pass")
+        if pass_count < 2:
+            raise ValueError("oral_exam insufficient passes")
         if not isinstance(anchor, dict):
             raise ValueError("anchor_realign missing")
         for key in ["question_id", "status", "drift_detail", "return_to_mainline"]:
@@ -735,6 +757,19 @@ def parse_model_output(model_raw_file: Path, model_json_file: Path, plan_mode: s
                 practice_commands.append("interactive_plan_tool_run_detected")
     if not practice_commands:
         raise ValueError("no practice command evidence")
+
+    viewed_required: set[str] = set()
+    for cmd in practice_commands:
+        if "tools/view.sh" not in cmd:
+            continue
+        cmd_text = str(cmd)
+        for req in required_files:
+            req_abs = str(Path(req).resolve())
+            if req in cmd_text or f"./{req}" in cmd_text or req_abs in cmd_text:
+                viewed_required.add(req)
+    missing_views = [p for p in required_files if p not in viewed_required]
+    if missing_views:
+        raise ValueError(f"required files not actually viewed via tools/view.sh: {missing_views}")
 
     practice_samples: list[str] = []
     seen: set[str] = set()

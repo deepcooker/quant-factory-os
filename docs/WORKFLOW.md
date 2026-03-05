@@ -72,6 +72,10 @@ This document describes the expected workflow for changes in this repository.
       - `LEARN_MODEL_ORAL_EXAM_QID1..N` (must map to `Q1..Q17` in `docs/PROJECT_GUIDE.md`)
       - `LEARN_MODEL_ANCHOR_QUESTION_ID`, `LEARN_MODEL_ANCHOR_STATUS`, `LEARN_MODEL_ANCHOR_DRIFT_DETAIL`, `LEARN_MODEL_ANCHOR_RETURN_ACTION`
       - `LEARN_MODEL_PRACTICE_COMMAND_COUNT`, `LEARN_MODEL_PRACTICE_SAMPLE_1` (and optional more samples)
+    - hard validation gates:
+      - practice evidence must include `tools/view.sh` reads that cover each required file at least once
+      - `plan_protocol.evidence` must mention each required file at least once
+      - `oral_exam` must have at least 2 `pass` items
     - optional human-readable console block:
       - `LEARN_READOUT_BEGIN` ... `LEARN_READOUT_END`
   - Purpose: materialize onboarding understanding (project/constitution/workflow/skills/session) with mandatory model-sync evidence.

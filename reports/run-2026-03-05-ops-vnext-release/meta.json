@@ -12,7 +12,10 @@
     "python3 -m py_compile tools/ops_init.py tools/ops_learn.py tools/ops_ready.py tools/ops_orient.py tools/ops_choose.py tools/ops_council.py tools/ops_arbiter.py tools/ops_slice.py tests/task_ops.py tests/task_run.py tests/task_enter.py",
     "python3 -m py_compile tools/ops_*.py tests/task_ops.py tests/task_run.py tests/task_enter.py",
     "bash -n tools/enter.sh tools/onboard.sh tools/start.sh tools/ops_legacy.sh tools/ship.sh tools/task.sh",
-    "remove tools/ops dispatcher and switch to direct script commands"
+    "remove tools/ops dispatcher and switch to direct script commands",
+    "python3 -m py_compile tools/ops_learn.py tools/ops_ready.py tools/ops_init.py",
+    "python3 tools/ops_learn.py PLAN_TRANSPORT=exec -log (expected fail)",
+    "learn parse gate: required-file tools/view.sh coverage + evidence coverage + oral pass threshold"
   ],
   "artifacts": [
     "TASKS/STATE.md",
@@ -29,6 +32,8 @@
     "tools/ops_council.py",
     "tools/ops_arbiter.py",
     "tools/ops_slice.py",
-    "tools/ops_legacy.sh"
+    "tools/ops_legacy.sh",
+    "AGENTS.md",
+    "docs/WORKFLOW.md"
   ]
 }
