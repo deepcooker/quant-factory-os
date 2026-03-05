@@ -1,7 +1,7 @@
 # CODEX CLI Playbook（默认流程 + 高级附录）
 
 版本基线：
-- `codex-cli 0.106.0`
+- `codex-cli 0.110.0`
 - 校验命令：`codex --version`
 
 配套目录：
@@ -19,26 +19,28 @@ codex --sandbox read-only --ask-for-approval never --search
 - 需求澄清、方案讨论、证据查阅
 - 只允许读，不修改仓库
 
-### 1.2 learn 同频模式（非交互 + 可审计）
+### 1.2 learn 同频模式（`/plan` 强模式 + 可审计）
 
 ```bash
-codex --search --ask-for-approval never exec \
-  --sandbox read-only \
-  --json \
-  --output-last-message <ABS_PATH>/learn.model.raw.txt \
-  "<PROMPT>"
+python3 tools/learn.py \
+  [-minimal|-low|-medium|-high|-xhigh]
 ```
 
+说明：
+- 传输固定为自动编排：`app-server -> exec` 回退（无需传 `plan_transport`）。
+- 模型固定：`gpt-5.3-codex`。
+- `-minimal` 在当前工具约束下会自动提升为 `low`（控制台会打印原因）。
+
 必备产物：
-- `learn.model.prompt.txt`
-- `learn.model.raw.txt`
-- `learn.model.events.jsonl`
-- `learn.model.stderr.log`
+- `learn/<project_id>.model.prompt.txt`
+- `learn/<project_id>.model.raw.txt`
+- `learn/<project_id>.model.events.jsonl`
+- `learn/<project_id>.model.stderr.log`
 
 判定规则：
-- 必须看到 `thread.started`（events）
-- 必须有非空 `output-last-message`
-- 必须有至少一个 `item.completed`
+- `MODEL_SYNC=1`、`PLAN_MODE=strong` 为 learn 内部固定门禁
+- 必须产出 `/plan` 强模式 JSON 包（含 plan/oral/anchor/practice）
+- 必须有 `tools/view.sh` 覆盖 required files 的实践证据
 
 ### 1.3 执行模式（可写）
 

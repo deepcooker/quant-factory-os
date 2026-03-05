@@ -32,13 +32,13 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 
 ## 4) Mandatory session gate (once per session)
 Before any implementation:
-1. `python3 tools/ops_init.py`
-2. `python3 tools/ops_learn.py`
-3. `python3 tools/ops_ready.py`
+1. `python3 tools/init.py`
+2. `python3 tools/learn.py`
+3. `python3 tools/ready.py`
 
 Runtime note:
-- Python-first commands: `ops_init/ops_learn/ops_ready/ops_orient/ops_choose/ops_council/ops_arbiter/ops_slice`.
-- Remaining commands are compatibility-routed via `bash tools/ops_legacy.sh <subcommand>`.
+- Python-first commands: `init/learn/ready/orient/choose/council/arbiter/slice_task`.
+- Remaining commands are compatibility-routed via `bash tools/legacy.sh <subcommand>`.
 
 `init` detailed step definitions, mode semantics (`-status` / `-main`), and output fields are owned by `docs/WORKFLOW.md` (`S0 Environment`). `AGENTS.md` keeps only gate-level contract.
 
@@ -48,18 +48,22 @@ Required visible progress:
 - `READY_STEP[<i>/<n>]`
 
 `learn` pass criteria (minimum):
-- Runtime implementation is Python-first (`tools/ops_learn.py`).
+- Runtime implementation is Python-first (`tools/learn.py`).
 - Must print:
   - `LEARN_MAINLINE`
   - `LEARN_CURRENT_STAGE`
   - `LEARN_NEXT_STEP`
   - `LEARN_REQUIRED_FILES_READ_LIST`
 - Model sync is mandatory (no downgrade path):
-  - `MODEL_SYNC=1` only
-  - `PLAN_MODE=strong` only
-  - `PLAN_TRANSPORT=auto|slash` (default `auto`; always enforces slash `/plan`)
+  - mode is fixed internally: `MODEL_SYNC=1`
+  - plan protocol is fixed internally: `PLAN_MODE=strong`
+  - transport is fixed internally: `auto(app-server->exec)` (no external override)
+  - fixed model constant: `gpt-5.3-codex`
+  - reasoning profile: `-minimal|-low|-medium|-high|-xhigh` (default `-xhigh`)
+  - runtime compatibility: `-minimal` auto-upgrades to `low` (with explicit stdout anchor reason)
+  - `-log` is implicit; learn always mirrors stdout to `learn/{project_id}.stdout.log`
   - learn does not set model timeout; wait for model completion
-  - no `exec` fallback path is allowed in learn model sync
+  - fallback is allowed and built-in: `app-server` primary, `exec` fallback
   - practice evidence must show `tools/view.sh` coverage for every required file
   - `plan_protocol.evidence` must cover every required file
   - `oral_exam` must have at least 2 `pass` scores
@@ -76,7 +80,7 @@ No coding until this gate is complete.
 ## 5) Working mode: Plan -> Confirm -> Execute
 - Complex work must follow `Plan -> Confirm -> Execute`.
 - Codex interactive `/plan` is planning protocol, not execution.
-- `bash tools/ops_legacy.sh plan` only drafts queue proposals; it does not open execute gate.
+- `bash tools/legacy.sh plan` only drafts queue proposals; it does not open execute gate.
 - `/compact` is milestone-based, not mandatory every task. Use before context grows too large or before switching milestone.
 
 ## 6) Workflow skeleton
@@ -88,12 +92,12 @@ No coding until this gate is complete.
 6. Ship.
 
 Discussion-first recommended lane:
-- `bash tools/ops_legacy.sh discuss TARGET=prepare`
-- `python3 tools/ops_choose.py OPTION=<id>`
-- `python3 tools/ops_council.py`
-- `python3 tools/ops_arbiter.py`
-- `python3 tools/ops_slice.py`
-- `bash tools/ops_legacy.sh do queue-next` (or `bash tools/ops_legacy.sh execute TARGET=do`)
+- `bash tools/legacy.sh discuss TARGET=prepare`
+- `python3 tools/choose.py OPTION=<id>`
+- `python3 tools/council.py`
+- `python3 tools/arbiter.py`
+- `python3 tools/slice_task.py`
+- `bash tools/legacy.sh do queue-next` (or `bash tools/legacy.sh execute TARGET=do`)
 
 Execution gate artifacts required before `do`:
 - `reports/<RUN_ID>/ready.json`
@@ -120,15 +124,15 @@ Optional failure memory:
 
 ## 8) Allowed commands (default)
 Use only these unless task explicitly authorizes more:
-- `python3 tools/ops_init.py`
-- `python3 tools/ops_learn.py`
-- `python3 tools/ops_ready.py`
-- `python3 tools/ops_orient.py`
-- `python3 tools/ops_choose.py`
-- `python3 tools/ops_council.py`
-- `python3 tools/ops_arbiter.py`
-- `python3 tools/ops_slice.py`
-- `bash tools/ops_legacy.sh ...`
+- `python3 tools/init.py`
+- `python3 tools/learn.py`
+- `python3 tools/ready.py`
+- `python3 tools/orient.py`
+- `python3 tools/choose.py`
+- `python3 tools/council.py`
+- `python3 tools/arbiter.py`
+- `python3 tools/slice_task.py`
+- `bash tools/legacy.sh ...`
 - `tools/doctor.sh`
 - `tools/enter.sh`
 - `tools/task.sh`
