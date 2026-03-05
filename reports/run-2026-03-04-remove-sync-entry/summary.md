@@ -55,3 +55,52 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
 - Full repo consistency verify is pending in this step (not run yet).
 - Local environment currently lacks `pytest` runtime, so test execution could not be completed in this shell.
 - `init` now acts as an environment health check only; continuity/learning/execution remain in `learn -> ready -> discuss/execute`.
+
+## Incremental update (learn hard-sync enforcement)
+- `tools/qf learn` is now hard-gated to real model sync:
+  - `MODEL_SYNC` only accepts `1`
+  - `PLAN_MODE` only accepts `strong`
+  - `codex` CLI missing -> learn fails immediately
+- Model output is now validated against required-read coverage:
+  - `files_read` must include all required onboarding files from learn context
+- Learn validity gate strengthened:
+  - `learn_file_is_valid` now requires `model_sync.status=pass`, `model_sync.passed=true`, `mode=1`, `plan_mode=strong`
+  - required model result packets must exist (`plan_protocol`, `oral_restate`, `oral_exam`, etc.)
+- Owner docs aligned with new policy:
+  - `AGENTS.md` learn gate text updated to mandatory model sync
+  - `docs/WORKFLOW.md` learn section updated (path moved to `learn/{project_id}.*`, mandatory sync semantics)
+  - `docs/PROJECT_GUIDE.md` learn command updated to `tools/qf learn -log` (strong mode now default hard gate)
+
+### Verify (this update)
+- `bash -n tools/qf` -> pass
+- `tools/qf learn PROJECT_ID=project-0 MODEL_SYNC=0` -> expected fail (`learn requires model sync`)
+- `tools/qf learn PROJECT_ID=project-0 PLAN_MODE=basic` -> expected fail (`learn requires PLAN_MODE=strong`)
+- `tools/qf learn PROJECT_ID=project-0 MODEL_TIMEOUT_SEC=120` -> pass (model anchors emitted)
+- `tools/qf ready` -> pass (`READY_LEARN_REPORT: learn/project-0.json`)
+
+## Incremental update (learn = plan packet + oral + practice + anchor)
+- Strengthened `tools/qf learn` strong-schema:
+  - Added mandatory `anchor_realign` packet (question_id/status/drift_detail/return_to_mainline)
+  - Added mandatory `practice` packet derived from model events (`command_execution_count` + command samples)
+- Console anchor outputs expanded:
+  - `LEARN_MODEL_ANCHOR_QUESTION_ID`
+  - `LEARN_MODEL_ANCHOR_STATUS`
+  - `LEARN_MODEL_ANCHOR_DRIFT_DETAIL`
+  - `LEARN_MODEL_ANCHOR_RETURN_ACTION`
+  - `LEARN_MODEL_PRACTICE_COMMAND_COUNT`
+  - `LEARN_MODEL_PRACTICE_SAMPLE_1..n`
+- Learn validity gate upgraded (`learn_file_is_valid`):
+  - requires `anchor_realign` + `practice` packets to exist and pass minimum checks
+- Updated learning knowledge base docs:
+  - removed Q18 from `docs/PROJECT_GUIDE.md` (not a mainline-realign question)
+  - moved Q16 codex sample evidence off `reports/run-*` paths to `test_codex/artifacts/*` + codex docs
+  - synced learn anchors section in `docs/WORKFLOW.md`
+- Updated exam auto template wording in `tools/qf`:
+  - Q16 evidence paths now point to `test_codex/artifacts/*` and codex docs
+  - mainline next command updated to `tools/qf learn -log`
+
+### Verify (this update)
+- `bash -n tools/qf` -> pass
+- `tools/qf learn PROJECT_ID=project-0 MODEL_TIMEOUT_SEC=120` -> pass
+  - includes new anchor/practice stdout fields
+- `tools/qf ready` -> pass (new learn gate accepted)

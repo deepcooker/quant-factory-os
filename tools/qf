@@ -26,7 +26,7 @@ Usage:
   tools/qf init [-status|-main]
   tools/qf onboard RUN_ID
   tools/qf sync [RUN_ID=<run-id>]
-  tools/qf learn [RUN_ID=<context-run-id>] [AUTO_EXAM=0|1] [REQUIRE_EXAM=0|1] [TTL_DAYS=<n>] [MODEL_SYNC=auto|0|1] [PLAN_MODE=strong|basic] [MODEL_TIMEOUT_SEC=<sec>] [MODEL=<slug>] [-log] [LOG=<path>]
+  tools/qf learn [PROJECT_ID=<project-id>] [TTL_DAYS=<n>] [MODEL_TIMEOUT_SEC=<sec>] [MODEL=<slug>] [-log] [LOG=<path>]
   tools/qf ready [RUN_ID=<run-id>] [DECISION=resume-close|abandon-new]
   tools/qf orient [RUN_ID=<run-id>]
   tools/qf choose [RUN_ID=<run-id>] OPTION=<id>
@@ -692,7 +692,7 @@ docs_paths = [
     "AGENTS.md",
     "TASKS/STATE.md",
     "TASKS/QUEUE.md",
-    f"reports/projects/{project_id}/session/learn.json",
+    f"learn/{project_id}.json",
     f"chatlogs/discussion/{run_id}/ready_brief.json",
 ]
 docs_blob = "\n".join(read_text(p) for p in docs_paths)
@@ -725,7 +725,7 @@ directions = [
         "benefit": "降低同频误差，提升决策速度。",
         "risk": "摘要质量受输入文档完整性影响。",
         "cost": "S",
-        "dependencies": ["AGENTS.md", "docs/PROJECT_GUIDE.md", "reports/projects/<PROJECT_ID>/session/learn.json"],
+        "dependencies": ["AGENTS.md", "docs/PROJECT_GUIDE.md", "learn/<PROJECT_ID>.json"],
         "scope_hint": ["tools/qf", "docs/PROJECT_GUIDE.md", "docs/WORKFLOW.md"],
         "score": score_for(78, ["learn", "ready", "workflow", "constitution", "evidence"]),
     },
@@ -1238,11 +1238,8 @@ def learn_marker_matches_project(path: Path, expected_project_id: str) -> bool:
     pid = str(data.get("project_id") or "").strip() or "project-0"
     return pid == expected_project_id
 
-learn_new_path = Path(f"reports/projects/{state_project_id}/session/learn.json")
-learn_legacy_path = Path("reports/session/learn.json")
+learn_new_path = Path(f"learn/{state_project_id}.json")
 learn_exists = learn_marker_matches_project(learn_new_path, state_project_id)
-if not learn_exists:
-    learn_exists = learn_marker_matches_project(learn_legacy_path, state_project_id)
 ready_exists = Path(f"reports/{run_id}/ready.json").is_file()
 choose_exists = Path(f"reports/{run_id}/orient_choice.json").is_file()
 council_exists = Path(f"chatlogs/discussion/{run_id}/council.json").is_file()
@@ -1394,36 +1391,26 @@ PY
 }
 
 cmd_learn() {
-  local context_run_id=""
-  local explicit_run_id=""
   local explicit_project_id="${QF_PROJECT_ID:-${PROJECT_ID:-}}"
   local project_id=""
   local token=""
-  local auto_exam="${QF_LEARN_AUTO_EXAM:-1}"
-  local require_exam="${QF_LEARN_REQUIRE_EXAM:-1}"
-  local require_exam_effective=""
   local ttl_days="${QF_LEARN_TTL_DAYS:-7}"
   local log_enabled="${QF_LEARN_LOG:-0}"
   local log_file="${QF_LEARN_LOG_FILE:-}"
-  local model_sync_raw="${QF_LEARN_MODEL_SYNC:-auto}"
-  local model_sync_mode="auto"
-  local plan_mode="${QF_LEARN_PLAN_MODE:-strong}"
+  local model_sync_raw="${QF_LEARN_MODEL_SYNC:-1}"
+  local model_sync_mode="1"
+  local plan_mode_raw="${QF_LEARN_PLAN_MODE:-strong}"
+  local plan_mode="strong"
   local model_timeout_sec="${QF_LEARN_MODEL_TIMEOUT_SEC:-180}"
   local model_name="${QF_LEARN_MODEL:-${MODEL:-}}"
-  local model_sync_enabled=0
   local model_sync_pass=0
-  local model_sync_status="skipped"
-  local model_sync_reason="disabled"
+  local model_sync_status="fail"
+  local model_sync_reason="pending"
   local model_rc=0
-  local codex_available=0
-  local learn_steps_total=8
-  local sync_report_file=""
-  local exam_result_file=""
+  local learn_steps_total=4
   local learn_file=""
   local learn_md=""
   local py_bin=""
-  local task_file=""
-  local current_status=""
   local model_prompt_file=""
   local model_raw_file=""
   local model_json_file=""
@@ -1433,17 +1420,12 @@ cmd_learn() {
   for token in "$@"; do
     [[ -z "$token" ]] && continue
     case "$token" in
-      RUN_ID=*)
-        explicit_run_id="${token#RUN_ID=}"
-        ;;
       PROJECT_ID=*)
         explicit_project_id="${token#PROJECT_ID=}"
         ;;
       AUTO_EXAM=*)
-        auto_exam="${token#AUTO_EXAM=}"
         ;;
       REQUIRE_EXAM=*)
-        require_exam="${token#REQUIRE_EXAM=}"
         ;;
       TTL_DAYS=*)
         ttl_days="${token#TTL_DAYS=}"
@@ -1452,7 +1434,7 @@ cmd_learn() {
         model_sync_raw="${token#MODEL_SYNC=}"
         ;;
       PLAN_MODE=*)
-        plan_mode="${token#PLAN_MODE=}"
+        plan_mode_raw="${token#PLAN_MODE=}"
         ;;
       MODEL_TIMEOUT_SEC=*)
         model_timeout_sec="${token#MODEL_TIMEOUT_SEC=}"
@@ -1473,58 +1455,28 @@ cmd_learn() {
           usage
           exit 2
         fi
-        if [[ -z "$explicit_run_id" ]]; then
-          explicit_run_id="$token"
-        else
-          echo "ERROR: unexpected learn positional arg: ${token}" >&2
-          usage
-          exit 2
-        fi
+        echo "ERROR: learn does not accept positional args. Use PROJECT_ID=... or flags only." >&2
+        usage
+        exit 2
         ;;
     esac
   done
-  if [[ -z "$explicit_run_id" && -n "${RUN_ID:-}" ]]; then
-    explicit_run_id="${RUN_ID}"
-  fi
   project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "learn")"
-
-  case "${auto_exam,,}" in
-    1|true|yes|y) auto_exam="1" ;;
-    0|false|no|n) auto_exam="0" ;;
-    *)
-      echo "ERROR: invalid AUTO_EXAM=${auto_exam} (expected 0|1)." >&2
-      exit 2
-      ;;
-  esac
-  case "${require_exam,,}" in
-    1|true|yes|y) require_exam="1" ;;
-    0|false|no|n) require_exam="0" ;;
-    *)
-      echo "ERROR: invalid REQUIRE_EXAM=${require_exam} (expected 0|1)." >&2
-      exit 2
-      ;;
-  esac
   case "${model_sync_raw,,}" in
-    auto)
-      model_sync_mode="auto"
-      ;;
     1|true|yes|y)
       model_sync_mode="1"
       ;;
-    0|false|no|n)
-      model_sync_mode="0"
-      ;;
     *)
-      echo "ERROR: invalid MODEL_SYNC=${model_sync_raw} (expected auto|0|1)." >&2
+      echo "ERROR: learn requires model sync. Use MODEL_SYNC=1 (or QF_LEARN_MODEL_SYNC=1)." >&2
       exit 2
       ;;
   esac
-  case "${plan_mode,,}" in
-    strong|basic)
-      plan_mode="${plan_mode,,}"
+  case "${plan_mode_raw,,}" in
+    strong)
+      plan_mode="strong"
       ;;
     *)
-      echo "ERROR: invalid PLAN_MODE=${plan_mode} (expected strong|basic)." >&2
+      echo "ERROR: learn requires PLAN_MODE=strong (or QF_LEARN_PLAN_MODE=strong)." >&2
       exit 2
       ;;
   esac
@@ -1545,25 +1497,16 @@ cmd_learn() {
       ;;
   esac
 
-  if [[ -n "$explicit_run_id" ]]; then
-    context_run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "learn" || true)"
-  else
-    context_run_id="$(resolve_state_current_run_id || true)"
-  fi
-
   if [[ "$log_enabled" == "1" && "${QF_LEARN_LOG_ACTIVE:-0}" != "1" ]]; then
     if [[ -z "$log_file" ]]; then
-      log_file="reports/projects/${project_id}/session/learn.stdout.log"
+      log_file="learn/${project_id}.stdout.log"
     fi
     mkdir -p "$(dirname "$log_file")"
     echo "LEARN_LOG_FILE: ${log_file}"
     set +e
     QF_LEARN_LOG_ACTIVE=1 QF_LEARN_LOG=0 QF_LEARN_LOG_FILE="$log_file" \
       bash tools/qf learn \
-        ${context_run_id:+"RUN_ID=${context_run_id}"} \
         "PROJECT_ID=${project_id}" \
-        "AUTO_EXAM=${auto_exam}" \
-        "REQUIRE_EXAM=${require_exam}" \
         "TTL_DAYS=${ttl_days}" \
         "MODEL_SYNC=${model_sync_mode}" \
         "PLAN_MODE=${plan_mode}" \
@@ -1574,51 +1517,21 @@ cmd_learn() {
     return "$log_rc"
   fi
 
-  emit_step "learn" 1 "$learn_steps_total" "resolve run context"
-  if [[ -n "$context_run_id" ]]; then
-    echo "LEARN_CONTEXT_RUN_ID: ${context_run_id}"
-  else
-    echo "LEARN_CONTEXT_RUN_ID: (none)"
-  fi
+  emit_step "learn" 1 "$learn_steps_total" "resolve project context"
+  echo "LEARN_SCOPE_MODE: project-scoped"
+  echo "LEARN_PROJECT_ID: ${project_id}"
+  echo "LEARN_SYNC_MODE: project-direct-read"
 
-  emit_step "learn" 2 "$learn_steps_total" "resolve onboarding evidence (sync optional)"
-  if [[ -n "$context_run_id" ]]; then
-    sync_report_file="$(resolve_sync_file_for_run "$context_run_id" || true)"
-    if [[ -n "$sync_report_file" ]]; then
-      echo "LEARN_SYNC_MODE: run-evidence"
-    else
-      echo "LEARN_SYNC_MODE: run-direct-read"
-    fi
-  else
-    sync_report_file=""
-    echo "LEARN_SYNC_MODE: session-direct-read"
-  fi
-
-  emit_step "learn" 3 "$learn_steps_total" "ensure exam evidence"
-  require_exam_effective="$require_exam"
-  if [[ -n "$context_run_id" ]]; then
-    exam_result_file="reports/${context_run_id}/sync_exam_result.json"
-    if [[ "$require_exam_effective" == "1" && "$auto_exam" == "1" ]]; then
-      echo "LEARN_EXAM_AUTO_RUN: tools/qf exam-auto RUN_ID=${context_run_id}"
-      cmd_exam_auto "RUN_ID=${context_run_id}"
-    fi
-  else
-    exam_result_file="reports/projects/${project_id}/session/sync_exam_result.json"
-    if [[ "$require_exam_effective" == "1" && ! -f "$exam_result_file" ]]; then
-      echo "LEARN_EXAM_BYPASS_NO_RUN_CONTEXT: true"
-      require_exam_effective="0"
-    fi
-  fi
-
-  emit_step "learn" 4 "$learn_steps_total" "prepare learn artifact paths"
-  mkdir -p "reports/projects/${project_id}/session"
-  learn_file="reports/projects/${project_id}/session/learn.json"
-  learn_md="reports/projects/${project_id}/session/learn.md"
-  model_prompt_file="reports/projects/${project_id}/session/learn.model.prompt.txt"
-  model_raw_file="reports/projects/${project_id}/session/learn.model.raw.txt"
-  model_json_file="reports/projects/${project_id}/session/learn.model.json"
-  model_events_file="reports/projects/${project_id}/session/learn.model.events.jsonl"
-  model_stderr_file="reports/projects/${project_id}/session/learn.model.stderr.log"
+  emit_step "learn" 2 "$learn_steps_total" "prepare learn artifact paths"
+  mkdir -p "learn"
+  learn_file="learn/${project_id}.json"
+  learn_md="learn/${project_id}.md"
+  model_prompt_file="learn/${project_id}.model.prompt.txt"
+  model_raw_file="learn/${project_id}.model.raw.txt"
+  model_json_file="learn/${project_id}.model.json"
+  model_events_file="learn/${project_id}.model.events.jsonl"
+  model_stderr_file="learn/${project_id}.model.stderr.log"
+  rm -f "$model_prompt_file" "$model_raw_file" "$model_json_file" "$model_events_file" "$model_stderr_file"
 
   if command -v python3 >/dev/null 2>&1; then
     py_bin="python3"
@@ -1629,32 +1542,16 @@ cmd_learn() {
     exit 1
   fi
 
-  task_file="$(state_field_value "CURRENT_TASK_FILE")"
-  if [[ -z "$task_file" ]]; then
-    task_file="(unknown)"
-  fi
-
-  emit_step "learn" 5 "$learn_steps_total" "generate learn report (project + constitution + workflow + skills + session + exam)"
-  "$py_bin" - <<'PY' "$context_run_id" "$project_id" "$sync_report_file" "$exam_result_file" "$learn_file" "$learn_md" "$require_exam_effective" "$ttl_days" "$task_file"
+  emit_step "learn" 3 "$learn_steps_total" "generate learn report (project + constitution + workflow + skills)"
+  "$py_bin" - <<'PY' "$project_id" "$learn_file" "$learn_md" "$ttl_days"
 import hashlib
 import json
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-context_run_id, project_id, sync_file, exam_file, out_json, out_md, require_exam, ttl_days, task_file = sys.argv[1:]
-require_exam = require_exam == "1"
+project_id, out_json, out_md, ttl_days = sys.argv[1:]
 ttl_days = int(ttl_days)
-
-
-def read_json(path: str) -> dict:
-    p = Path(path)
-    if not p.is_file():
-        return {}
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
 
 
 def ordered_unique(items: list[str]) -> list[str]:
@@ -1679,32 +1576,19 @@ def file_sha(path: Path) -> tuple[str, str]:
     return ("ok", digest)
 
 
-sync_obj = read_json(sync_file)
-exam_obj = read_json(exam_file)
-has_sync_report = bool(sync_obj)
 default_required_files = [
-    "README.md",
-    "AGENTS.md",
     "docs/PROJECT_GUIDE.md",
+    "AGENTS.md",
     "docs/WORKFLOW.md",
-    "docs/ENTITIES.md",
     "CODEX_CLI_PLAYBOOK.md",
     "TASKS/STATE.md",
-    "TASKS/QUEUE.md",
 ]
 
 required_files = default_required_files
 required_files_for_digest = [x for x in required_files if x != "TASKS/STATE.md"]
-
-if has_sync_report and isinstance(sync_obj.get("missing_required_files"), list):
-    missing_required = ordered_unique([str(x) for x in (sync_obj.get("missing_required_files") or [])])
-else:
-    missing_required = [path for path in required_files if not Path(path).is_file()]
+missing_required = [path for path in required_files if not Path(path).is_file()]
 
 context_files = list(required_files_for_digest)
-if task_file and task_file != "(unknown)":
-    context_files.append(task_file)
-context_files.extend(["AGENTS.md", "docs/WORKFLOW.md", "docs/PROJECT_GUIDE.md", "TASKS/QUEUE.md"])
 context_files = ordered_unique(context_files)
 
 skill_files: list[str] = []
@@ -1735,14 +1619,12 @@ for item in skill_entries:
 digest_lines.sort()
 context_digest = hashlib.sha256("\n".join(digest_lines).encode("utf-8")).hexdigest()
 
-sync_passed = bool(sync_obj.get("sync_passed")) and len(missing_required) == 0
+sync_passed = len(missing_required) == 0
 required_total = len(required_files)
 required_read = required_total - len(missing_required)
-if not has_sync_report:
-    sync_passed = len(missing_required) == 0
 
-project_summary = (sync_obj.get("project_overview") or {}).get("summary", "")
-project_goal = (sync_obj.get("project_overview") or {}).get("north_star", "")
+project_summary = ""
+project_goal = ""
 if not project_summary:
     readme_text = Path("README.md").read_text(encoding="utf-8", errors="replace") if Path("README.md").is_file() else ""
     for raw in readme_text.splitlines():
@@ -1768,23 +1650,15 @@ if not project_goal:
 if not project_goal:
     project_goal = "自动化 -> 自我迭代 -> 涌现智能。"
 
-exam_present = Path(exam_file).is_file()
-exam_passed = bool(exam_obj.get("passed")) if exam_present else False
-exam_score = exam_obj.get("score") if exam_present else None
-exam_status = "pass" if exam_passed else ("fail" if exam_present else "missing")
-
 learn_passed = sync_passed
-if require_exam:
-    learn_passed = learn_passed and exam_present and exam_passed
 
 now = datetime.now(timezone.utc)
 expires = now + timedelta(days=max(ttl_days, 1))
 
 obj = {
-    "schema": "qf_learn.v1",
+    "schema": "qf_learn.v2",
     "project_id": project_id,
-    "scope": "session",
-    "context_run_id": context_run_id,
+    "scope": "project-session",
     "created_at_utc": now.isoformat(),
     "expires_at_utc": expires.isoformat(),
     "learn_passed": bool(learn_passed),
@@ -1797,31 +1671,18 @@ obj = {
         "workflow_source": "docs/WORKFLOW.md",
     },
     "session_status": {
-        "continuity": (sync_obj.get("session_handoff") or {}).get("continuity", ("state_only" if context_run_id else "session_only")),
-        "current_stage": (
-            sync_obj.get("current_stage")
-            or {
-                "current_run_id": context_run_id,
-                "current_task_file": task_file,
-                "current_status": "active",
-            }
-        ),
+        "continuity": "state_only",
+        "current_stage": {
+            "current_project_id": project_id,
+        },
     },
     "sync": {
-        "report_file": (sync_file if has_sync_report else ""),
-        "mode": ("run-evidence" if has_sync_report else "direct-read"),
+        "report_file": "",
+        "mode": "project-direct-read",
         "passed": sync_passed,
         "required_total": required_total,
         "required_read": required_read,
         "missing_required_files": missing_required,
-    },
-    "exam": {
-        "required": require_exam,
-        "result_file": exam_file,
-        "present": exam_present,
-        "passed": exam_passed,
-        "score": exam_score,
-        "status": exam_status,
     },
     "skills": {
         "count": len(skill_entries),
@@ -1830,7 +1691,7 @@ obj = {
     "context_digest": context_digest,
     "context_files": [x["path"] for x in context_entries],
     "skill_files": [x["path"] for x in skill_entries],
-    "next_command": (f"tools/qf ready RUN_ID={context_run_id}" if context_run_id else "tools/qf ready"),
+    "next_command": "tools/qf ready",
 }
 Path(out_json).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -1838,28 +1699,18 @@ lines = []
 lines.append("# Learn Report")
 lines.append("")
 lines.append(f"PROJECT_ID: `{project_id}`")
-if context_run_id:
-    lines.append(f"CONTEXT_RUN_ID: `{context_run_id}`")
-else:
-    lines.append("CONTEXT_RUN_ID: `(none)`")
 lines.append(f"Generated At (UTC): {obj['created_at_utc']}")
 lines.append(f"Expires At (UTC): {obj['expires_at_utc']}")
 lines.append(f"Status: `{'pass' if obj['learn_passed'] else 'fail'}`")
 lines.append("")
 lines.append("## Sync")
-lines.append(f"- report: `{sync_file}`")
+lines.append("- report: `(none)`")
 lines.append(f"- required read: {required_read}/{required_total}")
 lines.append(f"- pass: `{str(sync_passed).lower()}`")
 if missing_required:
     lines.append("- missing required:")
     for p in missing_required:
         lines.append(f"  - `{p}`")
-lines.append("")
-lines.append("## Exam")
-lines.append(f"- required: `{str(require_exam).lower()}`")
-lines.append(f"- status: `{exam_status}`")
-lines.append(f"- score: `{exam_score}`")
-lines.append(f"- result: `{exam_file}`")
 lines.append("")
 lines.append("## Skills")
 lines.append(f"- files: {len(skill_entries)}")
@@ -1874,9 +1725,6 @@ Path(out_md).write_text("\n".join(lines), encoding="utf-8")
 
 print(f"LEARN_STATUS: {'pass' if obj['learn_passed'] else 'fail'}")
 print(f"LEARN_SYNC_REQUIRED_READ: {required_read}/{required_total}")
-print(f"LEARN_EXAM_STATUS: {exam_status}")
-if exam_score is not None:
-    print(f"LEARN_EXAM_SCORE: {exam_score}")
 print(f"LEARN_SKILLS_COUNT: {len(skill_entries)}")
 print(f"LEARN_CONTEXT_DIGEST: {context_digest}")
 PY
@@ -1898,7 +1746,7 @@ def as_single_line(value: str) -> str:
 mainline = as_single_line((obj.get("project_understanding") or {}).get("goal", ""))
 stage = obj.get("session_status", {}).get("current_stage", {}) or {}
 stage_text = as_single_line(
-    f"run={stage.get('current_run_id', '')};task={stage.get('current_task_file', '')};status={stage.get('current_status', '')}"
+    f"project={obj.get('project_id', '')}"
 )
 next_step = as_single_line(obj.get("next_command", ""))
 required_files = obj.get("context_files") or []
@@ -1911,45 +1759,26 @@ print(f"LEARN_REQUIRED_FILES_READ_LIST: {required_files_text}")
 PY
 
   if command -v codex >/dev/null 2>&1; then
-    codex_available=1
+    :
+  else
+    echo "ERROR: learn requires codex CLI (model sync is mandatory)." >&2
+    exit 1
   fi
-  case "$model_sync_mode" in
-    0)
-      model_sync_enabled=0
-      model_sync_status="skipped"
-      model_sync_reason="disabled"
-      ;;
-    1)
-      model_sync_enabled=1
-      ;;
-    auto)
-      if [[ "$codex_available" == "1" ]]; then
-        model_sync_enabled=1
-      else
-        model_sync_enabled=0
-        model_sync_status="skipped"
-        model_sync_reason="codex-not-found"
-      fi
-      ;;
-  esac
+  model_sync_status="fail"
+  model_sync_reason="unknown"
+  echo "LEARN_MODEL_SYNC_MODE: ${model_sync_mode}"
+  echo "LEARN_MODEL_PLAN_MODE: ${plan_mode}"
+  echo "LEARN_MODEL_TIMEOUT_SEC: ${model_timeout_sec}"
 
-  if [[ "$model_sync_enabled" == "1" ]]; then
-    model_sync_status="fail"
-    model_sync_reason="unknown"
-    echo "LEARN_MODEL_SYNC_MODE: ${model_sync_mode}"
-    echo "LEARN_MODEL_PLAN_MODE: ${plan_mode}"
-    echo "LEARN_MODEL_TIMEOUT_SEC: ${model_timeout_sec}"
-
-    "$py_bin" - <<'PY' "$learn_file" "$model_prompt_file" "$context_run_id" "$project_id" "$plan_mode"
+    "$py_bin" - <<'PY' "$learn_file" "$model_prompt_file" "$project_id" "$plan_mode"
 import json
 import sys
 from pathlib import Path
 
-learn_file, prompt_file, context_run_id, project_id, plan_mode = sys.argv[1:]
+learn_file, prompt_file, project_id, plan_mode = sys.argv[1:]
 obj = json.loads(Path(learn_file).read_text(encoding="utf-8"))
 required_files = obj.get("context_files") or []
 required_files = [str(x).strip() for x in required_files if str(x).strip()]
-run_display = context_run_id if context_run_id else "(none)"
 
 schema_lines = [
     '{',
@@ -1981,7 +1810,13 @@ if plan_mode == "strong":
             '    {"question":"<q1>","answer":"<a1>","score":"pass|fail"},',
             '    {"question":"<q2>","answer":"<a2>","score":"pass|fail"},',
             '    {"question":"<q3>","answer":"<a3>","score":"pass|fail"}',
-            '  ]',
+            '  ],',
+            '  "anchor_realign": {',
+            '    "question_id": "<Q1..Q17 from PROJECT_GUIDE>",',
+            '    "status": "on_track|drifted",',
+            '    "drift_detail": "<what detail drift happened or none>",',
+            '    "return_to_mainline": "<how to return to mainline now>"',
+            '  }',
         ]
     )
 schema_lines.append('}')
@@ -1991,8 +1826,6 @@ lines.append("You are performing strict onboarding sync for quant-factory-os.")
 lines.append("Read the listed files with tools/view.sh and reply with JSON only.")
 lines.append("")
 lines.append(f"PROJECT_ID: {project_id}")
-lines.append(f"CONTEXT_RUN_ID: {run_display}")
-lines.append("")
 lines.append("Required files to read:")
 for path in required_files:
     lines.append(f"- {path}")
@@ -2008,6 +1841,7 @@ if plan_mode == "strong":
     lines.append("- plan_protocol fields are mandatory.")
     lines.append("- oral_restate fields are mandatory.")
     lines.append("- oral_exam must contain at least 3 QA items.")
+    lines.append("- anchor_realign must map to one PROJECT_GUIDE question id (Q1..Q17).")
     lines.append("")
 lines.append("files_read must be a subset of the required files list above.")
 
@@ -2060,13 +1894,13 @@ PY
 
     echo "LEARN_MODEL_SYNC_RC: ${model_rc}"
 
-    if "$py_bin" - <<'PY' "$model_raw_file" "$model_json_file" "$plan_mode"
+    if "$py_bin" - <<'PY' "$model_raw_file" "$model_json_file" "$plan_mode" "$learn_file" "$model_events_file"
 import json
 import re
 import sys
 from pathlib import Path
 
-raw_file, out_json, plan_mode = sys.argv[1:]
+raw_file, out_json, plan_mode, learn_file, events_file = sys.argv[1:]
 raw_text = Path(raw_file).read_text(encoding="utf-8", errors="replace") if Path(raw_file).is_file() else ""
 if not raw_text.strip():
     raise SystemExit(1)
@@ -2087,11 +1921,26 @@ for key in required:
         raise SystemExit(1)
 if not isinstance(obj.get("files_read"), list):
     raise SystemExit(1)
+files_read = [str(x).strip() for x in (obj.get("files_read") or []) if str(x).strip()]
+if not files_read:
+    raise SystemExit(1)
+
+try:
+    learn_obj = json.loads(Path(learn_file).read_text(encoding="utf-8"))
+except Exception:
+    raise SystemExit(1)
+required_files = [str(x).strip() for x in (learn_obj.get("context_files") or []) if str(x).strip()]
+if not required_files:
+    raise SystemExit(1)
+missing_required = [p for p in required_files if p not in set(files_read)]
+if missing_required:
+    raise SystemExit(1)
 
 if plan_mode == "strong":
     plan = obj.get("plan_protocol")
     oral = obj.get("oral_restate")
     exam = obj.get("oral_exam")
+    anchor = obj.get("anchor_realign")
     if not isinstance(plan, dict):
         raise SystemExit(1)
     for key in ["goal", "non_goal", "evidence", "alternatives", "rebuttal", "decision_stop_condition"]:
@@ -2104,18 +1953,67 @@ if plan_mode == "strong":
             raise SystemExit(1)
     if not isinstance(exam, list) or len(exam) < 3:
         raise SystemExit(1)
+    if not isinstance(anchor, dict):
+        raise SystemExit(1)
+    for key in ["question_id", "status", "drift_detail", "return_to_mainline"]:
+        if key not in anchor:
+            raise SystemExit(1)
+    status = str(anchor.get("status", "")).strip()
+    if status not in ("on_track", "drifted"):
+        raise SystemExit(1)
+    qid = str(anchor.get("question_id", "")).strip().upper()
+    if not re.fullmatch(r"Q([1-9]|1[0-7])", qid):
+        raise SystemExit(1)
+
+practice_commands = []
+events_path = Path(events_file)
+if events_path.is_file():
+    for raw_line in events_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            event_obj = json.loads(line)
+        except Exception:
+            continue
+        item = event_obj.get("item")
+        if not isinstance(item, dict):
+            continue
+        if item.get("type") != "command_execution":
+            continue
+        raw_cmd = item.get("raw_input") or item.get("command") or item.get("input")
+        cmd = " ".join(str(raw_cmd or "").split()).strip()
+        if cmd:
+            practice_commands.append(cmd)
+if not practice_commands:
+    raise SystemExit(1)
+practice_samples = []
+seen = set()
+for cmd in practice_commands:
+    if cmd in seen:
+        continue
+    seen.add(cmd)
+    practice_samples.append(cmd)
+    if len(practice_samples) >= 3:
+        break
+obj["practice"] = {
+    "command_execution_count": len(practice_commands),
+    "command_samples": practice_samples,
+}
 
 Path(out_json).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 print("LEARN_MODEL_SYNC_STATUS: pass")
 print(f"LEARN_MODEL_MAINLINE: {' '.join(str(obj.get('mainline', '')).split())}")
 print(f"LEARN_MODEL_CURRENT_STAGE: {' '.join(str(obj.get('current_stage', '')).split())}")
 print(f"LEARN_MODEL_NEXT_STEP: {' '.join(str(obj.get('next_step', '')).split())}")
-files_read = ",".join([str(x).strip() for x in (obj.get("files_read") or []) if str(x).strip()])
-print(f"LEARN_MODEL_FILES_READ_LIST: {files_read}")
+files_read_text = ",".join(files_read)
+print(f"LEARN_MODEL_FILES_READ_LIST: {files_read_text}")
 if plan_mode == "strong":
     plan = obj.get("plan_protocol") or {}
     oral = obj.get("oral_restate") or {}
     exam = obj.get("oral_exam") or []
+    anchor = obj.get("anchor_realign") or {}
+    practice = obj.get("practice") or {}
     print(f"LEARN_MODEL_PLAN_GOAL: {' '.join(str(plan.get('goal', '')).split())}")
     print(f"LEARN_MODEL_PLAN_NON_GOAL: {' '.join(str(plan.get('non_goal', '')).split())}")
     print(f"LEARN_MODEL_PLAN_REBUTTAL: {' '.join(str(plan.get('rebuttal', '')).split())}")
@@ -2126,6 +2024,16 @@ if plan_mode == "strong":
     print(f"LEARN_MODEL_ORAL_SESSION: {' '.join(str(oral.get('session_continuity', '')).split())}")
     print(f"LEARN_MODEL_ORAL_CURRENT_FOCUS: {' '.join(str(oral.get('current_focus', '')).split())}")
     print(f"LEARN_MODEL_ORAL_NEXT_ACTION: {' '.join(str(oral.get('next_action', '')).split())}")
+    print(f"LEARN_MODEL_ANCHOR_QUESTION_ID: {' '.join(str(anchor.get('question_id', '')).split())}")
+    print(f"LEARN_MODEL_ANCHOR_STATUS: {' '.join(str(anchor.get('status', '')).split())}")
+    print(f"LEARN_MODEL_ANCHOR_DRIFT_DETAIL: {' '.join(str(anchor.get('drift_detail', '')).split())}")
+    print(f"LEARN_MODEL_ANCHOR_RETURN_ACTION: {' '.join(str(anchor.get('return_to_mainline', '')).split())}")
+    print(f"LEARN_MODEL_PRACTICE_COMMAND_COUNT: {int(practice.get('command_execution_count', 0))}")
+    samples = practice.get("command_samples") or []
+    idx2 = 1
+    for sample in samples:
+        print(f"LEARN_MODEL_PRACTICE_SAMPLE_{idx2}: {' '.join(str(sample).split())}")
+        idx2 += 1
     print(f"LEARN_MODEL_ORAL_EXAM_QA_COUNT: {len(exam)}")
     idx = 1
     for item in exam:
@@ -2156,7 +2064,6 @@ PY
       echo "LEARN_MODEL_SYNC_STATUS: fail"
       echo "LEARN_MODEL_SYNC_REASON: ${model_sync_reason}"
     fi
-  fi
 
   "$py_bin" - <<'PY' "$learn_file" "$learn_md" "$model_sync_mode" "$plan_mode" "$model_sync_status" "$model_sync_reason" "$model_sync_pass" "$model_prompt_file" "$model_raw_file" "$model_json_file" "$model_events_file" "$model_stderr_file"
 import json
@@ -2180,11 +2087,13 @@ model_obj = {
     "events_file": events_file,
     "stderr_file": stderr_file,
 }
-if Path(model_json_file).is_file():
+if model_sync_pass and Path(model_json_file).is_file():
     try:
         model_obj["result"] = json.loads(Path(model_json_file).read_text(encoding="utf-8"))
     except Exception:
         model_obj["result"] = {}
+else:
+    model_obj["result"] = {}
 obj["model_sync"] = model_obj
 
 if model_sync_mode == "1" and not model_sync_pass:
@@ -2208,33 +2117,18 @@ lines.append(f"- stderr: `{stderr_file}`")
 md_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 PY
 
-  emit_step "learn" 6 "$learn_steps_total" "validate learn gate"
   if [[ "$model_sync_mode" == "1" && "$model_sync_pass" != "1" ]]; then
     echo "ERROR: learn model sync strict mode failed." >&2
     echo "Check: ${model_stderr_file}" >&2
     exit 1
   fi
   if ! learn_file_is_valid "$learn_file" >/dev/null 2>&1; then
-    echo "ERROR: learn gate not satisfied." >&2
+    echo "ERROR: learn output validation failed." >&2
     echo "Check: ${learn_file}" >&2
     exit 1
   fi
 
-  emit_step "learn" 7 "$learn_steps_total" "append checkpoints and update state"
-  if [[ -n "$context_run_id" ]]; then
-    append_execution_event "$context_run_id" "learn" "learn_generated" "ok" "tools/qf learn" "project_id=${project_id};learn_file=${learn_file};sync_report=${sync_report_file};exam=${exam_result_file};model_status=${model_sync_status}" ""
-    append_conversation_checkpoint "$context_run_id" "learn" "learn gate completed; next step ready"
-  fi
-  current_status="$(state_field_value "CURRENT_STATUS")"
-  if [[ -z "$current_status" ]]; then
-    current_status="active"
-  fi
-  if [[ -n "$context_run_id" ]]; then
-    update_state_current "$context_run_id" "$(state_field_value "CURRENT_TASK_FILE")" "$current_status" "$project_id"
-  fi
-
-  emit_step "learn" 8 "$learn_steps_total" "print learn artifacts"
-  echo "LEARN_PROJECT_ID: ${project_id}"
+  emit_step "learn" 4 "$learn_steps_total" "print learn artifacts"
   echo "LEARN_FILE: ${learn_file}"
   echo "LEARN_MD: ${learn_md}"
   echo "LEARN_MODEL_PROMPT_FILE: ${model_prompt_file}"
@@ -2242,13 +2136,7 @@ PY
   echo "LEARN_MODEL_JSON_FILE: ${model_json_file}"
   echo "LEARN_MODEL_EVENTS_FILE: ${model_events_file}"
   echo "LEARN_MODEL_STDERR_FILE: ${model_stderr_file}"
-  if [[ -n "$context_run_id" ]]; then
-    echo "LEARN_CONTEXT_RUN_ID: ${context_run_id}"
-    echo "LEARN_NEXT_COMMAND: tools/qf ready RUN_ID=${context_run_id}"
-  else
-    echo "LEARN_CONTEXT_RUN_ID: (none)"
-    echo "LEARN_NEXT_COMMAND: tools/qf ready"
-  fi
+  echo "LEARN_NEXT_COMMAND: tools/qf ready"
 }
 
 resolve_ready_field() {
@@ -2368,7 +2256,7 @@ cmd_ready() {
     learn_report_file="$(resolve_learn_file_for_project "$project_id" || true)"
     if [[ -z "$learn_report_file" && "$auto_learn" == "1" ]]; then
       echo "LEARN_AUTO_RUN: tools/qf learn"
-      cmd_learn "RUN_ID=${run_id}" "PROJECT_ID=${project_id}" "REQUIRE_EXAM=0"
+      cmd_learn "PROJECT_ID=${project_id}"
       learn_report_file="$(resolve_learn_file_for_project "$project_id" || true)"
     fi
     if [[ -z "$learn_report_file" ]]; then
@@ -3123,7 +3011,7 @@ steps = delivery_contract.get("steps") or []
 if not isinstance(steps, list):
     steps = []
 
-learn_obj = read_json(f"reports/projects/{project_id}/session/learn.json")
+learn_obj = read_json(f"learn/{project_id}.json")
 ready_obj = read_json(f"reports/{run_id}/ready.json")
 queue_text = read_text("TASKS/QUEUE.md")
 queue_open_items = len(re.findall(r"^- \[ \] ", queue_text, flags=re.M))
@@ -4796,13 +4684,41 @@ except Exception:
 if not obj.get("learn_passed"):
     raise SystemExit(1)
 
-require_exam_env = os.environ.get("QF_LEARN_REQUIRE_EXAM", "1").lower() not in {"0", "false", "no", "n"}
-exam = obj.get("exam") or {}
-if bool(exam.get("required", require_exam_env)):
-    if not exam.get("present"):
+model_sync = obj.get("model_sync")
+if not isinstance(model_sync, dict):
+    raise SystemExit(1)
+if str(model_sync.get("mode", "")).strip() != "1":
+    raise SystemExit(1)
+if str(model_sync.get("plan_mode", "")).strip() != "strong":
+    raise SystemExit(1)
+if str(model_sync.get("status", "")).strip() != "pass":
+    raise SystemExit(1)
+if not bool(model_sync.get("passed")):
+    raise SystemExit(1)
+model_result = model_sync.get("result")
+if not isinstance(model_result, dict):
+    raise SystemExit(1)
+for key in ["mainline", "current_stage", "next_step", "files_read", "plan_protocol", "oral_restate", "oral_exam", "anchor_realign", "practice"]:
+    if key not in model_result:
         raise SystemExit(1)
-    if not exam.get("passed"):
+if not isinstance(model_result.get("files_read"), list) or not model_result.get("files_read"):
+    raise SystemExit(1)
+anchor = model_result.get("anchor_realign") or {}
+if not isinstance(anchor, dict):
+    raise SystemExit(1)
+for key in ["question_id", "status", "drift_detail", "return_to_mainline"]:
+    if key not in anchor:
         raise SystemExit(1)
+if str(anchor.get("status", "")).strip() not in ("on_track", "drifted"):
+    raise SystemExit(1)
+practice = model_result.get("practice") or {}
+if not isinstance(practice, dict):
+    raise SystemExit(1)
+if int(practice.get("command_execution_count", 0)) < 1:
+    raise SystemExit(1)
+samples = practice.get("command_samples")
+if not isinstance(samples, list) or not samples:
+    raise SystemExit(1)
 
 if os.environ.get("QF_READY_IGNORE_LEARN_TTL", "0") != "1":
     expires = str(obj.get("expires_at_utc", "")).strip()
@@ -4882,20 +4798,12 @@ PY
 resolve_learn_file_for_project() {
   local project_id="${1:-}"
   local learn_file=""
-  local legacy_file=""
   project_id="$(normalize_project_id "$project_id")"
-  learn_file="reports/projects/${project_id}/session/learn.json"
+  learn_file="learn/${project_id}.json"
   if [[ -f "$learn_file" ]] \
     && learn_file_is_valid "$learn_file" >/dev/null 2>&1 \
     && learn_file_matches_project "$learn_file" "$project_id" >/dev/null 2>&1; then
     printf "%s" "$learn_file"
-    return 0
-  fi
-  legacy_file="reports/session/learn.json"
-  if [[ -f "$legacy_file" ]] \
-    && learn_file_is_valid "$legacy_file" >/dev/null 2>&1 \
-    && learn_file_matches_project "$legacy_file" "$project_id" >/dev/null 2>&1; then
-    printf "%s" "$legacy_file"
     return 0
   fi
   printf ""
@@ -5304,11 +5212,6 @@ cmd_init() {
     echo "INIT_HINT: status-only mode, no resume reminder emitted."
   fi
 
-  if [[ -n "$current_run_id" ]]; then
-    append_execution_event "$current_run_id" "init" "init_checked" "ok" "tools/qf init ${init_mode}" "status=${init_status};reason_codes=${reason_codes_text}" ""
-  else
-    echo "INIT_EXECUTION_EVENT: skipped (no CURRENT_RUN_ID)"
-  fi
   if [[ "$init_mode" == "main" && "$init_status" != "ok" ]]; then
     exit 1
   fi
@@ -5698,14 +5601,14 @@ text = f"""## 问答 1：项目使命、背景、目标、最终结果、开发�
 ## 实操技能 1：Codex 正确打开方式、版本、项目内用法、样例与实操结果
 - Codex CLI 版本：`codex-cli 0.106.0`
 - 操作手册路径：`CODEX_CLI_PLAYBOOK.md`
-- 实操涉及文件：`reports/{run_id}/codex_exec.events.jsonl`、`reports/{run_id}/codex_exec.last.txt`、`reports/{run_id}/codex_exec.stderr.log`
+- 实操涉及文件：`test_codex/artifacts/exec_json.events.jsonl`、`test_codex/artifacts/exec_basic_last_message.txt`、`test_codex/logs/smoke.log`
 - 我实际执行的命令与结果：`codex --search --ask-for-approval never exec --sandbox read-only --json --output-last-message ...` 已执行并落盘事件流。
-- 证据文件路径：`reports/{run_id}/codex_exec.events.jsonl`
+- 证据文件路径：`CODEX_CLI_PLAYBOOK.md`、`CODEX_CLI_SOURCE_AUDIT.md`、`test_codex/artifacts/exec_json.events.jsonl`
 
 ## 拉回主线 2：是否偏离当前最重要任务，原因，下一步动作
 - 判断：不偏离，当前最重要任务就是强化 learn 同频与考试标准化。
 - 原因：这是所有后续自动化与多角色博弈质量的前置条件。
-- 下一步唯一命令：`tools/qf learn RUN_ID={run_id} MODEL_SYNC=1 PLAN_MODE=strong -log`
+- 下一步唯一命令：`tools/qf learn -log`
 - 证据文件路径：`TASKS/STATE.md`、`reports/{run_id}/conversation.md`
 """
 

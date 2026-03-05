@@ -49,12 +49,15 @@ Required visible progress:
   - `LEARN_CURRENT_STAGE`
   - `LEARN_NEXT_STEP`
   - `LEARN_REQUIRED_FILES_READ_LIST`
-- When model sync is enabled and passes, must also print:
+- Model sync is mandatory (no downgrade path):
+  - `MODEL_SYNC=1` only
+  - `PLAN_MODE=strong` only
+- Must also print model anchors:
   - `LEARN_MODEL_MAINLINE`
   - `LEARN_MODEL_CURRENT_STAGE`
   - `LEARN_MODEL_NEXT_STEP`
   - `LEARN_MODEL_FILES_READ_LIST`
-- In strict plan mode (`PLAN_MODE=strong`), model output must include plan packet and oral packet anchors defined in `docs/WORKFLOW.md`.
+  - plan/oral packet anchors defined in `docs/WORKFLOW.md`
 
 No coding until this gate is complete.
 

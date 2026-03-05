@@ -64,7 +64,7 @@
     - Codex CLI：负责本地执行、改动、验证、证据落盘（执行层）。
   - 同频操作顺序：
     - `tools/qf init`
-    - `tools/qf learn MODEL_SYNC=1 PLAN_MODE=strong -log`
+    - `tools/qf learn -log`（默认强制 `MODEL_SYNC=1` + `PLAN_MODE=strong`）
     - `tools/qf ready`
   - 必读文件清单：
     - `AGENTS.md`
@@ -222,11 +222,12 @@
   - 当前已确认版本：`codex-cli 0.106.0`
   - 操作手册：`CODEX_CLI_PLAYBOOK.md`
   - 相关文件：`AGENTS.md`、`docs/WORKFLOW.md`、`tools/qf`
-  - 样例证据：`reports/run-2026-03-02-qf-ready/codex_exec.check.events.jsonl`
+  - 样例证据：`test_codex/artifacts/exec_json.events.jsonl`
 - 证据文件：
   - `CODEX_CLI_PLAYBOOK.md`
-  - `reports/run-2026-03-02-qf-ready/codex_exec.check.events.jsonl`
-  - `reports/run-2026-03-02-qf-ready/codex_exec.check.last.txt`
+  - `CODEX_CLI_SOURCE_AUDIT.md`
+  - `test_codex/artifacts/exec_json.events.jsonl`
+  - `test_codex/artifacts/exec_basic_last_message.txt`
 
 ## 拉回主线
 
@@ -237,17 +238,4 @@
   - 接下来动作：先保证 `PROJECT_GUIDE` 成为高质量问答真相源，再用该真相源驱动 learn 与考试，最后继续收敛流程自动化。
 - 证据文件：
   - `TASKS/STATE.md`
-  - `TASKS/STATE.md`
-  - `reports/run-2026-03-02-qf-ready/decision.md`
-
-### 18. `/plan`、`tools/qf plan`、`/compact` 应该怎么用，什么时候用？
-- 回答：
-  - `Codex /plan`：讨论协议命令，用于进入“先规划后执行”的模式；适合复杂需求收敛。
-  - `tools/qf plan`：本地队列提案工具，生成 `TASKS/TODO_PROPOSAL.md`，不构成执行许可。
-  - 推荐顺序：`/plan -> 确认 -> tools/qf discuss/execute/do`。
-  - `/compact`：用于上下文过大时压缩，不要求每个 task 强制执行。
-  - `/compact` 前必须先落仓库证据：`tools/qf snapshot NOTE="decision + next step"`。
-- 证据文件：
-  - `CODEX_CLI_PLAYBOOK.md`
-  - `docs/WORKFLOW.md`
-  - `AGENTS.md`
+  - `reports/run-2026-03-04-remove-sync-entry/decision.md`

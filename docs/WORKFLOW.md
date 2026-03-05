@@ -36,30 +36,31 @@ This document describes the expected workflow for changes in this repository.
   - Note: this is context reconstruction only, not readiness pass.
   - Format: concise session summary (main thread, key conclusions, small reflection, one next command).
 - `S1.6 Learn Gate`: `tools/qf learn`
-  - Input: required owner docs (`AGENTS.md` + `docs/PROJECT_GUIDE.md` + workflow/entities/state/queue); optional exam auto-flow (`tools/qf exam-auto`).
-  - Output: `reports/projects/{project_id}/session/learn.json` + `reports/projects/{project_id}/session/learn.md`.
+  - Input: required owner docs (`AGENTS.md` + `docs/PROJECT_GUIDE.md` + workflow + codex playbook + state).
+  - Output: `learn/{project_id}.json` + `learn/{project_id}.md`.
   - Output visibility: prints `LEARN_STEP[<i>/<n>]` stage markers.
-  - Optional stdout mirror: `tools/qf learn -log` writes `reports/projects/{project_id}/session/learn.stdout.log` (or `LOG=<path>`).
-  - Optional model sync (Codex real interaction):
-    - `MODEL_SYNC=0|auto|1` (default `auto`)
-    - strict mode: `MODEL_SYNC=1` (learn fails if model sync fails)
-    - `PLAN_MODE=strong|basic` (default `strong`)
+  - Optional stdout mirror: `tools/qf learn -log` writes `learn/{project_id}.stdout.log` (or `LOG=<path>`).
+  - Model sync is mandatory (Codex real interaction):
+    - enforced mode: `MODEL_SYNC=1`
+    - enforced plan protocol: `PLAN_MODE=strong`
     - timeout/model override: `MODEL_TIMEOUT_SEC=<n>` (default 180), `MODEL=<slug>`
     - model artifacts:
-      - `learn.model.prompt.txt`
-      - `learn.model.raw.txt`
-      - `learn.model.json`
-      - `learn.model.events.jsonl`
-      - `learn.model.stderr.log`
+      - `learn/{project_id}.model.prompt.txt`
+      - `learn/{project_id}.model.raw.txt`
+      - `learn/{project_id}.model.json`
+      - `learn/{project_id}.model.events.jsonl`
+      - `learn/{project_id}.model.stderr.log`
   - Required learn anchors:
     - `LEARN_MAINLINE`, `LEARN_CURRENT_STAGE`, `LEARN_NEXT_STEP`, `LEARN_REQUIRED_FILES_READ_LIST`
-    - when model sync passes:
+    - when model sync passes (mandatory gate):
       - `LEARN_MODEL_MAINLINE`, `LEARN_MODEL_CURRENT_STAGE`, `LEARN_MODEL_NEXT_STEP`, `LEARN_MODEL_FILES_READ_LIST`
-    - when `PLAN_MODE=strong` and model sync passes:
+    - plan/oral packet anchors (`PLAN_MODE=strong`, mandatory):
       - `LEARN_MODEL_PLAN_GOAL`, `LEARN_MODEL_PLAN_NON_GOAL`, `LEARN_MODEL_PLAN_REBUTTAL`, `LEARN_MODEL_PLAN_DECISION_STOP`
       - `LEARN_MODEL_ORAL_PROJECT`, `LEARN_MODEL_ORAL_CONSTITUTION`, `LEARN_MODEL_ORAL_EVIDENCE`, `LEARN_MODEL_ORAL_SESSION`
       - `LEARN_MODEL_ORAL_CURRENT_FOCUS`, `LEARN_MODEL_ORAL_NEXT_ACTION`, `LEARN_MODEL_ORAL_EXAM_QA_COUNT`
-  - Purpose: materialize onboarding understanding (project/constitution/workflow/skills/session) with exam evidence.
+      - `LEARN_MODEL_ANCHOR_QUESTION_ID`, `LEARN_MODEL_ANCHOR_STATUS`, `LEARN_MODEL_ANCHOR_DRIFT_DETAIL`, `LEARN_MODEL_ANCHOR_RETURN_ACTION`
+      - `LEARN_MODEL_PRACTICE_COMMAND_COUNT`, `LEARN_MODEL_PRACTICE_SAMPLE_1` (and optional more samples)
+  - Purpose: materialize onboarding understanding (project/constitution/workflow/skills/session) with mandatory model-sync evidence.
 - `S2 Ready gate`: `tools/qf ready`
   - Input: restatement fields (goal/scope/acceptance/steps/stop)
   - Output: `reports/{RUN_ID}/ready.json`
@@ -205,7 +206,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 
 ## Readiness completion criteria (must be true before execution)
 - `tools/qf init` completed successfully.
-- `tools/qf learn` produced valid `reports/projects/{project_id}/session/learn.json` (`RUN_ID` optional).
+- `tools/qf learn` produced valid `learn/{project_id}.json` (model sync mandatory; `RUN_ID` not required).
 - `tools/qf ready` produced `reports/{RUN_ID}/ready.json`.
 - `tools/qf orient` produced `chatlogs/discussion/{RUN_ID}/orient.json`.
 - `tools/qf choose` produced `reports/{RUN_ID}/orient_choice.json`.
@@ -230,18 +231,10 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - 2) 若 `INIT_STATUS=needs_resume`/`blocked`，先执行 `tools/qf resume RUN_ID=<run-id>` 处理收尾问题。
 - 2.1) `handoff` 改为显式动作：`tools/qf handoff RUN_ID=<run-id>`（按需调用）。
 - 3) 按顺序阅读并复述：`AGENTS.md` -> `docs/PROJECT_GUIDE.md` -> `docs/WORKFLOW.md` -> `docs/ENTITIES.md` -> `TASKS/STATE.md` -> `TASKS/QUEUE.md`。
-- 3.1) 新/陌生 agent 建议先完成 learn 考试：
-  - 题面模板：`docs/LEARN_EXAM_ANSWER_TEMPLATE.md`
-  - 评分标准：`docs/LEARN_EXAM_RUBRIC.json`
-  - 低摩擦首选：`tools/qf exam-auto`（默认缺答卷会自动填答并直接评分）
-  - 手动模式：`tools/qf exam-auto AUTO_FILL=0`（只落模板，不自动填答）
-  - 兼容命令：`tools/qf exam`（只做评分，不自动生成答卷）
-- 3.2) 运行 `tools/qf learn` 固化“上岗学习”证据（项目+宪法+工作流+技能+session+考试），默认打印分步日志。
-  - `RUN_ID` 可选：
-    - 有 `RUN_ID`/`CURRENT_RUN_ID`：复用该 run 的执行证据。
-    - 无 run 上下文：进入 `session-direct-read`，直接读取必读文档并生成 learn 证据（不隐式绑定历史 run）。
+- 3.1) 运行 `tools/qf learn` 固化“上岗学习”证据（项目+宪法+工作流+技能+session），默认打印分步日志。
   - `project_id` 默认来自 `TASKS/STATE.md: CURRENT_PROJECT_ID`（缺省 `project-0`），也可通过环境变量覆盖：`PROJECT_ID` / `QF_PROJECT_ID`。
-    - 无 run 上下文且不存在 session exam 结果时，会打印 `LEARN_EXAM_BYPASS_NO_RUN_CONTEXT: true` 并降级为“仅文档同频门禁”。
+  - 模型同频是硬门禁（不可降级）：`MODEL_SYNC=1` + `PLAN_MODE=strong`。
+  - `learn` 会强制校验模型 `files_read` 覆盖必读文件清单。
 - 4) 运行 `tools/qf ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`，默认可自动填充；默认缺失 learn 时可自动补跑）。
 - 4.0) 若 `ready` 提示 unresolved run context，先二选一：
   - `tools/qf resume RUN_ID=<run-id>`（收尾）
