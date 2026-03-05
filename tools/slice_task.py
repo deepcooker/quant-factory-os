@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from ops_ready import (
+from ready import (
     append_conversation_checkpoint,
     append_execution_event,
     resolve_project_id_for_cmd,
@@ -54,9 +54,9 @@ def main(argv: list[str]) -> int:
     execution_contract = Path(f"reports/{run_id}/execution_contract.json")
     if not execution_contract.is_file():
         print("ERROR: execution-contract gate not satisfied.", file=sys.stderr)
-        print(f"Run: python3 tools/ops_arbiter.py RUN_ID={run_id}", file=sys.stderr)
-        print(f"Then: python3 tools/ops_slice.py RUN_ID={run_id}", file=sys.stderr)
-        print("Then retry: bash tools/ops_legacy.sh do queue-next", file=sys.stderr)
+        print(f"Run: python3 tools/arbiter.py RUN_ID={run_id}", file=sys.stderr)
+        print(f"Then: python3 tools/slice_task.py RUN_ID={run_id}", file=sys.stderr)
+        print("Then retry: bash tools/legacy.sh do queue-next", file=sys.stderr)
         return 1
 
     queue_file = Path("TASKS/QUEUE.md")
@@ -101,7 +101,7 @@ def main(argv: list[str]) -> int:
             scope = []
         scope = [str(x).strip().replace("`", "") for x in scope if str(x).strip()]
         if not scope:
-            scope = ["tools/ops_*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
+            scope = ["tools/*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
         scope_line = ", ".join(f"`{x}`" for x in scope)
         acceptance = raw.get("acceptance") or []
         if not isinstance(acceptance, list):
@@ -145,7 +145,7 @@ def main(argv: list[str]) -> int:
         "tasks_total": len(tasks),
         "queue_inserted": inserted,
         "queue_existing": existing,
-        "next_command": "bash tools/ops_legacy.sh do queue-next",
+        "next_command": "bash tools/legacy.sh do queue-next",
     }
     out_json.parent.mkdir(parents=True, exist_ok=True)
     out_json.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -153,7 +153,7 @@ def main(argv: list[str]) -> int:
     print(f"SLICE_TASKS_TOTAL: {len(tasks)}")
     print(f"SLICE_QUEUE_INSERTED: {inserted}")
     print(f"SLICE_QUEUE_EXISTING: {existing}")
-    print("SLICE_NEXT_COMMAND: bash tools/ops_legacy.sh do queue-next")
+    print("SLICE_NEXT_COMMAND: bash tools/legacy.sh do queue-next")
     print(f"SLICE_PROJECT_ID: {project_id}")
 
     task_file = state_field_value("CURRENT_TASK_FILE")
@@ -163,7 +163,7 @@ def main(argv: list[str]) -> int:
         "slice",
         "slice_generated",
         "ok",
-        f"python3 tools/ops_slice.py RUN_ID={run_id}",
+        f"python3 tools/slice_task.py RUN_ID={run_id}",
         f"execution_contract={execution_contract};slice_state={out_json}",
         "",
     )

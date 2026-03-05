@@ -23,27 +23,27 @@ SLICE_STATE_FILE=""
 usage() {
   cat <<'EOF'
 Usage:
-  python3 tools/ops_init.py [-status|-main]
-  bash tools/ops_legacy.sh onboard RUN_ID
-  bash tools/ops_legacy.sh sync [RUN_ID=<run-id>]
-  python3 tools/ops_learn.py [PROJECT_ID=<project-id>] [TTL_DAYS=<n>] [PLAN_TRANSPORT=auto|slash] [MODEL=<slug>] [-log] [LOG=<path>]
-  python3 tools/ops_ready.py [RUN_ID=<run-id>] [DECISION=resume-close|abandon-new]
-  python3 tools/ops_orient.py [RUN_ID=<run-id>]
-  python3 tools/ops_choose.py [RUN_ID=<run-id>] OPTION=<id>
-  python3 tools/ops_council.py [RUN_ID=<run-id>]
-  python3 tools/ops_arbiter.py [RUN_ID=<run-id>]
-  python3 tools/ops_slice.py [RUN_ID=<run-id>]
-  bash tools/ops_legacy.sh discuss [RUN_ID=<run-id>] [PROJECT_ID=<project-id>] [OPTION=<id>] [AUTO_CHOOSE=0|1] [TARGET=prepare|do] [CONFIRM_CONTRACT=0|1] [AUTO_CONFIRM_CONTRACT=0|1]
-  bash tools/ops_legacy.sh execute [RUN_ID=<run-id>] [PROJECT_ID=<project-id>] [OPTION=<id>] [AUTO_CHOOSE=0|1] [TARGET=prepare|do] [CONFIRM_CONTRACT=0|1] [AUTO_CONFIRM_CONTRACT=0|1]
-  bash tools/ops_legacy.sh review [RUN_ID=<run-id>] [AUTO_FIX=0|1] [STRICT=0|1]
-  bash tools/ops_legacy.sh snapshot [RUN_ID=<run-id>] NOTE=<text>
-  bash tools/ops_legacy.sh handoff [RUN_ID=<run-id>]
-  bash tools/ops_legacy.sh exam [RUN_ID=<run-id>] [ANSWER_FILE=<path>] [RUBRIC_FILE=<path>] [OUTPUT_FILE=<path>]
-  bash tools/ops_legacy.sh exam-auto [RUN_ID=<run-id>] [ANSWER_FILE=<path>] [RUBRIC_FILE=<path>] [OUTPUT_FILE=<path>] [AUTO_FILL=0|1]
-  bash tools/ops_legacy.sh plan [N]
-  bash tools/ops_legacy.sh do queue-next
-  bash tools/ops_legacy.sh resume [RUN_ID=<run-id>]
-  bash tools/ops_legacy.sh stash-clean [preview|apply] [KEEP=<n>]
+  python3 tools/init.py [-status|-main]
+  bash tools/legacy.sh onboard RUN_ID
+  bash tools/legacy.sh sync [RUN_ID=<run-id>]
+  python3 tools/learn.py [plan_transport=auto|slash] [-minimal|-low|-medium|-high|-xhigh]
+  python3 tools/ready.py [RUN_ID=<run-id>] [DECISION=resume-close|abandon-new]
+  python3 tools/orient.py [RUN_ID=<run-id>]
+  python3 tools/choose.py [RUN_ID=<run-id>] OPTION=<id>
+  python3 tools/council.py [RUN_ID=<run-id>]
+  python3 tools/arbiter.py [RUN_ID=<run-id>]
+  python3 tools/slice_task.py [RUN_ID=<run-id>]
+  bash tools/legacy.sh discuss [RUN_ID=<run-id>] [PROJECT_ID=<project-id>] [OPTION=<id>] [AUTO_CHOOSE=0|1] [TARGET=prepare|do] [CONFIRM_CONTRACT=0|1] [AUTO_CONFIRM_CONTRACT=0|1]
+  bash tools/legacy.sh execute [RUN_ID=<run-id>] [PROJECT_ID=<project-id>] [OPTION=<id>] [AUTO_CHOOSE=0|1] [TARGET=prepare|do] [CONFIRM_CONTRACT=0|1] [AUTO_CONFIRM_CONTRACT=0|1]
+  bash tools/legacy.sh review [RUN_ID=<run-id>] [AUTO_FIX=0|1] [STRICT=0|1]
+  bash tools/legacy.sh snapshot [RUN_ID=<run-id>] NOTE=<text>
+  bash tools/legacy.sh handoff [RUN_ID=<run-id>]
+  bash tools/legacy.sh exam [RUN_ID=<run-id>] [ANSWER_FILE=<path>] [RUBRIC_FILE=<path>] [OUTPUT_FILE=<path>]
+  bash tools/legacy.sh exam-auto [RUN_ID=<run-id>] [ANSWER_FILE=<path>] [RUBRIC_FILE=<path>] [OUTPUT_FILE=<path>] [AUTO_FILL=0|1]
+  bash tools/legacy.sh plan [N]
+  bash tools/legacy.sh do queue-next
+  bash tools/legacy.sh resume [RUN_ID=<run-id>]
+  bash tools/legacy.sh stash-clean [preview|apply] [KEEP=<n>]
 
 Global optional:
   PROJECT_ID=<project-id>   # defaults to TASKS/STATE.md CURRENT_PROJECT_ID or project-0
@@ -60,7 +60,7 @@ is_dirty() {
 print_resume_cmd() {
   local run_id="$1"
   if [[ -n "$run_id" ]]; then
-    echo "恢复命令：bash tools/ops_legacy.sh resume RUN_ID=${run_id}"
+    echo "恢复命令：bash tools/legacy.sh resume RUN_ID=${run_id}"
   fi
 }
 
@@ -92,7 +92,7 @@ emit_json_event() {
   if ! should_emit_json_stream; then
     return 0
   fi
-  printf '{"ts":"%s","type":"ops_event","phase":"%s","action":"%s","status":"%s","message":"%s"}\n' \
+  printf '{"ts":"%s","type":"core_event","phase":"%s","action":"%s","status":"%s","message":"%s"}\n' \
     "$(date -Iseconds)" \
     "$(json_escape "$phase")" \
     "$(json_escape "$action")" \
@@ -493,7 +493,7 @@ auto_stash_if_dirty() {
     echo "   修复：先处理未提交改动，或设置 QF_AUTOSTASH=1 后重试。"
     return 1
   fi
-  local stash_name="ops-${prefix}-wip-$(date +%Y%m%d-%H%M%S)"
+  local stash_name="legacy-${prefix}-wip-$(date +%Y%m%d-%H%M%S)"
   echo "Detected local changes. Stashing as: ${stash_name}"
   git stash push -u -m "$stash_name" >/dev/null
   local latest_stash
@@ -507,7 +507,7 @@ auto_stash_if_dirty() {
 cmd_onboard() {
   local run_id="${1:-${RUN_ID:-}}"
   if [[ -z "$run_id" ]]; then
-    echo "ERROR: RUN_ID is required. Usage: bash tools/ops_legacy.sh onboard <RUN_ID>" >&2
+    echo "ERROR: RUN_ID is required. Usage: bash tools/legacy.sh onboard <RUN_ID>" >&2
     exit 2
   fi
 
@@ -715,7 +715,7 @@ directions = [
         "risk": "增加一次显式确认步骤。",
         "cost": "S",
         "dependencies": ["TASKS/STATE.md", "reports/<RUN_ID>/ship_state.json"],
-        "scope_hint": ["tools/ops_*.py", "tests/"],
+        "scope_hint": ["tools/*.py", "tests/"],
         "score": score_for(82, ["ready", "resume", "stop reason", "run", "state"]),
     },
     {
@@ -726,7 +726,7 @@ directions = [
         "risk": "摘要质量受输入文档完整性影响。",
         "cost": "S",
         "dependencies": ["AGENTS.md", "docs/PROJECT_GUIDE.md", "learn/<PROJECT_ID>.json"],
-        "scope_hint": ["tools/ops_*.py", "docs/PROJECT_GUIDE.md", "docs/WORKFLOW.md"],
+        "scope_hint": ["tools/*.py", "docs/PROJECT_GUIDE.md", "docs/WORKFLOW.md"],
         "score": score_for(78, ["learn", "ready", "workflow", "constitution", "evidence"]),
     },
     {
@@ -737,7 +737,7 @@ directions = [
         "risk": "需要清晰迁移边界。",
         "cost": "M",
         "dependencies": ["chatlogs/discussion/", "reports/<RUN_ID>/"],
-        "scope_hint": ["tools/ops_*.py", "docs/WORKFLOW.md", "AGENTS.md", "chatlogs/discussion/"],
+        "scope_hint": ["tools/*.py", "docs/WORKFLOW.md", "AGENTS.md", "chatlogs/discussion/"],
         "score": score_for(76, ["discussion", "report", "confirm", "evidence", "orient"]),
     },
     {
@@ -748,7 +748,7 @@ directions = [
         "risk": "初期输出可能偏模板化。",
         "cost": "M",
         "dependencies": ["orient choice", "task contract"],
-        "scope_hint": ["tools/ops_*.py", "reports/<RUN_ID>/"],
+        "scope_hint": ["tools/*.py", "reports/<RUN_ID>/"],
         "score": score_for(70, ["product", "architect", "dev", "qa", "review", "contract"]),
     },
     {
@@ -759,7 +759,7 @@ directions = [
         "risk": "规则过严会增加时间成本。",
         "cost": "M",
         "dependencies": ["reports/<RUN_ID>/summary.md", "reports/<RUN_ID>/decision.md"],
-        "scope_hint": ["tools/ops_*.py", "tests/", "docs/WORKFLOW.md"],
+        "scope_hint": ["tools/*.py", "tests/", "docs/WORKFLOW.md"],
         "score": score_for(66, ["review", "drift", "summary", "decision", "verify"]),
     },
 ]
@@ -775,7 +775,7 @@ for idx, item in enumerate(directions):
     item["priority"] = f"P{idx}"
 
 recommended = directions[0]["id"] if directions else ""
-next_cmd = f"python3 tools/ops_choose.py RUN_ID={run_id} OPTION={recommended}" if recommended else f"python3 tools/ops_choose.py RUN_ID={run_id} OPTION=<id>"
+next_cmd = f"python3 tools/choose.py RUN_ID={run_id} OPTION={recommended}" if recommended else f"python3 tools/choose.py RUN_ID={run_id} OPTION=<id>"
 
 obj = {
     "project_id": project_id,
@@ -881,8 +881,8 @@ require_council_gate() {
   council_file="$(resolve_council_file_for_run "$run_id" || true)"
   if [[ -z "$council_file" ]]; then
     echo "ERROR: council gate not satisfied." >&2
-    echo "Run: python3 tools/ops_council.py RUN_ID=${run_id}" >&2
-    echo "Then: python3 tools/ops_arbiter.py RUN_ID=${run_id}" >&2
+    echo "Run: python3 tools/council.py RUN_ID=${run_id}" >&2
+    echo "Then: python3 tools/arbiter.py RUN_ID=${run_id}" >&2
     exit 1
   fi
   COUNCIL_FILE="$council_file"
@@ -899,9 +899,9 @@ require_direction_gate() {
   choice_file="reports/${run_id}/orient_choice.json"
   if [[ ! -f "$choice_file" ]]; then
     echo "ERROR: direction gate not satisfied." >&2
-    echo "Run: python3 tools/ops_orient.py RUN_ID=${run_id}" >&2
-    echo "Then: python3 tools/ops_choose.py RUN_ID=${run_id} OPTION=<id>" >&2
-    echo "Then retry: bash tools/ops_legacy.sh do queue-next" >&2
+    echo "Run: python3 tools/orient.py RUN_ID=${run_id}" >&2
+    echo "Then: python3 tools/choose.py RUN_ID=${run_id} OPTION=<id>" >&2
+    echo "Then retry: bash tools/legacy.sh do queue-next" >&2
     exit 1
   fi
   DIRECTION_CHOICE_FILE="$choice_file"
@@ -918,9 +918,9 @@ require_execution_contract_gate() {
   file="reports/${run_id}/execution_contract.json"
   if [[ ! -f "$file" ]]; then
     echo "ERROR: execution-contract gate not satisfied." >&2
-    echo "Run: python3 tools/ops_arbiter.py RUN_ID=${run_id}" >&2
-    echo "Then: python3 tools/ops_slice.py RUN_ID=${run_id}" >&2
-    echo "Then retry: bash tools/ops_legacy.sh do queue-next" >&2
+    echo "Run: python3 tools/arbiter.py RUN_ID=${run_id}" >&2
+    echo "Then: python3 tools/slice_task.py RUN_ID=${run_id}" >&2
+    echo "Then retry: bash tools/legacy.sh do queue-next" >&2
     exit 1
   fi
   EXECUTION_CONTRACT_FILE="$file"
@@ -937,8 +937,8 @@ require_slice_gate() {
   file="reports/${run_id}/slice_state.json"
   if [[ ! -f "$file" ]]; then
     echo "ERROR: slice gate not satisfied." >&2
-    echo "Run: python3 tools/ops_slice.py RUN_ID=${run_id}" >&2
-    echo "Then retry: bash tools/ops_legacy.sh do queue-next" >&2
+    echo "Run: python3 tools/slice_task.py RUN_ID=${run_id}" >&2
+    echo "Then retry: bash tools/legacy.sh do queue-next" >&2
     exit 1
   fi
   SLICE_STATE_FILE="$file"
@@ -991,7 +991,7 @@ if not isinstance(scope_hint, list):
     scope_hint = []
 scope = [clean(x).replace("`", "") for x in scope_hint if clean(x)]
 if not scope:
-    scope = ["tools/ops_*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
+    scope = ["tools/*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
 scope_line = ", ".join(f"`{x}`" for x in scope)
 
 title = f"contract-next: {title_raw}"
@@ -1256,24 +1256,24 @@ if orient_path.is_file():
     except Exception:
         recommended_option = ""
 if not learn_exists:
-    next_command = "python3 tools/ops_learn.py"
+    next_command = "python3 tools/learn.py"
 elif not ready_exists:
-    next_command = "python3 tools/ops_ready.py"
+    next_command = "python3 tools/ready.py"
 elif not choose_exists:
     if orient_path.is_file() and recommended_option:
-        next_command = f"python3 tools/ops_choose.py RUN_ID={run_id} OPTION={recommended_option}"
+        next_command = f"python3 tools/choose.py RUN_ID={run_id} OPTION={recommended_option}"
     elif orient_path.is_file():
-        next_command = f"python3 tools/ops_choose.py RUN_ID={run_id} OPTION=<id>"
+        next_command = f"python3 tools/choose.py RUN_ID={run_id} OPTION=<id>"
     else:
-        next_command = f"python3 tools/ops_orient.py RUN_ID={run_id}"
+        next_command = f"python3 tools/orient.py RUN_ID={run_id}"
 elif not council_exists:
-    next_command = f"python3 tools/ops_council.py RUN_ID={run_id}"
+    next_command = f"python3 tools/council.py RUN_ID={run_id}"
 elif not execution_contract_exists:
-    next_command = f"python3 tools/ops_arbiter.py RUN_ID={run_id}"
+    next_command = f"python3 tools/arbiter.py RUN_ID={run_id}"
 elif not slice_exists:
-    next_command = f"python3 tools/ops_slice.py RUN_ID={run_id}"
+    next_command = f"python3 tools/slice_task.py RUN_ID={run_id}"
 else:
-    next_command = "bash tools/ops_legacy.sh do queue-next"
+    next_command = "bash tools/legacy.sh do queue-next"
 
 decision_exists = Path(f"reports/{run_id}/decision.md").is_file()
 summary_exists = Path(f"reports/{run_id}/summary.md").is_file()
@@ -1317,9 +1317,9 @@ obj = {
     },
     "next_command": next_command,
     "next_command_low_friction": (
-        f"bash tools/ops_legacy.sh execute RUN_ID={run_id}"
+        f"bash tools/legacy.sh execute RUN_ID={run_id}"
         if ready_exists
-        else ("python3 tools/ops_ready.py" if learn_exists else "python3 tools/ops_learn.py")
+        else ("python3 tools/ready.py" if learn_exists else "python3 tools/learn.py")
     ),
 }
 
@@ -1381,7 +1381,7 @@ print(f"SYNC_MISSING_REQUIRED: {len(missing_required)}")
 print(f"SYNC_NEXT_COMMAND: {next_command}")
 PY
 
-  append_execution_event "$run_id" "sync" "sync_generated" "ok" "bash tools/ops_legacy.sh sync RUN_ID=${run_id}" "sync_file=${sync_file};sync_md=${sync_md}" ""
+  append_execution_event "$run_id" "sync" "sync_generated" "ok" "bash tools/legacy.sh sync RUN_ID=${run_id}" "sync_file=${sync_file};sync_md=${sync_md}" ""
   append_conversation_checkpoint "$run_id" "sync" "sync completed; report generated at ${sync_md}"
   update_state_current "$run_id" "$task_file" "$current_status" "$project_id"
   echo "SYNC_REPORT_FILE: ${sync_file}"
@@ -1397,8 +1397,8 @@ cmd_learn() {
   elif command -v python >/dev/null 2>&1; then
     py_bin="python"
   fi
-  if [[ -n "$py_bin" && -f "tools/ops_learn.py" ]]; then
-    "$py_bin" tools/ops_learn.py "$@"
+  if [[ -n "$py_bin" && -f "tools/learn.py" ]]; then
+    "$py_bin" tools/learn.py "$@"
     return $?
   fi
 
@@ -1544,7 +1544,7 @@ cmd_learn() {
     echo "LEARN_LOG_FILE: ${log_file}"
     set +e
     QF_LEARN_LOG_ACTIVE=1 QF_LEARN_LOG=0 QF_LEARN_LOG_FILE="$log_file" \
-      bash python3 tools/ops_learn.py \
+      bash python3 tools/learn.py \
         "PROJECT_ID=${project_id}" \
         "TTL_DAYS=${ttl_days}" \
         "MODEL_SYNC=${model_sync_mode}" \
@@ -1577,7 +1577,7 @@ cmd_learn() {
   elif command -v python >/dev/null 2>&1; then
     py_bin="python"
   else
-    echo "ERROR: python is required for python3 tools/ops_learn.py." >&2
+    echo "ERROR: python is required for python3 tools/learn.py." >&2
     exit 1
   fi
 
@@ -1695,7 +1695,7 @@ now = datetime.now(timezone.utc)
 expires = now + timedelta(days=max(ttl_days, 1))
 
 obj = {
-    "schema": "ops_learn.v2",
+    "schema": "learn.v2",
     "project_id": project_id,
     "scope": "project-session",
     "created_at_utc": now.isoformat(),
@@ -1730,7 +1730,7 @@ obj = {
     "context_digest": context_digest,
     "context_files": [x["path"] for x in context_entries],
     "skill_files": [x["path"] for x in skill_entries],
-    "next_command": "python3 tools/ops_ready.py",
+    "next_command": "python3 tools/ready.py",
 }
 Path(out_json).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -1909,7 +1909,7 @@ lines.append("")
 lines.append("Output requirements:")
 lines.append("- Do not run write commands.")
 lines.append("- Execute only minimal read/shell commands needed to gather evidence from the required files.")
-lines.append("- Do not call python3 tools/ops_init.py/learn/ready inside this model-sync pass.")
+lines.append("- Do not call python3 tools/init.py/learn/ready inside this model-sync pass.")
 lines.append("- Do not include markdown fences.")
 lines.append("- JSON must follow this schema exactly:")
 lines.extend(schema_lines)
@@ -2446,7 +2446,7 @@ PY
   echo "LEARN_MODEL_JSON_FILE: ${model_json_file}"
   echo "LEARN_MODEL_EVENTS_FILE: ${model_events_file}"
   echo "LEARN_MODEL_STDERR_FILE: ${model_stderr_file}"
-  echo "LEARN_NEXT_COMMAND: python3 tools/ops_ready.py"
+  echo "LEARN_NEXT_COMMAND: python3 tools/ready.py"
 }
 
 resolve_ready_field() {
@@ -2480,8 +2480,8 @@ cmd_ready() {
   elif command -v python >/dev/null 2>&1; then
     py_bin="python"
   fi
-  if [[ -n "$py_bin" && -f "tools/ops_ready.py" ]]; then
-    "$py_bin" tools/ops_ready.py "$@"
+  if [[ -n "$py_bin" && -f "tools/ready.py" ]]; then
+    "$py_bin" tools/ready.py "$@"
     return $?
   fi
 
@@ -2542,7 +2542,7 @@ cmd_ready() {
   run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "ready")"
   if [[ -z "$run_id" ]]; then
     echo "ERROR: ready requires RUN_ID (from explicit arg/env or TASKS/STATE.md CURRENT_RUN_ID)." >&2
-    echo "Usage: python3 tools/ops_ready.py [RUN_ID=<run-id>] [DECISION=resume-close|abandon-new]" >&2
+    echo "Usage: python3 tools/ready.py [RUN_ID=<run-id>] [DECISION=resume-close|abandon-new]" >&2
     exit 2
   fi
   project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "ready")"
@@ -2576,14 +2576,14 @@ cmd_ready() {
   if [[ "$require_learn" == "1" ]]; then
     learn_report_file="$(resolve_learn_file_for_project "$project_id" || true)"
     if [[ -z "$learn_report_file" && "$auto_learn" == "1" ]]; then
-      echo "LEARN_AUTO_RUN: python3 tools/ops_learn.py"
-      cmd_learn "PROJECT_ID=${project_id}"
+      echo "LEARN_AUTO_RUN: python3 tools/learn.py"
+      cmd_learn
       learn_report_file="$(resolve_learn_file_for_project "$project_id" || true)"
     fi
     if [[ -z "$learn_report_file" ]]; then
       echo "ERROR: learn gate not satisfied." >&2
-      echo "Run: python3 tools/ops_learn.py PROJECT_ID=${project_id}" >&2
-      echo "Then retry: python3 tools/ops_ready.py RUN_ID=${run_id}" >&2
+      echo "Run: python3 tools/learn.py" >&2
+      echo "Then retry: python3 tools/ready.py RUN_ID=${run_id}" >&2
       exit 1
     fi
   fi
@@ -2592,14 +2592,14 @@ cmd_ready() {
   sync_report_file="$(resolve_sync_file_for_run "$run_id" || true)"
   if [[ "$require_sync" == "1" ]]; then
     if [[ -z "$sync_report_file" && "$auto_sync" == "1" ]]; then
-      echo "SYNC_AUTO_RUN: bash tools/ops_legacy.sh sync RUN_ID=${run_id}"
+      echo "SYNC_AUTO_RUN: bash tools/legacy.sh sync RUN_ID=${run_id}"
       cmd_sync "RUN_ID=${run_id}"
       sync_report_file="$(resolve_sync_file_for_run "$run_id" || true)"
     fi
     if [[ -z "$sync_report_file" ]]; then
       echo "ERROR: sync gate not satisfied for run ${run_id}." >&2
-      echo "Run: bash tools/ops_legacy.sh sync RUN_ID=${run_id}" >&2
-      echo "Then retry: python3 tools/ops_ready.py RUN_ID=${run_id}" >&2
+      echo "Run: bash tools/legacy.sh sync RUN_ID=${run_id}" >&2
+      echo "Then retry: python3 tools/ready.py RUN_ID=${run_id}" >&2
       exit 1
     fi
   fi
@@ -2635,14 +2635,14 @@ cmd_ready() {
       echo "READY_NEEDS_DECISION: true"
       echo "READY_DECISION_REASON: unresolved run context detected for ${run_id} (CURRENT_STATUS=${state_status})"
       echo "READY_DECISION_OPTIONS: resume-close | abandon-new"
-      echo "READY_NEXT_1: bash tools/ops_legacy.sh resume RUN_ID=${run_id}"
-      echo "READY_NEXT_2: python3 tools/ops_ready.py RUN_ID=${run_id} DECISION=abandon-new"
+      echo "READY_NEXT_1: bash tools/legacy.sh resume RUN_ID=${run_id}"
+      echo "READY_NEXT_2: python3 tools/ready.py RUN_ID=${run_id} DECISION=abandon-new"
       exit 1
     fi
     case "$continue_decision" in
       resume-close)
         echo "READY_DECISION: resume-close"
-        echo "READY_NEXT_COMMAND: bash tools/ops_legacy.sh resume RUN_ID=${run_id}"
+        echo "READY_NEXT_COMMAND: bash tools/legacy.sh resume RUN_ID=${run_id}"
         exit 1
         ;;
       abandon-new)
@@ -2820,7 +2820,7 @@ obj = {
         "evidence_chain": evidence_chain,
         "session_continuity": session_handoff.get("continuity", "unknown"),
         "current_stage": current_stage,
-        "suggested_next_step": f"python3 tools/ops_orient.py RUN_ID={run_id}",
+        "suggested_next_step": f"python3 tools/orient.py RUN_ID={run_id}",
     },
 }
 Path(out).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -2889,7 +2889,7 @@ PY
   fi
 
   emit_step "ready" 10 "$ready_steps_total" "append execution/conversation checkpoints"
-  append_execution_event "$run_id" "ready" "ready_passed" "ok" "python3 tools/ops_ready.py" "ready_file=${ready_file};learn_report=${learn_report_file};sync_report=${sync_report_file};task_file=${task_file};brief=${ready_brief_md};orient=${orient_file}" ""
+  append_execution_event "$run_id" "ready" "ready_passed" "ok" "python3 tools/ready.py" "ready_file=${ready_file};learn_report=${learn_report_file};sync_report=${sync_report_file};task_file=${task_file};brief=${ready_brief_md};orient=${orient_file}" ""
   append_conversation_checkpoint "$run_id" "ready" "ready gate passed; brief=${ready_brief_md}; orient=${orient_file}"
   emit_step "ready" 11 "$ready_steps_total" "update TASKS/STATE pointer"
   update_state_current "$run_id" "$(state_field_value "CURRENT_TASK_FILE")" "active" "$project_id"
@@ -2919,8 +2919,8 @@ cmd_orient() {
   elif command -v python >/dev/null 2>&1; then
     py_bin="python"
   fi
-  if [[ -n "$py_bin" && -f "tools/ops_orient.py" ]]; then
-    "$py_bin" tools/ops_orient.py "$@"
+  if [[ -n "$py_bin" && -f "tools/orient.py" ]]; then
+    "$py_bin" tools/orient.py "$@"
     return $?
   fi
 
@@ -2975,7 +2975,7 @@ cmd_orient() {
     exit 1
   fi
 
-  append_execution_event "$run_id" "orient" "orient_generated" "ok" "python3 tools/ops_orient.py RUN_ID=${run_id}" "orient_file=${orient_file};orient_md=${orient_md}" ""
+  append_execution_event "$run_id" "orient" "orient_generated" "ok" "python3 tools/orient.py RUN_ID=${run_id}" "orient_file=${orient_file};orient_md=${orient_md}" ""
   append_conversation_checkpoint "$run_id" "orient" "orientation draft updated in chatlogs/discussion; recommended option ready for choose"
   update_state_current "$run_id" "$task_file" "$current_status" "$project_id"
   echo "ORIENT_FILE: ${orient_file}"
@@ -2991,8 +2991,8 @@ cmd_choose() {
   elif command -v python >/dev/null 2>&1; then
     py_bin="python"
   fi
-  if [[ -n "$py_bin" && -f "tools/ops_choose.py" ]]; then
-    "$py_bin" tools/ops_choose.py "$@"
+  if [[ -n "$py_bin" && -f "tools/choose.py" ]]; then
+    "$py_bin" tools/choose.py "$@"
     return $?
   fi
 
@@ -3046,7 +3046,7 @@ cmd_choose() {
   contract_md="reports/${run_id}/direction_contract.md"
   if [[ -z "$orient_file" || ! -f "$orient_file" ]]; then
     echo "ERROR: missing orientation file for run: ${run_id}" >&2
-    echo "Run: python3 tools/ops_orient.py RUN_ID=${run_id}" >&2
+    echo "Run: python3 tools/orient.py RUN_ID=${run_id}" >&2
     exit 1
   fi
 
@@ -3154,7 +3154,7 @@ contract = {
         ],
     },
     "role_reviews": role_reviews,
-    "next_command": "python3 tools/ops_council.py RUN_ID={}".format(obj.get("run_id") or ""),
+    "next_command": "python3 tools/council.py RUN_ID={}".format(obj.get("run_id") or ""),
 }
 out = {
     "project_id": project_id,
@@ -3168,7 +3168,7 @@ out = {
     "discussion_confirmed": True,
     "contract_json": contract_json,
     "contract_md": contract_md,
-    "next_command": f"python3 tools/ops_council.py RUN_ID={obj.get('run_id')}",
+    "next_command": f"python3 tools/council.py RUN_ID={obj.get('run_id')}",
 }
 Path(out_path).write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 Path(contract_json).write_text(json.dumps(contract, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -3207,13 +3207,13 @@ for gate in contract["delivery_contract"]["quality_gates"]:
     lines.append(f"- gate: {gate}")
 lines.append("")
 lines.append("## Next Command")
-lines.append(f"- `python3 tools/ops_council.py RUN_ID={obj.get('run_id')}`")
+lines.append(f"- `python3 tools/council.py RUN_ID={obj.get('run_id')}`")
 lines.append("")
 Path(contract_md).write_text("\n".join(lines), encoding="utf-8")
 
 print(f"CHOOSE_OPTION: {selected}")
 print(f"CHOOSE_TITLE: {picked.get('title', '')}")
-print(f"CHOOSE_NEXT_COMMAND: python3 tools/ops_council.py RUN_ID={obj.get('run_id')}")
+print(f"CHOOSE_NEXT_COMMAND: python3 tools/council.py RUN_ID={obj.get('run_id')}")
 print(f"CHOOSE_CONTRACT_JSON: {contract_json}")
 print(f"CHOOSE_CONTRACT_MD: {contract_md}")
 print(f"CHOOSE_PROJECT_ID: {project_id}")
@@ -3224,7 +3224,7 @@ PY
   if [[ -z "$current_status" ]]; then
     current_status="active"
   fi
-  append_execution_event "$run_id" "orient" "orient_chosen" "ok" "python3 tools/ops_choose.py RUN_ID=${run_id} OPTION=${option}" "choice_file=${choice_file};contract=${contract_json}" ""
+  append_execution_event "$run_id" "orient" "orient_chosen" "ok" "python3 tools/choose.py RUN_ID=${run_id} OPTION=${option}" "choice_file=${choice_file};contract=${contract_json}" ""
   append_conversation_checkpoint "$run_id" "choose" "direction selected and contract written; next step council"
   update_state_current "$run_id" "$task_file" "$current_status" "$project_id"
   echo "CHOOSE_FILE: ${choice_file}"
@@ -3241,8 +3241,8 @@ cmd_council() {
   elif command -v python >/dev/null 2>&1; then
     py_bin="python"
   fi
-  if [[ -n "$py_bin" && -f "tools/ops_council.py" ]]; then
-    "$py_bin" tools/ops_council.py "$@"
+  if [[ -n "$py_bin" && -f "tools/council.py" ]]; then
+    "$py_bin" tools/council.py "$@"
     return $?
   fi
 
@@ -3291,7 +3291,7 @@ cmd_council() {
   contract_json="reports/${run_id}/direction_contract.json"
   if [[ ! -f "$contract_json" ]]; then
     echo "ERROR: missing direction contract: $contract_json" >&2
-    echo "Run: python3 tools/ops_choose.py RUN_ID=${run_id} OPTION=<id>" >&2
+    echo "Run: python3 tools/choose.py RUN_ID=${run_id} OPTION=<id>" >&2
     exit 1
   fi
 
@@ -3355,7 +3355,7 @@ title = str(contract.get("selected_title", "")).strip() or "confirmed direction"
 goal = str(contract.get("execution_goal", "")).strip()
 scope = normalize_scope(contract.get("scope_hint"))
 if not scope:
-    scope = ["tools/ops_*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
+    scope = ["tools/*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
 
 delivery_contract = contract.get("delivery_contract") or {}
 quality_gates = delivery_contract.get("quality_gates") or []
@@ -3545,7 +3545,7 @@ obj = {
     "roles": roles,
     "disagreements": disagreements,
     "consensus_rule": "independent evidence review first, arbiter convergence second",
-    "next_command": f"python3 tools/ops_arbiter.py RUN_ID={run_id}",
+    "next_command": f"python3 tools/arbiter.py RUN_ID={run_id}",
 }
 Path(out_json).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -3583,14 +3583,14 @@ else:
     lines.append("- none")
 lines.append("")
 lines.append("## Next Command")
-lines.append(f"- `python3 tools/ops_arbiter.py RUN_ID={run_id}`")
+lines.append(f"- `python3 tools/arbiter.py RUN_ID={run_id}`")
 lines.append("")
 Path(out_md).write_text("\n".join(lines), encoding="utf-8")
 
 print(f"COUNCIL_ROLES: {len(roles)}")
 print(f"COUNCIL_WARNINGS: {warn_count}")
 print(f"COUNCIL_BLOCKERS: {block_count}")
-print(f"COUNCIL_NEXT_COMMAND: python3 tools/ops_arbiter.py RUN_ID={run_id}")
+print(f"COUNCIL_NEXT_COMMAND: python3 tools/arbiter.py RUN_ID={run_id}")
 print(f"COUNCIL_PROJECT_ID: {project_id}")
 PY
 
@@ -3599,7 +3599,7 @@ PY
   if [[ -z "$current_status" ]]; then
     current_status="active"
   fi
-  append_execution_event "$run_id" "council" "council_generated" "ok" "python3 tools/ops_council.py RUN_ID=${run_id}" "choice_file=${choice_file};council=${council_json}" ""
+  append_execution_event "$run_id" "council" "council_generated" "ok" "python3 tools/council.py RUN_ID=${run_id}" "choice_file=${choice_file};council=${council_json}" ""
   append_conversation_checkpoint "$run_id" "council" "council reviews generated; next step arbiter"
   update_state_current "$run_id" "$task_file" "$current_status" "$project_id"
   echo "COUNCIL_FILE_JSON: ${council_json}"
@@ -3615,8 +3615,8 @@ cmd_arbiter() {
   elif command -v python >/dev/null 2>&1; then
     py_bin="python"
   fi
-  if [[ -n "$py_bin" && -f "tools/ops_arbiter.py" ]]; then
-    "$py_bin" tools/ops_arbiter.py "$@"
+  if [[ -n "$py_bin" && -f "tools/arbiter.py" ]]; then
+    "$py_bin" tools/arbiter.py "$@"
     return $?
   fi
 
@@ -3665,7 +3665,7 @@ cmd_arbiter() {
   direction_contract="reports/${run_id}/direction_contract.json"
   if [[ ! -f "$direction_contract" ]]; then
     echo "ERROR: missing direction contract: $direction_contract" >&2
-    echo "Run: python3 tools/ops_choose.py RUN_ID=${run_id} OPTION=<id>" >&2
+    echo "Run: python3 tools/choose.py RUN_ID=${run_id} OPTION=<id>" >&2
     exit 1
   fi
 
@@ -3717,7 +3717,7 @@ council = read_json(council_file)
 
 scope = normalize_scope(direction.get("scope_hint"))
 if not scope:
-    scope = ["tools/ops_*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
+    scope = ["tools/*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
 
 title = str(direction.get("selected_title", "")).strip() or "confirmed direction"
 goal = str(direction.get("execution_goal", "")).strip() or "Deliver the confirmed direction with minimal safe tasks."
@@ -3789,7 +3789,7 @@ if blockers or warnings or role_conditions:
             "task_id": "slice-2",
             "title": f"{title} - close council conditions",
             "goal": "Resolve cross-role concerns raised by council before/while executing.",
-            "scope": ["tools/ops_*.py", "tests/", "chatlogs/discussion/", "reports/{RUN_ID}/"],
+            "scope": ["tools/*.py", "tests/", "chatlogs/discussion/", "reports/{RUN_ID}/"],
             "acceptance": concern_acceptance or ["no open council conditions"],
         }
     )
@@ -3799,7 +3799,7 @@ else:
             "task_id": "slice-2",
             "title": f"{title} - enforce guardrail tests",
             "goal": "Add or refine guardrail tests to lock behavior of the selected direction.",
-            "scope": ["tests/", "tools/ops_*.py"],
+            "scope": ["tests/", "tools/*.py"],
             "acceptance": [
                 "critical path regression tests added or refreshed",
                 "failure-path assertions are explicit and actionable",
@@ -3815,7 +3815,7 @@ tasks.append(
         "scope": ["AGENTS.md", "docs/WORKFLOW.md", "chatlogs/discussion/", "reports/{RUN_ID}/"],
         "acceptance": [
             "owner docs updated in same run when behavior/rules changed",
-            "bash tools/ops_legacy.sh review STRICT=1 AUTO_FIX=1 passes",
+            "bash tools/legacy.sh review STRICT=1 AUTO_FIX=1 passes",
             "decision records accepted tradeoffs and residual risks",
         ],
     }
@@ -3841,7 +3841,7 @@ obj = {
     },
     "role_conditions": role_conditions,
     "tasks": tasks,
-    "next_command": f"python3 tools/ops_slice.py RUN_ID={run_id}",
+    "next_command": f"python3 tools/slice_task.py RUN_ID={run_id}",
 }
 Path(out_json).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -3876,14 +3876,14 @@ for t in tasks:
         lines.append(f"    - {a}")
 lines.append("")
 lines.append("## Next Command")
-lines.append(f"- `python3 tools/ops_slice.py RUN_ID={run_id}`")
+lines.append(f"- `python3 tools/slice_task.py RUN_ID={run_id}`")
 lines.append("")
 Path(out_md).write_text("\n".join(lines), encoding="utf-8")
 
 print(f"ARBITER_TASKS: {len(tasks)}")
 print(f"ARBITER_BLOCKERS: {len(blockers)}")
 print(f"ARBITER_WARNINGS: {len(warnings)}")
-print(f"ARBITER_NEXT_COMMAND: python3 tools/ops_slice.py RUN_ID={run_id}")
+print(f"ARBITER_NEXT_COMMAND: python3 tools/slice_task.py RUN_ID={run_id}")
 print(f"ARBITER_PROJECT_ID: {project_id}")
 PY
 
@@ -3892,7 +3892,7 @@ PY
   if [[ -z "$current_status" ]]; then
     current_status="active"
   fi
-  append_execution_event "$run_id" "arbiter" "arbiter_generated" "ok" "python3 tools/ops_arbiter.py RUN_ID=${run_id}" "council_file=${council_file};execution_contract=${out_json}" ""
+  append_execution_event "$run_id" "arbiter" "arbiter_generated" "ok" "python3 tools/arbiter.py RUN_ID=${run_id}" "council_file=${council_file};execution_contract=${out_json}" ""
   append_conversation_checkpoint "$run_id" "arbiter" "execution contract generated; next step slice"
   update_state_current "$run_id" "$task_file" "$current_status" "$project_id"
   echo "EXECUTION_CONTRACT_JSON: ${out_json}"
@@ -3908,8 +3908,8 @@ cmd_slice() {
   elif command -v python >/dev/null 2>&1; then
     py_bin="python"
   fi
-  if [[ -n "$py_bin" && -f "tools/ops_slice.py" ]]; then
-    "$py_bin" tools/ops_slice.py "$@"
+  if [[ -n "$py_bin" && -f "tools/slice_task.py" ]]; then
+    "$py_bin" tools/slice_task.py "$@"
     return $?
   fi
 
@@ -4012,7 +4012,7 @@ for raw in tasks:
         scope = []
     scope = [str(x).strip().replace("`", "") for x in scope if str(x).strip()]
     if not scope:
-        scope = ["tools/ops_*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
+        scope = ["tools/*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
     scope_line = ", ".join(f"`{x}`" for x in scope)
     acceptance = raw.get("acceptance") or []
     if not isinstance(acceptance, list):
@@ -4056,14 +4056,14 @@ state = {
     "tasks_total": len(tasks),
     "queue_inserted": inserted,
     "queue_existing": existing,
-    "next_command": "bash tools/ops_legacy.sh do queue-next",
+    "next_command": "bash tools/legacy.sh do queue-next",
 }
 Path(out_json).write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 print(f"SLICE_TASKS_TOTAL: {len(tasks)}")
 print(f"SLICE_QUEUE_INSERTED: {inserted}")
 print(f"SLICE_QUEUE_EXISTING: {existing}")
-print("SLICE_NEXT_COMMAND: bash tools/ops_legacy.sh do queue-next")
+print("SLICE_NEXT_COMMAND: bash tools/legacy.sh do queue-next")
 print(f"SLICE_PROJECT_ID: {project_id}")
 PY
 
@@ -4072,7 +4072,7 @@ PY
   if [[ -z "$current_status" ]]; then
     current_status="active"
   fi
-  append_execution_event "$run_id" "slice" "slice_generated" "ok" "python3 tools/ops_slice.py RUN_ID=${run_id}" "execution_contract=${execution_contract};slice_state=${out_json}" ""
+  append_execution_event "$run_id" "slice" "slice_generated" "ok" "python3 tools/slice_task.py RUN_ID=${run_id}" "execution_contract=${execution_contract};slice_state=${out_json}" ""
   append_conversation_checkpoint "$run_id" "slice" "execution contract sliced into queue tasks; next step do"
   update_state_current "$run_id" "$task_file" "$current_status" "$project_id"
   echo "SLICE_STATE_FILE: ${out_json}"
@@ -4178,7 +4178,7 @@ cmd_execute() {
     run_id="$(basename "$(dirname "$ready_file")")"
   fi
 
-  append_execution_event "$run_id" "execute" "execute_start" "ok" "bash tools/ops_legacy.sh execute RUN_ID=${run_id}" "project_id=${project_id};option=${option};auto_choose=${auto_choose};confirm_contract=${confirm_contract};auto_confirm_contract=${auto_confirm_contract};target=${target}" ""
+  append_execution_event "$run_id" "execute" "execute_start" "ok" "bash tools/legacy.sh execute RUN_ID=${run_id}" "project_id=${project_id};option=${option};auto_choose=${auto_choose};confirm_contract=${confirm_contract};auto_confirm_contract=${auto_confirm_contract};target=${target}" ""
 
   emit_step "execute" 2 "$execute_steps_total" "ensure orientation draft"
   orient_file="$(resolve_orient_file_for_run "$run_id" || true)"
@@ -4188,7 +4188,7 @@ cmd_execute() {
     orient_file="$(resolve_orient_file_for_run "$run_id" || true)"
   fi
   if [[ -z "$orient_file" || ! -f "$orient_file" ]]; then
-    append_execution_event "$run_id" "execute" "execute_orient_missing" "fail" "bash tools/ops_legacy.sh execute RUN_ID=${run_id}" "" "orient file missing after orient step"
+    append_execution_event "$run_id" "execute" "execute_orient_missing" "fail" "bash tools/legacy.sh execute RUN_ID=${run_id}" "" "orient file missing after orient step"
     echo "ERROR: execute cannot continue because orient file is missing." >&2
     exit 1
   fi
@@ -4227,11 +4227,11 @@ PY
         echo "EXECUTE_NEEDS_OPTION: true"
         if [[ -n "$recommended" ]]; then
           echo "EXECUTE_RECOMMENDED_OPTION: ${recommended}"
-          echo "EXECUTE_NEXT_COMMAND: python3 tools/ops_choose.py RUN_ID=${run_id} OPTION=${recommended}"
+          echo "EXECUTE_NEXT_COMMAND: python3 tools/choose.py RUN_ID=${run_id} OPTION=${recommended}"
         else
-          echo "EXECUTE_NEXT_COMMAND: python3 tools/ops_choose.py RUN_ID=${run_id} OPTION=<id>"
+          echo "EXECUTE_NEXT_COMMAND: python3 tools/choose.py RUN_ID=${run_id} OPTION=<id>"
         fi
-        append_execution_event "$run_id" "execute" "execute_wait_option" "fail" "bash tools/ops_legacy.sh execute RUN_ID=${run_id}" "recommended=${recommended}" "missing option confirmation"
+        append_execution_event "$run_id" "execute" "execute_wait_option" "fail" "bash tools/legacy.sh execute RUN_ID=${run_id}" "recommended=${recommended}" "missing option confirmation"
         exit 1
       fi
     fi
@@ -4292,21 +4292,21 @@ PY
 
   if [[ "$target" == "do" && ! -f "$contract_confirm_file" ]]; then
     echo "EXECUTE_NEEDS_CONTRACT_CONFIRM: true"
-    echo "EXECUTE_NEXT_COMMAND: bash tools/ops_legacy.sh execute RUN_ID=${run_id} PROJECT_ID=${project_id} CONFIRM_CONTRACT=1 TARGET=do"
-    append_execution_event "$run_id" "execute" "execute_wait_contract_confirm" "fail" "bash tools/ops_legacy.sh execute RUN_ID=${run_id}" "project_id=${project_id};contract_confirm_file=${contract_confirm_file}" "missing execution contract confirmation"
+    echo "EXECUTE_NEXT_COMMAND: bash tools/legacy.sh execute RUN_ID=${run_id} PROJECT_ID=${project_id} CONFIRM_CONTRACT=1 TARGET=do"
+    append_execution_event "$run_id" "execute" "execute_wait_contract_confirm" "fail" "bash tools/legacy.sh execute RUN_ID=${run_id}" "project_id=${project_id};contract_confirm_file=${contract_confirm_file}" "missing execution contract confirmation"
     exit 1
   fi
 
   if [[ "$target" == "prepare" ]]; then
-    append_execution_event "$run_id" "execute" "execute_prepared" "ok" "bash tools/ops_legacy.sh execute RUN_ID=${run_id} TARGET=prepare" "project_id=${project_id};contract_confirm_file=${contract_confirm_file}" ""
+    append_execution_event "$run_id" "execute" "execute_prepared" "ok" "bash tools/legacy.sh execute RUN_ID=${run_id} TARGET=prepare" "project_id=${project_id};contract_confirm_file=${contract_confirm_file}" ""
     echo "EXECUTE_STATUS: prepared"
-    echo "EXECUTE_NEXT_COMMAND: bash tools/ops_legacy.sh do queue-next"
+    echo "EXECUTE_NEXT_COMMAND: bash tools/legacy.sh do queue-next"
     return 0
   fi
 
   echo "EXECUTE_STEP: do"
   RUN_ID="$run_id" cmd_do "queue-next"
-  append_execution_event "$run_id" "execute" "execute_done" "ok" "bash tools/ops_legacy.sh execute RUN_ID=${run_id}" "project_id=${project_id};contract_confirm_file=${contract_confirm_file}" ""
+  append_execution_event "$run_id" "execute" "execute_done" "ok" "bash tools/legacy.sh execute RUN_ID=${run_id}" "project_id=${project_id};contract_confirm_file=${contract_confirm_file}" ""
 }
 
 cmd_discuss() {
@@ -4585,7 +4585,7 @@ else:
     add_check("task_contract", "warn", f"task file missing or unknown: {task_file or '(empty)'}")
 
 status = "pass" if not blockers else "fail"
-next_cmd = f"bash tools/ops_legacy.sh do queue-next" if status == "pass" else f"bash tools/ops_legacy.sh snapshot RUN_ID={run_id} NOTE=\"review blockers\""
+next_cmd = f"bash tools/legacy.sh do queue-next" if status == "pass" else f"bash tools/legacy.sh snapshot RUN_ID={run_id} NOTE=\"review blockers\""
 
 obj = {
     "run_id": run_id,
@@ -4670,12 +4670,12 @@ PY
   printf "%s\n" "$output"
 
   if [[ "$rc" -ne 0 ]]; then
-    append_execution_event "$run_id" "review" "review_failed" "fail" "bash tools/ops_legacy.sh review RUN_ID=${run_id} AUTO_FIX=${auto_fix} STRICT=${strict}" "task_file=${task_file}" "$output"
+    append_execution_event "$run_id" "review" "review_failed" "fail" "bash tools/legacy.sh review RUN_ID=${run_id} AUTO_FIX=${auto_fix} STRICT=${strict}" "task_file=${task_file}" "$output"
     append_conversation_checkpoint "$run_id" "review" "review failed; see drift_review.md"
     return "$rc"
   fi
 
-  append_execution_event "$run_id" "review" "review_passed" "ok" "bash tools/ops_legacy.sh review RUN_ID=${run_id} AUTO_FIX=${auto_fix} STRICT=${strict}" "task_file=${task_file}" ""
+  append_execution_event "$run_id" "review" "review_passed" "ok" "bash tools/legacy.sh review RUN_ID=${run_id} AUTO_FIX=${auto_fix} STRICT=${strict}" "task_file=${task_file}" ""
   append_conversation_checkpoint "$run_id" "review" "review completed; drift report updated"
   return 0
 }
@@ -4875,22 +4875,22 @@ slice_state_file = f"reports/{run_id}/slice_state.json"
 orient_file = f"chatlogs/discussion/{run_id}/orient.json"
 
 if not ready:
-    next_cmd = "python3 tools/ops_ready.py"
+    next_cmd = "python3 tools/ready.py"
 elif ship and ship.get("last_error"):
-    next_cmd = "bash tools/ops_legacy.sh resume"
+    next_cmd = "bash tools/legacy.sh resume"
 elif not os.path.exists(choice_file):
     if os.path.exists(orient_file):
-        next_cmd = f"python3 tools/ops_choose.py RUN_ID={run_id} OPTION=<id>"
+        next_cmd = f"python3 tools/choose.py RUN_ID={run_id} OPTION=<id>"
     else:
-        next_cmd = f"python3 tools/ops_orient.py RUN_ID={run_id}"
+        next_cmd = f"python3 tools/orient.py RUN_ID={run_id}"
 elif not os.path.exists(council_file):
-    next_cmd = f"python3 tools/ops_council.py RUN_ID={run_id}"
+    next_cmd = f"python3 tools/council.py RUN_ID={run_id}"
 elif not os.path.exists(execution_contract_file):
-    next_cmd = f"python3 tools/ops_arbiter.py RUN_ID={run_id}"
+    next_cmd = f"python3 tools/arbiter.py RUN_ID={run_id}"
 elif not os.path.exists(slice_state_file):
-    next_cmd = f"python3 tools/ops_slice.py RUN_ID={run_id}"
+    next_cmd = f"python3 tools/slice_task.py RUN_ID={run_id}"
 else:
-    next_cmd = "bash tools/ops_legacy.sh do queue-next"
+    next_cmd = "bash tools/legacy.sh do queue-next"
 
 missing = []
 for p in (ready_file, convo_file, exec_file, ship_file):
@@ -4942,9 +4942,9 @@ elif not os.path.exists(ship_file):
 
 thinking_lines = []
 if any((x.get("status") == "fail") for x in exec_tail):
-    thinking_lines.append("- 最近出现失败事件，建议先 `bash tools/ops_legacy.sh resume` 处理恢复，再继续新任务。")
+    thinking_lines.append("- 最近出现失败事件，建议先 `bash tools/legacy.sh resume` 处理恢复，再继续新任务。")
 elif missing:
-    thinking_lines.append("- 接班信息有缺口；后续在关键决策点执行 `bash tools/ops_legacy.sh snapshot NOTE=\"...\"` 提升连续性。")
+    thinking_lines.append("- 接班信息有缺口；后续在关键决策点执行 `bash tools/legacy.sh snapshot NOTE=\"...\"` 提升连续性。")
 else:
     thinking_lines.append("- 当前信息链完整，建议保持“短总结 + 证据链接”节奏，避免文档噪音。")
 
@@ -4977,7 +4977,7 @@ with open(out_file, "w", encoding="utf-8") as f:
     f.write("\n".join(lines) + "\n")
 PY
 
-  append_execution_event "$run_id" "handoff" "handoff_generated" "ok" "bash tools/ops_legacy.sh handoff RUN_ID=${run_id}" "handoff_file=${out_file}" ""
+  append_execution_event "$run_id" "handoff" "handoff_generated" "ok" "bash tools/legacy.sh handoff RUN_ID=${run_id}" "handoff_file=${out_file}" ""
   current_status="$(state_field_value "CURRENT_STATUS")"
   if [[ -z "$current_status" ]]; then
     current_status="active"
@@ -5336,8 +5336,8 @@ require_ready_gate() {
     if [[ -n "$requested_run_id" ]]; then
       echo "Expected ready marker: reports/${requested_run_id}/ready.json" >&2
     fi
-    echo "Run: python3 tools/ops_ready.py" >&2
-    echo "Then retry: bash tools/ops_legacy.sh do queue-next" >&2
+    echo "Run: python3 tools/ready.py" >&2
+    echo "Then retry: bash tools/legacy.sh do queue-next" >&2
     exit 1
   fi
   REQUIRED_READY_FILE="$ready_file"
@@ -5378,8 +5378,8 @@ cmd_init() {
   elif command -v python >/dev/null 2>&1; then
     py_bin="python"
   fi
-  if [[ -n "$py_bin" && -f "tools/ops_init.py" ]]; then
-    "$py_bin" tools/ops_init.py "$@"
+  if [[ -n "$py_bin" && -f "tools/init.py" ]]; then
+    "$py_bin" tools/init.py "$@"
     return $?
   fi
 
@@ -5403,7 +5403,7 @@ cmd_init() {
   local git_dir=""
   local git_op_reason=""
   local init_status="ok"
-  local next_cmd="python3 tools/ops_learn.py"
+  local next_cmd="python3 tools/learn.py"
   local reason_codes_text="none"
   local worktree_dirty=0
   local staged_count=0
@@ -5585,9 +5585,9 @@ cmd_init() {
   fi
   if [[ "$init_status" != "ok" ]]; then
     if [[ -n "$current_run_id" ]]; then
-      next_cmd="bash tools/ops_legacy.sh resume RUN_ID=${current_run_id}"
+      next_cmd="bash tools/legacy.sh resume RUN_ID=${current_run_id}"
     else
-      next_cmd="bash tools/ops_legacy.sh resume"
+      next_cmd="bash tools/legacy.sh resume"
     fi
   fi
   echo "INIT_STATUS: ${init_status}"
@@ -5604,10 +5604,10 @@ cmd_init() {
   fi
   if [[ "$init_mode" == "check" ]]; then
     echo "== 建议流程 =="
-    echo "1) python3 tools/ops_learn.py"
-    echo "2) python3 tools/ops_ready.py"
-    echo "3) bash tools/ops_legacy.sh discuss TARGET=prepare"
-    echo "4) bash tools/ops_legacy.sh do queue-next"
+    echo "1) python3 tools/learn.py"
+    echo "2) python3 tools/ready.py"
+    echo "3) bash tools/legacy.sh discuss TARGET=prepare"
+    echo "4) bash tools/legacy.sh do queue-next"
   else
     echo "== 状态查询完成 =="
   fi
@@ -5618,11 +5618,11 @@ cmd_plan() {
   local explicit_run_id="${RUN_ID:-}"
   local run_id=""
   local proposal_file="${TASK_PLAN_OUTPUT_FILE:-TASKS/TODO_PROPOSAL.md}"
-  local proposal_copy="${QF_PLAN_COPY_PATH:-/tmp/ops_todo_proposal.md}"
+  local proposal_copy="${QF_PLAN_COPY_PATH:-/tmp/todo_proposal.md}"
 
   run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "plan")"
   if [[ -z "$run_id" ]]; then
-    run_id="run-$(date +%Y-%m-%d)-ops-plan"
+    run_id="run-$(date +%Y-%m-%d)-plan"
   fi
 
   auto_stash_if_dirty "plan"
@@ -5684,7 +5684,7 @@ cmd_do() {
   if [[ -n "$ready_file" ]]; then
     run_id="$(basename "$(dirname "$ready_file")")"
   elif [[ -z "$run_id" ]]; then
-    run_id="run-$(date +%Y-%m-%d)-ops-do"
+    run_id="run-$(date +%Y-%m-%d)-do"
   fi
   require_direction_gate "$run_id"
   choice_file="$DIRECTION_CHOICE_FILE"
@@ -5696,11 +5696,11 @@ cmd_do() {
   slice_state="$SLICE_STATE_FILE"
   if is_dirty; then
     echo "DO_SYNC_SKIPPED: working tree dirty; keep in-run artifacts untouched."
-    append_execution_event "$run_id" "do" "do_sync_skipped_dirty" "ok" "bash tools/ops_legacy.sh do queue-next" "reason=dirty_worktree" ""
+    append_execution_event "$run_id" "do" "do_sync_skipped_dirty" "ok" "bash tools/legacy.sh do queue-next" "reason=dirty_worktree" ""
   else
     sync_main "$run_id"
   fi
-  append_execution_event "$run_id" "do" "do_start" "ok" "bash tools/ops_legacy.sh do queue-next" "ready_file=${ready_file};choice_file=${choice_file};council_file=${council_file};execution_contract=${execution_contract};slice_state=${slice_state}" ""
+  append_execution_event "$run_id" "do" "do_start" "ok" "bash tools/legacy.sh do queue-next" "ready_file=${ready_file};choice_file=${choice_file};council_file=${council_file};execution_contract=${execution_contract};slice_state=${slice_state}" ""
 
   set +e
   output="$(bash tools/task.sh --next 2>&1)"
@@ -5710,7 +5710,7 @@ cmd_do() {
     printf "%s\n" "$output" >&2
     append_execution_event "$run_id" "do" "do_pick_failed" "fail" "bash tools/task.sh --next" "" "$output"
     if [[ "$output" == *"QUEUE 中没有未完成项"* ]]; then
-      echo "下一步建议：python3 tools/ops_orient.py RUN_ID=${run_id}" >&2
+      echo "下一步建议：python3 tools/orient.py RUN_ID=${run_id}" >&2
     fi
     print_resume_cmd "$run_id"
     exit "$rc"
@@ -5740,7 +5740,7 @@ cmd_do() {
   fi
 
   if [[ "${QF_DO_AUTO_REVIEW:-1}" == "1" ]]; then
-    echo "AUTO_REVIEW: bash tools/ops_legacy.sh review RUN_ID=${review_run_id} AUTO_FIX=${QF_DO_REVIEW_AUTO_FIX:-1}"
+    echo "AUTO_REVIEW: bash tools/legacy.sh review RUN_ID=${review_run_id} AUTO_FIX=${QF_DO_REVIEW_AUTO_FIX:-1}"
     set +e
     review_output="$(cmd_review "RUN_ID=${review_run_id}" "AUTO_FIX=${QF_DO_REVIEW_AUTO_FIX:-1}" "NON_BLOCKING=1" 2>&1)"
     review_rc=$?
@@ -5749,18 +5749,18 @@ cmd_do() {
       printf "%s\n" "$review_output"
     fi
     if [[ "$review_rc" -ne 0 ]]; then
-      append_execution_event "$review_run_id" "do" "do_auto_review_failed" "fail" "bash tools/ops_legacy.sh review RUN_ID=${review_run_id}" "" "$review_output"
+      append_execution_event "$review_run_id" "do" "do_auto_review_failed" "fail" "bash tools/legacy.sh review RUN_ID=${review_run_id}" "" "$review_output"
       echo "WARN: auto review failed (non-blocking)."
     else
-      append_execution_event "$review_run_id" "do" "do_auto_review_done" "ok" "bash tools/ops_legacy.sh review RUN_ID=${review_run_id}" "" ""
+      append_execution_event "$review_run_id" "do" "do_auto_review_done" "ok" "bash tools/legacy.sh review RUN_ID=${review_run_id}" "" ""
     fi
   fi
 }
 
-is_ops_stash_cleanup_candidate() {
+is_legacy_stash_cleanup_candidate() {
   local subject="${1:-}"
   case "$subject" in
-    *": ship-wip-"*|*": ops-init-wip-"*|*": resume-cleanup-run-"*|*": ops-resume-cleanup-run-"*|*": tmp-ship-cleanup-"*)
+    *": ship-wip-"*|*": init-wip-"*|*": ops-init-wip-"*|*": resume-cleanup-run-"*|*": legacy-resume-cleanup-run-"*|*": ops-resume-cleanup-run-"*|*": tmp-ship-cleanup-"*)
       return 0
       ;;
     *)
@@ -5811,7 +5811,7 @@ cmd_stash_clean() {
 
   while IFS='|' read -r ref subject; do
     [[ -z "$ref" ]] && continue
-    if is_ops_stash_cleanup_candidate "$subject"; then
+    if is_legacy_stash_cleanup_candidate "$subject"; then
       refs+=("$ref")
       subjects+=("$subject")
     fi
@@ -5837,7 +5837,7 @@ cmd_stash_clean() {
   done
 
   if [[ "$mode" != "apply" ]]; then
-    echo "next: bash tools/ops_legacy.sh stash-clean apply KEEP=${keep_latest}"
+    echo "next: bash tools/legacy.sh stash-clean apply KEEP=${keep_latest}"
     return 0
   fi
 
@@ -5846,7 +5846,7 @@ cmd_stash_clean() {
     return 0
   fi
 
-  command_line="bash tools/ops_legacy.sh stash-clean apply KEEP=${keep_latest}"
+  command_line="bash tools/legacy.sh stash-clean apply KEEP=${keep_latest}"
   run_id="$(resolve_state_current_run_id || true)"
 
   # Drop from oldest to newest to avoid stash index shifting issues.
@@ -5894,7 +5894,7 @@ cmd_exam_auto_fill_answer() {
   elif command -v python >/dev/null 2>&1; then
     py_bin="python"
   else
-    echo "ERROR: python is required for bash tools/ops_legacy.sh exam-auto." >&2
+    echo "ERROR: python is required for bash tools/legacy.sh exam-auto." >&2
     exit 1
   fi
 
@@ -5926,7 +5926,7 @@ text = f"""## 问答 1：项目使命、背景、目标、最终结果、开发�
 ## 问答 4：GPT 网页端（大脑）与 Codex CLI（手脚）如何同频，是否一致，操作顺序与优化
 - 回答：原则一致但职责不同：GPT做策略/评审，Codex做执行/验证。顺序是 init -> learn -> ready -> discuss/execute -> review/ship。建议优化 learn 的模型同频证据和失败语义。
 - 同频操作指南路径：`docs/WORKFLOW.md`、`docs/PROJECT_GUIDE.md`
-- 证据文件路径：`AGENTS.md`、`tools/ops_*.py_*.py`、`reports/{run_id}/conversation.md`
+- 证据文件路径：`AGENTS.md`、`tools/*.py`、`reports/{run_id}/conversation.md`
 
 ## 问答 5：当前项目“宪法”是什么、是否合理、可优化点
 - 回答：宪法是 AGENTS.md 的硬规则，核心是 task syscall、evidence memory、gate first、doc freshness。总体合理，需持续优化同频可见性和自动化体验。
@@ -5952,12 +5952,12 @@ text = f"""## 问答 1：项目使命、背景、目标、最终结果、开发�
 ## 问答 9：基建项目“讨论”应使用的流程
 - 回答：采用 orient -> choose -> council -> arbiter -> slice 的讨论收敛流，再进入 do。
 - 操作指南路径：`docs/WORKFLOW.md`
-- 证据文件路径：`tools/ops_*.py_*.py`、`chatlogs/discussion/{run_id}/`
+- 证据文件路径：`tools/*.py`、`chatlogs/discussion/{run_id}/`
 
 ## 问答 10：基建项目“代码实施”流程、角色定义、独立思考保障、当前实现状态
 - 回答：实施流程是 do + verify + review + ship；角色为产品/架构/研发/测试，独立思考通过 council 分角色输出与 arbiter 统一裁决保障。
 - 操作手册路径：`docs/WORKFLOW.md`
-- 证据文件路径：`tools/ops_*.py_*.py`、`chatlogs/discussion/{run_id}/council.json`
+- 证据文件路径：`tools/*.py`、`chatlogs/discussion/{run_id}/council.json`
 
 ## 问答 11：task / pr / run / project 等概念与生命周期管理
 - 回答：task 是合同，run 是证据命名空间，pr 是交付单元，project 是上层项目命名空间；生命周期由 STATE/QUEUE 与 reports 协同推进。
@@ -5967,8 +5967,8 @@ text = f"""## 问答 1：项目使命、背景、目标、最终结果、开发�
 ## 问答 12：准备工作完成后，需求方向讨论从哪一步开始，如何保存与多角色协作
 - 回答：从 orient 开始；方向保存于 `chatlogs/discussion/<RUN_ID>/orient.*` 与 `reports/<RUN_ID>/orient_choice.json`；多角色通过 council/arbiter 收敛。
 - 方向保存位置：`chatlogs/discussion/{run_id}/orient.json`、`reports/{run_id}/orient_choice.json`
-- 讨论流程与入口：`bash tools/ops_legacy.sh discuss` 或分步命令
-- 证据文件路径：`docs/WORKFLOW.md`、`tools/ops_*.py_*.py`
+- 讨论流程与入口：`bash tools/legacy.sh discuss` 或分步命令
+- 证据文件路径：`docs/WORKFLOW.md`、`tools/*.py`
 
 ## 问答 13：分支与代码管理策略，当前是否满足需求
 - 回答：策略是一 task 一分支一 PR，title 含 RUN_ID，body 包含 Why/What/Verify/Evidence。当前满足基础需求，但仍需继续降低 ship 摩擦。
@@ -5983,7 +5983,7 @@ text = f"""## 问答 1：项目使命、背景、目标、最终结果、开发�
 ## 问答 15：如果目标是“简单、爽用、自动化高”，当前必须优化的点
 - 回答：优先优化 learn 的模型同频可见锚点、run 级事件流审计稳定性、讨论与执行组合入口体验，以及文档自动更新门禁。
 - 优先级与理由：P0=learn同频可信度；P1=单入口编排体验；P2=细节脚本重构。
-- 证据文件路径：`tools/ops_*.py_*.py`、`docs/WORKFLOW.md`、`AGENTS.md`
+- 证据文件路径：`tools/*.py`、`docs/WORKFLOW.md`、`AGENTS.md`
 
 ## 实操技能 1：Codex 正确打开方式、版本、项目内用法、样例与实操结果
 - Codex CLI 版本：`codex-cli 0.106.0`
@@ -5995,7 +5995,7 @@ text = f"""## 问答 1：项目使命、背景、目标、最终结果、开发�
 ## 拉回主线 2：是否偏离当前最重要任务，原因，下一步动作
 - 判断：不偏离，当前最重要任务就是强化 learn 同频与考试标准化。
 - 原因：这是所有后续自动化与多角色博弈质量的前置条件。
-- 下一步唯一命令：`python3 tools/ops_learn.py`
+- 下一步唯一命令：`python3 tools/learn.py`
 - 证据文件路径：`TASKS/STATE.md`、`reports/{run_id}/conversation.md`
 """
 
@@ -6062,12 +6062,12 @@ cmd_exam() {
   elif command -v python >/dev/null 2>&1; then
     py_bin="python"
   else
-    echo "ERROR: python is required for bash tools/ops_legacy.sh exam." >&2
+    echo "ERROR: python is required for bash tools/legacy.sh exam." >&2
     exit 1
   fi
 
   if [[ ! -f "$answer_file" ]]; then
-    append_execution_event "$run_id" "exam" "exam_missing_answer" "fail" "bash tools/ops_legacy.sh exam RUN_ID=${run_id}" "answer_file=${answer_file}" "missing answer file"
+    append_execution_event "$run_id" "exam" "exam_missing_answer" "fail" "bash tools/legacy.sh exam RUN_ID=${run_id}" "answer_file=${answer_file}" "missing answer file"
     echo "ERROR: answer file not found: $answer_file" >&2
     exit 1
   fi
@@ -6087,7 +6087,7 @@ cmd_exam() {
   if [[ "$rc" -ne 0 ]]; then
     status="fail"
   fi
-  append_execution_event "$run_id" "exam" "exam_graded" "$status" "bash tools/ops_legacy.sh exam RUN_ID=${run_id}" "answer=${answer_file};rubric=${rubric_file};output=${output_file}" "$output"
+  append_execution_event "$run_id" "exam" "exam_graded" "$status" "bash tools/legacy.sh exam RUN_ID=${run_id}" "answer=${answer_file};rubric=${rubric_file};output=${output_file}" "$output"
   if [[ "$rc" -ne 0 ]]; then
     exit "$rc"
   fi
@@ -6168,7 +6168,7 @@ cmd_exam_auto() {
       check_py_bin="python"
     fi
     if [[ -z "$check_py_bin" ]]; then
-      echo "ERROR: python is required for bash tools/ops_legacy.sh exam-auto." >&2
+      echo "ERROR: python is required for bash tools/legacy.sh exam-auto." >&2
       exit 1
     fi
     if ! "$check_py_bin" - <<'PY' "$answer_file"
@@ -6182,12 +6182,12 @@ raise SystemExit(0 if required in text else 1)
 PY
     then
       cmd_exam_auto_fill_answer "$run_id" "$answer_file"
-      append_execution_event "$run_id" "exam-auto" "exam_auto_answer_migrated" "ok" "bash tools/ops_legacy.sh exam-auto RUN_ID=${run_id}" "answer_file=${answer_file}" ""
+      append_execution_event "$run_id" "exam-auto" "exam_auto_answer_migrated" "ok" "bash tools/legacy.sh exam-auto RUN_ID=${run_id}" "answer_file=${answer_file}" ""
       echo "EXAM_ANSWER_AUTOFILLED: $answer_file"
     fi
   fi
   if [[ ! -f "$answer_file" ]]; then
-    command_line="bash tools/ops_legacy.sh exam-auto RUN_ID=${run_id}"
+    command_line="bash tools/legacy.sh exam-auto RUN_ID=${run_id}"
     if [[ "$auto_fill" == "0" ]]; then
       if [[ ! -f "$template_file" ]]; then
         append_execution_event "$run_id" "exam-auto" "exam_auto_missing_template" "fail" "$command_line" "template_file=${template_file}" "missing template file"
@@ -6197,7 +6197,7 @@ PY
       cp "$template_file" "$answer_file"
       append_execution_event "$run_id" "exam-auto" "exam_auto_answer_scaffolded" "ok" "$command_line" "answer_file=${answer_file}" ""
       echo "EXAM_ANSWER_SCAFFOLDED: $answer_file"
-      echo "请先按模板补全答案，再运行：bash tools/ops_legacy.sh exam-auto RUN_ID=${run_id}"
+      echo "请先按模板补全答案，再运行：bash tools/legacy.sh exam-auto RUN_ID=${run_id}"
       return 3
     fi
 
@@ -6207,7 +6207,7 @@ PY
   fi
 
   cmd_exam "RUN_ID=${run_id}" "ANSWER_FILE=${answer_file}" "RUBRIC_FILE=${rubric_file}" "OUTPUT_FILE=${output_file}"
-  command_line="bash tools/ops_legacy.sh exam-auto RUN_ID=${run_id}"
+  command_line="bash tools/legacy.sh exam-auto RUN_ID=${run_id}"
   append_execution_event "$run_id" "exam-auto" "exam_auto_done" "ok" "$command_line" "answer_file=${answer_file};output_file=${output_file}" ""
 }
 
@@ -6266,13 +6266,13 @@ cmd_resume() {
 
   state_file="reports/${run_id}/ship_state.json"
   if [[ ! -f "$state_file" ]]; then
-    append_execution_event "$run_id" "resume" "resume_missing_state" "fail" "bash tools/ops_legacy.sh resume RUN_ID=${run_id}" "state_file=${state_file}" "missing state file"
+    append_execution_event "$run_id" "resume" "resume_missing_state" "fail" "bash tools/legacy.sh resume RUN_ID=${run_id}" "state_file=${state_file}" "missing state file"
     echo "ERROR: missing state file: $state_file"
     print_resume_cmd "$run_id"
     exit 1
   fi
 
-  append_execution_event "$run_id" "resume" "resume_start" "ok" "bash tools/ops_legacy.sh resume RUN_ID=${run_id}" "state_file=${state_file}" ""
+  append_execution_event "$run_id" "resume" "resume_start" "ok" "bash tools/legacy.sh resume RUN_ID=${run_id}" "state_file=${state_file}" ""
 
   step="$(read_state_field "$state_file" "step")"
   branch="$(read_state_field "$state_file" "branch")"
@@ -6390,7 +6390,7 @@ cmd_resume() {
     print_resume_cmd "$run_id"
     exit 1
   }
-  append_execution_event "$run_id" "resume" "resume_done" "ok" "bash tools/ops_legacy.sh resume RUN_ID=${run_id}" "pr_url=${pr_url}" ""
+  append_execution_event "$run_id" "resume" "resume_done" "ok" "bash tools/legacy.sh resume RUN_ID=${run_id}" "pr_url=${pr_url}" ""
   update_state_current "$run_id" "$(state_field_value "CURRENT_TASK_FILE")" "done"
   echo "resume done: ${run_id}"
 }

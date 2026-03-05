@@ -5,7 +5,7 @@ import sys
 import os
 from pathlib import Path
 
-from ops_ready import (
+from ready import (
     append_conversation_checkpoint,
     append_execution_event,
     generate_orient_draft,
@@ -61,7 +61,7 @@ def main(argv: list[str]) -> int:
         "orient",
         "orient_generated",
         "ok",
-        f"python3 tools/ops_orient.py RUN_ID={run_id}",
+        f"python3 tools/orient.py RUN_ID={run_id}",
         f"orient_file={orient_file};orient_md={orient_md}",
         "",
     )

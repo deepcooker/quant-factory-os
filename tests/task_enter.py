@@ -16,5 +16,5 @@ def test_task_enter_wrapper_files_exist() -> None:
 def test_task_enter_wrapper_targets_qf() -> None:
     enter_text = (REPO_ROOT / "tools" / "enter.sh").read_text(encoding="utf-8")
     onboard_text = (REPO_ROOT / "tools" / "onboard.sh").read_text(encoding="utf-8")
-    assert "python3 tools/ops_init.py" in enter_text
-    assert "tools/ops_legacy.sh onboard" in onboard_text
+    assert "python3 tools/init.py" in enter_text
+    assert "tools/legacy.sh onboard" in onboard_text

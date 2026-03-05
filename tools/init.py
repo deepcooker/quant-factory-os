@@ -120,7 +120,7 @@ def parse_args(argv: list[str]) -> str:
             init_mode = "main"
         else:
             eprint(f"ERROR: unknown init option: {arg}")
-            eprint("Usage: python3 tools/ops_init.py [-status|-main]")
+            eprint("Usage: python3 tools/init.py [-status|-main]")
             raise SystemExit(2)
     return init_mode
 
@@ -272,9 +272,9 @@ def main(argv: list[str]) -> int:
     elif reason_codes:
         init_status = "needs_resume"
 
-    next_cmd = "python3 tools/ops_learn.py"
+    next_cmd = "python3 tools/learn.py"
     if init_status != "ok":
-        next_cmd = f"bash tools/ops_legacy.sh resume RUN_ID={current_run_id}" if current_run_id else "bash tools/ops_legacy.sh resume"
+        next_cmd = f"bash tools/legacy.sh resume RUN_ID={current_run_id}" if current_run_id else "bash tools/legacy.sh resume"
 
     print(f"INIT_STATUS: {init_status}")
     print(f"INIT_REASON_CODES: {reason_codes_text}")
@@ -288,10 +288,10 @@ def main(argv: list[str]) -> int:
         return 1
     if init_mode == "check":
         print("== 建议流程 ==")
-        print("1) python3 tools/ops_learn.py")
-        print("2) python3 tools/ops_ready.py")
-        print("3) bash tools/ops_legacy.sh discuss TARGET=prepare")
-        print("4) bash tools/ops_legacy.sh do queue-next")
+        print("1) python3 tools/learn.py")
+        print("2) python3 tools/ready.py")
+        print("3) bash tools/legacy.sh discuss TARGET=prepare")
+        print("4) bash tools/legacy.sh do queue-next")
     else:
         print("== 状态查询完成 ==")
     return 0

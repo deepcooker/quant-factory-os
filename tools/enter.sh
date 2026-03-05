@@ -22,5 +22,5 @@ else
   export QF_AUTOSTASH=0
 fi
 
-echo "NOTICE: tools/enter.sh is deprecated; use python3 tools/ops_init.py"
-exec python3 tools/ops_init.py
+echo "NOTICE: tools/enter.sh is deprecated; use python3 tools/init.py"
+exec python3 tools/init.py
