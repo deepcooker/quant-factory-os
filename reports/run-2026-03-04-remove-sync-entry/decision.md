@@ -198,3 +198,21 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
 - Risk: temporary divergence between Python and legacy Bash fallback branches.
 - Mitigation: Python path is executed first and validated by real command chain + `make verify`.
 - Rollback: remove per-command delegation lines in `tools/qf` to restore legacy Bash handlers.
+
+## Incremental decision (split `tools/qf` into thin wrapper + legacy runtime)
+### Why
+- You asked to continue toward removing monolithic `tools/qf`.
+- A full one-shot migration of all subcommands would add unnecessary risk.
+- A two-layer split gives immediate architecture cleanup while preserving compatibility.
+
+### Decision
+- Move old monolithic Bash implementation to `tools/qf_legacy.sh`.
+- Keep `tools/qf` as stable thin dispatcher:
+  - Python-first path for migrated commands.
+  - Compatibility fallback to `qf_legacy.sh` for non-migrated commands.
+- Keep command surface unchanged for users (`tools/qf <subcmd>`).
+
+### Risk / rollback
+- Risk: fallback commands still carry legacy side effects (example: `plan` may stash/switch branch).
+- Mitigation: only migrated commands are called in the default flow (`init -> learn -> ready -> discuss lanes`), and migration continues command-by-command.
+- Rollback: point `tools/qf` back to monolithic path by restoring previous `tools/qf` from git history.

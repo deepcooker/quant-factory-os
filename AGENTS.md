@@ -38,6 +38,11 @@ Before any implementation:
 3. `tools/qf ready`
    - Runtime implementation is Python-first (`tools/qf_ready.py`); `tools/qf` is the CLI wrapper.
 
+`tools/qf` runtime note:
+- `tools/qf` is a thin dispatcher.
+- Python-first commands: `init/learn/ready/orient/choose/council/arbiter/slice`.
+- Remaining commands are compatibility-routed to `tools/qf_legacy.sh` until fully migrated.
+
 `init` detailed step definitions, mode semantics (`-status` / `-main`), and output fields are owned by `docs/WORKFLOW.md` (`S0 Environment`). `AGENTS.md` keeps only gate-level contract.
 
 Required visible progress:

@@ -21,7 +21,10 @@
     "tools/qf choose RUN_ID=run-2026-03-04-remove-sync-entry",
     "tools/qf council RUN_ID=run-2026-03-04-remove-sync-entry",
     "tools/qf arbiter RUN_ID=run-2026-03-04-remove-sync-entry",
-    "tools/qf slice RUN_ID=run-2026-03-04-remove-sync-entry"
+    "tools/qf slice RUN_ID=run-2026-03-04-remove-sync-entry",
+    "git mv tools/qf tools/qf_legacy.sh",
+    "bash -n tools/qf tools/qf_legacy.sh",
+    "tools/qf -h"
   ],
   "artifacts": [
     "learn/project-0.json",
@@ -54,7 +57,8 @@
     "reports/run-2026-03-04-remove-sync-entry/direction_contract.md",
     "reports/run-2026-03-04-remove-sync-entry/execution_contract.json",
     "reports/run-2026-03-04-remove-sync-entry/execution_contract.md",
-    "reports/run-2026-03-04-remove-sync-entry/slice_state.json"
+    "reports/run-2026-03-04-remove-sync-entry/slice_state.json",
+    "tools/qf_legacy.sh"
   ],
   "created_at_utc": "2026-03-04T07:36:12.983580+00:00",
   "cwd": "/root/quant-factory-os",

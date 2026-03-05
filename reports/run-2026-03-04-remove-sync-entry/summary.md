@@ -268,3 +268,20 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
 - `tools/qf arbiter RUN_ID=run-2026-03-04-remove-sync-entry` -> pass
 - `tools/qf slice RUN_ID=run-2026-03-04-remove-sync-entry` -> pass
 - `make verify` -> pass (`19 passed`)
+
+## Incremental update (`tools/qf` de-monolith wrapper split)
+- Split monolithic entrypoint into:
+  - thin stable CLI wrapper: `tools/qf`
+  - compatibility legacy runtime: `tools/qf_legacy.sh`
+- `tools/qf` now directly dispatches Python-first commands:
+  - `init/learn/ready/orient/choose/council/arbiter/slice`
+- Non-migrated commands are temporarily fallback-routed to `tools/qf_legacy.sh`:
+  - `sync/discuss/execute/review/snapshot/handoff/plan/do/exam/exam-auto/resume/...`
+- Synced owner docs for this runtime model:
+  - `AGENTS.md` (session gate runtime note)
+  - `docs/WORKFLOW.md` (dispatcher + compatibility fallback note)
+
+### Verify (this update)
+- `bash -n tools/qf tools/qf_legacy.sh` -> pass
+- `tools/qf -h` -> pass (legacy usage exposed via wrapper)
+- `make verify` -> pass (`19 passed`)

@@ -14,6 +14,10 @@ This document describes the expected workflow for changes in this repository.
 - Codex operation audit owner: `CODEX_CLI_SOURCE_AUDIT.md`
 
 ## Session lifecycle state machine (single source)
+- Runtime dispatcher note:
+  - `tools/qf` is the stable CLI entrypoint.
+  - Python-first commands currently include: `init/learn/ready/orient/choose/council/arbiter/slice`.
+  - Non-migrated commands are temporarily compatibility-routed via `tools/qf_legacy.sh`.
 - `S-1 Discussion-only` (optional)
   - Allowed only for read-only clarification/investigation.
   - Constraint: no repo mutation (no file edits, no generated artifacts, no ship).
