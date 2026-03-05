@@ -74,6 +74,19 @@ def dedup_lines(items: list[str]) -> list[str]:
     return out
 
 
+def non_goals_from_scope(scope: list[str]) -> list[str]:
+    base = [
+        "不扩展到当前 selected direction 之外的其他流程层级",
+        "不在本轮 contract 中引入新的业务项目范围",
+        "不跳过 verify/review/docs freshness gate",
+    ]
+    if "tools/learn.py" in scope:
+        base.append("不同时改造无关执行链脚本")
+    if "tools/orient.py" in scope or "tools/council.py" in scope:
+        base.append("不把 discussion artifacts 和 execution evidence 混写")
+    return dedup_lines(base)
+
+
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "arbiter")
@@ -136,23 +149,12 @@ def main(argv: list[str]) -> int:
                 role_conditions.append(f"{role_name}: {text}")
     role_conditions = dedup_lines(role_conditions)
 
-    tasks: list[dict[str, Any]] = []
-
-    core_acceptance = [
+    acceptance = [
         f"deliver selected direction option `{selected_option or 'unknown'}` with bounded scope",
         "command(s) pass: make verify",
-        "reports summary/decision updated for this slice",
+        "reports summary/decision updated for this run",
+        "owner docs updated in same run when behavior/rules changed",
     ]
-    tasks.append(
-        {
-            "task_id": "slice-1",
-            "title": f"{title} - core delivery",
-            "goal": goal,
-            "scope": scope,
-            "acceptance": core_acceptance,
-        }
-    )
-
     if blockers or warnings or role_conditions:
         concern_acceptance: list[str] = []
         for c in role_conditions[:5]:
@@ -161,42 +163,16 @@ def main(argv: list[str]) -> int:
             concern_acceptance.append("all blocker-level evidence checks are resolved")
         if warnings:
             concern_acceptance.append("warning-level checks are either resolved or explicitly accepted in decision.md")
-        tasks.append(
-            {
-                "task_id": "slice-2",
-                "title": f"{title} - close council conditions",
-                "goal": "Resolve cross-role concerns raised by council before/while executing.",
-                "scope": ["tools/*.py", "tests/", "chatlogs/discussion/", "reports/{RUN_ID}/"],
-                "acceptance": concern_acceptance or ["no open council conditions"],
-            }
-        )
+        acceptance.extend(concern_acceptance or ["no open council conditions"])
     else:
-        tasks.append(
-            {
-                "task_id": "slice-2",
-                "title": f"{title} - enforce guardrail tests",
-                "goal": "Add or refine guardrail tests to lock behavior of the selected direction.",
-                "scope": ["tests/", "tools/*.py"],
-                "acceptance": [
-                    "critical path regression tests added or refreshed",
-                    "failure-path assertions are explicit and actionable",
-                ],
-            }
+        acceptance.extend(
+            [
+                "critical path regression tests added or refreshed",
+                "failure-path assertions are explicit and actionable",
+            ]
         )
-
-    tasks.append(
-        {
-            "task_id": "slice-3",
-            "title": f"{title} - evidence and docs alignment",
-            "goal": "Keep evidence and owner docs aligned with final behavior of this direction.",
-            "scope": ["AGENTS.md", "docs/WORKFLOW.md", "chatlogs/discussion/", "reports/{RUN_ID}/"],
-            "acceptance": [
-                "owner docs updated in same run when behavior/rules changed",
-                "bash tools/legacy.sh review STRICT=1 AUTO_FIX=1 passes",
-                "decision records accepted tradeoffs and residual risks",
-            ],
-        }
-    )
+    acceptance.append("bash tools/legacy.sh review STRICT=1 AUTO_FIX=1 passes")
+    acceptance.append("decision records accepted tradeoffs and residual risks")
 
     created_at = datetime.now(timezone.utc).isoformat()
     obj: dict[str, Any] = {
@@ -209,6 +185,10 @@ def main(argv: list[str]) -> int:
             "goal": goal,
             "priority": priority,
         },
+        "execution_goal": goal,
+        "non_goals": non_goals_from_scope(scope),
+        "scope": scope,
+        "acceptance": dedup_lines(acceptance),
         "council_source": str(council_file),
         "arbiter_rule": "converge independent evidence-based reviews into one executable contract",
         "arbiter_summary": {
@@ -217,8 +197,9 @@ def main(argv: list[str]) -> int:
             "role_conditions": len(role_conditions),
             "disagreements": len(disagreements),
         },
+        "blockers": blockers,
+        "warnings": warnings,
         "role_conditions": role_conditions,
-        "tasks": tasks,
         "next_command": f"python3 tools/slice_task.py RUN_ID={run_id}",
     }
     out_json.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -244,18 +225,18 @@ def main(argv: list[str]) -> int:
         lines.append("## Disagreements")
         for d in disagreements:
             lines.append(f"- {d}")
-    lines.extend(["", "## Converged Task Slices"])
-    for t in tasks:
-        lines.append(f"- task_id: `{t['task_id']}` | title: {t['title']}")
-        lines.append(f"  - goal: {t['goal']}")
-        lines.append(f"  - scope: {', '.join(t['scope'])}")
-        lines.append("  - acceptance:")
-        for a in t["acceptance"]:
-            lines.append(f"    - {a}")
+    lines.extend(["", "## Execution Goal", f"- {goal}", "", "## Non Goals"])
+    for item in obj["non_goals"]:
+        lines.append(f"- {item}")
+    lines.extend(["", "## Scope"])
+    for item in scope:
+        lines.append(f"- `{item}`")
+    lines.extend(["", "## Acceptance"])
+    for item in obj["acceptance"]:
+        lines.append(f"- {item}")
     lines.extend(["", "## Next Command", f"- `python3 tools/slice_task.py RUN_ID={run_id}`", ""])
     out_md.write_text("\n".join(lines), encoding="utf-8")
 
-    print(f"ARBITER_TASKS: {len(tasks)}")
     print(f"ARBITER_BLOCKERS: {len(blockers)}")
     print(f"ARBITER_WARNINGS: {len(warnings)}")
     print(f"ARBITER_NEXT_COMMAND: python3 tools/slice_task.py RUN_ID={run_id}")

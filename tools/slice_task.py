@@ -43,6 +43,63 @@ def load_contract(path: Path) -> dict[str, Any]:
         return {}
 
 
+def build_tasks_from_contract(contract: dict[str, Any]) -> list[dict[str, Any]]:
+    direction = contract.get("direction") or {}
+    title = str(direction.get("selected_title", "")).strip() or "execution contract"
+    goal = str(contract.get("execution_goal", "")).strip() or str(direction.get("goal", "")).strip() or "Execute the selected direction."
+    scope = contract.get("scope") or []
+    if not isinstance(scope, list):
+        scope = []
+    scope = [str(x).strip().replace("`", "") for x in scope if str(x).strip()]
+    if not scope:
+        scope = ["tools/*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
+
+    acceptance = contract.get("acceptance") or []
+    if not isinstance(acceptance, list):
+        acceptance = []
+    acceptance = [str(x).strip() for x in acceptance if str(x).strip()]
+
+    blockers = contract.get("blockers") or []
+    warnings = contract.get("warnings") or []
+    role_conditions = contract.get("role_conditions") or []
+    if not isinstance(role_conditions, list):
+        role_conditions = []
+
+    tasks: list[dict[str, Any]] = [
+        {
+            "task_id": "slice-1",
+            "title": f"{title} - core delivery",
+            "goal": goal,
+            "scope": scope,
+            "acceptance": acceptance or [
+                "deliver selected direction with bounded scope",
+                "command(s) pass: make verify",
+                "reports summary/decision updated for this run",
+            ],
+        }
+    ]
+
+    if blockers or warnings or role_conditions:
+        concern_acceptance: list[str] = []
+        for item in role_conditions[:5]:
+            concern_acceptance.append(f"condition closed: {item}")
+        if blockers:
+            concern_acceptance.append("all blocker-level evidence checks are resolved")
+        if warnings:
+            concern_acceptance.append("warning-level checks are either resolved or explicitly accepted in decision.md")
+        tasks.append(
+            {
+                "task_id": "slice-2",
+                "title": f"{title} - close council conditions",
+                "goal": "Resolve cross-role concerns raised by council before or during execution.",
+                "scope": list(dict.fromkeys(scope + ["reports/{RUN_ID}/"])),
+                "acceptance": concern_acceptance or ["no open council conditions"],
+            }
+        )
+
+    return tasks
+
+
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "slice")
@@ -64,8 +121,8 @@ def main(argv: list[str]) -> int:
 
     contract = load_contract(execution_contract)
     tasks = contract.get("tasks") or []
-    if not isinstance(tasks, list):
-        tasks = []
+    if not isinstance(tasks, list) or not tasks:
+        tasks = build_tasks_from_contract(contract)
 
     if queue_file.exists():
         text = queue_file.read_text(encoding="utf-8")
