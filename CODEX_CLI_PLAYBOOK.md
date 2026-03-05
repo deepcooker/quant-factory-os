@@ -28,7 +28,8 @@ python3 tools/learn.py \
 
 说明：
 - 传输固定为自动编排：`app-server -> exec` 回退（无需传 `plan_transport`）。
-- 模型固定：`gpt-5.3-codex`。
+- `learn` 默认模型：`gpt-5.4`
+- 可显式覆盖：`python3 tools/learn.py model=gpt-5.3-codex` 或 `python3 tools/learn.py -model gpt-5.3-codex`
 - `-minimal` 在当前工具约束下会自动提升为 `low`（控制台会打印原因）。
 
 必备产物：

@@ -36,7 +36,7 @@ except Exception:  # pragma: no cover
 STATE_FILE = Path(os.environ.get("QF_STATE_FILE", "TASKS/STATE.md"))
 DEFAULT_PROJECT_ID = os.environ.get("QF_DEFAULT_PROJECT_ID", "project-0")
 LEARN_LOG_FILE_TEMPLATE = "learn/{project_id}.stdout.log"
-LEARN_MODEL_NAME = "gpt-5.3-codex"
+LEARN_MODEL_NAME = "gpt-5.4"
 LEARN_REASONING_DEFAULT_PROFILE = "xhigh"
 LEARN_REASONING_PROFILE_TO_EFFORT = {
     "minimal": "minimal",
@@ -139,9 +139,13 @@ def write_json(path: Path, obj: dict[str, Any]) -> None:
 
 def parse_cli(argv: list[str]) -> dict[str, Any]:
     reasoning_profile = LEARN_REASONING_DEFAULT_PROFILE
+    model_name = LEARN_MODEL_NAME
 
-    for token in argv:
+    i = 0
+    while i < len(argv):
+        token = argv[i]
         if not token:
+            i += 1
             continue
         low = token.lower()
         if token.startswith("project_id=") or low.startswith("project_id="):
@@ -163,8 +167,15 @@ def parse_cli(argv: list[str]) -> dict[str, Any]:
             eprint("ERROR: MODEL_TIMEOUT_SEC has been removed from learn.")
             raise SystemExit(2)
         elif token.startswith("model=") or low.startswith("model="):
-            eprint("ERROR: model is fixed in learn. Edit LEARN_MODEL_NAME constant in tools/learn.py if needed.")
-            raise SystemExit(2)
+            model_name = token.split("=", 1)[1].strip()
+        elif token == "-model":
+            if i + 1 >= len(argv):
+                eprint("ERROR: -model requires a value.")
+                raise SystemExit(2)
+            model_name = argv[i + 1].strip()
+            i += 1
+        elif token.startswith("-model="):
+            model_name = token.split("=", 1)[1].strip()
         elif token.startswith("model_reasoning_effort=") or low.startswith("model_reasoning_effort="):
             eprint("ERROR: use reasoning=<minimal|low|medium|high|xhigh> or -minimal|-low|-medium|-high|-xhigh.")
             raise SystemExit(2)
@@ -200,9 +211,13 @@ def parse_cli(argv: list[str]) -> dict[str, Any]:
         else:
             eprint("ERROR: learn does not accept positional args.")
             raise SystemExit(2)
+        i += 1
 
     if reasoning_profile not in LEARN_REASONING_PROFILE_TO_EFFORT:
         eprint(f"ERROR: invalid reasoning={reasoning_profile} (expected minimal|low|medium|high|xhigh).")
+        raise SystemExit(2)
+    if not model_name:
+        eprint("ERROR: model cannot be empty.")
         raise SystemExit(2)
     effective_effort = LEARN_REASONING_PROFILE_TO_EFFORT[reasoning_profile]
 
@@ -212,7 +227,7 @@ def parse_cli(argv: list[str]) -> dict[str, Any]:
         "model_sync_mode": "1",
         "plan_mode": "strong",
         "plan_transport": "auto(app-server->exec)",
-        "model_name": LEARN_MODEL_NAME,
+        "model_name": model_name,
         "reasoning_profile": reasoning_profile,
         "model_reasoning_effort": effective_effort,
     }
@@ -230,6 +245,7 @@ def run_logged_self(project_id: str, cfg: dict[str, Any]) -> int:
         py_bin,
         str(Path(__file__).resolve()),
         f"reasoning={cfg['reasoning_profile']}",
+        f"model={cfg['model_name']}",
     ]
     env = os.environ.copy()
     env["QF_LEARN_LOG_ACTIVE"] = "1"

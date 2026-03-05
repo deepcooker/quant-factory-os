@@ -108,6 +108,12 @@ python CODEX_APP_SERVER_PYTHON_TEST.py --help
 5. 没有计划信号  
 处理：确保 `--mode plan`，并检查 `turn` 是否完成及返回内容是否包含计划结构。
 
+6. `gpt-5.4-codex` 在 ChatGPT 登录路径下看起来“像成功”  
+处理：必须看 `summary.json` 里的 `checks.detail` 和对应 `events.jsonl` 的 `turn.status` / `turn.error`。  
+脚本现已修正：只有 `turn.status=completed` 才会把 `APP_SERVER_TURN_OK` 记为通过。  
+本地实测中，`gpt-5.4-codex` 在 `Logged in using ChatGPT` 路径下会返回：
+`The 'gpt-5.4-codex' model is not supported when using Codex with a ChatGPT account.`
+
 ## 6. 什么时候选 app-server
 
 优先用 `app-server` 的场景：

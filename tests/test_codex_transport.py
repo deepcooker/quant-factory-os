@@ -82,7 +82,7 @@ def test_run_plan_sync_fallback(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(ct, "run_exec_transport", fake_fallback)
 
     req = ct.TransportRequest(
-        model_name="gpt-5.3-codex",
+        model_name="gpt-5.4",
         model_reasoning_effort="xhigh",
         cwd=tmp_path,
     )

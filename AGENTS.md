@@ -58,7 +58,8 @@ Required visible progress:
   - mode is fixed internally: `MODEL_SYNC=1`
   - plan protocol is fixed internally: `PLAN_MODE=strong`
   - transport is fixed internally: `auto(app-server->exec)` (no external override)
-  - fixed model constant: `gpt-5.3-codex`
+  - default model constant: `gpt-5.4`
+  - one-shot override is allowed: `model=<slug>` or `-model <slug>`
   - reasoning profile: `-minimal|-low|-medium|-high|-xhigh` (default `-xhigh`)
   - runtime compatibility: `-minimal` auto-upgrades to `low` (with explicit stdout anchor reason)
   - `-log` is implicit; learn always mirrors stdout to `learn/{project_id}.stdout.log`

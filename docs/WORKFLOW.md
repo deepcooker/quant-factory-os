@@ -52,7 +52,8 @@ This document describes the expected workflow for changes in this repository.
     - transport is fixed internally: `auto(app-server->exec)` (no external override)
       - primary: `app-server` (plan-mode style read-only model sync)
       - fallback: `exec` (same prompt contract, strict parse gate unchanged)
-    - model is fixed in script constant: `gpt-5.3-codex`
+    - default model is `gpt-5.4`
+    - one-shot override is allowed: `model=<slug>` or `-model <slug>`
     - reasoning profile input: `-minimal|-low|-medium|-high|-xhigh` (default `-xhigh`)
       - runtime compatibility: `-minimal` auto-upgrades to `low` with explicit stdout reason anchor
     - model artifacts:

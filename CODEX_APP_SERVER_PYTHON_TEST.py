@@ -279,6 +279,8 @@ def run_full_turn(
     saw_turn_completed = False
     saw_plan_signal = False
     assistant_text_fragments: List[str] = []
+    turn_status = "unknown"
+    turn_error = ""
 
     while time.time() < deadline:
         msg = client.next_message(timeout=1.0)
@@ -319,6 +321,10 @@ def run_full_turn(
             t = params.get("turn") or {}
             if t.get("id") == turn_id:
                 saw_turn_completed = True
+                turn_status = str(t.get("status") or "unknown")
+                err = t.get("error") or {}
+                if isinstance(err, dict):
+                    turn_error = str(err.get("message") or "")
                 break
 
     all_text = "".join(assistant_text_fragments)
@@ -328,6 +334,8 @@ def run_full_turn(
     return {
         "turn_id": turn_id,
         "turn_completed": saw_turn_completed,
+        "turn_status": turn_status,
+        "turn_error": turn_error,
         "plan_signal": saw_plan_signal,
         "assistant_text_excerpt": all_text[:1000],
     }
@@ -380,7 +388,7 @@ def main() -> int:
     ensure_prereqs()
 
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
-    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     events_path = RUNTIME_DIR / f"{ts}.events.jsonl"
     stderr_path = RUNTIME_DIR / f"{ts}.stderr.log"
     summary_path = RUNTIME_DIR / f"{ts}.summary.json"
@@ -433,9 +441,9 @@ def main() -> int:
                     cwd=args.cwd,
                     timeout=args.timeout,
                 )
-                turn_ok = bool(full_turn.get("turn_completed"))
+                turn_ok = bool(full_turn.get("turn_completed")) and str(full_turn.get("turn_status")) == "completed"
                 plan_signal_ok = bool(full_turn.get("plan_signal"))
-                effort_ok = True
+                effort_ok = turn_ok
                 negative_result = run_negative_effort_check(
                     client=client,
                     thread_id=thread_id,
@@ -448,7 +456,12 @@ def main() -> int:
                 plan_signal_ok = True
                 effort_ok = True
 
-            checks.append(CheckResult("APP_SERVER_TURN_OK", turn_ok, "full" if not args.quick else "quick-skip"))
+            turn_detail = "full" if not args.quick else "quick-skip"
+            if not args.quick and full_turn:
+                turn_detail = str(full_turn.get("turn_status") or "unknown")
+                if full_turn.get("turn_error"):
+                    turn_detail = f"{turn_detail}: {full_turn['turn_error']}"
+            checks.append(CheckResult("APP_SERVER_TURN_OK", turn_ok, turn_detail))
             checks.append(
                 CheckResult(
                     "APP_SERVER_PLAN_SIGNAL",
@@ -456,7 +469,8 @@ def main() -> int:
                     "plan-mode-signal-detected" if plan_signal_ok else "no-plan-signal",
                 )
             )
-            checks.append(CheckResult("APP_SERVER_EFFORT_VALIDATION_OK", effort_ok, args.effort))
+            effort_detail = args.effort if effort_ok else f"{args.effort}: turn-not-completed"
+            checks.append(CheckResult("APP_SERVER_EFFORT_VALIDATION_OK", effort_ok, effort_detail))
             checks.append(negative_result)
 
     except Exception as exc:
