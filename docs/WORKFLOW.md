@@ -41,7 +41,8 @@ This document describes the expected workflow for changes in this repository.
   - Note: this is context reconstruction only, not readiness pass.
   - Format: concise session summary (main thread, key conclusions, small reflection, one next command).
 - `S1.6 Learn Gate`: `python3 tools/learn.py`
-  - Input: required owner docs (`AGENTS.md` + `docs/PROJECT_GUIDE.md` + workflow + codex playbook + state).
+  - Input: owner docs (`docs/PROJECT_GUIDE.md` + `AGENTS.md` + `docs/WORKFLOW.md`).
+  - Expansion rule: `PROJECT_GUIDE.md` is the course driver; each question's `必查文件` expands the actual read set (for example `TASKS/STATE.md`, `TASKS/QUEUE.md`, `CODEX_CLI_PLAYBOOK.md`, current run evidence).
   - Output: `learn/{project_id}.json` + `learn/{project_id}.md`.
   - Implementation: Python-first (`tools/learn.py`).
   - Output visibility: prints `LEARN_STEP[<i>/<n>]` stage markers.
@@ -49,9 +50,7 @@ This document describes the expected workflow for changes in this repository.
   - Model sync is mandatory (Codex real interaction):
     - enforced mode (fixed): `MODEL_SYNC=1`
     - enforced plan protocol (fixed): `PLAN_MODE=strong`
-    - transport is fixed internally: `auto(app-server->exec)` (no external override)
-      - primary: `app-server` (plan-mode style read-only model sync)
-      - fallback: `exec` (same prompt contract, strict parse gate unchanged)
+    - transport is fixed internally: `app-server` true plan mode only (no fallback, no external override)
     - default model is `gpt-5.4`
     - one-shot override is allowed: `model=<slug>` or `-model <slug>`
     - reasoning profile input: `-minimal|-low|-medium|-high|-xhigh` (default `-xhigh`)
@@ -69,17 +68,19 @@ This document describes the expected workflow for changes in this repository.
     - plan/oral packet anchors (strong mode, mandatory):
       - `LEARN_MODEL_PLAN_GOAL`, `LEARN_MODEL_PLAN_NON_GOAL`, `LEARN_MODEL_PLAN_REBUTTAL`, `LEARN_MODEL_PLAN_DECISION_STOP`
       - `LEARN_MODEL_ORAL_PROJECT`, `LEARN_MODEL_ORAL_CONSTITUTION`, `LEARN_MODEL_ORAL_EVIDENCE`, `LEARN_MODEL_ORAL_SESSION`
-      - `LEARN_MODEL_ORAL_CURRENT_FOCUS`, `LEARN_MODEL_ORAL_NEXT_ACTION`, `LEARN_MODEL_ORAL_EXAM_QA_COUNT`
-      - `LEARN_MODEL_ORAL_EXAM_QID1..N` (must map to `Q1..Q17` in `docs/PROJECT_GUIDE.md`)
+      - `LEARN_MODEL_ORAL_CURRENT_FOCUS`, `LEARN_MODEL_ORAL_NEXT_ACTION`
+      - `LEARN_MODEL_ORAL_Q_COUNT`
+      - `LEARN_MODEL_ORAL_QID1..N`, `LEARN_MODEL_ORAL_Q1..N`, `LEARN_MODEL_ORAL_A1..N`, `LEARN_MODEL_ORAL_ALIGNMENT1..N`
       - `LEARN_MODEL_ANCHOR_QUESTION_ID`, `LEARN_MODEL_ANCHOR_STATUS`, `LEARN_MODEL_ANCHOR_DRIFT_DETAIL`, `LEARN_MODEL_ANCHOR_RETURN_ACTION`
       - `LEARN_MODEL_PRACTICE_COMMAND_COUNT`, `LEARN_MODEL_PRACTICE_SAMPLE_1` (and optional more samples)
     - hard validation gates:
       - practice evidence must include `tools/view.sh` reads that cover each required file at least once
-      - `plan_protocol.evidence` must mention each required file at least once
-      - `oral_exam` must have at least 2 `pass` items
+      - `plan_protocol.evidence` must mention each owner file at least once
+      - `guide_oral` must cover every `PROJECT_GUIDE` question exactly once and stay in Q-order
+      - each `guide_oral` item must cite evidence from that question's `必查文件`
     - optional human-readable console block:
       - `LEARN_READOUT_BEGIN` ... `LEARN_READOUT_END`
-  - Purpose: materialize onboarding understanding (project/constitution/workflow/skills/session) with mandatory model-sync evidence.
+  - Purpose: materialize onboarding understanding (project/constitution/workflow/skills/project status/session continuity) with mandatory model-sync evidence.
 - `S2 Ready gate`: `python3 tools/ready.py`
   - Input: restatement fields (goal/scope/acceptance/steps/stop)
   - Output: `reports/{RUN_ID}/ready.json`
@@ -197,7 +198,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
   - `bash tools/legacy.sh snapshot RUN_ID=<run-id> NOTE="decision/next-step summary"`
 - `/compact` policy:
   - Use when conversation/context becomes large or when moving to a new milestone.
-  - Not a mandatory "every task" gate.
+  - Not a mandatory `learn` or "every task" gate.
   - Always snapshot first, then compact.
 - `bash tools/legacy.sh do` / `bash tools/legacy.sh resume` 自动记录执行轨迹到
   `reports/{RUN_ID}/execution.jsonl`（默认脱敏，可审计）。
@@ -263,7 +264,9 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - 3.1) 运行 `python3 tools/learn.py` 固化“上岗学习”证据（项目+宪法+工作流+技能+session），默认打印分步日志。
   - `project_id` 只来自 `TASKS/STATE.md: CURRENT_PROJECT_ID`（缺省 `project-0`）。
   - 模型同频是硬门禁（不可降级）：内部固定 `MODEL_SYNC=1` + `PLAN_MODE=strong`。
-  - `learn` 会强制校验模型 `files_read` 覆盖必读文件清单。
+  - `learn` 只接受 `app-server` 的 true plan mode；失败直接失败。
+  - `learn` 会强制校验模型 `files_read` 覆盖由 `PROJECT_GUIDE` 课程展开后的必读文件清单。
+  - `learn` 不再使用考试分数；改为全量逐题口述 + 证据引用 + 主线回拉。
 - 4) 运行 `python3 tools/ready.py` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`，默认可自动填充；默认缺失 learn 时可自动补跑）。
 - 4.0) 若 `ready` 提示 unresolved run context，先二选一：
   - `bash tools/legacy.sh resume RUN_ID=<run-id>`（收尾）
@@ -305,7 +308,7 @@ create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
 - Minimum documentation set for process changes:
   - `AGENTS.md`
   - `docs/WORKFLOW.md`
-  - `docs/PROJECT_GUIDE.md` and `docs/LEARN_EXAM_*` when onboarding/learn semantics changed
+  - `docs/PROJECT_GUIDE.md` when onboarding/learn semantics changed
   - `TASKS/STATE.md` pointers if run/task context changed
   - `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
 - If documentation is stale, do not ship.

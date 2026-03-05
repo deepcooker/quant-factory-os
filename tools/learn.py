@@ -8,13 +8,13 @@ import re
 import shutil
 import subprocess
 import sys
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 try:
     from tools.codex_transport import (
-        MODEL_TRANSPORT_FALLBACK,
         MODEL_TRANSPORT_PRIMARY,
         TransportArtifacts,
         TransportRequest,
@@ -24,7 +24,6 @@ try:
     )
 except Exception:  # pragma: no cover
     from codex_transport import (  # type: ignore
-        MODEL_TRANSPORT_FALLBACK,
         MODEL_TRANSPORT_PRIMARY,
         TransportArtifacts,
         TransportRequest,
@@ -45,15 +44,43 @@ LEARN_REASONING_PROFILE_TO_EFFORT = {
     "high": "high",
     "xhigh": "xhigh",
 }
+OWNER_FILES = [
+    "docs/PROJECT_GUIDE.md",
+    "AGENTS.md",
+    "docs/WORKFLOW.md",
+]
+GUIDE_REQUIRED_SECTION_NAMES = [
+    "为什么问这题",
+    "标准答案",
+    "必查文件",
+    "查找线索",
+    "主线意义",
+]
+GUIDE_QUESTION_RE = re.compile(r"^###\s+Q(?P<num>\d+)\.\s*(?P<title>.+?)\s*$", re.M)
+GUIDE_SECTION_RE = re.compile(r"^####\s+(?P<title>.+?)\s*$", re.M)
+
+
+@dataclass
+class GuideQuestion:
+    question_id: str
+    title: str
+    why: str
+    standard_answer: str
+    must_read_files: list[str]
+    hint_lines: list[str]
+    mainline_lines: list[str]
+
 
 
 def eprint(msg: str) -> None:
     print(msg, file=sys.stderr)
 
 
+
 def normalize_project_id(value: str | None) -> str:
     v = (value or "").strip()
     return v if v else DEFAULT_PROJECT_ID
+
 
 
 def state_field_value(key: str) -> str:
@@ -62,12 +89,23 @@ def state_field_value(key: str) -> str:
     pat = re.compile(rf"^\s*{re.escape(key)}:\s*(.*?)\s*$")
     try:
         for line in STATE_FILE.read_text(encoding="utf-8", errors="replace").splitlines():
-            m = pat.match(line)
-            if m:
-                return m.group(1)
+            match = pat.match(line)
+            if match:
+                return match.group(1)
     except Exception:
         return ""
     return ""
+
+
+
+def read_state_snapshot() -> dict[str, str]:
+    return {
+        "current_project_id": normalize_project_id(state_field_value("CURRENT_PROJECT_ID")),
+        "current_run_id": state_field_value("CURRENT_RUN_ID").strip(),
+        "current_task_file": state_field_value("CURRENT_TASK_FILE").strip(),
+        "current_status": state_field_value("CURRENT_STATUS").strip(),
+    }
+
 
 
 def resolve_project_id_for_cmd(explicit_project_id: str, context: str) -> str:
@@ -88,9 +126,11 @@ def resolve_project_id_for_cmd(explicit_project_id: str, context: str) -> str:
     return DEFAULT_PROJECT_ID
 
 
+
 def should_emit_json_stream() -> bool:
     value = os.environ.get("QF_EVENT_STREAM", "0").strip().lower()
     return value in {"1", "json", "jsonl"}
+
 
 
 def emit_step(index: int, total: int, detail: str) -> None:
@@ -107,6 +147,7 @@ def emit_step(index: int, total: int, detail: str) -> None:
         print(json.dumps(payload, ensure_ascii=False))
 
 
+
 def ordered_unique(items: list[str]) -> list[str]:
     out: list[str] = []
     seen: set[str] = set()
@@ -119,6 +160,7 @@ def ordered_unique(items: list[str]) -> list[str]:
     return out
 
 
+
 def file_sha(path: Path) -> tuple[str, str]:
     if not path.is_file():
         return ("missing", "missing")
@@ -129,12 +171,154 @@ def file_sha(path: Path) -> tuple[str, str]:
     return ("ok", digest)
 
 
+
 def read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+
 def write_json(path: Path, obj: dict[str, Any]) -> None:
     path.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+
+def read_text(path: Path) -> str:
+    if not path.is_file():
+        return ""
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
+
+def normalize_block(lines: list[str]) -> str:
+    parts: list[str] = []
+    for raw in lines:
+        s = raw.strip()
+        if not s:
+            continue
+        if s.startswith("- "):
+            s = s[2:].strip()
+        parts.append(s)
+    return " ".join(parts)
+
+
+
+def normalize_list(lines: list[str]) -> list[str]:
+    items: list[str] = []
+    for raw in lines:
+        s = raw.strip()
+        if not s:
+            continue
+        if s.startswith("- "):
+            s = s[2:].strip()
+        items.append(s)
+    return items
+
+
+
+def parse_north_star(lines: list[str]) -> str:
+    for idx, raw in enumerate(lines):
+        if raw.strip() != "## 一句话北极星":
+            continue
+        for cand in lines[idx + 1 :]:
+            s = cand.strip()
+            if not s:
+                continue
+            if s.startswith("#"):
+                break
+            return s.removeprefix("- ").strip()
+    return "自动化 -> 自我迭代 -> 涌现智能。"
+
+
+
+def resolve_dynamic_path(raw_path: str, project_id: str, current_run_id: str) -> str:
+    path = str(raw_path or "").strip()
+    if not path:
+        return ""
+    if ("<RUN_ID>" in path or "<CURRENT_RUN_ID>" in path) and not current_run_id:
+        return ""
+    path = path.replace("<PROJECT_ID>", project_id)
+    path = path.replace("<CURRENT_PROJECT_ID>", project_id)
+    path = path.replace("<RUN_ID>", current_run_id)
+    path = path.replace("<CURRENT_RUN_ID>", current_run_id)
+    return path
+
+
+
+def parse_project_guide(path: Path, project_id: str, current_run_id: str) -> tuple[str, list[GuideQuestion]]:
+    text = read_text(path)
+    if not text.strip():
+        raise ValueError(f"project guide missing or empty: {path}")
+    lines = text.splitlines()
+    north_star = parse_north_star(lines)
+
+    matches = list(GUIDE_QUESTION_RE.finditer(text))
+    if not matches:
+        raise ValueError("PROJECT_GUIDE has no Q sections")
+
+    questions: list[GuideQuestion] = []
+    for idx, match in enumerate(matches):
+        start = match.start()
+        end = matches[idx + 1].start() if idx + 1 < len(matches) else len(text)
+        block = text[start:end].splitlines()
+        heading = block[0].strip()
+        head_match = GUIDE_QUESTION_RE.match(heading)
+        if not head_match:
+            raise ValueError(f"invalid question heading: {heading}")
+        qid = f"Q{head_match.group('num')}"
+        title = head_match.group("title").strip()
+
+        sections: dict[str, list[str]] = {}
+        current_section = ""
+        for raw in block[1:]:
+            sec_match = GUIDE_SECTION_RE.match(raw.strip())
+            if sec_match:
+                current_section = sec_match.group("title").strip()
+                sections[current_section] = []
+                continue
+            if current_section:
+                sections[current_section].append(raw)
+
+        for section_name in GUIDE_REQUIRED_SECTION_NAMES:
+            if section_name not in sections:
+                raise ValueError(f"{qid} missing section: {section_name}")
+
+        why = normalize_block(sections["为什么问这题"])
+        standard_answer = normalize_block(sections["标准答案"])
+        if not why or not standard_answer:
+            raise ValueError(f"{qid} missing why/standard answer content")
+
+        must_read_files = ordered_unique(
+            [
+                resolved
+                for resolved in (
+                    resolve_dynamic_path(item, project_id, current_run_id)
+                    for item in normalize_list(sections["必查文件"])
+                )
+                if resolved
+            ]
+        )
+        if not must_read_files:
+            raise ValueError(f"{qid} has no resolved 必查文件")
+
+        hint_lines = normalize_list(sections["查找线索"])
+        mainline_lines = normalize_list(sections["主线意义"])
+        if not hint_lines or not mainline_lines:
+            raise ValueError(f"{qid} missing 查找线索/主线意义 content")
+
+        questions.append(
+            GuideQuestion(
+                question_id=qid,
+                title=title,
+                why=why,
+                standard_answer=standard_answer,
+                must_read_files=must_read_files,
+                hint_lines=hint_lines,
+                mainline_lines=mainline_lines,
+            )
+        )
+
+    return north_star, questions
+
 
 
 def parse_cli(argv: list[str]) -> dict[str, Any]:
@@ -161,7 +345,7 @@ def parse_cli(argv: list[str]) -> dict[str, Any]:
             eprint("ERROR: PLAN_MODE is fixed to strong in learn and cannot be overridden.")
             raise SystemExit(2)
         elif token.startswith("plan_transport=") or low.startswith("plan_transport="):
-            eprint("ERROR: plan_transport has been removed; learn transport is fixed to auto(app-server->exec).")
+            eprint("ERROR: plan_transport has been removed; learn transport is fixed to app-server plan mode.")
             raise SystemExit(2)
         elif token.startswith("model_timeout_sec=") or low.startswith("model_timeout_sec="):
             eprint("ERROR: MODEL_TIMEOUT_SEC has been removed from learn.")
@@ -199,7 +383,6 @@ def parse_cli(argv: list[str]) -> dict[str, Any]:
             eprint("ERROR: LOG=<path> is no longer accepted; log path is a script constant.")
             raise SystemExit(2)
         elif token.startswith("auto_exam=") or token.startswith("require_exam=") or low.startswith("auto_exam=") or low.startswith("require_exam="):
-            # Compatibility no-op.
             pass
         elif "=" in token:
             eprint(f"ERROR: unexpected learn arg: {token}")
@@ -226,11 +409,12 @@ def parse_cli(argv: list[str]) -> dict[str, Any]:
         "log_file": "",
         "model_sync_mode": "1",
         "plan_mode": "strong",
-        "plan_transport": "auto(app-server->exec)",
+        "plan_transport": MODEL_TRANSPORT_PRIMARY,
         "model_name": model_name,
         "reasoning_profile": reasoning_profile,
         "model_reasoning_effort": effective_effort,
     }
+
 
 
 def run_logged_self(project_id: str, cfg: dict[str, Any]) -> int:
@@ -269,109 +453,68 @@ def run_logged_self(project_id: str, cfg: dict[str, Any]) -> int:
         return int(proc.returncode or 0)
 
 
-def build_base_learn(project_id: str, learn_file: Path, learn_md: Path) -> None:
-    default_required_files = [
-        "docs/PROJECT_GUIDE.md",
-        "AGENTS.md",
-        "docs/WORKFLOW.md",
-        "CODEX_CLI_PLAYBOOK.md",
-        "TASKS/STATE.md",
-    ]
-    required_files = default_required_files
-    required_files_for_digest = [x for x in required_files if x != "TASKS/STATE.md"]
+
+def build_base_learn(project_id: str, learn_file: Path, learn_md: Path, state: dict[str, str]) -> None:
+    north_star, questions = parse_project_guide(Path("docs/PROJECT_GUIDE.md"), project_id, state["current_run_id"])
+    required_files = ordered_unique(OWNER_FILES + [path for q in questions for path in q.must_read_files])
     missing_required = [path for path in required_files if not Path(path).is_file()]
-    context_files = ordered_unique(list(required_files_for_digest))
-
-    skill_files: list[str] = []
-    for root in (Path("/root/.codex/skills/.system"), Path(".codex/skills/.system")):
-        if not root.is_dir():
-            continue
-        for skill in sorted(root.glob("*/SKILL.md")):
-            skill_files.append(str(skill))
-    skill_files = ordered_unique(skill_files)
-
     context_entries: list[dict[str, str]] = []
-    for rel in context_files:
+    for rel in required_files:
         status, digest = file_sha(Path(rel))
         context_entries.append({"path": rel, "status": status, "sha256": digest})
-
-    skill_entries: list[dict[str, str]] = []
-    for rel in skill_files:
-        status, digest = file_sha(Path(rel))
-        skill_entries.append({"path": rel, "status": status, "sha256": digest})
-
-    digest_lines: list[str] = []
-    for item in context_entries:
-        digest_lines.append(f"ctx:{item['path']}:{item['sha256']}")
-    for item in skill_entries:
-        digest_lines.append(f"skill:{item['path']}:{item['sha256']}")
+    digest_lines = [f"ctx:{item['path']}:{item['sha256']}" for item in context_entries]
     digest_lines.sort()
     context_digest = hashlib.sha256("\n".join(digest_lines).encode("utf-8")).hexdigest()
 
-    sync_passed = len(missing_required) == 0
-    required_total = len(required_files)
-    required_read = required_total - len(missing_required)
-
-    project_summary = ""
-    project_goal = ""
+    readme_summary = "quant-factory-os governance/execution base for quant engineering."
     if Path("README.md").is_file():
         for raw in Path("README.md").read_text(encoding="utf-8", errors="replace").splitlines():
             s = raw.strip()
             if s and not s.startswith("#"):
-                project_summary = s
+                readme_summary = s
                 break
-    if not project_summary:
-        project_summary = "quant-factory-os governance/execution base for quant engineering."
-
-    if Path("docs/PROJECT_GUIDE.md").is_file():
-        lines = Path("docs/PROJECT_GUIDE.md").read_text(encoding="utf-8", errors="replace").splitlines()
-        for i, raw in enumerate(lines):
-            if "一句话北极星" not in raw:
-                continue
-            for cand in lines[i + 1 :]:
-                s = cand.strip()
-                if not s or s.startswith("#") or s.startswith(">") or s.startswith("-"):
-                    continue
-                project_goal = s
-                break
-            break
-    if not project_goal:
-        project_goal = "自动化 -> 自我迭代 -> 涌现智能。"
 
     now = datetime.now(timezone.utc)
+    learn_passed = len(missing_required) == 0
     obj: dict[str, Any] = {
-        "schema": "qf_learn.v2",
+        "schema": "qf_learn.v3",
         "project_id": project_id,
         "scope": "project-session",
         "created_at_utc": now.isoformat(),
-        "learn_passed": bool(sync_passed),
+        "learn_passed": bool(learn_passed),
+        "owner_files": list(OWNER_FILES),
+        "context_files": list(required_files),
+        "context_digest": context_digest,
         "project_understanding": {
-            "summary": project_summary,
-            "goal": project_goal,
-        },
-        "constitution_and_workflow": {
-            "constitution_source": "AGENTS.md",
-            "workflow_source": "docs/WORKFLOW.md",
+            "summary": readme_summary,
+            "goal": north_star,
         },
         "session_status": {
-            "continuity": "state_only",
-            "current_stage": {"current_project_id": project_id},
+            "continuity": "run-context" if state["current_run_id"] else "project-only",
+            "current_stage": {
+                "current_project_id": project_id,
+                "current_run_id": state["current_run_id"],
+                "current_task_file": state["current_task_file"],
+                "current_status": state["current_status"],
+            },
         },
+        "guide_questions": [
+            {
+                "question_id": q.question_id,
+                "title": q.title,
+                "must_read_files": q.must_read_files,
+                "why": q.why,
+                "mainline": q.mainline_lines,
+            }
+            for q in questions
+        ],
         "sync": {
-            "report_file": "",
-            "mode": "project-direct-read",
-            "passed": sync_passed,
-            "required_total": required_total,
-            "required_read": required_read,
+            "mode": "project-guide-driven-read",
+            "passed": learn_passed,
+            "required_total": len(required_files),
+            "required_read": len(required_files) - len(missing_required),
             "missing_required_files": missing_required,
         },
-        "skills": {
-            "count": len(skill_entries),
-            "files": [x["path"] for x in skill_entries],
-        },
-        "context_digest": context_digest,
-        "context_files": [x["path"] for x in context_entries],
-        "skill_files": [x["path"] for x in skill_entries],
         "next_command": "python3 tools/ready.py",
     }
     write_json(learn_file, obj)
@@ -383,23 +526,35 @@ def build_base_learn(project_id: str, learn_file: Path, learn_md: Path) -> None:
         f"Generated At (UTC): {obj['created_at_utc']}",
         f"Status: `{'pass' if obj['learn_passed'] else 'fail'}`",
         "",
-        "## Sync",
-        "- report: `(none)`",
-        f"- required read: {required_read}/{required_total}",
-        f"- pass: `{str(sync_passed).lower()}`",
+        "## Owner Files",
     ]
-    if missing_required:
-        lines.append("- missing required:")
-        for p in missing_required:
-            lines.append(f"  - `{p}`")
+    for path in OWNER_FILES:
+        lines.append(f"- `{path}`")
     lines.extend(
         [
             "",
-            "## Skills",
-            f"- files: {len(skill_entries)}",
+            "## Questions",
+            f"- count: {len(questions)}",
             "",
-            "## Context Digest",
-            f"- `{context_digest}`",
+            "## Sync",
+            f"- required read: {obj['sync']['required_read']}/{obj['sync']['required_total']}",
+            f"- pass: `{str(learn_passed).lower()}`",
+        ]
+    )
+    if missing_required:
+        lines.append("- missing required:")
+        for path in missing_required:
+            lines.append(f"  - `{path}`")
+    lines.extend(
+        [
+            "",
+            "## Current Stage",
+            f"- project: `{project_id}`",
+            f"- run: `{state['current_run_id'] or '(none)'}`",
+            f"- task: `{state['current_task_file'] or '(none)'}`",
+            "",
+            "## Mainline",
+            f"- {north_star}",
             "",
             "## Next Command",
             f"- `{obj['next_command']}`",
@@ -409,112 +564,160 @@ def build_base_learn(project_id: str, learn_file: Path, learn_md: Path) -> None:
     learn_md.write_text("\n".join(lines), encoding="utf-8")
 
     print(f"LEARN_STATUS: {'pass' if obj['learn_passed'] else 'fail'}")
-    print(f"LEARN_SYNC_REQUIRED_READ: {required_read}/{required_total}")
-    print(f"LEARN_SKILLS_COUNT: {len(skill_entries)}")
+    print(f"LEARN_SYNC_REQUIRED_READ: {obj['sync']['required_read']}/{obj['sync']['required_total']}")
+    print(f"LEARN_GUIDE_QUESTION_COUNT: {len(questions)}")
     print(f"LEARN_CONTEXT_DIGEST: {context_digest}")
+
 
 
 def print_base_anchors(learn_file: Path) -> None:
     obj = read_json(learn_file)
-    mainline = " ".join(str((obj.get("project_understanding") or {}).get("goal", "")).split())
-    stage_text = " ".join(f"project={obj.get('project_id', '')}".split())
-    next_step = " ".join(str(obj.get("next_command", "")).split())
-    required_files = obj.get("context_files") or []
-    required_files_text = ",".join(" ".join(str(x).split()) for x in required_files if str(x).strip())
-    print(f"LEARN_MAINLINE: {mainline}")
-    print(f"LEARN_CURRENT_STAGE: {stage_text}")
-    print(f"LEARN_NEXT_STEP: {next_step}")
-    print(f"LEARN_REQUIRED_FILES_READ_LIST: {required_files_text}")
+    stage = obj.get("session_status", {}).get("current_stage", {})
+    stage_parts = [
+        f"project={stage.get('current_project_id', '')}",
+    ]
+    if stage.get("current_run_id"):
+        stage_parts.append(f"run={stage.get('current_run_id')}")
+    if stage.get("current_task_file"):
+        stage_parts.append(f"task={stage.get('current_task_file')}")
+    print(f"LEARN_MAINLINE: {' '.join(str((obj.get('project_understanding') or {}).get('goal', '')).split())}")
+    print(f"LEARN_CURRENT_STAGE: {' '.join(' '.join(stage_parts).split())}")
+    print(f"LEARN_NEXT_STEP: {' '.join(str(obj.get('next_command', '')).split())}")
+    print(f"LEARN_REQUIRED_FILES_READ_LIST: {','.join(obj.get('context_files') or [])}")
+
 
 
 def generate_prompt(learn_file: Path, prompt_file: Path, project_id: str, plan_mode: str) -> None:
     obj = read_json(learn_file)
+    guide_questions = obj.get("guide_questions") or []
     required_files = [str(x).strip() for x in (obj.get("context_files") or []) if str(x).strip()]
+    owner_files = [str(x).strip() for x in (obj.get("owner_files") or []) if str(x).strip()]
+    stage = ((obj.get("session_status") or {}).get("current_stage") or {})
     schema_lines = [
         "{",
         '  "mainline": "<string>",',
         '  "current_stage": "<string>",',
         '  "next_step": "<string>",',
         '  "files_read": ["<path1>", "<path2>"],',
+        '  "plan_protocol": {',
+        '    "goal": "<string>",',
+        '    "non_goal": "<string>",',
+        '    "evidence": ["<path>#<section>: <concrete fact>"],',
+        '    "alternatives": ["<alt1>", "<alt2>"],',
+        '    "rebuttal": "<string>",',
+        '    "decision_stop_condition": "<string>"',
+        "  },",
+        '  "oral_restate": {',
+        '    "project_understanding": "<string>",',
+        '    "constitution_workflow": "<string>",',
+        '    "evidence_chain": "<string>",',
+        '    "session_continuity": "<string>",',
+        '    "current_focus": "<string>",',
+        '    "next_action": "<string>"',
+        "  },",
+        '  "guide_oral": [',
+        '    {',
+        '      "question_id": "Q1",',
+        '      "question": "<question title>",',
+        '      "answer": "<full oral answer>",',
+        '      "standard_alignment": "aligned|partial|drifted",',
+        '      "evidence": ["<path>#<section>: <concrete fact>"],',
+        '      "drift_note": "<difference vs standard answer or none>",',
+        '      "return_to_mainline": "<how this question returns to mainline>"',
+        '    }',
+        '  ],',
+        '  "anchor_realign": {',
+        '    "question_id": "<Q1..Qn from PROJECT_GUIDE>",',
+        '    "status": "on_track|drifted",',
+        '    "drift_detail": "<what drift happened or none>",',
+        '    "return_to_mainline": "<how to return to mainline now>"',
+        '  }',
+        "}",
     ]
-    if plan_mode == "strong":
-        schema_lines.extend(
-            [
-                '  "plan_protocol": {',
-                '    "goal": "<string>",',
-                '    "non_goal": "<string>",',
-                '    "evidence": ["<path or claim>"],',
-                '    "alternatives": ["<alt1>", "<alt2>"],',
-                '    "rebuttal": "<string>",',
-                '    "decision_stop_condition": "<string>"',
-                "  },",
-                '  "oral_restate": {',
-                '    "project_understanding": "<string>",',
-                '    "constitution_workflow": "<string>",',
-                '    "evidence_chain": "<string>",',
-                '    "session_continuity": "<string>",',
-                '    "current_focus": "<string>",',
-                '    "next_action": "<string>"',
-                "  },",
-                '  "oral_exam": [',
-                '    {"question_id":"Q1","question":"<q1>","answer":"<a1>","score":"pass|fail"},',
-                '    {"question_id":"Q2","question":"<q2>","answer":"<a2>","score":"pass|fail"},',
-                '    {"question_id":"Q3","question":"<q3>","answer":"<a3>","score":"pass|fail"}',
-                "  ],",
-                '  "anchor_realign": {',
-                '    "question_id": "<Q1..Q17 from PROJECT_GUIDE>",',
-                '    "status": "on_track|drifted",',
-                '    "drift_detail": "<what detail drift happened or none>",',
-                '    "return_to_mainline": "<how to return to mainline now>"',
-                "  }",
-            ]
-        )
-    schema_lines.append("}")
 
     lines = [
         "You are performing strict onboarding sync for quant-factory-os.",
         "Use `/plan` strongest planning mindset in this response (plan-first, evidence-first, no execution).",
-        "Read the listed files with tools/view.sh and reply with JSON only.",
-        "You may run via codex app-server or codex exec transport; still enforce `/plan`-style strong mode output discipline.",
+        "This is a real plan-mode onboarding pass, not a summary shortcut.",
+        "Read files with tools/view.sh and reply with JSON only.",
         "",
         f"PROJECT_ID: {project_id}",
-        "Required files to read:",
+        f"CURRENT_RUN_ID: {stage.get('current_run_id') or '(none)'}",
+        f"CURRENT_TASK_FILE: {stage.get('current_task_file') or '(none)'}",
+        "",
+        "Owner files:",
     ]
+    for path in owner_files:
+        lines.append(f"- {path}")
+    lines.extend(
+        [
+            "",
+            "All required files to read with tools/view.sh:",
+        ]
+    )
     for path in required_files:
         lines.append(f"- {path}")
     lines.extend(
         [
             "",
+            "Question contract from PROJECT_GUIDE:",
+        ]
+    )
+    for item in guide_questions:
+        qid = str(item.get("question_id", "")).strip()
+        title = str(item.get("title", "")).strip()
+        lines.append(f"- {qid}: {title}")
+        for path in item.get("must_read_files") or []:
+            lines.append(f"  must_read: {path}")
+    lines.extend(
+        [
+            "",
             "Output requirements:",
             "- Do not run write commands.",
-            "- Read required files strictly in the listed order (top to bottom).",
-            "- Execute only minimal read/shell commands needed to gather evidence from the required files.",
-            "- Learning sync sequence must be: project -> constitution/workflow -> evidence chain -> session continuity -> current focus -> next action.",
-            "- Do not call python3 tools/init.py/learn/ready inside this model-sync pass.",
+            "- Read owner files first in this exact order: docs/PROJECT_GUIDE.md -> AGENTS.md -> docs/WORKFLOW.md.",
+            "- Then answer every PROJECT_GUIDE question in order (Q1..Qn) using the guide's own standard answers plus evidence from its must-read files.",
+            "- Do not skip any question.",
+            "- Keep every answer concise but complete: target 2-4 sentences per question, not long essays.",
+            "- Keep every drift_note to one short sentence.",
+            "- For each guide_oral item, include only the minimum evidence needed to cover that question's must_read files.",
+            "- For each guide_oral item, evidence count should normally equal the number of must_read files for that question; do not add extra evidence unless required.",
+            "- Prefer one targeted read per file. Do not repeatedly reread the same file unless the first read was insufficient.",
+            "- Prefer heading search plus focused view.sh reads over long full-file reads.",
+            "- For current-status questions, use current TASKS/STATE plus current run summary/decision only; do not wander into unrelated historical artifacts.",
             "- Do not include markdown fences.",
             "- JSON must follow this schema exactly:",
         ]
     )
     lines.extend(schema_lines)
-    lines.append("")
-    if plan_mode == "strong":
-        lines.extend(
-            [
-                "Strong mode gates:",
-                "- Treat this pass as `/plan`-equivalent strongest mode; no shortcut answers.",
-                "- plan_protocol fields are mandatory.",
-                "- plan_protocol.evidence must cover every required file at least once.",
-                "- oral_restate fields are mandatory.",
-                "- oral_exam must contain at least 3 QA items, each bound to PROJECT_GUIDE question ids (Q1..Q17).",
-                "- oral_exam must have at least 2 pass items.",
-                "- anchor_realign must map to one PROJECT_GUIDE question id (Q1..Q17).",
-                "- practice must include tools/view.sh reads for every required file.",
-                "",
-            ]
-        )
-    lines.append("files_read must be a subset of the required files list above.")
-    lines.append('For evidence format, use: "<path>#<section>: <concrete fact>".')
+    lines.extend(
+        [
+            "",
+            "Strong mode gates:",
+            "- Treat this pass as true `/plan` strongest mode.",
+            "- plan_protocol fields are mandatory.",
+            "- plan_protocol.evidence must cover every owner file at least once.",
+            "- oral_restate fields are mandatory.",
+            "- guide_oral must cover every PROJECT_GUIDE question exactly once and remain in Q-order.",
+            "- Each guide_oral item must cite evidence from that question's must_read files.",
+            "- anchor_realign must map to one PROJECT_GUIDE question id.",
+            "- Practice must include tools/view.sh reads for every required file.",
+            "",
+            "Evidence format rule:",
+            '- Use: "<path>#<section>: <concrete fact>".',
+        ]
+    )
     prompt_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+
+def path_reference_matches(text: str, required_path: str) -> bool:
+    value = str(text or "").strip()
+    target = str(required_path or "").strip()
+    if not value or not target:
+        return False
+    resolved = str(Path(target).resolve())
+    return target in value or f"./{target}" in value or resolved in value
+
 
 
 def parse_model_output(model_raw_file: Path, model_json_file: Path, plan_mode: str, learn_file: Path, model_events_file: Path) -> dict[str, Any]:
@@ -552,16 +755,23 @@ def parse_model_output(model_raw_file: Path, model_json_file: Path, plan_mode: s
 
     learn_obj = read_json(learn_file)
     required_files = [str(x).strip() for x in (learn_obj.get("context_files") or []) if str(x).strip()]
+    owner_files = [str(x).strip() for x in (learn_obj.get("owner_files") or []) if str(x).strip()]
+    guide_questions = learn_obj.get("guide_questions") or []
+    expected_questions = {
+        str(item.get("question_id", "")).strip(): item
+        for item in guide_questions
+        if str(item.get("question_id", "")).strip()
+    }
     if not required_files:
         raise ValueError("context_files empty")
-    missing_required = [p for p in required_files if p not in set(files_read)]
+    missing_required = [path for path in required_files if not any(path_reference_matches(value, path) for value in files_read)]
     if missing_required:
-        raise ValueError("files_read missing required files")
+        raise ValueError(f"files_read missing required files: {missing_required}")
 
     if plan_mode == "strong":
         plan = obj.get("plan_protocol")
         oral = obj.get("oral_restate")
-        exam = obj.get("oral_exam")
+        guide_oral = obj.get("guide_oral")
         anchor = obj.get("anchor_realign")
         if not isinstance(plan, dict):
             raise ValueError("plan_protocol missing")
@@ -571,40 +781,52 @@ def parse_model_output(model_raw_file: Path, model_json_file: Path, plan_mode: s
         evidence = plan.get("evidence") or []
         if not isinstance(evidence, list) or not evidence:
             raise ValueError("plan_protocol.evidence invalid")
-        covered_evidence: set[str] = set()
-        for ev in evidence:
-            ev_text = str(ev).strip()
-            if not ev_text:
-                continue
-            for req in required_files:
-                req_abs = str(Path(req).resolve())
-                if req in ev_text or f"./{req}" in ev_text or req_abs in ev_text:
-                    covered_evidence.add(req)
-        missing_evidence = [p for p in required_files if p not in covered_evidence]
-        if missing_evidence:
-            raise ValueError(f"plan_protocol.evidence missing required files: {missing_evidence}")
+        missing_owner_evidence = [
+            path for path in owner_files if not any(path_reference_matches(str(item), path) for item in evidence)
+        ]
+        if missing_owner_evidence:
+            raise ValueError(f"plan_protocol.evidence missing owner files: {missing_owner_evidence}")
         if not isinstance(oral, dict):
             raise ValueError("oral_restate missing")
         for key in ["project_understanding", "constitution_workflow", "evidence_chain", "session_continuity", "current_focus", "next_action"]:
             if key not in oral:
                 raise ValueError(f"oral_restate missing {key}")
-        if not isinstance(exam, list) or len(exam) < 3:
-            raise ValueError("oral_exam invalid")
-        for item in exam:
+        if not isinstance(guide_oral, list):
+            raise ValueError("guide_oral invalid")
+        if len(guide_oral) != len(expected_questions):
+            raise ValueError("guide_oral question count mismatch")
+        seen_qids: set[str] = set()
+        expected_order = list(expected_questions.keys())
+        actual_order: list[str] = []
+        for item in guide_oral:
             if not isinstance(item, dict):
-                raise ValueError("oral_exam item invalid")
-            for key in ["question_id", "question", "answer", "score"]:
+                raise ValueError("guide_oral item invalid")
+            for key in ["question_id", "question", "answer", "standard_alignment", "evidence", "drift_note", "return_to_mainline"]:
                 if key not in item:
-                    raise ValueError(f"oral_exam missing {key}")
-            qid_exam = str(item.get("question_id", "")).strip().upper()
-            if not re.fullmatch(r"Q([1-9]|1[0-7])", qid_exam):
-                raise ValueError("oral_exam question_id invalid")
-            score_exam = str(item.get("score", "")).strip().lower()
-            if score_exam not in {"pass", "fail"}:
-                raise ValueError("oral_exam score invalid")
-        pass_count = sum(1 for item in exam if str(item.get("score", "")).strip().lower() == "pass")
-        if pass_count < 2:
-            raise ValueError("oral_exam insufficient passes")
+                    raise ValueError(f"guide_oral missing {key}")
+            qid = str(item.get("question_id", "")).strip().upper()
+            if qid not in expected_questions:
+                raise ValueError(f"guide_oral unexpected question_id: {qid}")
+            if qid in seen_qids:
+                raise ValueError(f"guide_oral duplicate question_id: {qid}")
+            seen_qids.add(qid)
+            actual_order.append(qid)
+            if not str(item.get("question", "")).strip() or not str(item.get("answer", "")).strip():
+                raise ValueError(f"guide_oral empty question/answer: {qid}")
+            alignment = str(item.get("standard_alignment", "")).strip().lower()
+            if alignment not in {"aligned", "partial", "drifted"}:
+                raise ValueError(f"guide_oral standard_alignment invalid: {qid}")
+            evidence_items = item.get("evidence") or []
+            if not isinstance(evidence_items, list) or not evidence_items:
+                raise ValueError(f"guide_oral evidence invalid: {qid}")
+            must_read_files = [str(path).strip() for path in (expected_questions[qid].get("must_read_files") or []) if str(path).strip()]
+            missing_question_evidence = [
+                path for path in must_read_files if not any(path_reference_matches(str(ev), path) for ev in evidence_items)
+            ]
+            if missing_question_evidence:
+                raise ValueError(f"guide_oral evidence missing required files for {qid}: {missing_question_evidence}")
+        if actual_order != expected_order:
+            raise ValueError("guide_oral order mismatch")
         if not isinstance(anchor, dict):
             raise ValueError("anchor_realign missing")
         for key in ["question_id", "status", "drift_detail", "return_to_mainline"]:
@@ -614,7 +836,7 @@ def parse_model_output(model_raw_file: Path, model_json_file: Path, plan_mode: s
         if status not in {"on_track", "drifted"}:
             raise ValueError("anchor status invalid")
         qid = str(anchor.get("question_id", "")).strip().upper()
-        if not re.fullmatch(r"Q([1-9]|1[0-7])", qid):
+        if qid not in expected_questions:
             raise ValueError("anchor question_id invalid")
 
     practice_commands = extract_command_evidence(model_events_file)
@@ -627,10 +849,9 @@ def parse_model_output(model_raw_file: Path, model_json_file: Path, plan_mode: s
             continue
         cmd_text = str(cmd)
         for req in required_files:
-            req_abs = str(Path(req).resolve())
-            if req in cmd_text or f"./{req}" in cmd_text or req_abs in cmd_text:
+            if path_reference_matches(cmd_text, req):
                 viewed_required.add(req)
-    missing_views = [p for p in required_files if p not in viewed_required]
+    missing_views = [path for path in required_files if path not in viewed_required]
     if missing_views:
         raise ValueError(f"required files not actually viewed via tools/view.sh: {missing_views}")
 
@@ -641,7 +862,7 @@ def parse_model_output(model_raw_file: Path, model_json_file: Path, plan_mode: s
             continue
         seen.add(cmd)
         practice_samples.append(cmd)
-        if len(practice_samples) >= 3:
+        if len(practice_samples) >= 5:
             break
     obj["practice"] = {
         "command_execution_count": len(practice_commands),
@@ -649,6 +870,7 @@ def parse_model_output(model_raw_file: Path, model_json_file: Path, plan_mode: s
     }
     write_json(model_json_file, obj)
     return obj
+
 
 
 def print_model_anchors(obj: dict[str, Any], plan_mode: str) -> None:
@@ -662,7 +884,7 @@ def print_model_anchors(obj: dict[str, Any], plan_mode: str) -> None:
         return
     plan = obj.get("plan_protocol") or {}
     oral = obj.get("oral_restate") or {}
-    exam = obj.get("oral_exam") or []
+    guide_oral = obj.get("guide_oral") or []
     anchor = obj.get("anchor_realign") or {}
     practice = obj.get("practice") or {}
     print(f"LEARN_MODEL_PLAN_GOAL: {' '.join(str(plan.get('goal', '')).split())}")
@@ -680,21 +902,18 @@ def print_model_anchors(obj: dict[str, Any], plan_mode: str) -> None:
     print(f"LEARN_MODEL_ANCHOR_DRIFT_DETAIL: {' '.join(str(anchor.get('drift_detail', '')).split())}")
     print(f"LEARN_MODEL_ANCHOR_RETURN_ACTION: {' '.join(str(anchor.get('return_to_mainline', '')).split())}")
     print(f"LEARN_MODEL_PRACTICE_COMMAND_COUNT: {int(practice.get('command_execution_count', 0))}")
-    samples = practice.get("command_samples") or []
-    for idx, sample in enumerate(samples, start=1):
+    for idx, sample in enumerate(practice.get("command_samples") or [], start=1):
         print(f"LEARN_MODEL_PRACTICE_SAMPLE_{idx}: {' '.join(str(sample).split())}")
-    print(f"LEARN_MODEL_ORAL_EXAM_QA_COUNT: {len(exam)}")
-    for idx, item in enumerate(exam, start=1):
+    print(f"LEARN_MODEL_ORAL_Q_COUNT: {len(guide_oral)}")
+    for idx, item in enumerate(guide_oral, start=1):
         if not isinstance(item, dict):
             continue
-        qid = " ".join(str(item.get("question_id", "")).split())
-        q = " ".join(str(item.get("question", "")).split())
-        a = " ".join(str(item.get("answer", "")).split())
-        s = " ".join(str(item.get("score", "")).split())
-        print(f"LEARN_MODEL_ORAL_EXAM_QID{idx}: {qid}")
-        print(f"LEARN_MODEL_ORAL_EXAM_Q{idx}: {q}")
-        print(f"LEARN_MODEL_ORAL_EXAM_A{idx}: {a}")
-        print(f"LEARN_MODEL_ORAL_EXAM_SCORE{idx}: {s}")
+        print(f"LEARN_MODEL_ORAL_QID{idx}: {' '.join(str(item.get('question_id', '')).split())}")
+        print(f"LEARN_MODEL_ORAL_Q{idx}: {' '.join(str(item.get('question', '')).split())}")
+        print(f"LEARN_MODEL_ORAL_A{idx}: {' '.join(str(item.get('answer', '')).split())}")
+        print(f"LEARN_MODEL_ORAL_ALIGNMENT{idx}: {' '.join(str(item.get('standard_alignment', '')).split())}")
+        evidence_count = len(item.get("evidence") or []) if isinstance(item.get("evidence"), list) else 0
+        print(f"LEARN_MODEL_ORAL_EVIDENCE_COUNT{idx}: {evidence_count}")
 
     print("LEARN_READOUT_BEGIN")
     print(f"LEARN_READOUT_MAINLINE: {' '.join(str(obj.get('mainline', '')).split())}")
@@ -705,9 +924,8 @@ def print_model_anchors(obj: dict[str, Any], plan_mode: str) -> None:
     print(f"LEARN_READOUT_ANCHOR: {' '.join(str(anchor.get('question_id', '')).split())} | {' '.join(str(anchor.get('status', '')).split())}")
     print(f"LEARN_READOUT_ANCHOR_ACTION: {' '.join(str(anchor.get('return_to_mainline', '')).split())}")
     print(f"LEARN_READOUT_PRACTICE_COUNT: {int(practice.get('command_execution_count', 0))}")
-    if samples:
-        print(f"LEARN_READOUT_PRACTICE_FIRST: {' '.join(str(samples[0]).split())}")
     print("LEARN_READOUT_END")
+
 
 
 def update_learn_with_model(
@@ -757,6 +975,7 @@ def update_learn_with_model(
             "## Model Sync",
             f"- mode: `{model_sync_mode}`",
             f"- plan_mode: `{plan_mode}`",
+            f"- transport: `{plan_transport_effective}`",
             f"- status: `{model_sync_status}`",
             f"- reason: `{model_sync_reason}`",
             f"- prompt: `{model_prompt_file}`",
@@ -766,13 +985,31 @@ def update_learn_with_model(
             f"- stderr: `{model_stderr_file}`",
         ]
     )
+    if model_sync_pass and isinstance(model_obj.get("result"), dict):
+        result = model_obj["result"]
+        guide_oral = result.get("guide_oral") or []
+        lines.extend(
+            [
+                "",
+                "## Guide Oral",
+                f"- count: {len(guide_oral)}",
+            ]
+        )
+        for item in guide_oral:
+            if not isinstance(item, dict):
+                continue
+            lines.append(f"- {item.get('question_id')}: {item.get('question')}")
+            lines.append(f"  - alignment: {item.get('standard_alignment')}")
     learn_md.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+
 
 
 def learn_file_is_valid(learn_file: Path) -> bool:
     try:
         obj = read_json(learn_file)
     except Exception:
+        return False
+    if str(obj.get("schema", "")).strip() != "qf_learn.v3":
         return False
     if not obj.get("learn_passed"):
         return False
@@ -783,6 +1020,8 @@ def learn_file_is_valid(learn_file: Path) -> bool:
         return False
     if str(model_sync.get("plan_mode", "")).strip() != "strong":
         return False
+    if str(model_sync.get("plan_transport", "")).strip() != MODEL_TRANSPORT_PRIMARY:
+        return False
     if str(model_sync.get("status", "")).strip() != "pass":
         return False
     if not bool(model_sync.get("passed")):
@@ -790,10 +1029,12 @@ def learn_file_is_valid(learn_file: Path) -> bool:
     model_result = model_sync.get("result")
     if not isinstance(model_result, dict):
         return False
-    for key in ["mainline", "current_stage", "next_step", "files_read", "plan_protocol", "oral_restate", "oral_exam", "anchor_realign", "practice"]:
+    for key in ["mainline", "current_stage", "next_step", "files_read", "plan_protocol", "oral_restate", "guide_oral", "anchor_realign", "practice"]:
         if key not in model_result:
             return False
     if not isinstance(model_result.get("files_read"), list) or not model_result.get("files_read"):
+        return False
+    if not isinstance(model_result.get("guide_oral"), list) or not model_result.get("guide_oral"):
         return False
     anchor = model_result.get("anchor_realign") or {}
     if not isinstance(anchor, dict):
@@ -813,19 +1054,31 @@ def learn_file_is_valid(learn_file: Path) -> bool:
         return False
 
     context_files = obj.get("context_files") or []
-    skill_files = obj.get("skill_files") or []
     if not isinstance(context_files, list):
         context_files = []
-    if not isinstance(skill_files, list):
-        skill_files = []
-    digest_lines: list[str] = []
-    for rel in context_files:
-        digest_lines.append(f"ctx:{rel}:{file_sha(Path(str(rel)))[1]}")
-    for rel in skill_files:
-        digest_lines.append(f"skill:{rel}:{file_sha(Path(str(rel)))[1]}")
+    digest_lines = [f"ctx:{rel}:{file_sha(Path(str(rel)))[1]}" for rel in context_files]
     digest_lines.sort()
     current = hashlib.sha256("\n".join(digest_lines).encode("utf-8")).hexdigest()
     return current == str(obj.get("context_digest", "")).strip()
+
+
+
+def learn_file_matches_project(path: Path, project_id: str) -> bool:
+    try:
+        obj = read_json(path)
+    except Exception:
+        return False
+    pid = str(obj.get("project_id") or "").strip() or DEFAULT_PROJECT_ID
+    return pid == project_id
+
+
+
+def resolve_learn_file_for_project(project_id: str) -> str:
+    learn_file = Path("learn") / f"{project_id}.json"
+    if learn_file.is_file() and learn_file_is_valid(learn_file) and learn_file_matches_project(learn_file, project_id):
+        return str(learn_file)
+    return ""
+
 
 
 def main(argv: list[str]) -> int:
@@ -835,10 +1088,12 @@ def main(argv: list[str]) -> int:
     if os.environ.get("QF_LEARN_LOG_ACTIVE", "0") != "1":
         return run_logged_self(project_id, cfg)
 
+    state = read_state_snapshot()
     emit_step(1, 4, "resolve project context")
     print("LEARN_SCOPE_MODE: project-scoped")
     print(f"LEARN_PROJECT_ID: {project_id}")
-    print("LEARN_SYNC_MODE: project-direct-read")
+    print(f"LEARN_CURRENT_RUN_ID: {state['current_run_id'] or '(none)'}")
+    print("LEARN_SYNC_MODE: project-guide-driven-read")
 
     emit_step(2, 4, "prepare learn artifact paths")
     learn_dir = Path("learn")
@@ -850,26 +1105,26 @@ def main(argv: list[str]) -> int:
     model_json_file = learn_dir / f"{project_id}.model.json"
     model_events_file = learn_dir / f"{project_id}.model.events.jsonl"
     model_stderr_file = learn_dir / f"{project_id}.model.stderr.log"
-    model_app_events_file = learn_dir / f"{project_id}.model.app.events.jsonl"
-    model_app_stderr_file = learn_dir / f"{project_id}.model.app.stderr.log"
-    for p in (
+    for path in (
         model_prompt_file,
         model_raw_file,
         model_json_file,
         model_events_file,
         model_stderr_file,
-        model_app_events_file,
-        model_app_stderr_file,
     ):
         try:
-            if p.exists():
-                p.unlink()
+            if path.exists():
+                path.unlink()
         except Exception as exc:
             eprint(str(exc))
             return 1
 
-    emit_step(3, 4, "generate learn report (project + constitution + workflow + skills)")
-    build_base_learn(project_id, learn_file, learn_md)
+    emit_step(3, 4, "generate learn report (project guide + constitution + workflow)")
+    try:
+        build_base_learn(project_id, learn_file, learn_md, state)
+    except Exception as exc:
+        eprint(f"ERROR: build_base_learn failed: {exc}")
+        return 1
     print_base_anchors(learn_file)
 
     if shutil.which("codex") is None:
@@ -878,9 +1133,8 @@ def main(argv: list[str]) -> int:
 
     print(f"LEARN_MODEL_SYNC_MODE: {cfg['model_sync_mode']}")
     print(f"LEARN_MODEL_PLAN_MODE: {cfg['plan_mode']}")
-    print("LEARN_MODEL_PLAN_TRANSPORT: auto(app-server->exec)")
+    print(f"LEARN_MODEL_PLAN_TRANSPORT: {MODEL_TRANSPORT_PRIMARY}")
     print(f"LEARN_MODEL_PLAN_TRANSPORT_PRIMARY: {MODEL_TRANSPORT_PRIMARY}")
-    print(f"LEARN_MODEL_PLAN_TRANSPORT_FALLBACK: {MODEL_TRANSPORT_FALLBACK}")
     print(f"LEARN_MODEL: {cfg['model_name']}")
     print(f"LEARN_MODEL_REASONING_PROFILE: {cfg['reasoning_profile']}")
     requested_effort = cfg["model_reasoning_effort"]
@@ -901,17 +1155,11 @@ def main(argv: list[str]) -> int:
         raw_file=model_raw_file,
         events_file=model_events_file,
         stderr_file=model_stderr_file,
-        app_events_file=model_app_events_file,
-        app_stderr_file=model_app_stderr_file,
     )
     transport_result = run_plan_sync(transport_req, transport_artifacts)
     print(f"LEARN_MODEL_SYNC_RC_{MODEL_TRANSPORT_PRIMARY}: {transport_result.primary_rc}")
-    if transport_result.fallback_rc is not None:
-        print(f"LEARN_MODEL_SYNC_RC_{MODEL_TRANSPORT_FALLBACK}: {transport_result.fallback_rc}")
-    plan_transport_effective = transport_result.effective_transport
-    model_rc = transport_result.final_rc
-    print(f"LEARN_MODEL_PLAN_TRANSPORT_EFFECTIVE: {plan_transport_effective}")
-    print(f"LEARN_MODEL_SYNC_RC: {model_rc}")
+    print(f"LEARN_MODEL_PLAN_TRANSPORT_EFFECTIVE: {transport_result.effective_transport}")
+    print(f"LEARN_MODEL_SYNC_RC: {transport_result.final_rc}")
 
     model_sync_pass = False
     model_sync_status = "fail"
@@ -922,13 +1170,13 @@ def main(argv: list[str]) -> int:
         model_sync_pass = True
         model_sync_status = "pass"
         model_sync_reason = "ok"
-    except Exception:
+    except Exception as exc:
         model_sync_pass = False
         model_sync_status = "fail"
-        if model_rc != 0:
-            model_sync_reason = f"codex-exit-{model_rc}"
+        if transport_result.final_rc != 0:
+            model_sync_reason = f"codex-exit-{transport_result.final_rc}"
         else:
-            model_sync_reason = "schema-parse-failed"
+            model_sync_reason = f"schema-parse-failed:{exc}"
         print("LEARN_MODEL_SYNC_STATUS: fail")
         print(f"LEARN_MODEL_SYNC_REASON: {model_sync_reason}")
 
@@ -937,7 +1185,7 @@ def main(argv: list[str]) -> int:
         learn_md,
         cfg["model_sync_mode"],
         cfg["plan_mode"],
-        plan_transport_effective,
+        transport_result.effective_transport,
         model_sync_status,
         model_sync_reason,
         model_sync_pass,
@@ -965,10 +1213,6 @@ def main(argv: list[str]) -> int:
     print(f"LEARN_MODEL_JSON_FILE: {model_json_file}")
     print(f"LEARN_MODEL_EVENTS_FILE: {model_events_file}")
     print(f"LEARN_MODEL_STDERR_FILE: {model_stderr_file}")
-    if model_app_events_file.is_file():
-        print(f"LEARN_MODEL_APP_EVENTS_FILE: {model_app_events_file}")
-    if model_app_stderr_file.is_file():
-        print(f"LEARN_MODEL_APP_STDERR_FILE: {model_app_stderr_file}")
     print("LEARN_NEXT_COMMAND: python3 tools/ready.py")
     return 0
 

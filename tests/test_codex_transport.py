@@ -58,28 +58,20 @@ def test_extract_command_evidence_exec_and_app_server(tmp_path: Path) -> None:
     assert "tools/view.sh docs/WORKFLOW.md" in commands[2]
 
 
-def test_run_plan_sync_fallback(monkeypatch, tmp_path: Path) -> None:
+def test_run_plan_sync_app_server_only(monkeypatch, tmp_path: Path) -> None:
     prompt = tmp_path / "prompt.txt"
     raw = tmp_path / "raw.txt"
     events = tmp_path / "events.jsonl"
     stderr = tmp_path / "stderr.log"
-    app_events = tmp_path / "app.events.jsonl"
-    app_stderr = tmp_path / "app.stderr.log"
     prompt.write_text("{}", encoding="utf-8")
 
     def fake_primary(*args, **kwargs):  # type: ignore[no-untyped-def]
+        raw.write_text('{"mainline":"ok"}\n', encoding="utf-8")
         events.write_text("primary-events\n", encoding="utf-8")
         stderr.write_text("primary-stderr\n", encoding="utf-8")
-        return 1
-
-    def fake_fallback(*args, **kwargs):  # type: ignore[no-untyped-def]
-        raw.write_text('{"mainline":"ok"}\n', encoding="utf-8")
-        events.write_text("fallback-events\n", encoding="utf-8")
-        stderr.write_text("fallback-stderr\n", encoding="utf-8")
         return 0
 
     monkeypatch.setattr(ct, "run_app_server_transport", fake_primary)
-    monkeypatch.setattr(ct, "run_exec_transport", fake_fallback)
 
     req = ct.TransportRequest(
         model_name="gpt-5.4",
@@ -91,14 +83,10 @@ def test_run_plan_sync_fallback(monkeypatch, tmp_path: Path) -> None:
         raw_file=raw,
         events_file=events,
         stderr_file=stderr,
-        app_events_file=app_events,
-        app_stderr_file=app_stderr,
     )
     result = ct.run_plan_sync(req, artifacts)
 
     assert result.success is True
-    assert result.effective_transport == ct.MODEL_TRANSPORT_FALLBACK
-    assert result.primary_rc == 1
-    assert result.fallback_rc == 0
-    assert app_events.is_file()
-    assert app_stderr.is_file()
+    assert result.effective_transport == ct.MODEL_TRANSPORT_PRIMARY
+    assert result.primary_rc == 0
+    assert result.final_rc == 0

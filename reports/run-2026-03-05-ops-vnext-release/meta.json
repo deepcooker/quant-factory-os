@@ -1,7 +1,7 @@
 {
   "run_id": "run-2026-03-05-ops-vnext-release",
   "task_id": "TASKS/TASK-vnext-release-cleanup.md",
-  "stop_reason": "task_done",
+  "stop_reason": "needs_human_decision",
   "commands_run": [
     "rm -rf reports/* learn/* TASKS/TASK-*.md TASKS/TODO_PROPOSAL.md",
     "rewrite TASKS/STATE.md",
@@ -32,7 +32,17 @@
     "python3 -m py_compile tools/learn.py tests/test_learn_cli.py tests/test_codex_transport.py",
     "python3 - <<'PY' parse_cli default and override smoke 'PY",
     "timeout 120s python3 tools/learn.py -minimal",
-    "timeout 120s python3 tools/learn.py -minimal -model gpt-5.3-codex"
+    "timeout 120s python3 tools/learn.py -minimal -model gpt-5.3-codex",
+    "rewrite tools/codex_transport.py to app-server true plan mode only",
+    "rewrite tools/learn.py around PROJECT_GUIDE-driven question course",
+    "rewrite docs/PROJECT_GUIDE.md into question/standard-answer/evidence-guide format",
+    "update AGENTS.md and docs/WORKFLOW.md for guide_oral + no exam + no exec fallback",
+    "update CODEX_CLI_PLAYBOOK.md for app-server-only learn and /compact guidance",
+    "update tools/ready.py learn schema validation to qf_learn.v3",
+    "python3 -m py_compile tools/codex_transport.py tools/learn.py tools/ready.py",
+    "python3 - <<'PY' parse_project_guide(docs/PROJECT_GUIDE.md) smoke 'PY",
+    "python3 -m pytest ... (blocked: No module named pytest)",
+    "timeout 240s python3 tools/learn.py -medium (reaches true model-sync stage; full completion remains heavy)"
   ],
   "artifacts": [
     "TASKS/STATE.md",
@@ -59,11 +69,16 @@
     "CODEX_APP_SERVER_PYTHON_GUIDE.md",
     "CODEX_APP_SERVER_PYTHON_TEST.py",
     "tests/test_codex_transport.py",
+    "tests/test_learn_model_parse.py",
+    "tests/test_project_guide_parse.py",
     "test_codex/app_server_runtime/20260305T210523151594Z.summary.json",
     "test_codex/app_server_runtime/20260305T210546385697Z.summary.json",
     "test_codex/app_server_runtime/20260305T210546385697Z.events.jsonl",
     "tools/learn.py",
+    "tools/codex_transport.py",
     "tests/test_learn_cli.py",
-    "learn/project-0.stdout.log"
+    "learn/project-0.stdout.log",
+    "learn/project-0.model.prompt.txt",
+    "learn/project-0.model.events.jsonl"
   ]
 }

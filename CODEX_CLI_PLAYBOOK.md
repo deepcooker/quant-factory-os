@@ -27,10 +27,11 @@ python3 tools/learn.py \
 ```
 
 说明：
-- 传输固定为自动编排：`app-server -> exec` 回退（无需传 `plan_transport`）。
+- 传输固定为：`app-server` true plan mode（无 `exec` 回退，无需传 `plan_transport`）。
 - `learn` 默认模型：`gpt-5.4`
 - 可显式覆盖：`python3 tools/learn.py model=gpt-5.3-codex` 或 `python3 tools/learn.py -model gpt-5.3-codex`
 - `-minimal` 在当前工具约束下会自动提升为 `low`（控制台会打印原因）。
+- `learn` 不使用考试分数，改为全量逐题口述 + 证据引用 + 主线回拉。
 
 必备产物：
 - `learn/<project_id>.model.prompt.txt`
@@ -40,7 +41,7 @@ python3 tools/learn.py \
 
 判定规则：
 - `MODEL_SYNC=1`、`PLAN_MODE=strong` 为 learn 内部固定门禁
-- 必须产出 `/plan` 强模式 JSON 包（含 plan/oral/anchor/practice）
+- 必须产出 `/plan` 强模式 JSON 包（含 plan/guide_oral/anchor/practice）
 - 必须有 `tools/view.sh` 覆盖 required files 的实践证据
 
 ### 1.3 执行模式（可写）
@@ -53,15 +54,14 @@ codex --sandbox workspace-write --ask-for-approval on-request --search
 - 已确认方向后的实现/修复
 - 高风险命令可人工审批
 
-## 2) 软失败策略（当前版本必须知道）
+## 2) `/compact` 使用原则
 
-现象：
-- `exec` 内容已成功返回，但退出码是 `1`
-- 常见错误：`Failed to shutdown rollout recorder`
-
-处理：
-- 若 `events + last_message` 都有效，判定为 `PASS_SOFT`（可用于 learn 同频）
-- 退出码非零保留告警，不直接判 learn 失败
+- `/compact` 是长对话后的上下文压缩动作，不是 `learn` 的硬门禁。
+- 更合适的时机是：
+  - 一轮长同频讨论结束后
+  - 进入新里程碑前
+  - 需要缩小上下文但保留主线时
+- 官方 slash command 文档说明它适用于 “after long exchanges / long runs”。
 
 ## 3) 一键 smoke（自动化）
 

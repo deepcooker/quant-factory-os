@@ -106,3 +106,34 @@ RUN_ID: `run-2026-03-05-ops-vnext-release`
 ### Risk / rollback
 - Risk: slower completion on some prompts when using `gpt-5.4`.
 - Rollback: invoke `python3 tools/learn.py -model gpt-5.3-codex` or revert the default constant if needed.
+
+## Incremental decision (rebuild learn around PROJECT_GUIDE course flow)
+### Why
+- The previous learn flow proved model interaction and anchors, but it still behaved like a partial exam gate rather than a full onboarding curriculum.
+- The project goal is stronger: `learn` must really synchronize project goal, constitution, workflow, skills, project status, and session continuity through `PROJECT_GUIDE`, not through shallow chat memory.
+- `exec` fallback also weakened the guarantee that learn was running under true plan mode.
+
+### Decision
+- Rebuild `tools/learn.py` so `PROJECT_GUIDE` becomes the primary onboarding course.
+- Keep `AGENTS.md` and `docs/WORKFLOW.md` as owner docs, but let `PROJECT_GUIDE` drive all additional evidence reads through per-question `必查文件`.
+- Remove `oral_exam` and require full-question oral restatement (`guide_oral`) across the entire question bank.
+- Remove `exec` fallback; learn must now succeed only through `codex app-server` true plan mode.
+- Treat `/compact` as a long-session recommendation, not as a learn gate.
+
+### Evidence
+- `tools/learn.py`
+- `tools/codex_transport.py`
+- `docs/PROJECT_GUIDE.md`
+- `AGENTS.md`
+- `docs/WORKFLOW.md`
+- `CODEX_CLI_PLAYBOOK.md`
+- `tools/ready.py`
+
+### Risk / rollback
+- Risk: full-question learn is now much heavier, especially at `-medium` and above.
+- Risk: real model-sync completion time may still be too long for daily use until prompt/output size is tuned further.
+- Rollback path: reduce `PROJECT_GUIDE` output verbosity or relax full-question oral scope only if runtime proves unacceptable in repeated real smokes.
+
+### Current stop reason
+- `needs_human_decision`
+- Reason: implementation is landed, but real `-medium` onboarding runtime is still heavy enough that user should validate whether the full-question output shape matches desired day-to-day ergonomics.

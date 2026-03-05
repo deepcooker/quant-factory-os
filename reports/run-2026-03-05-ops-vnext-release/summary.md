@@ -96,3 +96,43 @@ RUN_ID: `run-2026-03-05-ops-vnext-release`
 - `python3 - <<'PY' ... parse_cli([] / model=... / -model ...)` -> pass
 - `timeout 120s python3 tools/learn.py -minimal` -> pass on default `gpt-5.4`
 - `timeout 120s python3 tools/learn.py -minimal -model gpt-5.3-codex` -> pass on override
+
+## Incremental update (PROJECT_GUIDE-driven learn rewrite)
+- Rebuilt `tools/learn.py` around `PROJECT_GUIDE` as the primary course file.
+- `learn` now expands required reads from three owner docs:
+  - `docs/PROJECT_GUIDE.md`
+  - `AGENTS.md`
+  - `docs/WORKFLOW.md`
+  plus each question's `必查文件`.
+- Removed `oral_exam` and replaced it with full-question `guide_oral` validation.
+- Removed `exec` fallback from learn transport; learn now requires `codex app-server` true plan mode.
+- Added `PROJECT_GUIDE` parser and strict validation for:
+  - full Q1..Q17 coverage
+  - fixed Q-order
+  - per-question must-read evidence coverage
+  - tools/view.sh command coverage for all required files
+- Rewrote `docs/PROJECT_GUIDE.md` into course format:
+  - question
+  - why this matters
+  - standard answer
+  - must-read files
+  - search hints
+  - mainline meaning
+- Updated `AGENTS.md`, `docs/WORKFLOW.md`, `CODEX_CLI_PLAYBOOK.md` to match the new learn semantics.
+- Updated `tools/ready.py` to accept the new `qf_learn.v3` schema.
+- Added/rewrote tests for:
+  - CLI parsing
+  - transport behavior
+  - PROJECT_GUIDE parsing
+  - learn model output parsing
+
+### Verify (incremental)
+- `python3 -m py_compile tools/codex_transport.py tools/learn.py tools/ready.py` -> pass
+- `python3 -m py_compile tools/learn.py` -> pass after parser fix
+- ad-hoc parser smoke:
+  - `parse_project_guide(docs/PROJECT_GUIDE.md)` -> 17 questions detected
+- `python3 -m pytest ...` could not run in this environment:
+  - `No module named pytest`
+- real smoke:
+  - `python3 tools/learn.py -medium` now reaches true model-sync stage with 17-question course expansion and 16 required files
+  - full completion is still heavy under current prompt shape; runtime optimization remains a follow-up item if medium-speed onboarding must finish faster

@@ -4,18 +4,15 @@ from __future__ import annotations
 import json
 import queue
 import re
-import shutil
 import subprocess
 import threading
 import time
-from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 MODEL_TRANSPORT_PRIMARY = "app-server"
-MODEL_TRANSPORT_FALLBACK = "exec"
+APP_SERVER_TURN_TIMEOUT_SEC = 1800.0
 
 
 @dataclass
@@ -24,8 +21,6 @@ class TransportArtifacts:
     raw_file: Path
     events_file: Path
     stderr_file: Path
-    app_events_file: Path | None = None
-    app_stderr_file: Path | None = None
 
 
 @dataclass
@@ -40,9 +35,9 @@ class TransportResult:
     success: bool
     effective_transport: str
     primary_rc: int
-    fallback_rc: int | None
     final_rc: int
     reason: str
+
 
 
 def runtime_reasoning_effort(requested_effort: str) -> tuple[str, str]:
@@ -50,6 +45,7 @@ def runtime_reasoning_effort(requested_effort: str) -> tuple[str, str]:
     if effort == "minimal":
         return ("low", "minimal-not-compatible-with-active-toolset-upgraded-to-low")
     return (effort, "as-requested")
+
 
 
 def _extract_text(payload: Any) -> str:
@@ -71,15 +67,31 @@ def _extract_text(payload: Any) -> str:
     return ""
 
 
+def _extract_first_json_dict_text(raw_text: str) -> str:
+    text = str(raw_text or "").strip()
+    if not text:
+        return ""
+    decoder = json.JSONDecoder()
+    for idx, ch in enumerate(text):
+        if ch != "{":
+            continue
+        try:
+            maybe, end = decoder.raw_decode(text[idx:])
+        except Exception:
+            continue
+        if isinstance(maybe, dict) and {"mainline", "current_stage", "next_step", "files_read"}.issubset(set(maybe.keys())):
+            return text[idx : idx + end]
+    return ""
+
+
 class _AppServerRPC:
     def __init__(self, events_file: Path, stderr_file: Path) -> None:
         self.events_file = events_file
         self.stderr_file = stderr_file
         self.proc: subprocess.Popen[str] | None = None
         self._messages: queue.Queue[dict[str, Any]] = queue.Queue()
-        self._pending: deque[dict[str, Any]] = deque()
+        self._pending: list[dict[str, Any]] = []
         self._next_id = 1
-        self._lock = threading.Lock()
         self._stdout_thread: threading.Thread | None = None
         self._stderr_thread: threading.Thread | None = None
         self._events_fp: Any = None
@@ -162,23 +174,15 @@ class _AppServerRPC:
         self._send({"method": method, "params": params or {}})
 
     def request(self, method: str, params: dict[str, Any] | None = None, timeout: float = 60.0) -> dict[str, Any]:
-        with self._lock:
-            req_id = self._next_id
-            self._next_id += 1
+        req_id = self._next_id
+        self._next_id += 1
         self._send({"id": req_id, "method": method, "params": params or {}})
-
-        if self._pending:
-            new_pending: deque[dict[str, Any]] = deque()
-            while self._pending:
-                msg = self._pending.popleft()
-                if msg.get("id") == req_id:
-                    self._pending = new_pending
-                    return msg
-                new_pending.append(msg)
-            self._pending = new_pending
 
         deadline = time.time() + timeout
         while True:
+            for idx, pending in enumerate(list(self._pending)):
+                if pending.get("id") == req_id:
+                    return self._pending.pop(idx)
             left = deadline - time.time()
             if left <= 0:
                 raise TimeoutError(f"timeout waiting response for {method}")
@@ -192,11 +196,12 @@ class _AppServerRPC:
 
     def next_event(self, timeout: float = 1.0) -> dict[str, Any] | None:
         if self._pending:
-            return self._pending.popleft()
+            return self._pending.pop(0)
         try:
             return self._messages.get(timeout=timeout)
         except queue.Empty:
             return None
+
 
 
 def run_app_server_transport(
@@ -272,7 +277,7 @@ def run_app_server_transport(
             if not isinstance(turn_id, str) or not turn_id.strip():
                 return 1
 
-            deadline = time.time() + 240.0
+            deadline = time.time() + APP_SERVER_TURN_TIMEOUT_SEC
             turn_done = False
             text_chunks: list[str] = []
             while time.time() < deadline:
@@ -285,21 +290,33 @@ def run_app_server_transport(
                     t = _extract_text(params.get("delta"))
                     if t:
                         text_chunks.append(t)
+                        parsed = _extract_first_json_dict_text("".join(text_chunks))
+                        if parsed:
+                            raw_file.write_text(parsed + "\n", encoding="utf-8")
+                            return 0
                 elif method == "item/completed":
                     item = params.get("item") or {}
                     if str(item.get("type", "")).lower() in {"plan", "agentmessage"}:
                         t = _extract_text(item.get("text") or item.get("content"))
                         if t:
                             text_chunks.append(t)
+                            parsed = _extract_first_json_dict_text("".join(text_chunks))
+                            if parsed:
+                                raw_file.write_text(parsed + "\n", encoding="utf-8")
+                                return 0
                 elif method == "codex/event/agent_message":
                     msg = params.get("msg") or {}
                     t = _extract_text(msg.get("message"))
                     if t:
                         text_chunks.append(t)
+                        parsed = _extract_first_json_dict_text("".join(text_chunks))
+                        if parsed:
+                            raw_file.write_text(parsed + "\n", encoding="utf-8")
+                            return 0
                 elif method == "turn/completed":
-                    t = params.get("turn") or {}
-                    if t.get("id") == turn_id:
-                        turn_done = True
+                    turn = params.get("turn") or {}
+                    if turn.get("id") == turn_id:
+                        turn_done = str(turn.get("status", "")).strip().lower() == "completed"
                         break
 
             raw_text = "".join(text_chunks).strip()
@@ -310,56 +327,6 @@ def run_app_server_transport(
             fh.write(f"app-server transport failed: {exc}\n")
         return 1
 
-
-def run_exec_transport(
-    prompt_file: Path,
-    raw_file: Path,
-    events_file: Path,
-    stderr_file: Path,
-    model_name: str,
-    model_reasoning_effort: str,
-) -> int:
-    try:
-        prompt_text = prompt_file.read_text(encoding="utf-8", errors="replace")
-    except Exception as exc:
-        stderr_file.write_text(f"read prompt failed: {exc}\n", encoding="utf-8")
-        return 1
-
-    cmd = ["codex", "--ask-for-approval", "never"]
-    if model_name:
-        cmd.extend(["-m", model_name])
-    if model_reasoning_effort:
-        cmd.extend(["-c", f"model_reasoning_effort={model_reasoning_effort}"])
-    cmd.extend(
-        [
-            "exec",
-            "--sandbox",
-            "read-only",
-            "--json",
-            "--output-last-message",
-            str(raw_file),
-            prompt_text,
-        ]
-    )
-
-    try:
-        proc = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-        )
-    except Exception as exc:
-        stderr_file.write_text(f"codex exec failed: {exc}\n", encoding="utf-8")
-        return 1
-
-    events_file.write_text(proc.stdout or "", encoding="utf-8")
-    stderr_file.write_text(proc.stderr or "", encoding="utf-8")
-    if not raw_file.is_file() or not raw_file.read_text(encoding="utf-8", errors="replace").strip():
-        return 1
-    return int(proc.returncode or 0)
 
 
 def run_plan_sync(request: TransportRequest, artifacts: TransportArtifacts) -> TransportResult:
@@ -372,46 +339,15 @@ def run_plan_sync(request: TransportRequest, artifacts: TransportArtifacts) -> T
         request.model_reasoning_effort,
         request.cwd,
     )
-    if primary_rc == 0:
-        return TransportResult(
-            success=True,
-            effective_transport=MODEL_TRANSPORT_PRIMARY,
-            primary_rc=primary_rc,
-            fallback_rc=None,
-            final_rc=primary_rc,
-            reason="ok",
-        )
-
-    if artifacts.app_events_file is not None:
-        try:
-            if artifacts.events_file.is_file():
-                shutil.copyfile(artifacts.events_file, artifacts.app_events_file)
-        except Exception:
-            pass
-    if artifacts.app_stderr_file is not None:
-        try:
-            if artifacts.stderr_file.is_file():
-                shutil.copyfile(artifacts.stderr_file, artifacts.app_stderr_file)
-        except Exception:
-            pass
-
-    fallback_rc = run_exec_transport(
-        artifacts.prompt_file,
-        artifacts.raw_file,
-        artifacts.events_file,
-        artifacts.stderr_file,
-        request.model_name,
-        request.model_reasoning_effort,
-    )
-    success = fallback_rc == 0
+    success = primary_rc == 0
     return TransportResult(
         success=success,
-        effective_transport=MODEL_TRANSPORT_FALLBACK,
+        effective_transport=MODEL_TRANSPORT_PRIMARY,
         primary_rc=primary_rc,
-        fallback_rc=fallback_rc,
-        final_rc=fallback_rc,
-        reason="ok" if success else f"fallback-failed-{fallback_rc}",
+        final_rc=primary_rc,
+        reason="ok" if success else f"app-server-failed-{primary_rc}",
     )
+
 
 
 def extract_command_evidence(events_file: Path) -> list[str]:
@@ -463,10 +399,8 @@ def extract_command_evidence(events_file: Path) -> list[str]:
     plain_events = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", events_text)
     plain_events = re.sub(r"\x1b\].*?(\x07|\x1b\\)", "", plain_events, flags=re.S)
     plain_events = plain_events.replace("\x1b", "")
-    for m in re.finditer(r"/bin/bash -lc [^\r\n]+", plain_events):
-        cmd = " ".join(m.group(0).split()).strip()
+    for match in re.finditer(r"/bin/bash -lc [^\r\n]+", plain_events):
+        cmd = " ".join(match.group(0).split()).strip()
         if cmd:
             commands.append(cmd)
-    if not commands and ("Ran " in plain_events or "command_execution" in plain_events):
-        commands.append("interactive_plan_tool_run_detected")
     return commands

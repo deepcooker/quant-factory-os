@@ -15,7 +15,7 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 ## 2) Core onboarding principle (mainline anchor)
 - Session startup is anchored by:
   - `AGENTS.md` (hard contract)
-  - `docs/PROJECT_GUIDE.md` (learning curriculum + Socratic question bank + mainline anchor)
+  - `docs/PROJECT_GUIDE.md` (learning curriculum + question bank + standard answers + mainline anchor)
 - If the session drifts, return to `docs/PROJECT_GUIDE.md` questions and re-answer from evidence before coding.
 
 ## 3) Single source map (owner files)
@@ -49,6 +49,9 @@ Required visible progress:
 
 `learn` pass criteria (minimum):
 - Runtime implementation is Python-first (`tools/learn.py`).
+- `learn` is the project onboarding core:
+  - owner files are `docs/PROJECT_GUIDE.md` + `AGENTS.md` + `docs/WORKFLOW.md`
+  - `PROJECT_GUIDE.md` drives what else must be read through each question's `必查文件`
 - Must print:
   - `LEARN_MAINLINE`
   - `LEARN_CURRENT_STAGE`
@@ -57,23 +60,23 @@ Required visible progress:
 - Model sync is mandatory (no downgrade path):
   - mode is fixed internally: `MODEL_SYNC=1`
   - plan protocol is fixed internally: `PLAN_MODE=strong`
-  - transport is fixed internally: `auto(app-server->exec)` (no external override)
+  - transport is fixed internally: `app-server` true plan mode only (no fallback, no external override)
   - default model constant: `gpt-5.4`
   - one-shot override is allowed: `model=<slug>` or `-model <slug>`
   - reasoning profile: `-minimal|-low|-medium|-high|-xhigh` (default `-xhigh`)
   - runtime compatibility: `-minimal` auto-upgrades to `low` (with explicit stdout anchor reason)
   - `-log` is implicit; learn always mirrors stdout to `learn/{project_id}.stdout.log`
   - learn does not set model timeout; wait for model completion
-  - fallback is allowed and built-in: `app-server` primary, `exec` fallback
   - practice evidence must show `tools/view.sh` coverage for every required file
-  - `plan_protocol.evidence` must cover every required file
-  - `oral_exam` must have at least 2 `pass` scores
+  - `plan_protocol.evidence` must cover every owner file
+  - full-question oral restatement is mandatory; no exam shortcut
 - Must also print model anchors:
   - `LEARN_MODEL_MAINLINE`
   - `LEARN_MODEL_CURRENT_STAGE`
   - `LEARN_MODEL_NEXT_STEP`
   - `LEARN_MODEL_FILES_READ_LIST`
-  - `LEARN_MODEL_ORAL_EXAM_QID1..N` (QIDs must map to `docs/PROJECT_GUIDE.md` Q1..Q17)
+  - `LEARN_MODEL_ORAL_Q_COUNT`
+  - `LEARN_MODEL_ORAL_QID1..N` / `LEARN_MODEL_ORAL_Q1..N` / `LEARN_MODEL_ORAL_A1..N`
   - plan/oral packet anchors defined in `docs/WORKFLOW.md`
 
 No coding until this gate is complete.
@@ -82,7 +85,7 @@ No coding until this gate is complete.
 - Complex work must follow `Plan -> Confirm -> Execute`.
 - Codex interactive `/plan` is planning protocol, not execution.
 - `bash tools/legacy.sh plan` only drafts queue proposals; it does not open execute gate.
-- `/compact` is milestone-based, not mandatory every task. Use before context grows too large or before switching milestone.
+- `/compact` is milestone-based, not a `learn` hard gate. Use after long exchanges or before switching milestones.
 
 ## 6) Workflow skeleton
 1. Read task acceptance criteria.
