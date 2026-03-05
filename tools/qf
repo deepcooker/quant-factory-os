@@ -2540,6 +2540,17 @@ resolve_ready_field() {
 }
 
 cmd_ready() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+  if [[ -n "$py_bin" && -f "tools/qf_ready.py" ]]; then
+    "$py_bin" tools/qf_ready.py "$@"
+    return $?
+  fi
+
   local run_id=""
   local explicit_run_id=""
   local explicit_project_id="${QF_PROJECT_ID:-${PROJECT_ID:-}}"

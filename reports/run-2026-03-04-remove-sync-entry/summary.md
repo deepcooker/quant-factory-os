@@ -215,3 +215,27 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
 - `tools/qf init` -> pass
 - `tools/qf init -main` -> expected fail in dirty/non-main context (`RC=1`, `INIT_STATUS: blocked`)
 - `make verify` -> pass (`19 passed`)
+
+## Incremental update (ready Python-first implementation)
+- Added new Python runtime implementation: `tools/qf_ready.py`.
+- Converted `tools/qf` `cmd_ready` to delegate to Python first; Bash now keeps compatibility wrapper/fallback role.
+- Kept ready gate behavior and outputs compatible:
+  - same 12-step markers (`READY_STEP[1/12..12/12]`)
+  - same run decision handling (`resume-close` / `abandon-new` / `continue`)
+  - same restatement defaults and auto-fill semantics (`QF_READY_AUTO=1`)
+  - same output artifacts (`ready.json`, `ready_brief`, `orient` draft)
+  - same checkpoint writes (`execution.jsonl`, `conversation.md`, `TASKS/STATE.md`)
+- In Python ready implementation, preserved:
+  - learn gate auto-run behavior
+  - optional sync gate compatibility behavior
+  - orientation draft scoring + recommended option output.
+- Updated owner docs:
+  - `docs/WORKFLOW.md` S2 now records Python-first ready implementation.
+  - `AGENTS.md` mandatory gate notes ready Python runtime.
+
+### Verify (this update)
+- `python3 -m py_compile tools/qf_ready.py` -> pass
+- `bash -n tools/qf` -> pass
+- `tools/qf ready` -> pass
+- `tools/qf ready DECISION=abandon-new` -> pass
+- `make verify` -> pass (`19 passed`)

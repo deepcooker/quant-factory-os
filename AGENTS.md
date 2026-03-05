@@ -36,6 +36,7 @@ Before any implementation:
    - Runtime implementation is Python-first (`tools/qf_init.py`); `tools/qf` is the CLI wrapper.
 2. `tools/qf learn`
 3. `tools/qf ready`
+   - Runtime implementation is Python-first (`tools/qf_ready.py`); `tools/qf` is the CLI wrapper.
 
 `init` detailed step definitions, mode semantics (`-status` / `-main`), and output fields are owned by `docs/WORKFLOW.md` (`S0 Environment`). `AGENTS.md` keeps only gate-level contract.
 

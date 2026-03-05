@@ -161,3 +161,19 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
 - Risk: temporary divergence if both Python and legacy Bash branches are modified.
 - Mitigation: Python path is primary; Bash path remains fallback only.
 - Rollback: remove `cmd_init` delegation line to restore legacy Bash-only path.
+
+## Incremental decision (make ready Python-first, keep Bash as wrapper)
+### Why
+- You requested ongoing migration to Python-first command logic.
+- `ready` is the core gate between onboarding and discussion/execution and has the highest state coupling.
+- Consolidating ready in Python reduces future maintenance cost and aligns with the new runtime direction.
+
+### Decision
+- Introduce `tools/qf_ready.py` as the canonical implementation for `tools/qf ready`.
+- Keep `tools/qf` as CLI wrapper that delegates to Python first for compatibility.
+- Preserve existing ready contract: gate checks, decision handling, artifact outputs, and state/checkpoint updates.
+
+### Risk / rollback
+- Risk: behavior drift between Python implementation and legacy Bash body over time.
+- Mitigation: Python path is primary and validated by real command runs (`ready`, `ready DECISION=...`).
+- Rollback: remove `cmd_ready` delegation line to return to legacy Bash path.

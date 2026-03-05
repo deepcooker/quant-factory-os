@@ -76,6 +76,7 @@ This document describes the expected workflow for changes in this repository.
 - `S2 Ready gate`: `tools/qf ready`
   - Input: restatement fields (goal/scope/acceptance/steps/stop)
   - Output: `reports/{RUN_ID}/ready.json`
+  - Implementation: Python-first (`tools/qf_ready.py`), `tools/qf` keeps CLI wrapper only.
   - Output visibility: prints `READY_STEP[<i>/<n>]` stage markers.
   - Machine-readable stream (optional): `QF_EVENT_STREAM=1` emits JSONL step events to stdout.
   - Learn dependency: `QF_READY_REQUIRE_LEARN=auto` (default) enforces learn gate by default.
