@@ -33,7 +33,7 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 ## 4) Mandatory session gate (once per session)
 Before any implementation:
 1. `tools/qf init`
-2. `tools/qf learn -log`
+2. `tools/qf learn`
 3. `tools/qf ready`
 
 `init` detailed step definitions, mode semantics (`-status` / `-main`), and output fields are owned by `docs/WORKFLOW.md` (`S0 Environment`). `AGENTS.md` keeps only gate-level contract.

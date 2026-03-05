@@ -64,7 +64,7 @@
     - Codex CLI：负责本地执行、改动、验证、证据落盘（执行层）。
   - 同频操作顺序：
     - `tools/qf init`
-    - `tools/qf learn -log`（默认强制 `MODEL_SYNC=1` + `PLAN_MODE=strong`）
+    - `tools/qf learn`（默认强制 `MODEL_SYNC=1` + `PLAN_MODE=strong`，默认输出日志）
     - `tools/qf ready`
   - 必读文件清单：
     - `AGENTS.md`

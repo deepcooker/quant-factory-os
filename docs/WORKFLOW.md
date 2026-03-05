@@ -39,11 +39,13 @@ This document describes the expected workflow for changes in this repository.
   - Input: required owner docs (`AGENTS.md` + `docs/PROJECT_GUIDE.md` + workflow + codex playbook + state).
   - Output: `learn/{project_id}.json` + `learn/{project_id}.md`.
   - Output visibility: prints `LEARN_STEP[<i>/<n>]` stage markers.
-  - Optional stdout mirror: `tools/qf learn -log` writes `learn/{project_id}.stdout.log` (or `LOG=<path>`).
+  - Stdout mirror is enabled by default: `tools/qf learn` writes `learn/{project_id}.stdout.log`.
+    - one-shot disable: `QF_LEARN_LOG=0 tools/qf learn`
+    - custom log path: `tools/qf learn LOG=<path>`
   - Model sync is mandatory (Codex real interaction):
     - enforced mode: `MODEL_SYNC=1`
     - enforced plan protocol: `PLAN_MODE=strong`
-    - timeout/model override: `MODEL_TIMEOUT_SEC=<n>` (default 180), `MODEL=<slug>`
+    - timeout/model override: `MODEL_TIMEOUT_SEC=<n>` (default 300), `MODEL=<slug>`
     - model artifacts:
       - `learn/{project_id}.model.prompt.txt`
       - `learn/{project_id}.model.raw.txt`

@@ -92,3 +92,18 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
 ### Risk / rollback
 - Risk: slightly longer stdout.
 - Rollback: remove `LEARN_READOUT_*` print block from `tools/qf` without affecting gates.
+
+## Incremental decision (learn timeout/log defaults)
+### Why
+- Requirement: simplify operator UX so learn runs with full visibility by default.
+- Manual `-log` and shorter default timeout increased unnecessary friction.
+
+### Decision
+- Set `learn` defaults to:
+  - `MODEL_TIMEOUT_SEC=300` (unless overridden)
+  - log mirror enabled by default (`QF_LEARN_LOG=1`)
+- Keep strict same-frequency gates unchanged (`MODEL_SYNC=1`, `PLAN_MODE=strong`).
+
+### Risk / rollback
+- Risk: default run writes one extra log file each learn invocation.
+- Rollback: revert `QF_LEARN_LOG` default to `0` and keep `-log` as manual opt-in.

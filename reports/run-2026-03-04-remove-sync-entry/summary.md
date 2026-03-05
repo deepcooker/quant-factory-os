@@ -115,3 +115,20 @@ RUN_ID: `run-2026-03-04-remove-sync-entry`
 - `bash -n tools/qf` -> pass
 - `tools/qf learn PROJECT_ID=project-0 MODEL_TIMEOUT_SEC=90` -> pass
   - confirms `LEARN_READOUT_*` block is printed
+
+## Incremental update (learn defaults)
+- Changed learn defaults for lower-friction onboarding:
+  - `QF_LEARN_MODEL_TIMEOUT_SEC` default from `180` -> `300`
+  - `QF_LEARN_LOG` default from `0` -> `1` (stdout mirror on by default)
+- Updated docs and guide wording:
+  - session gate command changed from `tools/qf learn -log` to `tools/qf learn`
+  - workflow updated with default-on log behavior and `QF_LEARN_LOG=0` one-shot disable
+  - timeout default updated to `300`
+- Synced helper answer template text inside `tools/qf`:
+  - next-step command uses `tools/qf learn` (without `-log`)
+
+### Verify (this update)
+- `bash -n tools/qf` -> pass
+- `tools/qf learn PROJECT_ID=project-0` -> pass
+  - confirms `LEARN_LOG_FILE: learn/project-0.stdout.log`
+  - confirms `LEARN_MODEL_TIMEOUT_SEC: 300`
