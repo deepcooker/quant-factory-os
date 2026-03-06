@@ -1,0 +1,1 @@
+{"ts":"2026-03-06T20:18:38+08:00","run_id":"run-2026-03-06-ship-post-sync-cleanliness","phase":"review","action":"review_passed","status":"ok","command":"bash tools/legacy.sh review RUN_ID=run-2026-03-06-ship-post-sync-cleanliness AUTO_FIX=1 STRICT=1","artifacts":"task_file=TASKS/TASK-ship-post-sync-cleanliness.md","error":""}

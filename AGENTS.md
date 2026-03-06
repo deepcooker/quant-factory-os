@@ -94,7 +94,13 @@ No coding until this gate is complete.
 3. Implement smallest safe diff.
 4. `make verify` until green.
 5. Update run evidence.
-6. Ship.
+6. Run smoke / release-prep checks.
+7. Ship.
+
+Current boundary:
+- `smoke` is the ship-readiness layer; it checks materials, verify/review status, and owner-doc freshness.
+- `smoke` does not perform remote git / PR / merge actions.
+- `ship` is the formal git / PR / merge / sync step.
 
 Discussion-first recommended lane:
 - `bash tools/legacy.sh discuss TARGET=prepare`
@@ -140,6 +146,7 @@ Use only these unless task explicitly authorizes more:
 - `bash tools/legacy.sh ...`
 - `tools/doctor.sh`
 - `tools/enter.sh`
+- `tools/smoke.sh`
 - `tools/task.sh`
 - `tools/ship.sh`
 - `tools/view.sh`

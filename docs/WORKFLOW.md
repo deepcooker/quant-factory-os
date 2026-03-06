@@ -423,6 +423,36 @@ project
 - strict blocker 未清空，不得 ship
 
 下一跳：
+- `smoke`
+
+### 6.4 `smoke`
+
+目标：
+- 做 ship 前的 release-prep 检查
+
+输入：
+- 当前 task 合同
+- verify 结果
+- review 结果
+- 当前 run evidence
+- owner docs 更新状态
+
+输出：
+- ship-ready 结论
+- 缺失材料清单（如有）
+
+规则：
+- smoke 不负责远端交付；它只判断是否具备 ship 条件
+- 至少确认以下内容已经齐备：
+  - verify 已通过
+  - strict review blocker 已清空
+  - `reports/<RUN_ID>/summary.md`
+  - `reports/<RUN_ID>/decision.md`
+  - `reports/<RUN_ID>/meta.json`
+  - 若流程/规则/工具行为变化，对应 owner docs 已同步
+- 缺材料、合同不清、验证未过时，必须退回 task owner / 项目负责人
+
+下一跳：
 - `ship`
 
 ## 7. S4 交付层
@@ -447,6 +477,8 @@ project
 规则：
 - one task -> one branch -> one PR
 - ship 前必须更新证据和 owner docs
+- ship 负责 git / branch / commit / push / PR / merge / sync
+- `ship_state.json` 属于 ship 自动回写的交付状态文件；业务材料不在 ship 阶段补写
 
 ### 7.2 `run close`
 
@@ -490,7 +522,14 @@ project
 8. `python3 tools/slice_task.py`
 9. `bash tools/legacy.sh do queue-next`
 10. `bash tools/legacy.sh review RUN_ID=<run-id> STRICT=1 AUTO_FIX=1`
-11. `tools/ship.sh`
+11. `tools/smoke.sh`
+12. `tools/ship.sh`
+
+说明：
+- `-daily` 是日常同频入口，等价于 `-medium`，用于减少档位选择负担；不改变 `learn` 的强同频、app-server 和 oral restatement 硬门禁。
+- `tools/smoke.sh` 是 ship 前的 readiness/checklist 层，不直接执行远端 PR/merge。
+- `tools/task.sh` / `tools/ship.sh` 默认保持当前 active branch 作为发货基线；只有显式以 `main` 为基线时，`ship.sh` 才会执行 `fetch/pull origin main`。
+- 当 `gh pr merge` 前发现 PR 不是 cleanly mergeable 时，`ship.sh` 会以 `pr_merge_blocked` 退出并打印恢复命令，而不是继续盲重试。
 
 说明：
 - `-daily` 是日常同频入口，等价于 `-medium`，用于减少档位选择负担；不改变 `learn` 的强同频、app-server 和 oral restatement 硬门禁。

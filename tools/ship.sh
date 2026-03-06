@@ -156,6 +156,23 @@ write_ship_state() {
 EOF
 }
 
+list_dirty_paths() {
+  git status --porcelain | sed -E 's/^[ MARCUD?!]{2} //'
+}
+
+has_blocking_dirty_paths() {
+  local line=""
+  local ship_state_rel="reports/${run_id}/ship_state.json"
+  while IFS= read -r line; do
+    [[ -n "$line" ]] || continue
+    if [[ "$line" == "$ship_state_rel" ]]; then
+      continue
+    fi
+    return 0
+  done < <(list_dirty_paths)
+  return 1
+}
+
 print_resume_cmd() {
   if [[ -n "${run_id:-}" ]]; then
     echo "恢复命令：bash tools/legacy.sh resume RUN_ID=${run_id}"
@@ -168,6 +185,19 @@ fail_with_resume() {
   write_ship_state "$step" "$err"
   append_mistake_event "$step" "$err" "fail_with_resume"
   echo "❌ ${step} failed: ${err}" >&2
+  print_resume_cmd >&2
+  exit 1
+}
+
+fail_pr_merge_blocked() {
+  local merge_state="${1:-UNKNOWN}"
+  local detail="${2:-pull request is not cleanly mergeable}"
+  local err="merge_state=${merge_state}; ${detail}"
+  write_ship_state "pr_merge_blocked" "$err"
+  append_mistake_event "pr_merge_blocked" "$err" "guard"
+  echo "❌ pr_merge blocked: ${detail}" >&2
+  echo "   merge_state=${merge_state}" >&2
+  echo "   这是可恢复状态，不再继续盲重试 merge。" >&2
   print_resume_cmd >&2
   exit 1
 }
@@ -887,6 +917,13 @@ if ! run_with_retry_capture "pr_state" gh pr view "$pr_url" --json state -q .sta
 fi
 state="$(printf "%s\n" "$RETRY_OUTPUT" | tail -n1 | tr -d '\r')"
 if [[ "$state" != "MERGED" ]]; then
+  merge_state="UNKNOWN"
+  if run_with_retry_capture "pr_merge_state" gh pr view "$pr_url" --json mergeStateStatus -q .mergeStateStatus; then
+    merge_state="$(printf "%s\n" "$RETRY_OUTPUT" | tail -n1 | tr -d '\r')"
+  fi
+  if [[ "$merge_state" != "CLEAN" && "$merge_state" != "UNKNOWN" ]]; then
+    fail_pr_merge_blocked "$merge_state" "pull request is not cleanly mergeable; resolve branch state first"
+  fi
   if ! run_with_retry_capture "pr_merge" gh pr merge --squash --delete-branch "$pr_url"; then
     fail_with_resume "pr_merge" "${RETRY_LAST_ERROR:-gh pr merge failed}"
   fi
@@ -901,7 +938,7 @@ fi
 echo "== 下一枪建议 =="
 echo "如果 QUEUE 还有 [ ]：运行 tools/task.sh --next"
 
-if [[ -n "$(git status --porcelain)" ]]; then
+if has_blocking_dirty_paths; then
   write_ship_state "sync_blocked_dirty" "working tree not clean"
   append_mistake_event "sync_blocked_dirty" "working tree not clean" "guard"
   echo "❌ post-ship sync aborted: working tree is not clean."
