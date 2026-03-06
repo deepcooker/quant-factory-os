@@ -18,6 +18,7 @@ try:
         MODEL_TRANSPORT_PRIMARY,
         TransportArtifacts,
         TransportRequest,
+        extract_final_answer_json_from_events,
         extract_command_evidence,
         run_plan_sync,
         runtime_reasoning_effort,
@@ -27,6 +28,7 @@ except Exception:  # pragma: no cover
         MODEL_TRANSPORT_PRIMARY,
         TransportArtifacts,
         TransportRequest,
+        extract_final_answer_json_from_events,
         extract_command_evidence,
         run_plan_sync,
         runtime_reasoning_effort,
@@ -751,21 +753,35 @@ def extract_first_learn_json_dict(raw_text: str) -> dict[str, Any] | None:
     return None
 
 
+def extract_learn_json_from_events(model_events_file: Path) -> dict[str, Any] | None:
+    parsed = extract_final_answer_json_from_events(model_events_file)
+    if not parsed:
+        return None
+    try:
+        maybe = json.loads(parsed)
+    except Exception:
+        return extract_first_learn_json_dict(parsed)
+    return maybe if isinstance(maybe, dict) else None
+
+
 
 def parse_model_output(model_raw_file: Path, model_json_file: Path, plan_mode: str, learn_file: Path, model_events_file: Path) -> dict[str, Any]:
     raw_text = model_raw_file.read_text(encoding="utf-8", errors="replace") if model_raw_file.is_file() else ""
-    if not raw_text.strip():
-        raise ValueError("model raw empty")
     obj: dict[str, Any] | None = None
-    try:
-        maybe = json.loads(raw_text)
-        if isinstance(maybe, dict):
-            obj = maybe
-    except Exception:
-        obj = extract_first_learn_json_dict(raw_text)
+    if raw_text.strip():
+        try:
+            maybe = json.loads(raw_text)
+            if isinstance(maybe, dict):
+                obj = maybe
+        except Exception:
+            obj = extract_first_learn_json_dict(raw_text)
     if obj is not None and not {"mainline", "current_stage", "next_step", "files_read"}.issubset(set(obj.keys())):
         obj = extract_first_learn_json_dict(raw_text)
     if obj is None:
+        obj = extract_learn_json_from_events(model_events_file)
+    if obj is None:
+        if not raw_text.strip():
+            raise ValueError("model raw empty")
         raise ValueError("model raw is not dict json")
 
     for key in ["mainline", "current_stage", "next_step", "files_read"]:
