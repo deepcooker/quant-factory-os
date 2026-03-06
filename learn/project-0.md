@@ -1,7 +1,7 @@
 # Learn Report
 
 PROJECT_ID: `project-0`
-Generated At (UTC): 2026-03-06T11:37:27.469699+00:00
+Generated At (UTC): 2026-03-06T17:01:34.758953+00:00
 Status: `pass`
 
 ## Owner Files
@@ -18,8 +18,8 @@ Status: `pass`
 
 ## Current Stage
 - project: `project-0`
-- run: `run-2026-03-05-ops-vnext-release`
-- task: `TASKS/TASK-vnext-release-cleanup.md`
+- run: `run-2026-03-07-learn-model-packet-finalization`
+- task: `TASKS/TASK-learn-model-packet-finalization.md`
 
 ## Mainline
 - 自动化 -> 自我迭代 -> 涌现智能。

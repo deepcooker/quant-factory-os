@@ -6,8 +6,8 @@ Your entire final reply must be exactly one JSON object and nothing else.
 Any prose before or after the JSON object is a failure.
 
 PROJECT_ID: project-0
-CURRENT_RUN_ID: run-2026-03-05-ops-vnext-release
-CURRENT_TASK_FILE: TASKS/TASK-vnext-release-cleanup.md
+CURRENT_RUN_ID: run-2026-03-07-learn-model-packet-finalization
+CURRENT_TASK_FILE: TASKS/TASK-learn-model-packet-finalization.md
 
 Owner files:
 - docs/PROJECT_GUIDE.md
@@ -18,8 +18,8 @@ Additional required files to read with tools/view.sh:
 - docs/ENTITIES.md
 - TASKS/STATE.md
 - TASKS/QUEUE.md
-- reports/run-2026-03-05-ops-vnext-release/summary.md
-- reports/run-2026-03-05-ops-vnext-release/decision.md
+- reports/run-2026-03-07-learn-model-packet-finalization/summary.md
+- reports/run-2026-03-07-learn-model-packet-finalization/decision.md
 - CODEX_CLI_PLAYBOOK.md
 - CODEX_CLI_SOURCE_AUDIT.md
 
