@@ -16,6 +16,7 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 - Session startup is anchored by:
   - `AGENTS.md` (hard contract)
   - `docs/PROJECT_GUIDE.md` (learning curriculum + question bank + standard answers + mainline anchor)
+- `PROJECT_GUIDE.md` is not a passive reference; it is the high-quality reverse-questioning course that forces reading owner docs, evidence, and session continuity before coding.
 - If the session drifts, return to `docs/PROJECT_GUIDE.md` questions and re-answer from evidence before coding.
 
 ## 3) Single source map (owner files)

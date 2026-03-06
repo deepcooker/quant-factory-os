@@ -1,0 +1,14 @@
+{
+  "project_id": "project-0",
+  "run_id": "run-2026-03-07-project-guide-mainline-reinforcement",
+  "created_at_utc": "2026-03-06T17:36:35.351145+00:00",
+  "selected_option": "execution-path-ergonomics",
+  "selected_title": "P2: 收敛执行链的人体工学",
+  "priority": "P2",
+  "reason": "如果当前重点从讨论边界转向真正落地，那么最值得做的是把 do/review/ship 的提示、失败恢复和证据更新体验继续压顺。",
+  "source_orient_file": "chatlogs/discussion/run-2026-03-07-project-guide-mainline-reinforcement/orient.json",
+  "discussion_confirmed": true,
+  "contract_json": "reports/run-2026-03-07-project-guide-mainline-reinforcement/direction_contract.json",
+  "contract_md": "reports/run-2026-03-07-project-guide-mainline-reinforcement/direction_contract.md",
+  "next_command": "python3 tools/council.py RUN_ID=run-2026-03-07-project-guide-mainline-reinforcement"
+}
