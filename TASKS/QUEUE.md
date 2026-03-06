@@ -42,7 +42,7 @@
   - [ ] `make verify` 通过
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
 
-- [>] TODO Title: ship post-sync cleanliness: avoid self-dirty ship_state on merged PR flow  Picked: run-2026-03-06-ship-post-sync-cleanliness 2026-03-06T20:25:00+0800
+- [x] TODO Title: ship post-sync cleanliness: avoid self-dirty ship_state on merged PR flow  Picked: run-2026-03-06-ship-post-sync-cleanliness 2026-03-06T20:25:00+0800
   Goal: 修复 `tools/ship.sh` 在 PR 合并后因自身写入 `ship_state.json` 导致 post-ship sync 被脏工作区拦住的问题。
   Scope: `tools/ship.sh`, `tests/`, `TASKS/`, `reports/`, `docs/`
   Acceptance:
@@ -50,6 +50,29 @@
   - [ ] 新增或刷新关键回归测试
   - [ ] `make verify` 通过
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+  Done: commit `4e5aed6`
+
+- [x] TODO Title: ship post-sync smoke: real merged-PR sync continuity check  Picked: run-2026-03-06-ship-post-sync-smoke 2026-03-06T20:40:00+0800
+  Done: self-dirty `ship_state.json` no longer blocked post-ship sync; PR #167 exposed next gap at `pr_merge`
+  Goal: 用一个最小无害改动真实演练 `tools/task.sh -> tools/ship.sh`，确认 merged PR 后 post-ship sync 不再被当前 run 的 `ship_state.json` 自身阻塞。
+  Scope: `TASKS/`, `reports/`, `docs/`
+  Acceptance:
+  - [ ] 真实执行 `tools/task.sh -> tools/ship.sh`
+  - [ ] merged PR 后 post-ship sync 成功越过 `ship_state.json` 自脏点
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
+- [x] TODO Title: ship pr-merge resilience: handle non-clean merge path without losing continuity  Picked: run-2026-03-06-ship-pr-merge-resilience 2026-03-06T20:55:00+0800
+  Goal: 修复 `tools/ship.sh` 在 PR 已创建但 `gh pr merge` 遇到 non-clean merge 时的处理策略，确保错误可恢复且不污染本地 continuity。
+  Scope: `tools/ship.sh`, `tests/`, `TASKS/`, `reports/`, `docs/`
+  Acceptance:
+  - [ ] `pr_merge` 冲突路径有明确、可恢复、低副作用的处理策略
+  - [ ] 新增或刷新关键回归测试
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+  Done: clear `pr_merge_blocked` guard added; review pass recorded in run-2026-03-06-ship-pr-merge-resilience
+
+- [ ] TODO Title: vnext release baseline
   Goal: 进入开发设计阶段的新版本基线，保持流程最小可用并可继续迭代。
   Scope: `TASKS/`, `reports/`, `tools/`, `docs/`, `tests/`
   Acceptance:

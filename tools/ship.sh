@@ -189,6 +189,19 @@ fail_with_resume() {
   exit 1
 }
 
+fail_pr_merge_blocked() {
+  local merge_state="${1:-UNKNOWN}"
+  local detail="${2:-pull request is not cleanly mergeable}"
+  local err="merge_state=${merge_state}; ${detail}"
+  write_ship_state "pr_merge_blocked" "$err"
+  append_mistake_event "pr_merge_blocked" "$err" "guard"
+  echo "❌ pr_merge blocked: ${detail}" >&2
+  echo "   merge_state=${merge_state}" >&2
+  echo "   这是可恢复状态，不再继续盲重试 merge。" >&2
+  print_resume_cmd >&2
+  exit 1
+}
+
 run_with_retry_capture() {
   local step="$1"
   shift
@@ -904,6 +917,13 @@ if ! run_with_retry_capture "pr_state" gh pr view "$pr_url" --json state -q .sta
 fi
 state="$(printf "%s\n" "$RETRY_OUTPUT" | tail -n1 | tr -d '\r')"
 if [[ "$state" != "MERGED" ]]; then
+  merge_state="UNKNOWN"
+  if run_with_retry_capture "pr_merge_state" gh pr view "$pr_url" --json mergeStateStatus -q .mergeStateStatus; then
+    merge_state="$(printf "%s\n" "$RETRY_OUTPUT" | tail -n1 | tr -d '\r')"
+  fi
+  if [[ "$merge_state" != "CLEAN" && "$merge_state" != "UNKNOWN" ]]; then
+    fail_pr_merge_blocked "$merge_state" "pull request is not cleanly mergeable; resolve branch state first"
+  fi
   if ! run_with_retry_capture "pr_merge" gh pr merge --squash --delete-branch "$pr_url"; then
     fail_with_resume "pr_merge" "${RETRY_LAST_ERROR:-gh pr merge failed}"
   fi

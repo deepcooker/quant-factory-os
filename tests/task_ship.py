@@ -38,3 +38,10 @@ def test_task_ship_ignores_own_ship_state_in_post_sync_dirty_check() -> None:
     assert 'ship_state_rel="reports/${run_id}/ship_state.json"' in text
     assert 'if [[ "$line" == "$ship_state_rel" ]]; then' in text
     assert "if has_blocking_dirty_paths; then" in text
+
+
+def test_task_ship_checks_merge_state_before_pr_merge() -> None:
+    text = (REPO_ROOT / "tools" / "ship.sh").read_text(encoding="utf-8")
+    assert 'gh pr view "$pr_url" --json mergeStateStatus -q .mergeStateStatus' in text
+    assert 'if [[ "$merge_state" != "CLEAN" && "$merge_state" != "UNKNOWN" ]]; then' in text
+    assert 'fail_pr_merge_blocked "$merge_state"' in text
