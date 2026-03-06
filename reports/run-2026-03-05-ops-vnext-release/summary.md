@@ -181,3 +181,33 @@ RUN_ID: `run-2026-03-05-ops-vnext-release`
   - targeted-section read guidance remains
 - latest model event stream ended with usage quota failure rather than prompt/schema failure:
   - `learn/project-0.model.events.jsonl` -> `usage_limit_exceeded`
+
+## Incremental update (real learn -> ready closure passed after quota recovery)
+- Re-ran the real onboarding flow after quota recovery:
+  - `env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -low`
+  - `python3 tools/ready.py`
+- `learn -low` completed successfully under:
+  - real Codex app-server
+  - real plan mode
+  - `gpt-5.4`
+  - low reasoning effort
+- The pass still preserved the intended onboarding depth:
+  - required files read: `10/10`
+  - full `PROJECT_GUIDE` oral coverage: `Q1..Q17`
+  - practice evidence: `38` `tools/view.sh` command reads
+  - anchor status: `on_track`
+- `ready` then passed as a pure gate and wrote:
+  - `reports/run-2026-03-05-ops-vnext-release/ready.json`
+- Current conclusion:
+  - the strategy-based reading prompt did not damage sync quality
+  - the current blocker has shifted from “can it close at all” to simple daily ergonomics tuning for `-medium`
+
+### Verify (incremental)
+- `env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -low` -> pass
+- `python3 tools/ready.py` -> pass
+- key outputs:
+  - `LEARN_MODEL_SYNC_STATUS: pass`
+  - `LEARN_MODEL_ORAL_Q_COUNT: 17`
+  - `LEARN_MODEL_ANCHOR_STATUS: on_track`
+  - `READY_LEARN_STATUS: pass`
+  - `READY_NEXT_COMMAND: python3 tools/orient.py`

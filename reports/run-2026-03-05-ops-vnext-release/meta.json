@@ -1,7 +1,7 @@
 {
   "run_id": "run-2026-03-05-ops-vnext-release",
   "task_id": "TASKS/TASK-vnext-release-cleanup.md",
-  "stop_reason": "infra_quota_or_auth",
+  "stop_reason": "needs_human_decision",
   "commands_run": [
     "rm -rf reports/* learn/* TASKS/TASK-*.md TASKS/TODO_PROPOSAL.md",
     "rewrite TASKS/STATE.md",
@@ -54,7 +54,9 @@
     "rollback temporary hardcoded learn reading plan; keep strategy-level targeted-section guidance only",
     "bash -n tools/view.sh",
     "bash tools/view.sh -h",
-    "bash tools/view.sh docs/WORKFLOW.md 20"
+    "bash tools/view.sh docs/WORKFLOW.md 20",
+    "env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -low",
+    "python3 tools/ready.py"
   ],
   "artifacts": [
     "TASKS/STATE.md",
@@ -94,6 +96,12 @@
     "learn/project-0.model.events.jsonl",
     "learn/project-0.model.stderr.log",
     "learn/project-0.model.raw.txt",
-    "tools/view.sh"
+    "tools/view.sh",
+    "learn/project-0.json",
+    "learn/project-0.md",
+    "learn/project-0.model.json",
+    "reports/run-2026-03-05-ops-vnext-release/ready.json",
+    "reports/run-2026-03-05-ops-vnext-release/conversation.md",
+    "reports/run-2026-03-05-ops-vnext-release/execution.jsonl"
   ]
 }

@@ -188,3 +188,34 @@ RUN_ID: `run-2026-03-05-ops-vnext-release`
 ### Current stop reason
 - `infra_quota_or_auth`
 - Reason: the latest live learn smoke was cut off by Codex usage limits after the prompt rollback, so final runtime verification must wait for quota reset.
+
+## Incremental decision (accept strategy-based learn reads after real low-profile pass)
+### Why
+- After quota recovery, the real `learn -low` run completed end-to-end under app-server true plan mode and still preserved the full onboarding shape:
+  - all required files read
+  - all `PROJECT_GUIDE` questions answered
+  - anchor remained on track
+- This proves the rollback from a scripted read plan to a strategy-constrained read policy did not reduce onboarding quality.
+
+### Decision
+- Keep the current learn design:
+  - strategy-based reading
+  - no hardcoded line-by-line read script
+  - full `Q1..Q17` oral sync
+  - evidence-driven file coverage
+- Treat `learn -low -> ready` as the first verified daily-use closure.
+- Defer further work to ergonomics tuning for `-medium`, not to another architectural rewrite of onboarding.
+
+### Evidence
+- `learn/project-0.json`
+- `learn/project-0.model.json`
+- `learn/project-0.model.events.jsonl`
+- `reports/run-2026-03-05-ops-vnext-release/ready.json`
+
+### Risk / rollback
+- Risk: `-medium` may still feel heavy in day-to-day use even though `-low` now closes successfully.
+- Rollback: none recommended on the reading-strategy direction; only tune prompt/output ergonomics if daily latency remains too high.
+
+### Current stop reason
+- `needs_human_decision`
+- Reason: the learn/ready closure is now verified; next step is a product decision whether to continue tuning onboarding ergonomics or move forward into `orient`.
