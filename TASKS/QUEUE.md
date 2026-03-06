@@ -106,6 +106,13 @@
   Scope: `tools/ship.sh`, `tests/`, `TASKS/`, `reports/`, `docs/`
   Acceptance:
   - [ ] merged PR 后切回 base branch 的 sync 路径不会再被当前 run 的 `ship_state.json` 拦住
+
+- [x] TODO Title: ship post-commit state cleanliness  Picked: run-2026-03-06-ship-post-commit-state-cleanliness 2026-03-06T16:05:00+0000
+  Goal: 修复 `tools/ship.sh` 在 local commit 之后继续写成功态 `ship_state.json` 导致工作区重新变脏、阻塞 PR merge 与 post-ship sync continuity 的问题。
+  Scope: `tools/ship.sh`, `tests/`, `TASKS/`, `reports/`, `docs/`
+  Acceptance:
+  - [ ] local commit 之后的成功路径不再重写 tracked `ship_state.json`
+  - [ ] PR create / merge / post-ship sync 不会再被当前 run 的 `ship_state.json` 未提交改动拦住
   - [ ] 新增或刷新关键回归测试
   - [ ] `make verify` 通过
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
