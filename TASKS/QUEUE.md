@@ -32,7 +32,8 @@
 
 - [ ] TODO Title: vnext release baseline
   
-- [>] TODO Title: task ship smoke: real task-to-ship continuity check  Picked: run-2026-03-06-task-ship-smoke 2026-03-06T20:18:00+0800
+- [x] TODO Title: task ship smoke: real task-to-ship continuity check  Picked: run-2026-03-06-task-ship-smoke 2026-03-06T20:18:00+0800
+  Done: PR #166, RUN_ID=run-2026-03-06-task-ship-smoke
   Goal: 用一个最小无害改动真实演练 `tools/task.sh -> tools/ship.sh`，验证新的 branch continuity 策略不会把会话带到错误基线。
   Scope: `TASKS/`, `reports/`, `docs/`
   Acceptance:
