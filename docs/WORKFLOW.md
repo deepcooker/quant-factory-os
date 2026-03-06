@@ -483,6 +483,7 @@ project
 - ship 前必须更新证据和 owner docs
 - ship 负责 git / branch / commit / push / PR / merge / sync
 - `ship_state.json` 属于 ship 自动回写的交付状态文件；业务材料不在 ship 阶段补写
+- 成功路径下，`ship` 不应在 PR merge 之后继续重写已跟踪的 `ship_state.json`，避免为记录成功状态再次弄脏工作区并阻塞 post-ship sync；失败与恢复状态仍需落 `ship_state.json`
 
 ### 7.2 `run close`
 

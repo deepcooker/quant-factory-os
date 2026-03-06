@@ -100,3 +100,12 @@
   - [ ] `tools/*.py` 命令链可用
   - [ ] task/report 历史噪音已清理
   - [ ] 提交 PR
+
+- [x] TODO Title: ship post-merge checkout cleanliness  Picked: run-2026-03-06-ship-post-merge-checkout-cleanliness 2026-03-06T16:00:00+0000
+  Goal: 修复 `tools/ship.sh` 在 PR merged 后因当前 run 的 `ship_state.json` 未提交改动阻塞切回 base branch / post-ship sync 的问题。
+  Scope: `tools/ship.sh`, `tests/`, `TASKS/`, `reports/`, `docs/`
+  Acceptance:
+  - [ ] merged PR 后切回 base branch 的 sync 路径不会再被当前 run 的 `ship_state.json` 拦住
+  - [ ] 新增或刷新关键回归测试
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
