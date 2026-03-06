@@ -50,6 +50,16 @@
   - [ ] 新增或刷新关键回归测试
   - [ ] `make verify` 通过
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+  Done: commit `4e5aed6`
+
+- [>] TODO Title: ship post-sync smoke: real merged-PR sync continuity check  Picked: run-2026-03-06-ship-post-sync-smoke 2026-03-06T20:40:00+0800
+  Goal: 用一个最小无害改动真实演练 `tools/task.sh -> tools/ship.sh`，确认 merged PR 后 post-ship sync 不再被当前 run 的 `ship_state.json` 自身阻塞。
+  Scope: `TASKS/`, `reports/`, `docs/`
+  Acceptance:
+  - [ ] 真实执行 `tools/task.sh -> tools/ship.sh`
+  - [ ] merged PR 后 post-ship sync 成功越过 `ship_state.json` 自脏点
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
   Goal: 进入开发设计阶段的新版本基线，保持流程最小可用并可继续迭代。
   Scope: `TASKS/`, `reports/`, `tools/`, `docs/`, `tests/`
   Acceptance:

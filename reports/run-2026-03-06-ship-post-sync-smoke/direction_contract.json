@@ -1,0 +1,15 @@
+{
+  "project_id": "project-0",
+  "run_id": "run-2026-03-06-ship-post-sync-smoke",
+  "created_at_utc": "2026-03-06T12:41:00+00:00",
+  "selected_option": "ship-post-sync-smoke",
+  "selected_title": "P0: real merged-PR post-sync smoke",
+  "execution_goal": "用一个最小无害改动真实演练 task.sh -> ship.sh，确认 merged PR 后 post-ship sync 不再被当前 run 的 ship_state.json 自身阻塞。",
+  "scope_hint": [
+    "TASKS/",
+    "reports/",
+    "docs/"
+  ],
+  "priority": "P0",
+  "next_command": "make verify"
+}
