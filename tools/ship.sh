@@ -829,7 +829,6 @@ if git diff --cached --quiet; then
 fi
 
 git commit -m "$MSG"
-write_ship_state "committed" ""
 if ! run_with_retry_capture "push" git push -u origin "$branch"; then
   fail_with_resume "push" "${RETRY_LAST_ERROR:-git push failed}"
 fi
@@ -920,7 +919,6 @@ pr_url="$(printf "%s\n" "$RETRY_OUTPUT" | awk '/^https:\/\/github\.com\/.*\/pull
 if [[ -z "$pr_url" ]]; then
   fail_with_resume "pr_create" "could not parse PR URL from gh output"
 fi
-write_ship_state "pr_created" ""
 echo "PR: $pr_url"
 
 # NEW: auto mark queue done (if a matching [>] Picked: <RUN_ID> exists)
