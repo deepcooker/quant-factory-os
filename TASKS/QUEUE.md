@@ -30,7 +30,7 @@
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
   Done: branch continuity defaulted to active base branch; review pass recorded in run-2026-03-06-task-ship-branch-safety
 
-- [ ] TODO Title: vnext release baseline
+- [x] TODO Title: vnext release baseline  Picked: run-2026-03-06-vnext-release-baseline 2026-03-06T21:20:00+0800
   
 - [x] TODO Title: task ship smoke: real task-to-ship continuity check  Picked: run-2026-03-06-task-ship-smoke 2026-03-06T20:18:00+0800
   Done: PR #166, RUN_ID=run-2026-03-06-task-ship-smoke
