@@ -10,6 +10,10 @@
 它不负责重复解释所有命令参数。
 对象定义以 `docs/ENTITIES.md` 为准，硬规则以 `AGENTS.md` 为准。
 
+补充定位：
+- 本文件描述的是 foundation repo 当前状态机。
+- 自动化 1.0 的“business project repo 单入口目标形态”见 `docs/AUTOMATION_1_0.md`。
+
 ## 1. 设计原则
 
 ### 1.1 流程分层

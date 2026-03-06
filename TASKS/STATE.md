@@ -1,7 +1,7 @@
 # STATE
 
 CURRENT_PROJECT_ID: project-0
-CURRENT_RUN_ID: run-2026-03-06-ship-pr-merge-recovery-guidance
-CURRENT_TASK_FILE: TASKS/TASK-ship-pr-merge-recovery-guidance.md
+CURRENT_RUN_ID: run-2026-03-06-automation-1-0-definition
+CURRENT_TASK_FILE: TASKS/TASK-automation-1-0-definition.md
 CURRENT_STATUS: active
-CURRENT_UPDATED_AT: 2026-03-06T13:55:00+00:00
+CURRENT_UPDATED_AT: 2026-03-06T14:05:00+00:00

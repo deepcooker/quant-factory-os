@@ -23,6 +23,7 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 - Project cognition / Q&A anchor: `docs/PROJECT_GUIDE.md`
 - Execution state machine: `docs/WORKFLOW.md`
 - Entity dictionary: `docs/ENTITIES.md`
+- Automation 1.0 target shape: `docs/AUTOMATION_1_0.md`
 - Codex CLI operations: `CODEX_CLI_PLAYBOOK.md`
 - Codex CLI source audit: `CODEX_CLI_SOURCE_AUDIT.md`
 - Current active pointers: `TASKS/STATE.md`
