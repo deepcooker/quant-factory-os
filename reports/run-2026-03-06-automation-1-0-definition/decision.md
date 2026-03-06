@@ -18,3 +18,6 @@ RUN_ID: `run-2026-03-06-automation-1-0-definition`
 ## Risks / Rollback
 - This run defines the target shape but does not yet create the separate business project repo.
 - If the wording later proves too strong, rollback is simple: remove `docs/AUTOMATION_1_0.md` and the minimal references from `AGENTS.md` / `docs/WORKFLOW.md`.
+
+## Stop Reason
+- needs_human_decision
