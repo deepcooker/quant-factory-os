@@ -137,3 +137,25 @@ RUN_ID: `run-2026-03-05-ops-vnext-release`
 ### Current stop reason
 - `needs_human_decision`
 - Reason: implementation is landed, but real `-medium` onboarding runtime is still heavy enough that user should validate whether the full-question output shape matches desired day-to-day ergonomics.
+
+## Incremental decision (separate learn parser bug from learn runtime weight)
+### Why
+- A real rerun after the latest workflow/ready cleanup exposed two different failure modes:
+  - sandboxed Codex app-server attempts could fail on `~/.codex` cache writes
+  - interrupted `model.raw.txt` content could begin with non-JSON process prose, which caused `tools/learn.py` to mis-parse the first `{...}` block instead of the intended onboarding packet
+- The parser bug is a real code defect and should be fixed independently from the broader runtime-weight problem.
+
+### Decision
+- Remove dead legacy code from `tools/ready.py` and keep it as a pure gate only.
+- Harden `tools/learn.py` so it scans `model.raw.txt` for the first JSON object that actually matches the learn packet shape (`mainline/current_stage/next_step/files_read`), rather than trusting the first decoded dict.
+- Treat the remaining `learn -low/-medium` delay as a separate ergonomics/runtime problem to optimize next; do not conflate it with parser correctness.
+
+### Evidence
+- `tools/learn.py`
+- `tools/ready.py`
+- `learn/project-0.model.events.jsonl`
+- `learn/project-0.model.stderr.log`
+
+### Risk / rollback
+- Risk: learn still remains too heavy for daily use until the prompt/tool loop is shortened.
+- Rollback: none recommended for the parser change; the previous behavior was incorrect when raw output contained leading prose.

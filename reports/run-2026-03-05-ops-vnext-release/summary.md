@@ -136,3 +136,21 @@ RUN_ID: `run-2026-03-05-ops-vnext-release`
 - real smoke:
   - `python3 tools/learn.py -medium` now reaches true model-sync stage with 17-question course expansion and 16 required files
   - full completion is still heavy under current prompt shape; runtime optimization remains a follow-up item if medium-speed onboarding must finish faster
+
+## Incremental update (learn parser hardening after real rerun)
+- Removed dead legacy ready code from `tools/ready.py` so the file now only contains the pure-gate path.
+- Hardened `tools/learn.py` model parsing:
+  - when `model.raw.txt` contains process prose before the final JSON packet, learn now searches for the first JSON object that matches the onboarding schema instead of trusting the first `{...}` block.
+- Re-ran real `learn` model-sync attempts:
+  - sandboxed runs exposed `~/.codex` cache write failures (`Permission denied`) from Codex app-server
+  - unsandboxed re-run removed the cache error, but `learn -low/-medium` still remained too heavy and did not finish in a practical time window
+- Current conclusion:
+  - one parser bug is fixed
+  - the remaining blocker is onboarding prompt/runtime weight, not the learn gate schema itself
+
+### Verify (incremental)
+- `python3 -m py_compile tools/learn.py tools/ready.py` -> pass
+- `python3 - <<'PY' ... parse_model_output(...) ...` on the interrupted raw artifact now fails later for incomplete JSON instead of mis-parsing the first non-target `{...}` block
+- real rerun findings:
+  - sandboxed `learn` showed `failed to renew cache TTL: Permission denied (os error 13)`
+  - unsandboxed `learn` removed that permission error but still did not produce `model.raw.txt` within the observation window

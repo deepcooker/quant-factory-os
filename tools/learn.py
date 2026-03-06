@@ -720,6 +720,25 @@ def path_reference_matches(text: str, required_path: str) -> bool:
 
 
 
+def extract_first_learn_json_dict(raw_text: str) -> dict[str, Any] | None:
+    text = str(raw_text or "").strip()
+    if not text:
+        return None
+    decoder = json.JSONDecoder()
+    required = {"mainline", "current_stage", "next_step", "files_read"}
+    for idx, ch in enumerate(text):
+        if ch != "{":
+            continue
+        try:
+            maybe, _end = decoder.raw_decode(text[idx:])
+        except Exception:
+            continue
+        if isinstance(maybe, dict) and required.issubset(set(maybe.keys())):
+            return maybe
+    return None
+
+
+
 def parse_model_output(model_raw_file: Path, model_json_file: Path, plan_mode: str, learn_file: Path, model_events_file: Path) -> dict[str, Any]:
     raw_text = model_raw_file.read_text(encoding="utf-8", errors="replace") if model_raw_file.is_file() else ""
     if not raw_text.strip():
@@ -730,17 +749,9 @@ def parse_model_output(model_raw_file: Path, model_json_file: Path, plan_mode: s
         if isinstance(maybe, dict):
             obj = maybe
     except Exception:
-        decoder = json.JSONDecoder()
-        for idx, ch in enumerate(raw_text):
-            if ch != "{":
-                continue
-            try:
-                maybe, _end = decoder.raw_decode(raw_text[idx:])
-            except Exception:
-                continue
-            if isinstance(maybe, dict):
-                obj = maybe
-                break
+        obj = extract_first_learn_json_dict(raw_text)
+    if obj is not None and not {"mainline", "current_stage", "next_step", "files_read"}.issubset(set(obj.keys())):
+        obj = extract_first_learn_json_dict(raw_text)
     if obj is None:
         raise ValueError("model raw is not dict json")
 
