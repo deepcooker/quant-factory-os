@@ -87,6 +87,7 @@ ship_state_file=""
 current_ship_step=""
 RETRY_OUTPUT=""
 RETRY_LAST_ERROR=""
+ship_recovery_cmd=""
 
 classify_mistake_category() {
   local step="${1:-}"
@@ -138,7 +139,7 @@ append_mistake_event() {
 write_ship_state() {
   local step="$1"
   local last_error="${2:-}"
-  local branch_val commit_val pr_val msg_val
+  local branch_val commit_val pr_val msg_val recovery_val
 
   [[ -n "${run_id:-}" ]] || return 0
 
@@ -149,10 +150,11 @@ write_ship_state() {
   commit_val="$(json_escape "$(git rev-parse --short HEAD 2>/dev/null || true)")"
   pr_val="$(json_escape "${pr_url:-}")"
   msg_val="$(json_escape "${MSG:-}")"
+  recovery_val="$(json_escape "${ship_recovery_cmd:-}")"
   last_error="$(json_escape "$last_error")"
 
   cat > "$ship_state_file" <<EOF
-{"run_id":"${run_id}","branch":"${branch_val}","commit":"${commit_val}","pr_url":"${pr_val}","step":"$(json_escape "$step")","last_error":"${last_error}","msg":"${msg_val}","updated_at":"$(date -Iseconds)"}
+{"run_id":"${run_id}","branch":"${branch_val}","commit":"${commit_val}","pr_url":"${pr_val}","step":"$(json_escape "$step")","last_error":"${last_error}","msg":"${msg_val}","recovery_cmd":"${recovery_val}","updated_at":"$(date -Iseconds)"}
 EOF
 }
 
@@ -192,12 +194,31 @@ fail_with_resume() {
 fail_pr_merge_blocked() {
   local merge_state="${1:-UNKNOWN}"
   local detail="${2:-pull request is not cleanly mergeable}"
+  local base_ref="${pr_base_branch:-${base_branch:-}}"
+  local head_ref="${branch:-}"
   local err="merge_state=${merge_state}; ${detail}"
+  ship_recovery_cmd="gh pr checkout ${pr_url##*/} && git fetch origin ${base_ref} && git merge origin/${base_ref}"
   write_ship_state "pr_merge_blocked" "$err"
   append_mistake_event "pr_merge_blocked" "$err" "guard"
   echo "❌ pr_merge blocked: ${detail}" >&2
   echo "   merge_state=${merge_state}" >&2
+  if [[ -n "$pr_url" ]]; then
+    echo "   pr_url=${pr_url}" >&2
+  fi
+  if [[ -n "$base_ref" ]]; then
+    echo "   base_branch=${base_ref}" >&2
+  fi
+  if [[ -n "$head_ref" ]]; then
+    echo "   head_branch=${head_ref}" >&2
+  fi
   echo "   这是可恢复状态，不再继续盲重试 merge。" >&2
+  echo "   建议恢复步骤：" >&2
+  echo "   1) gh pr checkout ${pr_url##*/}" >&2
+  if [[ -n "$base_ref" ]]; then
+    echo "   2) git fetch origin ${base_ref}" >&2
+    echo "   3) git merge origin/${base_ref}" >&2
+  fi
+  echo "   4) 解决冲突后重新 push，再重试 ship/resume" >&2
   print_resume_cmd >&2
   exit 1
 }

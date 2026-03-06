@@ -45,3 +45,11 @@ def test_task_ship_checks_merge_state_before_pr_merge() -> None:
     assert 'gh pr view "$pr_url" --json mergeStateStatus -q .mergeStateStatus' in text
     assert 'if [[ "$merge_state" != "CLEAN" && "$merge_state" != "UNKNOWN" ]]; then' in text
     assert 'fail_pr_merge_blocked "$merge_state"' in text
+
+
+def test_task_ship_pr_merge_blocked_records_recovery_context() -> None:
+    text = (REPO_ROOT / "tools" / "ship.sh").read_text(encoding="utf-8")
+    assert '"recovery_cmd":"${recovery_val}"' in text
+    assert 'ship_recovery_cmd="gh pr checkout ${pr_url##*/} && git fetch origin ${base_ref} && git merge origin/${base_ref}"' in text
+    assert 'echo "   1) gh pr checkout ${pr_url##*/}" >&2' in text
+    assert 'echo "   3) git merge origin/${base_ref}" >&2' in text
