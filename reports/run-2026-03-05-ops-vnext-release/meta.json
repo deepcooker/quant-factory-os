@@ -1,7 +1,7 @@
 {
   "run_id": "run-2026-03-05-ops-vnext-release",
   "task_id": "TASKS/TASK-vnext-release-cleanup.md",
-  "stop_reason": "infra_quota_or_auth",
+  "stop_reason": "needs_human_decision",
   "commands_run": [
     "rm -rf reports/* learn/* TASKS/TASK-*.md TASKS/TODO_PROPOSAL.md",
     "rewrite TASKS/STATE.md",
@@ -64,7 +64,10 @@
     "python3 -m py_compile tools/codex_transport.py tools/learn.py",
     "env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -low",
     "python3 tools/ready.py",
-    "env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -medium"
+    "env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -medium",
+    "git commit -m \"chore(evidence): record learn ready closure\"",
+    "env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -medium (quota recovered -> pass)",
+    "python3 tools/ready.py (post-medium gate confirmation)"
   ],
   "artifacts": [
     "TASKS/STATE.md",
@@ -113,6 +116,10 @@
     "reports/run-2026-03-05-ops-vnext-release/execution.jsonl",
     "tools/codex_transport.py",
     "learn/project-0.model.events.jsonl",
-    "learn/project-0.model.stderr.log"
+    "learn/project-0.model.stderr.log",
+    "learn/project-0.json",
+    "learn/project-0.model.json",
+    "reports/run-2026-03-05-ops-vnext-release/ready.json",
+    "git:ce7f36d"
   ]
 }

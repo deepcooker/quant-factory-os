@@ -249,3 +249,35 @@ RUN_ID: `run-2026-03-05-ops-vnext-release`
 - `infra_quota_or_auth`
 - Reason: after the transport fixes, `learn -low -> ready` passes again, but `learn -medium` is currently blocked by `usage_limit_exceeded`, so the next action depends on quota recovery rather than more prompt compression.
 - Reason: the learn/ready closure is now verified; next step is a product decision whether to continue tuning onboarding ergonomics or move forward into `orient`.
+
+## Incremental decision (accept medium-profile learn closure and move decision point to product flow)
+### Why
+- The previous open question after the transport fix was whether `learn -medium` was still blocked by account quota or whether the current onboarding shape could actually close at the next daily-use profile.
+- A fresh real rerun now completed successfully under:
+  - `env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -medium`
+  - followed by `python3 tools/ready.py`
+- This changes the situation materially: the blocking factor is no longer quota/auth for the medium profile.
+
+### Decision
+- Treat the transport fix as validated at both daily-use profiles currently under discussion:
+  - `-low`
+  - `-medium`
+- Stop framing the current blocker as transport or quota.
+- Move the next decision point back to product flow:
+  - either proceed into `python3 tools/orient.py`
+  - or explicitly choose another learn-ergonomics follow-up slice
+
+### Evidence
+- `learn/project-0.json`
+- `learn/project-0.model.json`
+- `learn/project-0.model.events.jsonl`
+- `reports/run-2026-03-05-ops-vnext-release/ready.json`
+- git commit `ce7f36d`
+
+### Risk / rollback
+- Risk: `-medium` now passes, but latency and output volume may still be heavier than ideal for daily use.
+- Rollback: not recommended on transport behavior; if ergonomics are still unsatisfactory, tune prompt/output shape rather than reintroducing commentary mixing.
+
+### Current stop reason
+- `needs_human_decision`
+- Reason: transport and medium-profile validation are now complete enough; the next step is a product choice about whether to enter `orient` for the learn-ergonomics slice or start a different queued direction.
