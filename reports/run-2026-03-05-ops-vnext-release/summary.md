@@ -237,3 +237,31 @@ RUN_ID: `run-2026-03-05-ops-vnext-release`
   - `learn/project-0.model.events.jsonl` -> `item/started` shows `agentMessage.phase=commentary|final_answer`
   - `learn/project-0.model.events.jsonl` -> `usage_limit_exceeded`
   - `learn/project-0.model.stderr.log` -> app-server exits with quota-related failure during `-medium`
+
+## Incremental update (medium-profile learn closure passed after quota recovery)
+- Committed the previously verified transport fix and low-profile closure evidence:
+  - `git commit -m "chore(evidence): record learn ready closure"` -> `ce7f36d`
+- Re-ran the medium daily-use profile in real app-server true plan mode:
+  - `env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -medium`
+  - result: pass
+- Re-ran the gate after the medium learn artifact was written:
+  - `python3 tools/ready.py`
+  - result: pass
+- The previous blocker is now cleared:
+  - `-medium` no longer failed on `usage_limit_exceeded`
+  - model sync completed with `LEARN_MODEL_SYNC_STATUS: pass`
+  - oral coverage remained complete at `Q1..Q17`
+- Current implication:
+  - both `-low` and `-medium` now close successfully against the current transport and onboarding shape
+  - the next meaningful product step is no longer quota recovery, but whether to move into `orient` for the learn-ergonomics slice
+
+### Verify (incremental)
+- `git commit -m "chore(evidence): record learn ready closure"` -> pass (`ce7f36d`)
+- `env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -medium` -> pass
+- `python3 tools/ready.py` -> pass
+- key outputs:
+  - `LEARN_MODEL_SYNC_STATUS: pass`
+  - `LEARN_MODEL_ORAL_Q_COUNT: 17`
+  - `LEARN_MODEL_ANCHOR_STATUS: on_track`
+  - `READY_LEARN_STATUS: pass`
+  - `READY_NEXT_COMMAND: python3 tools/orient.py`

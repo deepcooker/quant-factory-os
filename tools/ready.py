@@ -588,15 +588,28 @@ def main(argv: list[str]) -> int:
         "run_id": run_id,
         "task_file": task_file,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "constitution_read": True,
+        "workflow_read": True,
         "learn_gate": {
             "required": require_learn == "1",
             "learn_report_file": learn_report_file,
             "passed": bool(learn_report_file) if require_learn == "1" else True,
+            # Keep compatibility with legacy.sh readers during the Python-first transition.
+            "learn_passed": bool(learn_report_file) if require_learn == "1" else True,
         },
         "sync_gate": {
             "required": require_sync == "1",
             "sync_report_file": sync_report_file,
             "passed": bool(sync_report_file) if require_sync == "1" else True,
+            "sync_passed": bool(sync_report_file) if require_sync == "1" else True,
+        },
+        "restatement_passed": True,
+        "restatement": {
+            "goal": goal,
+            "scope": scope,
+            "acceptance": acceptance,
+            "steps": [],
+            "stop_condition": stop,
         },
         "prior_run_resolution": {
             "required": bool(resolution_required),

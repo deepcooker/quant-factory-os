@@ -44,6 +44,9 @@ LEARN_REASONING_PROFILE_TO_EFFORT = {
     "high": "high",
     "xhigh": "xhigh",
 }
+LEARN_REASONING_PROFILE_ALIASES = {
+    "daily": "medium",
+}
 OWNER_FILES = [
     "docs/PROJECT_GUIDE.md",
     "AGENTS.md",
@@ -324,6 +327,7 @@ def parse_project_guide(path: Path, project_id: str, current_run_id: str) -> tup
 def parse_cli(argv: list[str]) -> dict[str, Any]:
     reasoning_profile = LEARN_REASONING_DEFAULT_PROFILE
     model_name = LEARN_MODEL_NAME
+    reasoning_alias = ""
 
     i = 0
     while i < len(argv):
@@ -361,20 +365,24 @@ def parse_cli(argv: list[str]) -> dict[str, Any]:
         elif token.startswith("-model="):
             model_name = token.split("=", 1)[1].strip()
         elif token.startswith("model_reasoning_effort=") or low.startswith("model_reasoning_effort="):
-            eprint("ERROR: use reasoning=<minimal|low|medium|high|xhigh> or -minimal|-low|-medium|-high|-xhigh.")
+            eprint("ERROR: use reasoning=<minimal|low|medium|high|xhigh|daily> or -minimal|-low|-medium|-high|-xhigh|-daily.")
             raise SystemExit(2)
         elif token.startswith("reasoning="):
-            reasoning_profile = token.split("=", 1)[1].strip().lower()
+            requested_reasoning = token.split("=", 1)[1].strip().lower()
+            reasoning_profile = LEARN_REASONING_PROFILE_ALIASES.get(requested_reasoning, requested_reasoning)
+            reasoning_alias = requested_reasoning if requested_reasoning in LEARN_REASONING_PROFILE_ALIASES else ""
         elif low.startswith("reasoning="):
             eprint("ERROR: parameter key must be lowercase: reasoning=...")
             raise SystemExit(2)
-        elif token in {"-minimal", "-low", "-medium", "-high", "-xhigh"}:
-            reasoning_profile = token.lstrip("-")
-        elif low in {"-minimal", "-low", "-medium", "-high", "-xhigh"}:
-            eprint("ERROR: reasoning flag must be lowercase: -minimal|-low|-medium|-high|-xhigh.")
+        elif token in {"-minimal", "-low", "-medium", "-high", "-xhigh", "-daily"}:
+            requested_reasoning = token.lstrip("-")
+            reasoning_profile = LEARN_REASONING_PROFILE_ALIASES.get(requested_reasoning, requested_reasoning)
+            reasoning_alias = requested_reasoning if requested_reasoning in LEARN_REASONING_PROFILE_ALIASES else ""
+        elif low in {"-minimal", "-low", "-medium", "-high", "-xhigh", "-daily"}:
+            eprint("ERROR: reasoning flag must be lowercase: -minimal|-low|-medium|-high|-xhigh|-daily.")
             raise SystemExit(2)
         elif token == "-fast" or low == "-fast":
-            eprint("ERROR: -fast has been removed. Use -minimal|-low|-medium|-high|-xhigh.")
+            eprint("ERROR: -fast has been removed. Use -minimal|-low|-medium|-high|-xhigh|-daily.")
             raise SystemExit(2)
         elif token in {"-log", "--log"} or low in {"-log", "--log"}:
             eprint("ERROR: -log/--log is no longer needed; learn always mirrors stdout log.")
@@ -389,7 +397,7 @@ def parse_cli(argv: list[str]) -> dict[str, Any]:
             raise SystemExit(2)
         elif token.startswith("-"):
             eprint(f"ERROR: unknown learn flag: {token}")
-            eprint("Allowed: -minimal|-low|-medium|-high|-xhigh")
+            eprint("Allowed: -minimal|-low|-medium|-high|-xhigh|-daily")
             raise SystemExit(2)
         else:
             eprint("ERROR: learn does not accept positional args.")
@@ -397,7 +405,7 @@ def parse_cli(argv: list[str]) -> dict[str, Any]:
         i += 1
 
     if reasoning_profile not in LEARN_REASONING_PROFILE_TO_EFFORT:
-        eprint(f"ERROR: invalid reasoning={reasoning_profile} (expected minimal|low|medium|high|xhigh).")
+        eprint(f"ERROR: invalid reasoning={reasoning_profile} (expected minimal|low|medium|high|xhigh|daily).")
         raise SystemExit(2)
     if not model_name:
         eprint("ERROR: model cannot be empty.")
@@ -412,6 +420,7 @@ def parse_cli(argv: list[str]) -> dict[str, Any]:
         "plan_transport": MODEL_TRANSPORT_PRIMARY,
         "model_name": model_name,
         "reasoning_profile": reasoning_profile,
+        "reasoning_alias": reasoning_alias,
         "model_reasoning_effort": effective_effort,
     }
 
@@ -1154,6 +1163,8 @@ def main(argv: list[str]) -> int:
     print(f"LEARN_MODEL_REASONING_PROFILE: {cfg['reasoning_profile']}")
     requested_effort = cfg["model_reasoning_effort"]
     effective_effort, effort_reason = runtime_reasoning_effort(requested_effort)
+    if cfg.get("reasoning_alias") == "daily" and effort_reason == "as-requested":
+        effort_reason = "daily-alias-to-medium"
     print(f"LEARN_MODEL_REASONING_EFFORT: {effective_effort}")
     print(f"LEARN_MODEL_REASONING_EFFORT_REQUESTED: {requested_effort}")
     print(f"LEARN_MODEL_REASONING_EFFORT_EFFECTIVE: {effective_effort}")
