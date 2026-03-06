@@ -31,6 +31,25 @@
   Done: branch continuity defaulted to active base branch; review pass recorded in run-2026-03-06-task-ship-branch-safety
 
 - [ ] TODO Title: vnext release baseline
+  
+- [x] TODO Title: task ship smoke: real task-to-ship continuity check  Picked: run-2026-03-06-task-ship-smoke 2026-03-06T20:18:00+0800
+  Done: PR #166, RUN_ID=run-2026-03-06-task-ship-smoke
+  Goal: 用一个最小无害改动真实演练 `tools/task.sh -> tools/ship.sh`，验证新的 branch continuity 策略不会把会话带到错误基线。
+  Scope: `TASKS/`, `reports/`, `docs/`
+  Acceptance:
+  - [ ] 真实执行 `tools/task.sh -> tools/ship.sh`
+  - [ ] 发货前后 active branch continuity 符合预期
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
+- [>] TODO Title: ship post-sync cleanliness: avoid self-dirty ship_state on merged PR flow  Picked: run-2026-03-06-ship-post-sync-cleanliness 2026-03-06T20:25:00+0800
+  Goal: 修复 `tools/ship.sh` 在 PR 合并后因自身写入 `ship_state.json` 导致 post-ship sync 被脏工作区拦住的问题。
+  Scope: `tools/ship.sh`, `tests/`, `TASKS/`, `reports/`, `docs/`
+  Acceptance:
+  - [ ] merged PR 路径下不会被 `ship_state.json` 自身阻塞 post-ship sync
+  - [ ] 新增或刷新关键回归测试
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
   Goal: 进入开发设计阶段的新版本基线，保持流程最小可用并可继续迭代。
   Scope: `TASKS/`, `reports/`, `tools/`, `docs/`, `tests/`
   Acceptance:

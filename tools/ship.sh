@@ -156,6 +156,23 @@ write_ship_state() {
 EOF
 }
 
+list_dirty_paths() {
+  git status --porcelain | sed -E 's/^[ MARCUD?!]{2} //'
+}
+
+has_blocking_dirty_paths() {
+  local line=""
+  local ship_state_rel="reports/${run_id}/ship_state.json"
+  while IFS= read -r line; do
+    [[ -n "$line" ]] || continue
+    if [[ "$line" == "$ship_state_rel" ]]; then
+      continue
+    fi
+    return 0
+  done < <(list_dirty_paths)
+  return 1
+}
+
 print_resume_cmd() {
   if [[ -n "${run_id:-}" ]]; then
     echo "恢复命令：bash tools/legacy.sh resume RUN_ID=${run_id}"
@@ -901,7 +918,7 @@ fi
 echo "== 下一枪建议 =="
 echo "如果 QUEUE 还有 [ ]：运行 tools/task.sh --next"
 
-if [[ -n "$(git status --porcelain)" ]]; then
+if has_blocking_dirty_paths; then
   write_ship_state "sync_blocked_dirty" "working tree not clean"
   append_mistake_event "sync_blocked_dirty" "working tree not clean" "guard"
   echo "❌ post-ship sync aborted: working tree is not clean."
