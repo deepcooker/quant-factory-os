@@ -1,0 +1,57 @@
+{
+  "project_id": "project-0",
+  "run_id": "run-2026-03-06-slice-next-p0-learn-core-delivery",
+  "created_at_utc": "2026-03-06T11:44:30+00:00",
+  "selected_option": "learn-daily-ergonomics",
+  "selected_title": "P0: 收敛 learn 的日常同频体验",
+  "execution_goal": "当前合同直接把 learn 和 PROJECT_GUIDE 同频列为增量重点；结合最新 learn focus，下一步最合理的是继续收敛强同频输出和主线回拉体验：继续围绕当前 active run 收敛 learn 主线、流程边界和日常使用体验。",
+  "scope_hint": [
+    "tools/learn.py",
+    "docs/PROJECT_GUIDE.md",
+    "docs/WORKFLOW.md",
+    "AGENTS.md"
+  ],
+  "priority": "P0",
+  "inherited_from_run": "run-2026-03-05-ops-vnext-release",
+  "source_contract_json": "reports/run-2026-03-05-ops-vnext-release/direction_contract.json",
+  "delivery_contract": {
+    "steps": [
+      "council-review",
+      "arbiter-contract",
+      "slice-into-tasks",
+      "implement",
+      "verify",
+      "review-and-align",
+      "reports-and-ship"
+    ],
+    "quality_gates": [
+      "make verify green",
+      "scope remains bounded",
+      "owner docs updated in same run",
+      "reports evidence updated"
+    ]
+  },
+  "role_reviews": [
+    {
+      "role": "product",
+      "focus": "value and scope relevance",
+      "independent_view": "确认方向是否解决真实问题，并限制在最小可交付范围内。"
+    },
+    {
+      "role": "architect",
+      "focus": "boundary and extensibility",
+      "independent_view": "检查状态机边界、证据边界、兼容迁移路径是否明确。"
+    },
+    {
+      "role": "dev",
+      "focus": "minimal diff and operability",
+      "independent_view": "优先小步改动，确保命令链可重复执行并便于调试。"
+    },
+    {
+      "role": "qa",
+      "focus": "behavioral regression and gates",
+      "independent_view": "独立验证门禁和回归，不受开发路径影响。"
+    }
+  ],
+  "next_command": "make verify"
+}

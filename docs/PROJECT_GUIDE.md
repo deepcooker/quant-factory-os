@@ -67,7 +67,7 @@
 #### 为什么问这题
 这题负责定义脑和手的协作边界，不然模型会把战略、评审、实现、修复混成一层。
 #### 标准答案
-GPT 网页端和 Codex CLI 不一样，但必须同频。网页端更适合做方向讨论、方案反驳、角色博弈和收敛决策；Codex CLI 更适合本地读仓、改代码、跑验证、写证据。它们保持同频的方式不是靠聊天记忆同步，而是靠仓库内的 owner docs、task/run 指针和执行证据同步。Codex CLI 在本地必须先执行 `python3 tools/init.py -> python3 tools/learn.py -> python3 tools/ready.py`，再进入讨论或执行链。网页端如果要作为大脑，也必须先看 `AGENTS.md`、`docs/PROJECT_GUIDE.md`、`docs/WORKFLOW.md`，再围绕当前 state/run 来讨论，而不是脱离仓库空谈。
+GPT 网页端和 Codex CLI 不一样，但必须同频。网页端更适合做方向讨论、方案反驳、角色博弈和收敛决策；Codex CLI 更适合本地读仓、改代码、跑验证、写证据。它们保持同频的方式不是靠聊天记忆同步，而是靠仓库内的 owner docs、task/run 指针和执行证据同步。Codex CLI 在本地必须先执行 `python3 tools/init.py -> python3 tools/learn.py -> python3 tools/ready.py`，再进入讨论或执行链；日常默认建议用 `python3 tools/learn.py -daily`，它等价于 `-medium`，但不降低强同频门禁。网页端如果要作为大脑，也必须先看 `AGENTS.md`、`docs/PROJECT_GUIDE.md`、`docs/WORKFLOW.md`，再围绕当前 state/run 来讨论，而不是脱离仓库空谈。
 #### 必查文件
 - AGENTS.md
 - docs/WORKFLOW.md

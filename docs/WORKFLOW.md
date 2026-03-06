@@ -481,7 +481,7 @@ project
 推荐日常顺序：
 
 1. `python3 tools/init.py`
-2. `python3 tools/learn.py -medium`
+2. `python3 tools/learn.py -daily`
 3. `python3 tools/ready.py`
 4. `python3 tools/orient.py`
 5. `python3 tools/choose.py OPTION=<id>`
@@ -491,6 +491,9 @@ project
 9. `bash tools/legacy.sh do queue-next`
 10. `bash tools/legacy.sh review RUN_ID=<run-id> STRICT=1 AUTO_FIX=1`
 11. `tools/ship.sh`
+
+说明：
+- `-daily` 是日常同频入口，等价于 `-medium`，用于减少档位选择负担；不改变 `learn` 的强同频、app-server 和 oral restatement 硬门禁。
 
 ## 10. Pause / Resume
 
