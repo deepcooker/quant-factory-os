@@ -90,3 +90,111 @@ def test_run_plan_sync_app_server_only(monkeypatch, tmp_path: Path) -> None:
     assert result.effective_transport == ct.MODEL_TRANSPORT_PRIMARY
     assert result.primary_rc == 0
     assert result.final_rc == 0
+
+
+def test_extract_final_answer_json_from_events_supports_codex_event_deltas(tmp_path: Path) -> None:
+    events = tmp_path / "events.jsonl"
+    lines = [
+        json.dumps(
+            {
+                "method": "codex/event/item_started",
+                "params": {
+                    "msg": {
+                        "item": {
+                            "type": "AgentMessage",
+                            "id": "msg-final",
+                            "phase": "final_answer",
+                        }
+                    }
+                },
+            }
+        ),
+        json.dumps(
+            {
+                "method": "codex/event/agent_message_content_delta",
+                "params": {
+                    "msg": {
+                        "item_id": "msg-final",
+                        "delta": "{\"mainline\":\"ok\",\"current_stage\":\"stage\",",
+                    }
+                },
+            }
+        ),
+        json.dumps(
+            {
+                "method": "codex/event/agent_message_content_delta",
+                "params": {
+                    "msg": {
+                        "item_id": "msg-final",
+                        "delta": "\"next_step\":\"next\",\"files_read\":[\"AGENTS.md\"]}",
+                    }
+                },
+            }
+        ),
+    ]
+    events.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    parsed = ct.extract_final_answer_json_from_events(events)
+    assert json.loads(parsed)["mainline"] == "ok"
+
+
+def test_extract_final_answer_json_from_events_ignores_duplicate_codex_event_deltas(tmp_path: Path) -> None:
+    events = tmp_path / "events.jsonl"
+    lines = [
+        json.dumps(
+            {
+                "method": "item/started",
+                "params": {
+                    "item": {
+                        "type": "agentMessage",
+                        "id": "msg-final",
+                        "phase": "final_answer",
+                    }
+                },
+            }
+        ),
+        json.dumps(
+            {
+                "method": "item/agentMessage/delta",
+                "params": {
+                    "itemId": "msg-final",
+                    "delta": "{\"mainline\":\"ok\",\"current_stage\":\"stage\",",
+                },
+            }
+        ),
+        json.dumps(
+            {
+                "method": "codex/event/agent_message_content_delta",
+                "params": {
+                    "msg": {
+                        "item_id": "msg-final",
+                        "delta": "{\"mainline\":\"ok\",\"current_stage\":\"stage\",",
+                    }
+                },
+            }
+        ),
+        json.dumps(
+            {
+                "method": "item/agentMessage/delta",
+                "params": {
+                    "itemId": "msg-final",
+                    "delta": "\"next_step\":\"next\",\"files_read\":[\"AGENTS.md\"]}",
+                },
+            }
+        ),
+        json.dumps(
+            {
+                "method": "codex/event/agent_message_content_delta",
+                "params": {
+                    "msg": {
+                        "item_id": "msg-final",
+                        "delta": "\"next_step\":\"next\",\"files_read\":[\"AGENTS.md\"]}",
+                    }
+                },
+            }
+        ),
+    ]
+    events.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    parsed = ct.extract_final_answer_json_from_events(events)
+    assert json.loads(parsed)["files_read"] == ["AGENTS.md"]

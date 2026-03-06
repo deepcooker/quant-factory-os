@@ -109,6 +109,79 @@ def _maybe_extract_final_json_dict_text(
     return (None, json_start_idx)
 
 
+def extract_final_answer_json_from_events(events_file: Path) -> str:
+    if not events_file.is_file():
+        return ""
+    agent_message_phase: dict[str, str] = {}
+    text_chunks: list[str] = []
+    json_start_idx: int | None = None
+    try:
+        lines = events_file.read_text(encoding="utf-8", errors="replace").splitlines()
+    except Exception:
+        return ""
+    has_item_agent_delta = any('"method":"item/agentMessage/delta"' in line for line in lines)
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except Exception:
+            continue
+        method = str(event.get("method", "")).strip()
+        params = event.get("params") or {}
+        if method in {"item/started", "codex/event/item_started"}:
+            item = params.get("item") or ((params.get("msg") or {}).get("item")) or {}
+            if str(item.get("type", "")).lower() == "agentmessage":
+                item_id = str(item.get("id", "")).strip()
+                phase = str(item.get("phase", "")).strip().lower()
+                if item_id:
+                    agent_message_phase[item_id] = phase
+            continue
+        if method in {"item/agentMessage/delta", "codex/event/agent_message_content_delta"}:
+            if method == "codex/event/agent_message_content_delta" and has_item_agent_delta:
+                continue
+            if method == "item/agentMessage/delta":
+                item_id = str(params.get("itemId", "")).strip()
+                payload = params.get("delta")
+            else:
+                msg = params.get("msg") or {}
+                item_id = str(msg.get("item_id", "")).strip()
+                payload = msg.get("delta")
+            if agent_message_phase.get(item_id, "") != "final_answer":
+                continue
+            text = _extract_text(payload)
+            if not text:
+                continue
+            text_chunks.append(text)
+            parsed, json_start_idx = _maybe_extract_final_json_dict_text(
+                text_chunks,
+                json_start_idx,
+                text,
+            )
+            if parsed:
+                return parsed
+            continue
+        if method in {"item/completed", "codex/event/item_completed"}:
+            item = params.get("item") or ((params.get("msg") or {}).get("item")) or {}
+            if str(item.get("type", "")).lower() != "agentmessage":
+                continue
+            if str(item.get("phase", "")).strip().lower() != "final_answer":
+                continue
+            text = _extract_text(item.get("text") or item.get("content"))
+            if text:
+                text_chunks.append(text)
+            parsed, json_start_idx = _maybe_extract_final_json_dict_text(
+                text_chunks,
+                json_start_idx,
+                text,
+                force=True,
+            )
+            if parsed:
+                return parsed
+    return ""
+
+
 class _AppServerRPC:
     def __init__(self, events_file: Path, stderr_file: Path) -> None:
         self.events_file = events_file
@@ -318,8 +391,8 @@ def run_app_server_transport(
                     continue
                 method = str(event.get("method", "")).strip()
                 params = event.get("params") or {}
-                if method == "item/started":
-                    item = params.get("item") or {}
+                if method in {"item/started", "codex/event/item_started"}:
+                    item = params.get("item") or ((params.get("msg") or {}).get("item")) or {}
                     if str(item.get("type", "")).lower() == "agentmessage":
                         item_id = str(item.get("id", "")).strip()
                         phase = str(item.get("phase", "")).strip().lower()
@@ -329,10 +402,13 @@ def run_app_server_transport(
                 if method in {"item/plan/delta", "item/agentMessage/delta"}:
                     if method == "item/agentMessage/delta":
                         item_id = str(params.get("itemId", "")).strip()
+                        payload = params.get("delta")
                         phase = agent_message_phase.get(item_id, "")
                         if phase and phase != "final_answer":
                             continue
-                    t = _extract_text(params.get("delta"))
+                    else:
+                        payload = params.get("delta")
+                    t = _extract_text(payload)
                     if t:
                         text_chunks.append(t)
                         parsed, json_start_idx = _maybe_extract_final_json_dict_text(
@@ -343,8 +419,8 @@ def run_app_server_transport(
                         if parsed:
                             raw_file.write_text(parsed + "\n", encoding="utf-8")
                             return 0
-                elif method == "item/completed":
-                    item = params.get("item") or {}
+                elif method in {"item/completed", "codex/event/item_completed"}:
+                    item = params.get("item") or ((params.get("msg") or {}).get("item")) or {}
                     item_type = str(item.get("type", "")).lower()
                     if item_type == "agentmessage":
                         phase = str(item.get("phase", "")).strip().lower()
