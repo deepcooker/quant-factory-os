@@ -619,10 +619,10 @@ def generate_prompt(learn_file: Path, prompt_file: Path, project_id: str, plan_m
         '    {',
         '      "question_id": "Q1",',
         '      "question": "<question title>",',
-        '      "answer": "<full oral answer>",',
+        '      "answer": "<1-2 sentence oral answer>",',
         '      "standard_alignment": "aligned|partial|drifted",',
         '      "evidence": ["<path>#<section>: <concrete fact>"],',
-        '      "drift_note": "<difference vs standard answer or none>",',
+        '      "drift_note": "<short difference or none>",',
         '      "return_to_mainline": "<how this question returns to mainline>"',
         '    }',
         '  ],',
@@ -649,41 +649,41 @@ def generate_prompt(learn_file: Path, prompt_file: Path, project_id: str, plan_m
     ]
     for path in owner_files:
         lines.append(f"- {path}")
+    extra_files = [path for path in required_files if path not in owner_files]
     lines.extend(
         [
             "",
-            "All required files to read with tools/view.sh:",
+            "Additional required files to read with tools/view.sh:",
         ]
     )
-    for path in required_files:
+    for path in extra_files:
         lines.append(f"- {path}")
-    lines.extend(
-        [
-            "",
-            "Question contract from PROJECT_GUIDE:",
-        ]
-    )
+    lines.extend(["", "PROJECT_GUIDE question ids to answer in order:"])
     for item in guide_questions:
         qid = str(item.get("question_id", "")).strip()
         title = str(item.get("title", "")).strip()
         lines.append(f"- {qid}: {title}")
-        for path in item.get("must_read_files") or []:
-            lines.append(f"  must_read: {path}")
     lines.extend(
         [
             "",
             "Output requirements:",
             "- Do not run write commands.",
-            "- Read owner files first in this exact order: docs/PROJECT_GUIDE.md -> AGENTS.md -> docs/WORKFLOW.md.",
+            "- Read owner files first in this order: docs/PROJECT_GUIDE.md -> AGENTS.md -> docs/WORKFLOW.md.",
+            "- Then read the additional required files listed above.",
+            "- Use tools/view.sh for all file reads. If a file is long, read only the relevant chunk(s); do not force full-file reads when a section-sized read is enough.",
+            "- Prefer targeted section reads over whole-document sweeps, especially for docs/WORKFLOW.md and CODEX_CLI_* docs.",
+            "- Do not search for more files unless a listed required file was truncated or a question's must-read file clearly requires one short section lookup.",
+            "- The must-read mapping for each question is already defined inside PROJECT_GUIDE. Use that file as the source of truth instead of rebuilding the mapping yourself.",
             "- Then answer every PROJECT_GUIDE question in order (Q1..Qn) using the guide's own standard answers plus evidence from its must-read files.",
             "- Do not skip any question.",
-            "- Keep every answer concise but complete: target 2-4 sentences per question, not long essays.",
+            "- Keep every answer concise but complete: target 1-2 sentences per question.",
             "- Keep every drift_note to one short sentence.",
             "- For each guide_oral item, include only the minimum evidence needed to cover that question's must_read files.",
             "- For each guide_oral item, evidence count should normally equal the number of must_read files for that question; do not add extra evidence unless required.",
-            "- Prefer one targeted read per file. Do not repeatedly reread the same file unless the first read was insufficient.",
-            "- Prefer heading search plus focused view.sh reads over long full-file reads.",
+            "- Do not reread a file unless the first read was truncated or the needed section was not covered.",
+            "- Do not use rg, grep, or ls for exploration in this pass unless a required file read was truncated and you need one short section lookup.",
             "- For current-status questions, use current TASKS/STATE plus current run summary/decision only; do not wander into unrelated historical artifacts.",
+            "- Do not emit process narration, planning prose, or any text before the final JSON object.",
             "- Do not include markdown fences.",
             "- JSON must follow this schema exactly:",
         ]

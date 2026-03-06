@@ -10,6 +10,10 @@ if [[ $# -lt 1 ]]; then
   usage
 fi
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+fi
+
 path="$1"
 shift
 
@@ -21,6 +25,15 @@ context=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    [0-9]*)
+      if [[ $# -eq 1 ]]; then
+        to="$1"
+        shift
+      else
+        echo "ERROR: unexpected positional argument: $1"
+        usage
+      fi
+      ;;
     --from)
       from="${2:-}"
       shift 2

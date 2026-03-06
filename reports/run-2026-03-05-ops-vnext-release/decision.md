@@ -159,3 +159,32 @@ RUN_ID: `run-2026-03-05-ops-vnext-release`
 ### Risk / rollback
 - Risk: learn still remains too heavy for daily use until the prompt/tool loop is shortened.
 - Rollback: none recommended for the parser change; the previous behavior was incorrect when raw output contained leading prose.
+
+## Incremental decision (keep view.sh compatibility fix, reject hardcoded learn read script)
+### Why
+- The model naturally used `tools/view.sh -h` and `tools/view.sh <path> 120`. Rejecting those forms caused avoidable tool-loop noise during onboarding.
+- A temporary hardcoded reading script reduced prompt drift during debugging, but it encoded current file layout and would make `learn` brittle as documents evolve.
+- The latest failed real smoke was blocked by Codex quota (`usage_limit_exceeded`), so hardcoding reads would solve the wrong problem.
+
+### Decision
+- Keep the durable `tools/view.sh` compatibility improvements.
+- Remove the hardcoded reading-plan prompt from `tools/learn.py`.
+- Keep only strategy-level guidance in learn:
+  - read owner docs first
+  - read required files next
+  - use `tools/view.sh`
+  - prefer targeted section reads
+  - avoid unnecessary exploration and rereads
+
+### Evidence
+- `tools/view.sh`
+- `tools/learn.py`
+- `learn/project-0.model.events.jsonl`
+
+### Risk / rollback
+- Risk: without a scripted read plan, learn may still spend too many tool turns on long docs until prompt strategy is tuned further.
+- Rollback: only reintroduce a debugging-only scripted plan locally; do not make it part of the committed onboarding design.
+
+### Current stop reason
+- `infra_quota_or_auth`
+- Reason: the latest live learn smoke was cut off by Codex usage limits after the prompt rollback, so final runtime verification must wait for quota reset.

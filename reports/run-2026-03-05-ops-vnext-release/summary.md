@@ -154,3 +154,30 @@ RUN_ID: `run-2026-03-05-ops-vnext-release`
 - real rerun findings:
   - sandboxed `learn` showed `failed to renew cache TTL: Permission denied (os error 13)`
   - unsandboxed `learn` removed that permission error but still did not produce `model.raw.txt` within the observation window
+
+## Incremental update (learn reading strategy rollback + view.sh compatibility)
+- Kept the `tools/view.sh` interface fix because the model naturally called two forms that previously caused avoidable tool errors:
+  - `tools/view.sh -h`
+  - `tools/view.sh <path> 120`
+- Rolled back the temporary hardcoded learn reading script. The fixed line-range plan was useful for debugging, but it is not acceptable as the long-term onboarding design because it overfits the current document layout.
+- `tools/learn.py` now constrains reading strategy instead of hardcoding reading commands:
+  - read owner docs first
+  - then read additional required files
+  - use `tools/view.sh` for all reads
+  - prefer targeted section reads over whole-document sweeps
+  - avoid extra exploration unless a required read was truncated or a question needs one short lookup
+- Current conclusion:
+  - `view.sh` ergonomics improved in a durable way
+  - learn prompt direction is now back on the right architecture (`strategy`, not `script`)
+  - the latest failed smoke was still blocked by Codex usage limits, not by repo logic
+
+### Verify (incremental)
+- `bash -n tools/view.sh` -> pass
+- `bash tools/view.sh -h` -> pass
+- `bash tools/view.sh docs/WORKFLOW.md 20` -> pass
+- prompt inspection on `tools/learn.py` confirms:
+  - no `Exact reading plan`
+  - no hardcoded `--from/--to` read script
+  - targeted-section read guidance remains
+- latest model event stream ended with usage quota failure rather than prompt/schema failure:
+  - `learn/project-0.model.events.jsonl` -> `usage_limit_exceeded`

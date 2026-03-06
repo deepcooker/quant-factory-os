@@ -1,7 +1,7 @@
 {
   "run_id": "run-2026-03-05-ops-vnext-release",
   "task_id": "TASKS/TASK-vnext-release-cleanup.md",
-  "stop_reason": "needs_human_decision",
+  "stop_reason": "infra_quota_or_auth",
   "commands_run": [
     "rm -rf reports/* learn/* TASKS/TASK-*.md TASKS/TODO_PROPOSAL.md",
     "rewrite TASKS/STATE.md",
@@ -49,7 +49,12 @@
     "python3 - <<'PY' parse_model_output(...) regression smoke 'PY",
     "timeout 180s env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -medium (sandboxed; codex cache permission failure observed)",
     "timeout 180s env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -low (sandboxed; no raw output produced)",
-    "env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -low (unsandboxed rerun; no cache error but still heavy/no raw output in observation window)"
+    "env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -low (unsandboxed rerun; no cache error but still heavy/no raw output in observation window)",
+    "add tools/view.sh compatibility for -h and trailing numeric shorthand",
+    "rollback temporary hardcoded learn reading plan; keep strategy-level targeted-section guidance only",
+    "bash -n tools/view.sh",
+    "bash tools/view.sh -h",
+    "bash tools/view.sh docs/WORKFLOW.md 20"
   ],
   "artifacts": [
     "TASKS/STATE.md",
@@ -88,6 +93,7 @@
     "learn/project-0.model.prompt.txt",
     "learn/project-0.model.events.jsonl",
     "learn/project-0.model.stderr.log",
-    "learn/project-0.model.raw.txt"
+    "learn/project-0.model.raw.txt",
+    "tools/view.sh"
   ]
 }
