@@ -1,0 +1,1 @@
+{"schema":"qf_smoke.v1","run_id":"run-2026-03-07-project-guide-mainline-reinforcement","task_file":"TASKS/TASK-project-guide-mainline-reinforcement.md","status":"pass","drift_review_status":"pass","missing_items":[],"next_command":"tools/ship.sh \"<message>\"","updated_at":"2026-03-07T01:36:44+08:00"}

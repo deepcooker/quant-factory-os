@@ -137,3 +137,7 @@
   - [ ] 新增或刷新关键回归测试
   - [ ] `make verify` 通过
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
+- [x] TODO Title: project guide mainline reinforcement  Picked: run-2026-03-07-project-guide-mainline-reinforcement 2026-03-07T01:35:00+0000
+  Goal: 在不改变题库骨架的前提下，把 `PROJECT_GUIDE.md` 进一步收紧成 `learn` 的高质量提问主课程，并先生成 `PROJECT_GUIDE_1.0_backup.md`。
+  Scope: `docs/PROJECT_GUIDE.md`, `docs/PROJECT_GUIDE_1.0_backup.md`, `docs/WORKFLOW.md`, `AGENTS.md`, `TASKS/`, `reports/`
