@@ -950,7 +950,6 @@ if [[ "$state" != "MERGED" ]]; then
   fi
 fi
 wait_for_pr_merged "$pr_url"
-write_ship_state "merged" ""
 
 if [[ -n "$PR_BODY_EXCERPT" ]]; then
   printf "%s\n" "$PR_BODY_EXCERPT"
@@ -977,7 +976,8 @@ if [[ "$base_branch" == "main" ]]; then
   fi
 fi
 base_sha="$(git rev-parse --short HEAD)"
-write_ship_state "synced" ""
+# Success-path runtime ship_state rewrites would dirty the tracked evidence file
+# after the PR is already merged, which can block checkout/sync continuity.
 echo "post-ship synced ${base_branch}@${base_sha}"
 
 git branch -D "$branch" >/dev/null 2>&1 || true

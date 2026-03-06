@@ -53,3 +53,10 @@ def test_task_ship_pr_merge_blocked_records_recovery_context() -> None:
     assert 'ship_recovery_cmd="gh pr checkout ${pr_url##*/} && git fetch origin ${base_ref} && git merge origin/${base_ref}"' in text
     assert 'echo "   1) gh pr checkout ${pr_url##*/}" >&2' in text
     assert 'echo "   3) git merge origin/${base_ref}" >&2' in text
+
+
+def test_task_ship_does_not_rewrite_ship_state_on_success_path() -> None:
+    text = (REPO_ROOT / "tools" / "ship.sh").read_text(encoding="utf-8")
+    assert 'write_ship_state "merged" ""' not in text
+    assert 'write_ship_state "synced" ""' not in text
+    assert "Success-path runtime ship_state rewrites would dirty the tracked evidence file" in text
