@@ -1,7 +1,7 @@
 {
-  "mainline": "自动化 -> 自我迭代 -> 涌现智能；把 AI 协作从依赖聊天记忆改造成依赖仓库证据、门禁和工作流的工程化闭环。",
-  "current_stage": "项目仍在基座强化阶段，当前 active run 聚焦把 learn 做成 PROJECT_GUIDE 驱动的真同频核心，并继续收敛日常流程边界与体验。",
-  "next_step": "保持 plan-first，围绕当前 run 先按 orient -> choose -> council -> arbiter -> slice 收敛 learn-daily-ergonomics 方向，再进入最小实现与验证。",
+  "mainline": "把 AI 协作从依赖聊天记忆改造成依赖仓库内证据、门禁和工作流的工程化闭环，并把 learn 做成真实的项目同频核心。",
+  "current_stage": "项目仍处于基座强化阶段，当前 active run 聚焦 vnext release cleanup 之后的 learn 日常同频体验收敛，而不是扩展业务功能。",
+  "next_step": "继续围绕当前 run 先稳住 learn/PROJECT_GUIDE/owner docs 的同频体验，再按 orient -> choose -> council -> arbiter -> slice 收敛到可执行合同后进入 do。",
   "files_read": [
     "docs/PROJECT_GUIDE.md",
     "AGENTS.md",
@@ -12,269 +12,272 @@
     "reports/run-2026-03-05-ops-vnext-release/summary.md",
     "reports/run-2026-03-05-ops-vnext-release/decision.md",
     "CODEX_CLI_PLAYBOOK.md",
-    "CODEX_CLI_SOURCE_AUDIT.md",
-    "TASKS/TASK-vnext-release-cleanup.md"
+    "CODEX_CLI_SOURCE_AUDIT.md"
   ],
   "plan_protocol": {
-    "goal": "完成一次严格 onboarding sync：按 PROJECT_GUIDE 的题目与必查文件重建项目主线、当前阶段、当前 run 焦点和下一步讨论入口。",
-    "non_goal": "不执行代码修改、不补充未要求的历史探索、不把讨论直接推进为实现。",
+    "goal": "用 PROJECT_GUIDE 驱动的强计划式 onboarding，同频项目主线、当前阶段、当前 run 证据与下一步动作，并把回答锚定到 owner docs 和当前 run artifacts。",
+    "non_goal": "不执行实现、不扩展新功能、不重建历史审计线，也不脱离当前 STATE/run 去做额外探索。",
     "evidence": [
-      "docs/PROJECT_GUIDE.md#一句话北极星: 项目主线被明确写成“自动化 -> 自我迭代 -> 涌现智能”。",
-      "AGENTS.md#4) Mandatory session gate: 任何实现前都必须先跑 init -> learn -> ready，且 learn 必须覆盖 owner docs 和必查文件。",
-      "docs/WORKFLOW.md#1.1 流程分层: 工作流固定为上岗层、讨论层、拆解层、执行层、交付层五层状态机。"
+      "docs/PROJECT_GUIDE.md#一句话北极星: 项目主线被定义为“自动化 -> 自我迭代 -> 涌现智能”。",
+      "AGENTS.md#4) Mandatory session gate (once per session): 实现前必须先跑 init -> learn -> ready，且 learn 是硬门禁。",
+      "docs/WORKFLOW.md#3.2 `learn`: learn 的目标是完成项目同频和主线回拉，并输出 mainline/current_stage/next_step。",
+      "TASKS/STATE.md#STATE: 当前活动指针是 project-0 / run-2026-03-05-ops-vnext-release / TASKS/TASK-vnext-release-cleanup.md。",
+      "TASKS/QUEUE.md#Queue: 当前未完成队列首项是“收敛 learn 的日常同频体验 - core delivery”。",
+      "reports/run-2026-03-05-ops-vnext-release/summary.md#Incremental update (real learn -> ready closure passed after quota recovery): 真实 learn -low 已在 app-server true plan mode 下完成并覆盖 Q1..Q17。",
+      "reports/run-2026-03-05-ops-vnext-release/decision.md#Incremental decision (accept strategy-based learn reads after real low-profile pass): 当前方向接受策略约束式读取，证明 learn 可在真实低强度模式下完成。"
     ],
     "alternatives": [
-      "把 onboarding 当摘要复述处理",
-      "直接围绕当前 task 开始执行实现"
+      "继续把重心放在 learn/PROJECT_GUIDE/owner docs 的同频体验收敛。",
+      "转去做新业务或更深插件化设计。"
     ],
-    "rebuttal": "这两种做法都违背 AGENTS 的 learn 硬门禁和当前 plan-first 要求；当前正确动作是用 PROJECT_GUIDE + owner docs + 当前 run evidence 做证据化同频。",
-    "decision_stop_condition": "当 Q1-Q17 都按 GUIDE 顺序回答完、每题都有对应必查文件证据、并且主线/阶段/下一步可直接回到当前 run 的讨论入口时停止。"
+    "rebuttal": "第二种会偏离当前 run 与 queue 的主线，因为当前证据明确把 learn 真实性、流程噪音压缩和文档一致性作为最重要任务。",
+    "decision_stop_condition": "当 owner docs、当前 run evidence、当前 queue 与 PROJECT_GUIDE 问答都一致地指向同一主线与下一步，且不再需要额外读取即可回答 Q1..Q17 时停止。"
   },
   "oral_restate": {
-    "project_understanding": "这是一个 quant-engineering OS 基建仓，核心不是堆脚本，而是把 task、run、evidence、workflow 和 owner docs 变成 AI 协作的稳定治理底座。",
-    "constitution_workflow": "宪法是 AGENTS.md，课程锚点是 PROJECT_GUIDE，状态机细节在 WORKFLOW；复杂工作必须先 Plan -> Confirm -> Execute，并遵守 init -> learn -> ready -> orient... -> ship 的分层流程。",
-    "evidence_chain": "当前真相链是 TASKS/STATE.md 指向 active run/task，QUEUE 给出未完成切片，reports/run-2026-03-05-ops-vnext-release/summary.md 与 decision.md 说明本轮持续在压缩流程噪音并强化 learn。",
-    "session_continuity": "最近 session 的连续主线没有换题，仍然是清理历史噪音后，把 learn 重构成 PROJECT_GUIDE 驱动的真同频流程，并解决真实运行中的模型/配额/体验问题。",
-    "current_focus": "当前最重要的不是扩业务，而是让 learn 的真实性、主线回拉能力、证据覆盖和日常使用体验足够稳。",
-    "next_action": "下一动作应从 orient 开始为 learn-daily-ergonomics 收敛方向合同，而不是跳过讨论层直接实现。"
+    "project_understanding": "这是一个量化工程 OS 基座仓，目标是把任务、决策、验证、错误和状态都沉淀进仓库，用 Task + Gate + Evidence + Verify + Ship 的方式完成协作。",
+    "constitution_workflow": "宪法是 AGENTS.md，状态机细节在 docs/WORKFLOW.md，主线问答锚点在 docs/PROJECT_GUIDE.md；复杂工作必须先 Plan -> Confirm -> Execute。",
+    "evidence_chain": "当前真相链是 TASKS/STATE.md 指向 active run/task，reports/run-2026-03-05-ops-vnext-release/summary.md 与 decision.md 说明最近落地与当前判断，QUEUE 说明未完成事项。",
+    "session_continuity": "最近 session 持续在收敛 learn 的真实性、强计划同频输出、PROJECT_GUIDE 驱动读取，以及减少流程噪音，而不是扩展业务面。",
+    "current_focus": "当前最重要的焦点是把 learn 做成稳定、可审计、低噪音的日常同频入口，并保持 owner docs 与 current run 证据一致。",
+    "next_action": "若进入正式流程，准备完成后应从 orient 开始讨论方向，再经 choose/council/arbiter/slice 形成合同，而不是直接 do。"
   },
   "guide_oral": [
     {
       "question_id": "Q1",
       "question": "整个项目是做什么的，背景，目标是什么，我最终要什么，我是用什么开发方式来完成这个项目的？",
-      "answer": "quant-factory-os 是一个基建型执行与治理系统，目标是把 AI 协作从聊天记忆迁移到仓库证据、门禁和工作流上，最终让新 agent 能快速同频、按规则执行并持续沉淀状态与决策。它的开发方式不是随手改代码，而是以 task/run 为入口，走 Task + Gate + Evidence + Verify + Ship 的工程化闭环。",
+      "answer": "`quant-factory-os` 是一个基建型执行与治理系统，目标是把 AI 协作从依赖聊天记忆改造成依赖仓库证据、门禁和工作流的工程化闭环。最终要的是新 agent 能快速同频并按规则执行，开发方式是 `Task + Gate + Evidence + Verify + Ship`，而不是随手改代码。",
       "standard_alignment": "aligned",
       "evidence": [
-        "AGENTS.md#0) Scope: 仓库被定义为 quant-engineering OS，并要求遵循 deterministic workflow 而不是 ad-hoc chat。",
-        "docs/WORKFLOW.md#3.2 learn: learn 的目标是完成项目同频和主线回拉，且不直接授权执行。",
-        "docs/ENTITIES.md#1.1 分层原则: project/run/task/evidence 被定义为长期上下文、周期容器、最小切片和仓库记忆。"
+        "AGENTS.md#1) Entry Rule: Task + Run are mandatory: 所有实现都必须从 TASK 与 STATE 中的 active run/task 开始。",
+        "docs/WORKFLOW.md#1.1 流程分层: 仓库流程被定义为上岗/讨论/拆解/执行/交付五层状态机。",
+        "docs/ENTITIES.md#1.1 分层原则: project/run/task/evidence 被定义为对象模型先于流程模型的核心边界。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "把项目先看成治理基座而不是普通工具仓，后续所有流程题才能对齐。"
+      "return_to_mainline": "先把项目看成治理基座仓，再谈命令、脚本或具体实现。"
     },
     {
       "question_id": "Q2",
       "question": "项目有几个阶段性目标，现在完成到哪个阶段，每个阶段都完成了什么？",
-      "answer": "项目按上岗、讨论、拆解、执行、交付这条基座链路逐步硬化，当前仍在基座强化阶段，重点是把 learn 和整条最小流程做稳，而不是扩新业务。当前 active run 已完成历史噪音清理、最小 state/task/queue 重建，以及 PROJECT_GUIDE 驱动的 learn 重构方向落地。",
+      "answer": "项目按基座硬化、讨论与执行闭环、再到多角色协作与业务承接逐步推进；当前仍在基座强化阶段。已完成的重点是 Python-first 核心命令、真实 learn model sync、ready 门禁、讨论链路骨架与 owner docs map，而当前 run 继续收敛 learn 的日常同频体验。",
       "standard_alignment": "aligned",
       "evidence": [
-        "docs/WORKFLOW.md#1.1 流程分层: 项目状态机固定分为上岗层、讨论层、拆解层、执行层、交付层。",
-        "TASKS/STATE.md#STATE: CURRENT_RUN_ID 为 run-2026-03-05-ops-vnext-release，CURRENT_STATUS 为 active。",
-        "TASKS/QUEUE.md#Queue: 当前未完成的首个队列项是“收敛 learn 的日常同频体验 - core delivery”。",
-        "reports/run-2026-03-05-ops-vnext-release/summary.md#Incremental update (PROJECT_GUIDE-driven learn rewrite): 当前 run 已把 learn 重构为 PROJECT_GUIDE 驱动，并要求 full-question guide_oral。"
+        "docs/WORKFLOW.md#1.1 流程分层: 当前全流程已被分为上岗、讨论、拆解、执行、交付五层。",
+        "TASKS/STATE.md#STATE: 当前 active run 是 run-2026-03-05-ops-vnext-release。",
+        "TASKS/QUEUE.md#Queue: 队列首项明确写的是“收敛 learn 的日常同频体验 - core delivery”。",
+        "reports/run-2026-03-05-ops-vnext-release/summary.md#Incremental update (PROJECT_GUIDE-driven learn rewrite): 已完成 learn 围绕 PROJECT_GUIDE 的重写与相关文档/ready 适配。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "先确认当前仍在基座强化而非业务扩张阶段，才能避免把未来蓝图当现状。"
+      "return_to_mainline": "用当前 queue 和 run summary 判断阶段，不拿最终蓝图当成当前已完成能力。"
     },
     {
       "question_id": "Q3",
       "question": "这个基建项目做完之后，它会作为基座的项目，我们接下来第一个项目将完成什么，你会怎么去落地，我们现在设计的结构是把这个变成一个插件好呢还是独立项目好，项目最难的是读懂和同频我的意图，你读了项目后，你准备用什么样的方式来接？",
-      "answer": "这个仓应继续作为基座仓，负责流程、门禁和同频治理；后续第一个真实业务项目应独立承接，而不是现在就把不稳定的规则插件化。我的承接方式是先用 owner docs 和当前 run evidence 完成同频，再围绕当前 run/task 走讨论收敛，而不是把业务和基建混到一个仓里直接实现。",
+      "answer": "这个仓应作为基座仓，负责流程、门禁、同频和执行治理；后续第一个真实业务项目应以独立项目优先接入，而不是现在就插件化。我的承接方式是先跑 owner-doc 同频、确认当前 run/task 和方向，再通过讨论层收敛合同后执行，以避免误读意图。",
       "standard_alignment": "aligned",
       "evidence": [
-        "docs/WORKFLOW.md#1.2 边界原则: discussion 先于 execution，queue 在 discussion 之后，说明基座仓提供的是流程骨架。",
-        "docs/ENTITIES.md#2.5 关系: 一个 project 可以包含多个 run，run 是周期容器而不是单个业务实现。",
-        "reports/run-2026-03-05-ops-vnext-release/decision.md#Incremental decision (rebuild learn around PROJECT_GUIDE course flow): 当前决策重心是强化 learn/PROJECT_GUIDE/WORKFLOW，而不是扩展业务插件接口。"
+        "docs/WORKFLOW.md#1.2 边界原则: discussion 先于 execution，说明基座更偏流程骨架而非业务实现。",
+        "docs/ENTITIES.md#2. Project: project_id 承载长期知识、规则、历史和默认同频作用域。",
+        "reports/run-2026-03-05-ops-vnext-release/decision.md#Incremental decision (rebuild learn around PROJECT_GUIDE course flow): 当前判断是先强化基座 learn/guide/workflow，而不是把不稳定规则过早固化成别的接口。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "把基座仓和业务仓分层，避免当前主线被过早插件化带偏。"
+      "return_to_mainline": "先把基座规则做稳，再让业务仓通过 guide 和合同接入。"
     },
     {
       "question_id": "Q4",
       "question": "如果完成这个项目，我把 gpt 网页端当做大脑，codex cli 当做手脚，你是怎么让 codex cli 和 gpt 保持同频的，一样吗，如果不一样，都需要怎么做？",
-      "answer": "网页端和 Codex CLI 角色不同但必须通过仓库证据同频：网页端更适合方向讨论和决策，CLI 更适合读仓、验证和执行。它们不会天然共享上下文，所以都必须回到 AGENTS/PROJECT_GUIDE/WORKFLOW 和当前 TASKS/STATE、run evidence 上，而 CLI 还必须先过 init -> learn -> ready。 ",
+      "answer": "网页端和 Codex CLI 不一样：网页端更适合方向讨论与反驳收敛，CLI 更适合本地读仓、改代码、跑验证和写证据。它们保持同频不是靠聊天记忆，而是都先锚定 `AGENTS.md`、`docs/PROJECT_GUIDE.md`、`docs/WORKFLOW.md` 与当前 `TASKS/STATE.md`/run evidence。",
       "standard_alignment": "aligned",
       "evidence": [
-        "AGENTS.md#4) Mandatory session gate: Codex CLI 在任何实现前都必须先执行 init、learn、ready。",
-        "docs/WORKFLOW.md#3.2 learn: learn 的输入固定包含 owner docs、PROJECT_GUIDE 引导出的必查文件、当前 state 和当前 run evidence。",
-        "CODEX_CLI_PLAYBOOK.md#1.2 learn 同频模式: learn 必须走 app-server true plan mode，默认模型 gpt-5.4，并要求 tools/view.sh 覆盖 required files。",
-        "TASKS/STATE.md#STATE: 当前真相指针固定到 project-0 / run-2026-03-05-ops-vnext-release / TASK-vnext-release-cleanup。"
+        "AGENTS.md#4) Mandatory session gate (once per session): Codex CLI 在实现前必须先跑 init -> learn -> ready。",
+        "docs/WORKFLOW.md#3.2 `learn`: learn 负责项目同频和主线回拉，而不是决定方向或直接执行。",
+        "CODEX_CLI_PLAYBOOK.md#1.2 learn 同频模式（`/plan` 强模式 + 可审计）: learn 固定走 app-server true plan mode 并要求审计产物。",
+        "TASKS/STATE.md#STATE: 当前同频对象由 state 固定到 project-0 与当前 run/task。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "同频不是靠聊天记忆，而是靠 owner docs、state 指针和 run evidence 回到同一条主线。"
+      "return_to_mainline": "把脑和手都拉回同一套 owner docs、state 指针和 run 证据。"
     },
     {
       "question_id": "Q5",
       "question": "这个项目当前的宪法是什么样的？",
-      "answer": "项目宪法是 AGENTS.md，它定义 task/run 入口、session gate、允许命令、证据门禁、文档新鲜度和 PR 纪律。WORKFLOW 负责状态机细节，PROJECT_GUIDE 负责学习与主线回拉，但执行边界最终以 AGENTS 为准。",
+      "answer": "当前项目的宪法是 `AGENTS.md`，它定义了任务入口、同频门禁、允许命令、失败协议、文档新鲜度和 PR/ship 纪律。`docs/WORKFLOW.md` 是状态机细节，`docs/PROJECT_GUIDE.md` 是学习与主线锚点，但执行边界最终以 `AGENTS.md` 为准。",
       "standard_alignment": "aligned",
       "evidence": [
-        "AGENTS.md#1) Entry Rule: 所有实现都必须从 TASKS/TASK-*.md 开始，且不能脱离 active TASK_ID + RUN_ID 编辑。",
-        "docs/WORKFLOW.md#开头说明: 本文件明确对象定义以 ENTITIES 为准，硬规则以 AGENTS.md 为准。"
+        "AGENTS.md#3) Single source map (owner files): 明确把 AGENTS.md 定义为 Hard rules。",
+        "docs/WORKFLOW.md#WORKFLOW: 文档开头明确对象定义以 ENTITIES 为准，硬规则以 AGENTS.md 为准。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "先分清宪法层和说明层，后续所有流程判断才不会失焦。"
+      "return_to_mainline": "先区分硬规则层与说明层，再理解流程细节。"
     },
     {
       "question_id": "Q6",
       "question": "这个项目当前工作流是什么样的？",
-      "answer": "当前工作流是分层状态机：init -> learn -> ready 完成上岗与门禁，orient -> choose -> council -> arbiter -> slice 完成讨论与合同收敛，随后 do -> verify -> review -> ship 进入交付。复杂工作必须先 Plan -> Confirm -> Execute，不能跳过讨论层直接写代码。",
+      "answer": "当前工作流是分层状态机：`init -> learn -> ready -> orient -> choose -> council -> arbiter -> slice -> do -> verify -> review -> ship`。其中上岗层负责同频与开工门禁，讨论层负责方向和合同收敛，复杂需求必须先 `Plan -> Confirm -> Execute`。",
       "standard_alignment": "aligned",
       "evidence": [
-        "docs/WORKFLOW.md#2. 状态机总览: 项目主线被写成 project -> init -> learn -> ready -> orient -> choose -> council -> arbiter -> slice -> queue/task -> do -> verify -> review -> ship。",
-        "AGENTS.md#5) Working mode: 复杂工作必须遵守 Plan -> Confirm -> Execute，legacy plan 只提队列建议而不授权执行。"
+        "docs/WORKFLOW.md#2. 状态机总览: 状态机总览列出了从 project 到 ship 的完整主线。",
+        "AGENTS.md#5) Working mode: Plan -> Confirm -> Execute: 复杂工作必须先 Plan -> Confirm -> Execute，不能把 legacy plan 当执行许可。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "把自己拉回状态机，避免把 learn、plan、do、ship 混成一层。"
+      "return_to_mainline": "所有动作都要先放回状态机位置，避免把 plan、do、ship 混在一起。"
     },
     {
       "question_id": "Q7",
       "question": "我们现在的项目有没有未完成的任务呢，最新的批次在讨论什么问题，你是怎么查的？",
-      "answer": "有，当前 STATE 仍是 active，QUEUE 里至少还有“收敛 learn 的日常同频体验”与“vnext release baseline”两个未完成项。最新批次讨论的核心不是业务功能，而是 learn 的真同频质量、流程边界和日常使用体验；这个判断来自 STATE、QUEUE、当前 run 的 summary 和 decision。",
+      "answer": "有未完成任务，当前 queue 里至少还有“收敛 learn 的日常同频体验”和“vnext release baseline”两项未勾选。查法是先看 `TASKS/STATE.md` 锁定当前 run/task，再看 `TASKS/QUEUE.md` 和当前 run 的 `summary.md`/`decision.md`，结论是最近批次主要在收敛 learn、PROJECT_GUIDE 驱动同频与流程自动化体验。",
       "standard_alignment": "aligned",
       "evidence": [
-        "TASKS/STATE.md#STATE: CURRENT_STATUS 为 active，当前 task 是 TASKS/TASK-vnext-release-cleanup.md。",
-        "TASKS/QUEUE.md#Queue: 存在未勾选的 learn-daily-ergonomics 和 vnext release baseline 两个待办项。",
-        "reports/run-2026-03-05-ops-vnext-release/summary.md#Incremental update (learn reading strategy rollback + view.sh compatibility): 当前结论是继续围绕 learn 主线、流程边界和日常体验收敛。",
-        "reports/run-2026-03-05-ops-vnext-release/decision.md#Current stop reason: 最新 live learn smoke 因 quota/auth 被截断，说明当前批次仍在处理 learn 真实性与运行体验。"
+        "TASKS/STATE.md#STATE: 当前 active 指针锁定到 run-2026-03-05-ops-vnext-release 与 TASK-vnext-release-cleanup。",
+        "TASKS/QUEUE.md#Queue: 队列中两项 TODO 都未完成，且首项直接聚焦 learn 日常同频体验。",
+        "reports/run-2026-03-05-ops-vnext-release/summary.md#Incremental update (PROJECT_GUIDE-driven learn rewrite): 最近落地围绕 learn 重写、owner docs 同步和真实 model sync。",
+        "reports/run-2026-03-05-ops-vnext-release/decision.md#Incremental decision (accept strategy-based learn reads after real low-profile pass): 当前判断接受策略式读取并继续优化 learn 体验。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "把焦点锁回当前未完成任务和本轮 run 争论点，而不是泛泛讲历史。"
+      "return_to_mainline": "看当前局面必须先看 state、queue 和当前 run 证据，而不是泛泛讲愿景。"
     },
     {
       "question_id": "Q8",
       "question": "你查了最近的 session 说了什么，你是从哪里查的？",
-      "answer": "最近 session 的主线是：清理旧 task/report 噪音后，把 learn 重构成 PROJECT_GUIDE 驱动的真同频流程，并继续解决真实 smoke 中的模型、配额和体验问题。我是从 TASKS/STATE.md 和当前 run 的 summary.md、decision.md 读取这个连续性，而不是靠聊天记忆猜测。",
+      "answer": "最近 session 的主线是持续压缩流程噪音，把 `learn` 做成真正的项目同频核心，并让 `PROJECT_GUIDE` 成为课程驱动器。这个结论来自 `TASKS/STATE.md` 定位当前 run，再结合当前 run 的 `summary.md` 与 `decision.md`，而不是靠聊天记忆猜。",
       "standard_alignment": "aligned",
       "evidence": [
-        "TASKS/STATE.md#STATE: 当前 session 对应的活动 run 是 run-2026-03-05-ops-vnext-release。",
-        "reports/run-2026-03-05-ops-vnext-release/summary.md#What changed: 本轮先清理历史 task/report 噪音并重建最小 active baseline。",
-        "reports/run-2026-03-05-ops-vnext-release/decision.md#Incremental decision (rebuild learn around PROJECT_GUIDE course flow): 本轮明确把 learn 改造成 PROJECT_GUIDE 驱动的课程式同频核心。"
+        "TASKS/STATE.md#STATE: 当前 session continuity 的指针是 run-2026-03-05-ops-vnext-release。",
+        "reports/run-2026-03-05-ops-vnext-release/summary.md#Incremental update (real learn -> ready closure passed after quota recovery): 最近一次真实闭环证明 learn -> ready 已跑通并覆盖 Q1..Q17。",
+        "reports/run-2026-03-05-ops-vnext-release/decision.md#Incremental decision (rebuild learn around PROJECT_GUIDE course flow): 当前连续决策都在强化 PROJECT_GUIDE 驱动的 learn 主线。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "session continuity 必须落回 run evidence，避免一换会话就把当前主线当新话题。"
+      "return_to_mainline": "session continuity 以仓库证据为准，优先读当前 run summary/decision。"
     },
     {
       "question_id": "Q9",
       "question": "基建项目讨论项目应该用哪个流程？",
-      "answer": "基建项目的讨论应走 orient -> choose -> council -> arbiter -> slice，而不是直接 do。这个流程先生成方向、由用户确认、再做多角色独立评审并收敛成执行合同；legacy plan 只负责提队列建议，不等于 /plan 或执行许可。",
+      "answer": "基建项目讨论需求应走 `orient -> choose -> council -> arbiter -> slice` 的讨论优先流程，再进入 `do`。`legacy plan` 只是队列建议，不等于 Codex `/plan`，更不等于执行许可。",
       "standard_alignment": "aligned",
       "evidence": [
-        "docs/WORKFLOW.md#4. S1 讨论层: orient、choose、council、arbiter 被定义为方向到执行合同的讨论链。",
-        "AGENTS.md#5) Working mode: Complex work 必须 Plan -> Confirm -> Execute，不能跳过讨论层直接写代码。"
+        "docs/WORKFLOW.md#4. S1 讨论层: 讨论层被定义为 orient/choose/council/arbiter。",
+        "AGENTS.md#5) Working mode: Plan -> Confirm -> Execute: 复杂工作必须先规划确认，不能跳过讨论层直接写代码。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "守住讨论先于执行，才能让后续实现有合同和边界。"
+      "return_to_mainline": "守住讨论先于执行，先把方向和合同收敛。"
     },
     {
       "question_id": "Q10",
       "question": "基建项目的代码实施流程是什么样的，它需要哪些 agent 进行协作呢，怎么保证这些角色都是独立思考的，他们每一个角色的定义是什么样子的，怎么保证其独立思考的，我们现在都实现了吗，怎么实现的？",
-      "answer": "实施流程是在讨论层收敛合同后进入 do -> verify -> review -> ship，多角色理想上覆盖产品、架构、研发、测试四个视角。独立思考靠 council 分角色独立产出、再由 arbiter 汇总成单一执行合同；当前仓已经有 orient/council/arbiter/slice 骨架，但还不是成熟的并行 agent 团队实现。",
+      "answer": "代码实施流程是讨论层收敛合同后进入 `do -> verify -> review -> ship`；理想协作角色是产品、架构、研发、测试，分别负责目标边界、系统约束、实现路径和回归验证。独立思考通过 `council` 先分视角产出、再由 `arbiter` 收敛来保证；当前只实现了 `orient/council/arbiter/slice` 的流程骨架，还不是完整高并发独立 agent 团队。",
       "standard_alignment": "aligned",
       "evidence": [
-        "docs/WORKFLOW.md#4.3 council: council 的职责是让产品/架构/研发/测试独立给出意见并暴露 blocker/warn/disagreement。",
-        "AGENTS.md#6) Workflow skeleton: 讨论优先推荐 lane 明确包含 choose、council、arbiter、slice_task 后才进入 do。"
+        "docs/WORKFLOW.md#4.3 `council`: council 负责让产品/架构/研发/测试等多角色独立给出意见。",
+        "AGENTS.md#6) Workflow skeleton: 讨论优先推荐链路要求 council、arbiter、slice 先于 do。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "承认当前只是流程骨架，避免把理想多角色协作误说成已完全实现。"
+      "return_to_mainline": "把多角色协作看成当前流程骨架能力，而不是已经完全实现的组织形态。"
     },
     {
       "question_id": "Q11",
       "question": "项目基建里的 task，pr，run，project 的都是什么意思，还有其他的概念吗，他们的生命周期管理是怎么样的？",
-      "answer": "project 是长期命名空间，run 是一轮从方向讨论到交付的周期容器，task 是 run 内最小可执行切片，PR 是该 task 的交付与审查单元；此外还有 discussion artifacts、queue、gate 和 evidence。生命周期是 project 持续存在，run 内先讨论后切 task，task 完成后更新 run evidence，再通过 one task -> one branch -> one PR 完成交付并更新 state。",
+      "answer": "`project` 是长期命名空间，当前默认 `project-0`；`run` 是一轮方向到交付的周期容器；`task` 是 run 内最小可执行切片；`PR` 是交付与审查单元。除此之外还有 `queue`、`gate`、`discussion artifacts`、`evidence`，生命周期基本是 `QUEUE -> TASK -> RUN evidence -> verify -> ship/PR -> state update`。",
       "standard_alignment": "aligned",
       "evidence": [
-        "docs/ENTITIES.md#2. Project / 3. Run / 4. Task / 10. PR: 对 project、run、task、PR 及其生命周期和关系做了明确定义。",
-        "docs/WORKFLOW.md#2. 状态机总览: 生命周期流转是 init/learn/ready -> discussion -> slice -> queue/task -> do -> verify -> review -> ship -> run close。",
-        "AGENTS.md#13) PR discipline: PR 纪律固定为 one task -> one branch -> one PR，且标题必须包含 RUN_ID。"
+        "docs/ENTITIES.md#2. Project: project_id 承载长期知识与多个 run。",
+        "docs/WORKFLOW.md#7.1 `ship`: one task -> one branch -> one PR 是交付规则。",
+        "AGENTS.md#13) PR discipline: PR 标题必须包含 RUN_ID，正文要带 Why/What/Verify/Evidence paths。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "先统一名词边界，后续关于当前 task/run/project 的判断才不会混层。"
+      "return_to_mainline": "先统一对象层级，再看每个对象在流程中的流转。"
     },
     {
       "question_id": "Q12",
       "question": "我们在项目的准备工作做好后，我们一个需求讨论方向，从流程的哪一步开始？",
-      "answer": "准备工作完成后，需求讨论应从 orient 开始，然后依次 choose -> council -> arbiter -> slice，而不是直接 do。当前 run summary 也显示最近的重心仍是方向与同频体验收敛，所以 ready 后的正确下一步仍然是讨论层。",
+      "answer": "准备工作完成后，讨论方向应从 `orient` 开始，再走 `choose -> council -> arbiter -> slice`，而不是直接 `do`。当前 run summary 也说明重点仍是方向和同频体验收敛，不是跳过讨论层直接编码。",
       "standard_alignment": "aligned",
       "evidence": [
-        "docs/WORKFLOW.md#3.3 ready: ready 的下一跳明确写为 orient。",
-        "AGENTS.md#6) Workflow skeleton: discussion-first recommended lane 从 discuss/orient 类动作开始，再到 choose/council/arbiter/slice。",
-        "reports/run-2026-03-05-ops-vnext-release/summary.md#Incremental update (learn reading strategy rollback + view.sh compatibility): 当前 run 仍在围绕 learn 的读取策略和日常体验做方向收敛。"
+        "docs/WORKFLOW.md#3.3 `ready`: ready 的下一跳被明确定义为 orient。",
+        "AGENTS.md#6) Workflow skeleton: discussion-first recommended lane 从 discuss/choose/council/arbiter/slice 开始。",
+        "reports/run-2026-03-05-ops-vnext-release/summary.md#Incremental update (learn reading strategy rollback + view.sh compatibility): 当前策略强调 owner docs 先读、required files 次之、避免额外探索，说明仍在优化上岗与讨论前置质量。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "把 ready 理解成开工许可而不是直接改代码许可。"
+      "return_to_mainline": "把 ready 视为开工许可，不是直接改代码的许可。"
     },
     {
       "question_id": "Q13",
       "question": "我们分支代码的管理是怎么样的，现在满足需求吗？",
-      "answer": "当前分支管理规则是 one task -> one branch -> one PR，PR 标题必须带 RUN_ID，正文包含 Why / What / Verify / Evidence paths。对当前基建阶段这已经满足需求，因为重点是保证改动能回到 task/run/evidence，而不是设计复杂分支模型。",
+      "answer": "当前分支管理是“一任务一分支一 PR”，PR 标题必须带 `RUN_ID`，正文要有 Why / What / Verify / Evidence paths。对当前基建阶段这已经满足需求，因为重点是交付能回到 task、run 和验证证据，而不是复杂分支模型。",
       "standard_alignment": "aligned",
       "evidence": [
-        "AGENTS.md#13) PR discipline: 明确要求一任务一分支一 PR，且 PR 标题必须包含 RUN_ID。",
-        "docs/WORKFLOW.md#7.1 ship: ship 规则再次要求 one task -> one branch -> one PR。"
+        "AGENTS.md#13) PR discipline: 明确规定 one task -> one branch -> one PR 与 PR 内容要求。",
+        "docs/WORKFLOW.md#7.1 `ship`: ship 规则重复要求 one task -> one branch -> one PR。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "交付纪律先服务可审计和可回溯，再考虑更复杂的分支策略。"
+      "return_to_mainline": "先保证每次交付都可审计，再考虑更复杂的分支策略。"
     },
     {
       "question_id": "Q14",
       "question": "每次做完任务，你必须要做什么事情？",
-      "answer": "每次做完任务都必须先 verify，再更新 run evidence，并在规则/流程变化时同步 owner docs，最后才能 ship。最低限度要补全 reports/<RUN_ID>/summary.md、decision.md、meta.json；没有验证和证据更新就不算完成。",
+      "answer": "每次做完任务都必须先验证，再更新 run evidence，并在流程/规则/工具行为变化时同步 owner docs，最后才 ship。最低限度要更新 `reports/<RUN_ID>/summary.md`、`decision.md`、`meta.json`，否则不算完成。",
       "standard_alignment": "aligned",
       "evidence": [
-        "AGENTS.md#7) Evidence is memory / 12) Documentation freshness gate: 每个 run 至少要更新 meta.json、summary.md、decision.md，且规则变化必须同步 owner docs。",
-        "docs/WORKFLOW.md#6.2 verify / 7.1 ship / 11. Documentation Freshness Gate: verify 未通过不得 ship，ship 前必须更新证据和 owner docs。",
-        "reports/run-2026-03-05-ops-vnext-release/summary.md#Summary: 当前 run 的 summary 已作为 run evidence 记录 what changed 和 verify。",
-        "reports/run-2026-03-05-ops-vnext-release/decision.md#Decision: 当前 run 的 decision 已记录 why、decision、risk 和 stop reason。"
+        "AGENTS.md#7) Evidence is memory (hard gate): 每个 run 都必须更新 meta.json、summary.md、decision.md。",
+        "docs/WORKFLOW.md#6.2 `verify`: 未通过 verify 不得进入 ship。",
+        "reports/run-2026-03-05-ops-vnext-release/summary.md#Summary: 当前 run summary 展示了 What changed 与 Verify 作为交付证据模板。",
+        "reports/run-2026-03-05-ops-vnext-release/decision.md#Decision: 当前 run decision 记录了 Why/Decision/Risk/Stop reason 作为闭环证据。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "把“完成”定义回验证和证据闭环，而不是代码结束。"
+      "return_to_mainline": "把“完成”的定义固定为 verify + evidence + docs freshness + ship。"
     },
     {
       "question_id": "Q15",
       "question": "这个项目是基建项目吗，如果我要的体验是为了用起来很爽，完全自动化，有哪些必要的需要优化的？",
-      "answer": "这是基建项目，所以“爽”和“自动化”首先意味着同频质量真、流程噪音少、门禁清晰、失败恢复可用，而不是继续堆命令。当前最该优化的仍是 learn 的真实性与日常体验，其次是流程分叉、文档同步门禁和后续 orchestrator/多角色能力。",
+      "answer": "这是基建项目，想要“很爽”和高度自动化，优先不是堆命令，而是把 `learn` 的同频质量、主路径低噪音、文档硬门禁、失败恢复清晰度先做好。当前 decision 也把优化重点放在 learn 的真实性和策略式低噪音读取上。",
       "standard_alignment": "aligned",
       "evidence": [
-        "docs/WORKFLOW.md#1.1 流程分层: 仓库被设计成从上岗到交付的通用流程基座，而不是单一业务实现。",
-        "AGENTS.md#4) Mandatory session gate / 12) Documentation freshness gate: 自动化体验依赖 learn 门禁、文档新鲜度和流程硬约束。",
-        "reports/run-2026-03-05-ops-vnext-release/decision.md#Incremental decision (keep view.sh compatibility fix, reject hardcoded learn read script): 当前决策明确优先收敛 learn 的读取策略与日常体验，而不是引入错误的硬编码方案。"
+        "docs/WORKFLOW.md#9. 默认日常流程: 主路径被设计成固定顺序的自动化日常流程。",
+        "AGENTS.md#12) Documentation freshness gate: 文档同步被设为硬门禁，以支持可持续自动化。",
+        "reports/run-2026-03-05-ops-vnext-release/decision.md#Incremental decision (keep view.sh compatibility fix, reject hardcoded learn read script): 当前优化方向明确是减少 onboarding 工具噪音并保持策略级约束。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "产品体验优化要先落在 learn 和流程稳定性上，不能被局部功能诱导。"
+      "return_to_mainline": "体验优化先做同频质量、门禁和低噪音流程，不先追求更多功能面。"
     },
     {
       "question_id": "Q16",
       "question": "这个项目 codex 的正确打开方式你会吗，所有的 codex 正确的方法你会使用，我们项目中用到了哪些，你能列出来吗？",
-      "answer": "会；本项目把 Codex 用法明确分成讨论模式、learn 同频模式和执行模式三类：只读讨论用 `codex --sandbox read-only --ask-for-approval never --search`，执行用 `codex --sandbox workspace-write --ask-for-approval on-request --search`，learn 则固定走 app-server true plan mode。除此之外，项目还参考了官方/源码审计得到的 review、exec JSONL、resume、sandbox、app-server 等能力，但强调的是按场景分层使用，而不是混用所有子命令。",
+      "answer": "会。项目里主要用三类 Codex 方式：讨论模式 `codex --sandbox read-only --ask-for-approval never --search`，执行模式 `codex --sandbox workspace-write --ask-for-approval on-request --search`，以及 `learn` 走 `codex app-server` 的 true plan mode；具体边界和实测基线由 PLAYBOOK 与 SOURCE_AUDIT 校对。",
       "standard_alignment": "aligned",
       "evidence": [
-        "CODEX_CLI_PLAYBOOK.md#1) 默认流程: Playbook 直接给出了讨论模式、learn 同频模式和执行模式三种推荐打开方式。",
-        "CODEX_CLI_SOURCE_AUDIT.md#3) 官方文档 vs 本地核对（关键结论）: 审计确认了 sandbox、审批策略、/plan、/compact、--search、exec --json 等能力与官方一致。",
-        "AGENTS.md#8) Allowed commands: 项目层面对 Codex/脚本的允许命令范围已经做了硬约束。"
+        "CODEX_CLI_PLAYBOOK.md#1) 默认流程（只记这 3 条）: Playbook 明确列出讨论模式、learn 同频模式和执行模式。",
+        "CODEX_CLI_SOURCE_AUDIT.md#3) 官方文档 vs 本地核对（关键结论）: 本地核对确认 sandbox、approval、/plan、/compact 与官方一致。",
+        "AGENTS.md#8) Allowed commands (default): 项目内默认允许的命令把 Python-first 工具链与 legacy.sh 边界固定下来。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "把 Codex 当分层执行器使用，而不是把所有能力混成一条路径。"
+      "return_to_mainline": "分清讨论、plan、执行、review、ship 的边界，而不是背所有 Codex 子命令。"
     },
     {
       "question_id": "Q17",
       "question": "根据最新的 session，你现在做的东西是否偏离了我们现在最重要的任务，你是否认为我们偏离了主线，为什么，接下来我们应该怎么做？",
-      "answer": "这次 onboarding pass 没有偏离主线，因为当前最重要的任务正是把 learn 做成真正的同频核心，而本次动作就是按 PROJECT_GUIDE 和当前 run evidence 重建主线、阶段和下一步。接下来应继续围绕当前 active run 的 learn-daily-ergonomics 方向，在讨论层完成方向合同收敛后再推进最小实现与真实 smoke。 ",
+      "answer": "按当前 run 证据看，最重要任务仍是把 `learn` 做成真实、低噪音、可审计的同频核心；只要动作不能增强这一点，就算偏离主线。当前主线没有偏离，下一步应继续围绕 current run 收敛 learn/PROJECT_GUIDE/owner docs，再在讨论层生成合同后执行。",
       "standard_alignment": "aligned",
       "evidence": [
-        "TASKS/STATE.md#STATE: 当前 active run 仍是 run-2026-03-05-ops-vnext-release，说明主线尚未切换。",
-        "reports/run-2026-03-05-ops-vnext-release/summary.md#Incremental update (PROJECT_GUIDE-driven learn rewrite): 当前 run 已把 learn 的课程化和逐题口述作为核心增量。",
-        "reports/run-2026-03-05-ops-vnext-release/decision.md#Current stop reason: 目前阻塞点是 learn 的实际运行体验与 quota/auth，而不是需求方向切换。",
-        "docs/WORKFLOW.md#4. S1 讨论层 / 5. S2 拆解层: 下一步正确路径仍是 orient -> choose -> council -> arbiter -> slice，然后才进入 do。"
+        "TASKS/STATE.md#STATE: 当前焦点被 state 固定到 run-2026-03-05-ops-vnext-release。",
+        "reports/run-2026-03-05-ops-vnext-release/summary.md#Incremental update (real learn -> ready closure passed after quota recovery): 最近真实闭环已证明 learn -> ready 是当前最关键产物。",
+        "reports/run-2026-03-05-ops-vnext-release/decision.md#Incremental decision (accept strategy-based learn reads after real low-profile pass): 当前决策接受继续围绕 learn 策略式读取与同频质量前进。",
+        "docs/WORKFLOW.md#3.2 `learn`: workflow 把 learn 定义为项目同频和主线回拉的核心。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "持续用 Q17 检查当前动作是否真的在提升 learn 真实性、流程自动化体验或文档一致性。"
+      "return_to_mainline": "用 current run 的 queue、summary、decision 和 learn 定义持续校验是否仍在强化主线。"
     }
   ],
   "anchor_realign": {
     "question_id": "Q17",
     "status": "on_track",
     "drift_detail": "none",
-    "return_to_mainline": "继续以当前 active run 的 learn 强同频和流程收敛为唯一优先级，先走讨论链生成合同，再做最小实现和真实验证。"
+    "return_to_mainline": "继续以当前 STATE/QUEUE/run evidence 为唯一当前性来源，把后续工作限定在提升 learn 真实性、流程低噪音与文档一致性的范围内。"
   },
   "practice": {
-    "command_execution_count": 38,
+    "command_execution_count": 36,
     "command_samples": [
+      "/bin/bash -lc tools/view.sh AGENTS.md",
       "/bin/bash -lc tools/view.sh docs/WORKFLOW.md",
       "/bin/bash -lc tools/view.sh docs/PROJECT_GUIDE.md",
-      "/bin/bash -lc tools/view.sh AGENTS.md",
-      "/bin/bash -lc 'tools/view.sh docs/WORKFLOW.md'",
-      "/bin/bash -lc 'tools/view.sh docs/PROJECT_GUIDE.md'"
+      "/bin/bash -lc 'tools/view.sh AGENTS.md'",
+      "/bin/bash -lc 'tools/view.sh docs/WORKFLOW.md'"
     ]
   }
 }
