@@ -84,6 +84,31 @@ def _extract_first_json_dict_text(raw_text: str) -> str:
     return ""
 
 
+def _maybe_extract_final_json_dict_text(
+    text_chunks: list[str],
+    json_start_idx: int | None,
+    chunk_text: str,
+    *,
+    force: bool = False,
+) -> tuple[str | None, int | None]:
+    if chunk_text:
+        if json_start_idx is None:
+            local_idx = chunk_text.find("{")
+            if local_idx >= 0:
+                json_start_idx = sum(len(part) for part in text_chunks[:-1]) + local_idx
+        if not force and "}" not in chunk_text:
+            return (None, json_start_idx)
+    elif not force:
+        return (None, json_start_idx)
+    if json_start_idx is None:
+        return (None, None)
+    combined = "".join(text_chunks)
+    parsed = _extract_first_json_dict_text(combined[json_start_idx:])
+    if parsed:
+        return (parsed, json_start_idx)
+    return (None, json_start_idx)
+
+
 class _AppServerRPC:
     def __init__(self, events_file: Path, stderr_file: Path) -> None:
         self.events_file = events_file
@@ -200,6 +225,11 @@ class _AppServerRPC:
         try:
             return self._messages.get(timeout=timeout)
         except queue.Empty:
+            if self.proc is not None and self.proc.poll() is not None:
+                return {
+                    "method": "__app_server_exit__",
+                    "params": {"returncode": self.proc.returncode},
+                }
             return None
 
 
@@ -280,36 +310,56 @@ def run_app_server_transport(
             deadline = time.time() + APP_SERVER_TURN_TIMEOUT_SEC
             turn_done = False
             text_chunks: list[str] = []
+            agent_message_phase: dict[str, str] = {}
+            json_start_idx: int | None = None
             while time.time() < deadline:
                 event = rpc.next_event(timeout=1.0)
                 if event is None:
                     continue
                 method = str(event.get("method", "")).strip()
                 params = event.get("params") or {}
+                if method == "item/started":
+                    item = params.get("item") or {}
+                    if str(item.get("type", "")).lower() == "agentmessage":
+                        item_id = str(item.get("id", "")).strip()
+                        phase = str(item.get("phase", "")).strip().lower()
+                        if item_id:
+                            agent_message_phase[item_id] = phase
+                    continue
                 if method in {"item/plan/delta", "item/agentMessage/delta"}:
+                    if method == "item/agentMessage/delta":
+                        item_id = str(params.get("itemId", "")).strip()
+                        phase = agent_message_phase.get(item_id, "")
+                        if phase and phase != "final_answer":
+                            continue
                     t = _extract_text(params.get("delta"))
                     if t:
                         text_chunks.append(t)
-                        parsed = _extract_first_json_dict_text("".join(text_chunks))
+                        parsed, json_start_idx = _maybe_extract_final_json_dict_text(
+                            text_chunks,
+                            json_start_idx,
+                            t,
+                        )
                         if parsed:
                             raw_file.write_text(parsed + "\n", encoding="utf-8")
                             return 0
                 elif method == "item/completed":
                     item = params.get("item") or {}
-                    if str(item.get("type", "")).lower() in {"plan", "agentmessage"}:
+                    item_type = str(item.get("type", "")).lower()
+                    if item_type == "agentmessage":
+                        phase = str(item.get("phase", "")).strip().lower()
+                        if phase and phase != "final_answer":
+                            continue
+                    if item_type in {"plan", "agentmessage"}:
                         t = _extract_text(item.get("text") or item.get("content"))
                         if t:
                             text_chunks.append(t)
-                            parsed = _extract_first_json_dict_text("".join(text_chunks))
-                            if parsed:
-                                raw_file.write_text(parsed + "\n", encoding="utf-8")
-                                return 0
-                elif method == "codex/event/agent_message":
-                    msg = params.get("msg") or {}
-                    t = _extract_text(msg.get("message"))
-                    if t:
-                        text_chunks.append(t)
-                        parsed = _extract_first_json_dict_text("".join(text_chunks))
+                        parsed, json_start_idx = _maybe_extract_final_json_dict_text(
+                            text_chunks,
+                            json_start_idx,
+                            t,
+                            force=True,
+                        )
                         if parsed:
                             raw_file.write_text(parsed + "\n", encoding="utf-8")
                             return 0
@@ -318,6 +368,8 @@ def run_app_server_transport(
                     if turn.get("id") == turn_id:
                         turn_done = str(turn.get("status", "")).strip().lower() == "completed"
                         break
+                elif method == "__app_server_exit__":
+                    break
 
             raw_text = "".join(text_chunks).strip()
             raw_file.write_text(raw_text + ("\n" if raw_text else ""), encoding="utf-8")

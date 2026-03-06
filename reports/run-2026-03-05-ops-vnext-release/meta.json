@@ -1,7 +1,7 @@
 {
   "run_id": "run-2026-03-05-ops-vnext-release",
   "task_id": "TASKS/TASK-vnext-release-cleanup.md",
-  "stop_reason": "needs_human_decision",
+  "stop_reason": "infra_quota_or_auth",
   "commands_run": [
     "rm -rf reports/* learn/* TASKS/TASK-*.md TASKS/TODO_PROPOSAL.md",
     "rewrite TASKS/STATE.md",
@@ -56,7 +56,15 @@
     "bash tools/view.sh -h",
     "bash tools/view.sh docs/WORKFLOW.md 20",
     "env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -low",
-    "python3 tools/ready.py"
+    "python3 tools/ready.py",
+    "inspect app-server event phases in learn/project-0.model.events.jsonl",
+    "filter commentary and keep only final_answer in tools/codex_transport.py",
+    "optimize final JSON extraction to avoid full-buffer rescans on every delta",
+    "detect app-server child exit in tools/codex_transport.py",
+    "python3 -m py_compile tools/codex_transport.py tools/learn.py",
+    "env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -low",
+    "python3 tools/ready.py",
+    "env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -medium"
   ],
   "artifacts": [
     "TASKS/STATE.md",
@@ -102,6 +110,9 @@
     "learn/project-0.model.json",
     "reports/run-2026-03-05-ops-vnext-release/ready.json",
     "reports/run-2026-03-05-ops-vnext-release/conversation.md",
-    "reports/run-2026-03-05-ops-vnext-release/execution.jsonl"
+    "reports/run-2026-03-05-ops-vnext-release/execution.jsonl",
+    "tools/codex_transport.py",
+    "learn/project-0.model.events.jsonl",
+    "learn/project-0.model.stderr.log"
   ]
 }

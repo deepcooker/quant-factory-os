@@ -218,4 +218,34 @@ RUN_ID: `run-2026-03-05-ops-vnext-release`
 
 ### Current stop reason
 - `needs_human_decision`
+
+## Incremental decision (filter commentary at transport layer, do not weaken onboarding)
+### Why
+- The remaining learn bottleneck was no longer file coverage or prompt structure; it was app-server plan-mode process output.
+- Local protocol/schema evidence shows app-server distinguishes `agentMessage.phase=commentary` from `agentMessage.phase=final_answer`.
+- Treating both as one stream pollutes raw output and wastes parser work, but shrinking `PROJECT_GUIDE` or dropping questions would directly hurt onboarding quality.
+
+### Decision
+- Keep the full onboarding content unchanged:
+  - `Q1..Q17`
+  - must-read evidence coverage
+  - mainline anchor and oral readout
+- Fix transport instead:
+  - ignore `commentary`
+  - only accumulate `final_answer`
+  - optimize final JSON extraction so parsing does not rescan the whole buffer on every delta
+  - stop waiting when app-server exits without a usable packet
+
+### Evidence
+- `tools/codex_transport.py`
+- `learn/project-0.model.events.jsonl`
+- `learn/project-0.model.stderr.log`
+
+### Risk / rollback
+- Risk: app-server can still fail before final answer under quota pressure, so `-medium` remains dependent on account limits.
+- Rollback: not recommended; the previous behavior mixed protocol phases and made final parsing slower and noisier.
+
+### Current stop reason
+- `infra_quota_or_auth`
+- Reason: after the transport fixes, `learn -low -> ready` passes again, but `learn -medium` is currently blocked by `usage_limit_exceeded`, so the next action depends on quota recovery rather than more prompt compression.
 - Reason: the learn/ready closure is now verified; next step is a product decision whether to continue tuning onboarding ergonomics or move forward into `orient`.

@@ -211,3 +211,29 @@ RUN_ID: `run-2026-03-05-ops-vnext-release`
   - `LEARN_MODEL_ANCHOR_STATUS: on_track`
   - `READY_LEARN_STATUS: pass`
   - `READY_NEXT_COMMAND: python3 tools/orient.py`
+
+## Incremental update (transport commentary filtering + final JSON hot-path fix)
+- Hardened `tools/codex_transport.py` around app-server plan-mode output handling:
+  - track `agentMessage.phase`
+  - ignore `commentary` chunks
+  - only accumulate `final_answer`
+- Fixed the final JSON extraction hot path:
+  - do not rescan the entire accumulated output on every delta
+  - only attempt JSON extraction after seeing likely JSON-closing chunks or on item completion
+- Added app-server exit detection so `learn` no longer risks waiting forever when the child process exits without a usable final packet.
+- Re-ran the real onboarding flow after these transport changes:
+  - `env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -low` -> pass
+  - `python3 tools/ready.py` -> pass
+- Tried the next daily-use profile:
+  - `env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -medium`
+  - result: model sync failed due Codex account quota, not due repo logic
+
+### Verify (incremental)
+- `python3 -m py_compile tools/codex_transport.py tools/learn.py` -> pass
+- `env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -low` -> pass
+- `python3 tools/ready.py` -> pass
+- `env PYTHONUNBUFFERED=1 QF_LEARN_LOG_ACTIVE=1 python3 tools/learn.py -medium` -> fail with quota event
+- key evidence:
+  - `learn/project-0.model.events.jsonl` -> `item/started` shows `agentMessage.phase=commentary|final_answer`
+  - `learn/project-0.model.events.jsonl` -> `usage_limit_exceeded`
+  - `learn/project-0.model.stderr.log` -> app-server exits with quota-related failure during `-medium`
