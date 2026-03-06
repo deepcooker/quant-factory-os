@@ -10,6 +10,10 @@
 它不负责重复解释所有命令参数。
 对象定义以 `docs/ENTITIES.md` 为准，硬规则以 `AGENTS.md` 为准。
 
+补充定位：
+- 本文件描述的是 foundation repo 当前状态机。
+- 自动化 1.0 的“business project repo 单入口目标形态”见 `docs/AUTOMATION_1_0.md`。
+
 ## 1. 设计原则
 
 ### 1.1 流程分层
@@ -529,7 +533,7 @@ project
 - `-daily` 是日常同频入口，等价于 `-medium`，用于减少档位选择负担；不改变 `learn` 的强同频、app-server 和 oral restatement 硬门禁。
 - `tools/smoke.sh` 是 ship 前的 readiness/checklist 层，不直接执行远端 PR/merge。
 - `tools/task.sh` / `tools/ship.sh` 默认保持当前 active branch 作为发货基线；只有显式以 `main` 为基线时，`ship.sh` 才会执行 `fetch/pull origin main`。
-- 当 `gh pr merge` 前发现 PR 不是 cleanly mergeable 时，`ship.sh` 会以 `pr_merge_blocked` 退出并打印恢复命令，而不是继续盲重试。
+- 当 `gh pr merge` 前发现 PR 不是 cleanly mergeable 时，`ship.sh` 会以 `pr_merge_blocked` 退出并打印 base-into-head 恢复命令，而不是继续盲重试。
 
 说明：
 - `-daily` 是日常同频入口，等价于 `-medium`，用于减少档位选择负担；不改变 `learn` 的强同频、app-server 和 oral restatement 硬门禁。

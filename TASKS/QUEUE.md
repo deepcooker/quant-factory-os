@@ -72,6 +72,27 @@
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
   Done: clear `pr_merge_blocked` guard added; review pass recorded in run-2026-03-06-ship-pr-merge-resilience
 
+- [x] TODO Title: ship pr-merge recovery guidance  Picked: run-2026-03-06-ship-pr-merge-recovery-guidance 2026-03-06T21:55:00+0800
+  Goal: 收紧 `tools/ship.sh` 在 `pr_merge_blocked` 之后的恢复指引，让 base-into-head 的冲突恢复路径更明确、低风险、可复制。
+  Scope: `tools/ship.sh`, `tests/`, `TASKS/`, `reports/`, `docs/`
+  Acceptance:
+  - [ ] `pr_merge_blocked` 输出包含明确的 base-into-head 恢复命令
+  - [ ] `ship_state.json` 保留足够恢复上下文
+  - [ ] 新增或刷新关键回归测试
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
+- [x] TODO Title: automation 1.0 definition  Picked: run-2026-03-06-automation-1-0-definition 2026-03-06T22:05:00+0800
+  Goal: 把“自动化 1.0”的成功定义正式落到 foundation repo 文档：明确它是面向业务项目交付的单入口目标、基座退后台、1.0 验收到交付为止，以及 foundation repo / business project repo 的分层关系。
+  Scope: `docs/`, `AGENTS.md`, `TASKS/`, `reports/`
+  Acceptance:
+  - [ ] `Automation 1.0` 的成功定义形成正式文档
+  - [ ] 文档与 `ENTITIES / WORKFLOW / PROJECT_GUIDE` 现有术语保持一致
+  - [ ] 明确 1.0 到交付为止，不把运行迭代闭环算入当前验收
+  - [ ] 明确 foundation repo 与 business project repo 的分层关系
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
 - [ ] TODO Title: vnext release baseline
   Goal: 进入开发设计阶段的新版本基线，保持流程最小可用并可继续迭代。
   Scope: `TASKS/`, `reports/`, `tools/`, `docs/`, `tests/`
