@@ -673,4 +673,7 @@ if git status --porcelain | grep -q "tools/ship.sh"; then
 fi
 
 # 提交和创建 PR
-SHIP_TASK_FILE="$task_file" SHIP_TASK_TITLE="$title" tools/ship.sh "$msg"
+SHIP_BASE_BRANCH="$(git rev-parse --abbrev-ref HEAD)" \
+SHIP_TASK_FILE="$task_file" \
+SHIP_TASK_TITLE="$title" \
+tools/ship.sh "$msg"

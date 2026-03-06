@@ -619,6 +619,8 @@ gh auth status -h github.com >/dev/null
 git rev-parse --is-inside-work-tree >/dev/null
 
 orig_branch="$(git rev-parse --abbrev-ref HEAD)"
+base_branch="${SHIP_BASE_BRANCH:-$orig_branch}"
+pr_base_branch="${SHIP_PR_BASE_BRANCH:-$base_branch}"
 
 STASH_NAME=""
 if ! git diff --quiet || ! git diff --cached --quiet || [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
@@ -631,10 +633,12 @@ ts="$(date +%Y%m%d-%H%M%S)"
 slug="$(echo "$MSG" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed -E 's/^-+|-+$//g' | cut -c1-40)"
 branch="chore/${slug:-update}-${ts}"
 
-git fetch origin
-git checkout main >/dev/null 2>&1 || git checkout -b main origin/main
-git pull --rebase origin main
-git checkout -b "$branch"
+if [[ "$base_branch" == "main" ]]; then
+  git fetch origin
+  git checkout main >/dev/null 2>&1 || git checkout -b main origin/main
+  git pull --rebase origin main
+fi
+git checkout -b "$branch" "$base_branch"
 
 # 先把 stash 恢复到新分支上（如果有）
 if [[ -n "$STASH_NAME" ]]; then
@@ -678,7 +682,7 @@ if git diff --name-only | grep -qx "tools/ship.sh" && [[ "${SHIP_ALLOW_SELF:-0}"
   echo "   1) 要么撤销对 tools/ship.sh 的改动：git restore tools/ship.sh"
   echo "   2) 要么确认这是有意升级 ship 脚本，然后用："
   echo "      SHIP_ALLOW_SELF=1 tools/ship.sh \"$MSG\""
-  cleanup_empty_branch "$branch" "origin/main"
+  cleanup_empty_branch "$branch" "$base_branch"
   exit 1
 fi
 
@@ -731,7 +735,7 @@ staged_files="$(git diff --cached --name-only || true)"
 if ! guard_workflow_changes "$staged_files"; then
   write_ship_state "workflow_guard_failed" "workflow guard failed"
   append_mistake_event "workflow_guard_failed" "workflow guard failed" "guard"
-  cleanup_empty_branch "$branch" "origin/main"
+  cleanup_empty_branch "$branch" "$base_branch"
   print_resume_cmd
   exit 1
 fi
@@ -739,7 +743,7 @@ fi
 if ! run_scope_gate "$staged_files"; then
   write_ship_state "scope_gate_failed" "scope gate failed"
   append_mistake_event "scope_gate_failed" "scope gate failed" "guard"
-  cleanup_empty_branch "$branch" "origin/main"
+  cleanup_empty_branch "$branch" "$base_branch"
   print_resume_cmd
   exit 1
 fi
@@ -747,7 +751,7 @@ fi
 if ! guard_single_run; then
   write_ship_state "single_run_guard_failed" "single-run guard failed"
   append_mistake_event "single_run_guard_failed" "single-run guard failed" "guard"
-  cleanup_empty_branch "$branch" "origin/main"
+  cleanup_empty_branch "$branch" "$base_branch"
   print_resume_cmd
   exit 1
 fi
@@ -760,7 +764,7 @@ if echo "$staged_files" | grep -qx "project_all_files.txt" \
   echo "   该文件为本地生成物，默认不纳入 PR。"
   echo "   如需更新，请设置："
   echo "     SHIP_ALLOW_FILELIST=1 tools/ship.sh \"$MSG\""
-  cleanup_empty_branch "$branch" "origin/main"
+  cleanup_empty_branch "$branch" "$base_branch"
   print_resume_cmd
   exit 1
 fi
@@ -769,7 +773,7 @@ if git diff --cached --quiet; then
   write_ship_state "no_changes_staged" "No changes staged"
   echo "No changes staged. Nothing to commit."
   echo "You are on branch: $branch"
-  cleanup_empty_branch "$branch" "origin/main"
+  cleanup_empty_branch "$branch" "$base_branch"
   exit 0
 fi
 
@@ -780,8 +784,8 @@ if ! run_with_retry_capture "push" git push -u origin "$branch"; then
 fi
 
 # --- 中文 PR 描述自动生成 ---
-stat="$(git diff --stat origin/main...HEAD || true)"
-files="$(git diff --name-only origin/main...HEAD || true)"
+stat="$(git diff --stat "${pr_base_branch}"...HEAD || true)"
+files="$(git diff --name-only "${pr_base_branch}"...HEAD || true)"
 stat_short="$(echo "$stat" | head -n 60)"
 files_short="$(echo "$files" | head -n 120)"
 
@@ -858,7 +862,7 @@ emit_pr_body_excerpt "$run_id" "$PR_BODY_EXCERPT"
 
 
 
-if ! run_with_retry_capture "pr_create" gh pr create --base main --head "$branch" --title "$MSG" --body "$PR_BODY"; then
+if ! run_with_retry_capture "pr_create" gh pr create --base "$pr_base_branch" --head "$branch" --title "$MSG" --body "$PR_BODY"; then
   fail_with_resume "pr_create" "${RETRY_LAST_ERROR:-gh pr create failed}"
 fi
 pr_url="$(printf "%s\n" "$RETRY_OUTPUT" | awk '/^https:\/\/github\.com\/.*\/pull\/[0-9]+$/ {print; exit}')"
@@ -906,16 +910,17 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
-if ! run_with_retry_capture "sync_checkout_main" git checkout main; then
-  fail_with_resume "sync_checkout_main" "${RETRY_LAST_ERROR:-git checkout main failed}"
+if ! run_with_retry_capture "sync_checkout_base" git checkout "$base_branch"; then
+  fail_with_resume "sync_checkout_base" "${RETRY_LAST_ERROR:-git checkout base branch failed}"
 fi
-if ! run_with_retry_capture "sync_pull_main" git pull --rebase origin main; then
-  fail_with_resume "sync_pull_main" "${RETRY_LAST_ERROR:-git pull --rebase origin main failed}"
+if [[ "$base_branch" == "main" ]]; then
+  if ! run_with_retry_capture "sync_pull_base" git pull --rebase origin main; then
+    fail_with_resume "sync_pull_base" "${RETRY_LAST_ERROR:-git pull --rebase origin main failed}"
+  fi
 fi
-main_sha="$(git rev-parse --short HEAD)"
-origin_sha="$(git rev-parse --short origin/main)"
+base_sha="$(git rev-parse --short HEAD)"
 write_ship_state "synced" ""
-echo "post-ship synced main@${main_sha} (origin/main@${origin_sha})"
+echo "post-ship synced ${base_branch}@${base_sha}"
 
 git branch -D "$branch" >/dev/null 2>&1 || true
 

@@ -1,7 +1,7 @@
 # STATE
 
 CURRENT_PROJECT_ID: project-0
-CURRENT_RUN_ID: run-2026-03-06-slice-next-p0-learn-core-delivery
-CURRENT_TASK_FILE: TASKS/TASK-slice-next-p0-learn-core-delivery.md
+CURRENT_RUN_ID: run-2026-03-06-task-ship-branch-safety
+CURRENT_TASK_FILE: TASKS/TASK-task-ship-branch-safety.md
 CURRENT_STATUS: active
-CURRENT_UPDATED_AT: 2026-03-06T11:40:11+00:00
+CURRENT_UPDATED_AT: 2026-03-06T12:05:00+00:00
