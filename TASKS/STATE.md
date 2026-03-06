@@ -1,7 +1,7 @@
 # STATE
 
 CURRENT_PROJECT_ID: project-0
-CURRENT_RUN_ID: run-2026-03-06-ship-post-merge-checkout-cleanliness
-CURRENT_TASK_FILE: TASKS/TASK-ship-post-merge-checkout-cleanliness.md
+CURRENT_RUN_ID: run-2026-03-07-ship-retry-success-state-cleanliness
+CURRENT_TASK_FILE: TASKS/TASK-ship-retry-success-state-cleanliness.md
 CURRENT_STATUS: active
-CURRENT_UPDATED_AT: 2026-03-06T15:57:42+00:00
+CURRENT_UPDATED_AT: 2026-03-06T16:20:24+00:00

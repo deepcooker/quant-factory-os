@@ -57,6 +57,11 @@ def test_task_ship_pr_merge_blocked_records_recovery_context() -> None:
 
 def test_task_ship_does_not_rewrite_ship_state_on_success_path() -> None:
     text = (REPO_ROOT / "tools" / "ship.sh").read_text(encoding="utf-8")
+    assert 'ship_allow_success_state_writes="1"' in text
+    assert 'if [[ "${ship_allow_success_state_writes:-1}" == "1" ]]; then' in text
+    assert 'ship_allow_success_state_writes="0"' in text
+    assert 'write_ship_state "committed" ""' not in text
+    assert 'write_ship_state "pr_created" ""' not in text
     assert 'write_ship_state "merged" ""' not in text
     assert 'write_ship_state "synced" ""' not in text
     assert "Success-path runtime ship_state rewrites would dirty the tracked evidence file" in text
