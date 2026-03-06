@@ -1,0 +1,57 @@
+{
+  "project_id": "project-0",
+  "run_id": "run-2026-03-07-ship-retry-success-state-cleanliness",
+  "created_at_utc": "2026-03-06T16:20:24.371340+00:00",
+  "direction": {
+    "selected_option": "execution-path-ergonomics",
+    "selected_title": "P2: 收敛执行链的人体工学",
+    "goal": "当前证据已经反复触及 verify/review/ship 约束；如果要往执行层推进，最合理的是优先压顺执行链的人体工学与失败恢复。",
+    "priority": "P2"
+  },
+  "execution_goal": "当前证据已经反复触及 verify/review/ship 约束；如果要往执行层推进，最合理的是优先压顺执行链的人体工学与失败恢复。",
+  "non_goals": [
+    "不扩展到当前 selected direction 之外的其他流程层级",
+    "不在本轮 contract 中引入新的业务项目范围",
+    "不跳过 verify/review/docs freshness gate"
+  ],
+  "scope": [
+    "tools/legacy.sh",
+    "tools/task.sh",
+    "tools/ship.sh",
+    "docs/WORKFLOW.md",
+    "reports/"
+  ],
+  "acceptance": [
+    "deliver selected direction option `execution-path-ergonomics` with bounded scope",
+    "command(s) pass: make verify",
+    "reports summary/decision updated for this run",
+    "owner docs updated in same run when behavior/rules changed",
+    "condition closed: architect: ready gate missing; lifecycle invariant is broken",
+    "condition closed: qa: ready gate missing; test baseline cannot be trusted",
+    "all blocker-level evidence checks are resolved",
+    "bash tools/legacy.sh review STRICT=1 AUTO_FIX=1 passes",
+    "decision records accepted tradeoffs and residual risks"
+  ],
+  "council_source": "chatlogs/discussion/run-2026-03-07-ship-retry-success-state-cleanliness/council.json",
+  "arbiter_rule": "converge independent evidence-based reviews into one executable contract",
+  "arbiter_summary": {
+    "blockers": 1,
+    "warnings": 0,
+    "role_conditions": 2,
+    "disagreements": 2
+  },
+  "blockers": [
+    {
+      "id": "ready_gate",
+      "label": "ready gate is passed",
+      "status": "block",
+      "detail": "ready.json missing or minimal ready contract invalid"
+    }
+  ],
+  "warnings": [],
+  "role_conditions": [
+    "architect: ready gate missing; lifecycle invariant is broken",
+    "qa: ready gate missing; test baseline cannot be trusted"
+  ],
+  "next_command": "python3 tools/slice_task.py RUN_ID=run-2026-03-07-ship-retry-success-state-cleanliness"
+}
