@@ -87,6 +87,8 @@ ship_state_file=""
 current_ship_step=""
 RETRY_OUTPUT=""
 RETRY_LAST_ERROR=""
+ship_recovery_cmd=""
+ship_allow_success_state_writes="1"
 
 classify_mistake_category() {
   local step="${1:-}"
@@ -138,7 +140,7 @@ append_mistake_event() {
 write_ship_state() {
   local step="$1"
   local last_error="${2:-}"
-  local branch_val commit_val pr_val msg_val
+  local branch_val commit_val pr_val msg_val recovery_val
 
   [[ -n "${run_id:-}" ]] || return 0
 
@@ -149,16 +151,34 @@ write_ship_state() {
   commit_val="$(json_escape "$(git rev-parse --short HEAD 2>/dev/null || true)")"
   pr_val="$(json_escape "${pr_url:-}")"
   msg_val="$(json_escape "${MSG:-}")"
+  recovery_val="$(json_escape "${ship_recovery_cmd:-}")"
   last_error="$(json_escape "$last_error")"
 
   cat > "$ship_state_file" <<EOF
-{"run_id":"${run_id}","branch":"${branch_val}","commit":"${commit_val}","pr_url":"${pr_val}","step":"$(json_escape "$step")","last_error":"${last_error}","msg":"${msg_val}","updated_at":"$(date -Iseconds)"}
+{"run_id":"${run_id}","branch":"${branch_val}","commit":"${commit_val}","pr_url":"${pr_val}","step":"$(json_escape "$step")","last_error":"${last_error}","msg":"${msg_val}","recovery_cmd":"${recovery_val}","updated_at":"$(date -Iseconds)"}
 EOF
+}
+
+list_dirty_paths() {
+  git status --porcelain | sed -E 's/^[ MARCUD?!]{2} //'
+}
+
+has_blocking_dirty_paths() {
+  local line=""
+  local ship_state_rel="reports/${run_id}/ship_state.json"
+  while IFS= read -r line; do
+    [[ -n "$line" ]] || continue
+    if [[ "$line" == "$ship_state_rel" ]]; then
+      continue
+    fi
+    return 0
+  done < <(list_dirty_paths)
+  return 1
 }
 
 print_resume_cmd() {
   if [[ -n "${run_id:-}" ]]; then
-    echo "恢复命令：tools/qf resume RUN_ID=${run_id}"
+    echo "恢复命令：bash tools/legacy.sh resume RUN_ID=${run_id}"
   fi
 }
 
@@ -168,6 +188,38 @@ fail_with_resume() {
   write_ship_state "$step" "$err"
   append_mistake_event "$step" "$err" "fail_with_resume"
   echo "❌ ${step} failed: ${err}" >&2
+  print_resume_cmd >&2
+  exit 1
+}
+
+fail_pr_merge_blocked() {
+  local merge_state="${1:-UNKNOWN}"
+  local detail="${2:-pull request is not cleanly mergeable}"
+  local base_ref="${pr_base_branch:-${base_branch:-}}"
+  local head_ref="${branch:-}"
+  local err="merge_state=${merge_state}; ${detail}"
+  ship_recovery_cmd="gh pr checkout ${pr_url##*/} && git fetch origin ${base_ref} && git merge origin/${base_ref}"
+  write_ship_state "pr_merge_blocked" "$err"
+  append_mistake_event "pr_merge_blocked" "$err" "guard"
+  echo "❌ pr_merge blocked: ${detail}" >&2
+  echo "   merge_state=${merge_state}" >&2
+  if [[ -n "$pr_url" ]]; then
+    echo "   pr_url=${pr_url}" >&2
+  fi
+  if [[ -n "$base_ref" ]]; then
+    echo "   base_branch=${base_ref}" >&2
+  fi
+  if [[ -n "$head_ref" ]]; then
+    echo "   head_branch=${head_ref}" >&2
+  fi
+  echo "   这是可恢复状态，不再继续盲重试 merge。" >&2
+  echo "   建议恢复步骤：" >&2
+  echo "   1) gh pr checkout ${pr_url##*/}" >&2
+  if [[ -n "$base_ref" ]]; then
+    echo "   2) git fetch origin ${base_ref}" >&2
+    echo "   3) git merge origin/${base_ref}" >&2
+  fi
+  echo "   4) 解决冲突后重新 push，再重试 ship/resume" >&2
   print_resume_cmd >&2
   exit 1
 }
@@ -194,7 +246,9 @@ run_with_retry_capture() {
       if [[ -n "$output" ]]; then
         printf "%s\n" "$output"
       fi
-      write_ship_state "$step" ""
+      if [[ "${ship_allow_success_state_writes:-1}" == "1" ]]; then
+        write_ship_state "$step" ""
+      fi
       return 0
     fi
 
@@ -619,6 +673,8 @@ gh auth status -h github.com >/dev/null
 git rev-parse --is-inside-work-tree >/dev/null
 
 orig_branch="$(git rev-parse --abbrev-ref HEAD)"
+base_branch="${SHIP_BASE_BRANCH:-$orig_branch}"
+pr_base_branch="${SHIP_PR_BASE_BRANCH:-$base_branch}"
 
 STASH_NAME=""
 if ! git diff --quiet || ! git diff --cached --quiet || [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
@@ -631,10 +687,12 @@ ts="$(date +%Y%m%d-%H%M%S)"
 slug="$(echo "$MSG" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed -E 's/^-+|-+$//g' | cut -c1-40)"
 branch="chore/${slug:-update}-${ts}"
 
-git fetch origin
-git checkout main >/dev/null 2>&1 || git checkout -b main origin/main
-git pull --rebase origin main
-git checkout -b "$branch"
+if [[ "$base_branch" == "main" ]]; then
+  git fetch origin
+  git checkout main >/dev/null 2>&1 || git checkout -b main origin/main
+  git pull --rebase origin main
+fi
+git checkout -b "$branch" "$base_branch"
 
 # 先把 stash 恢复到新分支上（如果有）
 if [[ -n "$STASH_NAME" ]]; then
@@ -678,7 +736,7 @@ if git diff --name-only | grep -qx "tools/ship.sh" && [[ "${SHIP_ALLOW_SELF:-0}"
   echo "   1) 要么撤销对 tools/ship.sh 的改动：git restore tools/ship.sh"
   echo "   2) 要么确认这是有意升级 ship 脚本，然后用："
   echo "      SHIP_ALLOW_SELF=1 tools/ship.sh \"$MSG\""
-  cleanup_empty_branch "$branch" "origin/main"
+  cleanup_empty_branch "$branch" "$base_branch"
   exit 1
 fi
 
@@ -731,7 +789,7 @@ staged_files="$(git diff --cached --name-only || true)"
 if ! guard_workflow_changes "$staged_files"; then
   write_ship_state "workflow_guard_failed" "workflow guard failed"
   append_mistake_event "workflow_guard_failed" "workflow guard failed" "guard"
-  cleanup_empty_branch "$branch" "origin/main"
+  cleanup_empty_branch "$branch" "$base_branch"
   print_resume_cmd
   exit 1
 fi
@@ -739,7 +797,7 @@ fi
 if ! run_scope_gate "$staged_files"; then
   write_ship_state "scope_gate_failed" "scope gate failed"
   append_mistake_event "scope_gate_failed" "scope gate failed" "guard"
-  cleanup_empty_branch "$branch" "origin/main"
+  cleanup_empty_branch "$branch" "$base_branch"
   print_resume_cmd
   exit 1
 fi
@@ -747,7 +805,7 @@ fi
 if ! guard_single_run; then
   write_ship_state "single_run_guard_failed" "single-run guard failed"
   append_mistake_event "single_run_guard_failed" "single-run guard failed" "guard"
-  cleanup_empty_branch "$branch" "origin/main"
+  cleanup_empty_branch "$branch" "$base_branch"
   print_resume_cmd
   exit 1
 fi
@@ -760,7 +818,7 @@ if echo "$staged_files" | grep -qx "project_all_files.txt" \
   echo "   该文件为本地生成物，默认不纳入 PR。"
   echo "   如需更新，请设置："
   echo "     SHIP_ALLOW_FILELIST=1 tools/ship.sh \"$MSG\""
-  cleanup_empty_branch "$branch" "origin/main"
+  cleanup_empty_branch "$branch" "$base_branch"
   print_resume_cmd
   exit 1
 fi
@@ -769,19 +827,19 @@ if git diff --cached --quiet; then
   write_ship_state "no_changes_staged" "No changes staged"
   echo "No changes staged. Nothing to commit."
   echo "You are on branch: $branch"
-  cleanup_empty_branch "$branch" "origin/main"
+  cleanup_empty_branch "$branch" "$base_branch"
   exit 0
 fi
 
 git commit -m "$MSG"
-write_ship_state "committed" ""
+ship_allow_success_state_writes="0"
 if ! run_with_retry_capture "push" git push -u origin "$branch"; then
   fail_with_resume "push" "${RETRY_LAST_ERROR:-git push failed}"
 fi
 
 # --- 中文 PR 描述自动生成 ---
-stat="$(git diff --stat origin/main...HEAD || true)"
-files="$(git diff --name-only origin/main...HEAD || true)"
+stat="$(git diff --stat "${pr_base_branch}"...HEAD || true)"
+files="$(git diff --name-only "${pr_base_branch}"...HEAD || true)"
 stat_short="$(echo "$stat" | head -n 60)"
 files_short="$(echo "$files" | head -n 120)"
 
@@ -858,14 +916,13 @@ emit_pr_body_excerpt "$run_id" "$PR_BODY_EXCERPT"
 
 
 
-if ! run_with_retry_capture "pr_create" gh pr create --base main --head "$branch" --title "$MSG" --body "$PR_BODY"; then
+if ! run_with_retry_capture "pr_create" gh pr create --base "$pr_base_branch" --head "$branch" --title "$MSG" --body "$PR_BODY"; then
   fail_with_resume "pr_create" "${RETRY_LAST_ERROR:-gh pr create failed}"
 fi
 pr_url="$(printf "%s\n" "$RETRY_OUTPUT" | awk '/^https:\/\/github\.com\/.*\/pull\/[0-9]+$/ {print; exit}')"
 if [[ -z "$pr_url" ]]; then
   fail_with_resume "pr_create" "could not parse PR URL from gh output"
 fi
-write_ship_state "pr_created" ""
 echo "PR: $pr_url"
 
 # NEW: auto mark queue done (if a matching [>] Picked: <RUN_ID> exists)
@@ -883,12 +940,18 @@ if ! run_with_retry_capture "pr_state" gh pr view "$pr_url" --json state -q .sta
 fi
 state="$(printf "%s\n" "$RETRY_OUTPUT" | tail -n1 | tr -d '\r')"
 if [[ "$state" != "MERGED" ]]; then
+  merge_state="UNKNOWN"
+  if run_with_retry_capture "pr_merge_state" gh pr view "$pr_url" --json mergeStateStatus -q .mergeStateStatus; then
+    merge_state="$(printf "%s\n" "$RETRY_OUTPUT" | tail -n1 | tr -d '\r')"
+  fi
+  if [[ "$merge_state" != "CLEAN" && "$merge_state" != "UNKNOWN" ]]; then
+    fail_pr_merge_blocked "$merge_state" "pull request is not cleanly mergeable; resolve branch state first"
+  fi
   if ! run_with_retry_capture "pr_merge" gh pr merge --squash --delete-branch "$pr_url"; then
     fail_with_resume "pr_merge" "${RETRY_LAST_ERROR:-gh pr merge failed}"
   fi
 fi
 wait_for_pr_merged "$pr_url"
-write_ship_state "merged" ""
 
 if [[ -n "$PR_BODY_EXCERPT" ]]; then
   printf "%s\n" "$PR_BODY_EXCERPT"
@@ -897,7 +960,7 @@ fi
 echo "== 下一枪建议 =="
 echo "如果 QUEUE 还有 [ ]：运行 tools/task.sh --next"
 
-if [[ -n "$(git status --porcelain)" ]]; then
+if has_blocking_dirty_paths; then
   write_ship_state "sync_blocked_dirty" "working tree not clean"
   append_mistake_event "sync_blocked_dirty" "working tree not clean" "guard"
   echo "❌ post-ship sync aborted: working tree is not clean."
@@ -906,16 +969,18 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
-if ! run_with_retry_capture "sync_checkout_main" git checkout main; then
-  fail_with_resume "sync_checkout_main" "${RETRY_LAST_ERROR:-git checkout main failed}"
+if ! run_with_retry_capture "sync_checkout_base" git checkout "$base_branch"; then
+  fail_with_resume "sync_checkout_base" "${RETRY_LAST_ERROR:-git checkout base branch failed}"
 fi
-if ! run_with_retry_capture "sync_pull_main" git pull --rebase origin main; then
-  fail_with_resume "sync_pull_main" "${RETRY_LAST_ERROR:-git pull --rebase origin main failed}"
+if [[ "$base_branch" == "main" ]]; then
+  if ! run_with_retry_capture "sync_pull_base" git pull --rebase origin main; then
+    fail_with_resume "sync_pull_base" "${RETRY_LAST_ERROR:-git pull --rebase origin main failed}"
+  fi
 fi
-main_sha="$(git rev-parse --short HEAD)"
-origin_sha="$(git rev-parse --short origin/main)"
-write_ship_state "synced" ""
-echo "post-ship synced main@${main_sha} (origin/main@${origin_sha})"
+base_sha="$(git rev-parse --short HEAD)"
+# Success-path runtime ship_state rewrites would dirty the tracked evidence file
+# after a local commit exists, which can block later PR/sync continuity.
+echo "post-ship synced ${base_branch}@${base_sha}"
 
 git branch -D "$branch" >/dev/null 2>&1 || true
 

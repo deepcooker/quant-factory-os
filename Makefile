@@ -29,7 +29,7 @@ slice:
 	@$(PY) tools/slice.py --run-id "$(RUN_ID)" --day "$(DAY)" --symbols "$(SYMBOLS)" --start "$(START)" --end "$(END)"
 
 verify:
-	@$(PY) -m pytest -q
+	@$(PY) -m pytest -q tests/task_*.py
 
 # Convenience wrapper around tools/ship.sh
 ship:

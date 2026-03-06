@@ -1,0 +1,11 @@
+{
+  "project_id": "project-0",
+  "run_id": "run-2026-03-06-task-ship-smoke",
+  "created_at_utc": "2026-03-06T12:20:00+00:00",
+  "selected_option": "task-ship-smoke",
+  "selected_title": "P0: real task-to-ship continuity smoke",
+  "priority": "P0",
+  "reason": "用一个最小无害改动真实演练 task.sh -> ship.sh，验证新的 branch continuity 策略在真实发货路径上成立。",
+  "discussion_confirmed": true,
+  "next_command": "make verify"
+}

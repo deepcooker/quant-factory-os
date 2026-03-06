@@ -1,303 +1,572 @@
 # WORKFLOW
 
-Standard start
+本文件定义本仓的状态机。
 
-This document describes the expected workflow for changes in this repository.
+它回答的是：
+- 当前流程分几层
+- 每一层的目标是什么
+- 每一层的输入、输出、门禁和下一跳是什么
 
-## Document ownership
-- Session entrypoint owner: `SYNC/READ_ORDER.md`
-- Hard rules owner: `AGENTS.md`
-- Execution details owner: `docs/WORKFLOW.md` (this file)
-- Entity definitions owner: `docs/ENTITIES.md`
-- Strategy/vision owner: `docs/PROJECT_GUIDE.md`
-- Codex operation owner: `docs/CODEX_CLI_OPERATION.md`
+它不负责重复解释所有命令参数。
+对象定义以 `docs/ENTITIES.md` 为准，硬规则以 `AGENTS.md` 为准。
 
-## Session lifecycle state machine (single source)
-- `S-1 Discussion-only` (optional)
-  - Allowed only for read-only clarification/investigation.
-  - Constraint: no repo mutation (no file edits, no generated artifacts, no ship).
-  - Exit: before any mutation, bind to active `TASKS/TASK-*.md` + `RUN_ID`.
-- `S0 Environment`: `tools/qf init`
-  - Input: local repo checkout
-  - Output: synced main + doctor checks + onboard summary
-  - Note: this is environment preparation only, not readiness pass.
-  - Output visibility: prints `INIT_STEP[<i>/<n>]` stage markers.
-  - Safety: no implicit cleanup of `reports/run-*-pick-candidate` directories.
-  - Boundary: init does not create a new business `RUN_ID`; it uses `CURRENT_RUN_ID` when present, otherwise session context only.
-  - Project context: reads `CURRENT_PROJECT_ID` from `TASKS/STATE.md` (defaults to `project-0`).
-  - Continuing runs: auto-handoff is executed by default (`QF_INIT_AUTO_HANDOFF=1`).
-- `S1 Handoff`: `tools/qf handoff`
-  - Input: `CURRENT_RUN_ID` (or explicit RUN_ID)
-  - Output: `reports/{RUN_ID}/handoff.md`
-  - Note: this is context reconstruction only, not readiness pass.
-  - Format: concise session summary (main thread, key conclusions, small reflection, one next command).
-- `S1.5 Sync Evidence`: `tools/qf sync`
-  - Input: `SYNC/READ_ORDER.md` + required governance/startup files.
-  - Output: `reports/{RUN_ID}/sync_report.json` + `reports/{RUN_ID}/sync_report.md`.
-  - Gate: marks whether required sync files are all present/readable (`sync_passed`).
-- `S1.6 Learn Gate`: `tools/qf learn`
-  - Input: valid sync report; optional exam auto-flow (`tools/qf exam-auto`).
-  - Output: `reports/projects/{project_id}/session/learn.json` + `reports/projects/{project_id}/session/learn.md`.
-  - Output visibility: prints `LEARN_STEP[<i>/<n>]` stage markers.
-  - Optional stdout mirror: `tools/qf learn -log` writes `reports/projects/{project_id}/session/learn.stdout.log` (or `LOG=<path>`).
-  - Optional model sync (Codex real interaction):
-    - `MODEL_SYNC=0|auto|1` (default `auto`)
-    - strict mode: `MODEL_SYNC=1` (learn fails if model sync fails)
-    - `PLAN_MODE=strong|basic` (default `strong`)
-    - timeout/model override: `MODEL_TIMEOUT_SEC=<n>` (default 180), `MODEL=<slug>`
-    - model artifacts:
-      - `learn.model.prompt.txt`
-      - `learn.model.raw.txt`
-      - `learn.model.json`
-      - `learn.model.events.jsonl`
-      - `learn.model.stderr.log`
-  - Required learn anchors:
-    - `LEARN_MAINLINE`, `LEARN_CURRENT_STAGE`, `LEARN_NEXT_STEP`, `LEARN_REQUIRED_FILES_READ_LIST`
-    - when model sync passes:
-      - `LEARN_MODEL_MAINLINE`, `LEARN_MODEL_CURRENT_STAGE`, `LEARN_MODEL_NEXT_STEP`, `LEARN_MODEL_FILES_READ_LIST`
-    - when `PLAN_MODE=strong` and model sync passes:
-      - `LEARN_MODEL_PLAN_GOAL`, `LEARN_MODEL_PLAN_NON_GOAL`, `LEARN_MODEL_PLAN_REBUTTAL`, `LEARN_MODEL_PLAN_DECISION_STOP`
-      - `LEARN_MODEL_ORAL_PROJECT`, `LEARN_MODEL_ORAL_CONSTITUTION`, `LEARN_MODEL_ORAL_EVIDENCE`, `LEARN_MODEL_ORAL_SESSION`
-      - `LEARN_MODEL_ORAL_CURRENT_FOCUS`, `LEARN_MODEL_ORAL_NEXT_ACTION`, `LEARN_MODEL_ORAL_EXAM_QA_COUNT`
-  - Purpose: materialize onboarding understanding (project/constitution/workflow/skills/session) with exam evidence.
-- `S2 Ready gate`: `tools/qf ready`
-  - Input: restatement fields (goal/scope/acceptance/steps/stop)
-  - Output: `reports/{RUN_ID}/ready.json`
-  - Output visibility: prints `READY_STEP[<i>/<n>]` stage markers.
-  - Machine-readable stream (optional): `QF_EVENT_STREAM=1` emits JSONL step events to stdout.
-  - Learn dependency: `QF_READY_REQUIRE_LEARN=auto` (default) enforces learn gate when sync gate is enabled.
-    - auto recovery: `QF_READY_AUTO_LEARN=1` auto-runs `tools/qf learn` when learn evidence is missing/expired.
-  - Sync dependency: requires valid `sync_report.json`; default auto-runs `tools/qf sync` if missing (`QF_READY_AUTO_SYNC=1`).
-  - Low-friction mode: fields auto-fill from active task contract by default (`QF_READY_AUTO=1`).
-  - Exit resolution gate: if unresolved run context is detected, must choose:
-    - `DECISION=resume-close` (run `tools/qf resume`)
-    - `DECISION=abandon-new` (continue new direction cycle)
-  - Resolution persistence: `abandon-new` is stored in `ready.json` for the same RUN to avoid repeated prompts on subsequent `ready`.
-  - Ready also writes discussion brief to `SYNC/discussion/{RUN_ID}/ready_brief.json|md`.
-  - Gate: `tools/qf do` must fail without valid `ready.json`.
-- `S2.4 Plan protocol gate` (discussion-first, required for complex changes)
-  - Interactive planning command: Codex `/plan` (not `tools/qf plan`).
-  - Required output packet (strong): goal/non-goal/evidence/alternatives/rebuttal/decision+stop-condition.
-  - Confirmation: plan must be explicitly accepted before entering execution target.
-  - Evidence sink: record final accepted plan into run evidence (`direction_contract` / `execution_contract` / `decision.md`).
-- `S2.5 Direction gate`: `tools/qf orient` + `tools/qf choose`
-  - Input: `docs/PROJECT_GUIDE.md` + governance docs + state/evidence.
-  - Output:
-    - discussion draft: `SYNC/discussion/{RUN_ID}/orient.json|md`
-    - confirmed decision: `reports/{RUN_ID}/orient_choice.json`
-    - direction contract: `reports/{RUN_ID}/direction_contract.json|md`
-  - Purpose: confirm direction/priority before execution queue pick.
-- `S2.6 Council gate`: `tools/qf council`
-  - Input: `orient_choice.json` + `direction_contract.json`
-  - Output: `SYNC/discussion/{RUN_ID}/council.json|md`
-  - Purpose: product/architect/dev/qa independent review before convergence.
-  - Rule: council output must be evidence-based (sync/ready/scope/verify/docs/queue pressure checks), not static templates.
-- `S2.7 Arbiter gate`: `tools/qf arbiter`
-  - Input: `council.json` + `direction_contract.json`
-  - Output: `reports/{RUN_ID}/execution_contract.json|md`
-  - Purpose: converge independent views into one executable contract.
-  - Rule: execution slices must reflect council blockers/warnings/role conditions.
-- `S2.8 Slice gate`: `tools/qf slice`
-  - Input: `execution_contract.json`
-  - Output:
-    - `reports/{RUN_ID}/slice_state.json`
-    - queue insertion into `TASKS/QUEUE.md` (idempotent by slice marker)
-  - Purpose: turn contract into smallest executable queue tasks.
-- `S2.9 Discuss shortcut`: `tools/qf discuss`
-  - Purpose: one command to run discussion chain (`orient/choose/council/arbiter/slice`) and stop before execution.
-  - Default target: `prepare` (prints `EXECUTE_STATUS: prepared` + next do command).
-- `tools/qf plan [N]` (legacy helper)
-  - Purpose: generate `TASKS/TODO_PROPOSAL.md` queue suggestions only.
-  - Non-goal: this command is not the planning gate and does not authorize execution.
-- `S3 Execute`: `tools/qf do queue-next`
-  - Input: valid gates (`ready.json` + `orient_choice.json` + `council.json` + `execution_contract.json` + `slice_state.json`)
-  - Output: task pick + evidence skeleton + execution trace updates
-  - Task pick command: `tools/task.sh --next` (no `plan 20` dependency in critical path)
-  - Queue pick policy: prefer unchecked item whose `Slice: run_id=<CURRENT_RUN_ID>` matches `TASKS/STATE.md`; fallback to first unchecked item.
-  - Auto checkpoint: runs `tools/qf review RUN_ID=<picked-run> AUTO_FIX=1 NON_BLOCKING=1` to emit drift report early.
-- `S2.5~S3 Orchestrator (optional)`: `tools/qf execute`
-  - Purpose: low-friction single command to advance gate chain and execute.
-  - Output visibility: prints `EXECUTE_STEP[<i>/<n>]` stage markers.
-  - Default behavior: if no confirmed option, stop with actionable choose command.
-  - Contract confirm gate for execution:
-    - `TARGET=do` requires `reports/{RUN_ID}/execution_contract_confirm.json`.
-    - quick confirm command: `tools/qf execute RUN_ID=<run-id> PROJECT_ID=<project-id> CONFIRM_CONTRACT=1 TARGET=do`.
-    - automation mode: `QF_EXECUTE_AUTO_CONFIRM_CONTRACT=1 tools/qf execute`.
-  - Auto mode: `QF_EXECUTE_AUTO_CHOOSE=1 tools/qf execute` uses orient recommended option and continues through `council->arbiter->slice->do`.
-- `S3.5 Review`: `tools/qf review`
-  - Input: run evidence (`summary/decision/ready/choice/contract`) and optional flags (`AUTO_FIX`, `STRICT`).
-  - Output: `reports/{RUN_ID}/drift_review.json|md`; blockers additionally write `SYNC/discussion/{RUN_ID}/drift_todo.md`.
-  - Gate: strict mode blockers must be resolved before ship.
-- `S4 Ship`: `tools/ship.sh` (or `make ship`)
-  - Input: verified diff + in-scope task contract
-  - Output: PR + merge + main sync
-- `S5 Learn`: reports/mistakes updates
-  - Input: execution and verification outcomes
-  - Output: durable memory for next session handoff.
+补充定位：
+- 本文件描述的是 foundation repo 当前状态机。
+- 自动化 1.0 的“business project repo 单入口目标形态”见 `docs/AUTOMATION_1_0.md`。
 
-## Evidence minimum fields
-- Required run evidence files: `reports/{RUN_ID}/meta.json`, `summary.md`, `decision.md`.
-- `meta.json` minimum gate fields:
-  - `run_id`
-  - `task_id`
-  - `stop_reason`
-  - `commands_run`
-  - `artifacts`
-- Full schema ownership: `docs/ENTITIES.md`.
+## 1. 设计原则
 
-## Status snapshot rule
-Before each ship, record `/status` output in the evidence for the active RUN_ID.
+### 1.1 流程分层
+流程固定分为五层：
 
-## File list rule
-`project_all_files.txt` is a local generated artifact and is excluded from PRs by
-default. Update it only with a dedicated task, and call out the change in the PR
-body.
+1. 上岗层
+   - `init`
+   - `learn`
+   - `ready`
+2. 讨论层
+   - `orient`
+   - `choose`
+   - `council`
+   - `arbiter`
+3. 拆解层
+   - `slice`
+   - `queue`
+   - `task`
+4. 执行层
+   - `do`
+   - `verify`
+   - `review`
+5. 交付层
+   - `ship`
+   - `run close`
+   - `state update`
 
-## Scope gate rule
-Task files must declare a `## Scope` section with allowed change paths. `tools/ship.sh`
-validates staged files against this declared scope by default.
+### 1.2 边界原则
+- `init` 不学习，不讨论，不执行。
+- `learn` 不决定方向，不授权执行。
+- `ready` 只做 Go/No-Go 门禁。
+- discussion 先于 execution。
+- `queue` 在 discussion 之后，不在 discussion 之前。
 
-## Context snapshot (for ChatGPT)
-`project_all_files.txt` is a context index snapshot for external models. It is
-not evidence and does not belong in PRs by default. If it must be updated,
-create a dedicated task, set `SHIP_ALLOW_FILELIST=1`, and use
-`git add -f project_all_files.txt`.
+### 1.3 对象原则
+- `project_id`：长期上下文
+- `run_id`：一轮周期容器
+- `task_id`：run 内最小执行切片
+- discussion artifacts：方向到合同的中间对象
 
-## Memory & Context (handoff rules)
-- The following hard rules are handoff gates and apply to every delivery.
-- Do not store full chat transcripts or raw logs in the repo. Keep them local
-  under `chatlogs/` and ensure it is listed in `.gitignore`.
-- Preferred startup for full local transcript fallback:
-  - `./tools/start.sh` (default `START_SESSION_LOG=1`)
-  - optional controls:
-    - `START_SESSION_LOG=0` disable transcript logging
-    - `START_SESSION_LOG_FILE=/abs/path/session.log` set explicit log file path
-- For anti-loss fallback, store concise session checkpoints in
-  `reports/{RUN_ID}/conversation.md` via:
-  - `tools/qf snapshot RUN_ID=<run-id> NOTE="decision/next-step summary"`
-- `/compact` policy:
-  - Use when conversation/context becomes large or when moving to a new milestone.
-  - Not a mandatory "every task" gate.
-  - Always snapshot first, then compact.
-- `tools/qf do` / `tools/qf resume` 自动记录执行轨迹到
-  `reports/{RUN_ID}/execution.jsonl`（默认脱敏，可审计）。
-- `tools/qf resume` 在同步回 `main` 前若检测到脏工作区，会自动 stash
-  `qf-resume-cleanup-run-{RUN_ID}-wip-*`，避免因自身日志写入导致 checkout 自阻塞。
-- `tools/qf sync` / `tools/qf ready` / `tools/qf orient` / `tools/qf choose` /
-  `tools/qf council` / `tools/qf arbiter` / `tools/qf slice` 默认写入
-  `reports/{RUN_ID}/conversation.md` checkpoint（可用 `QF_AUTO_CONVERSATION=0` 关闭）。
-- Discussion drafts are intentionally separated from execution evidence:
-  - pre-confirmation drafts in `SYNC/discussion/{RUN_ID}/`
-  - post-confirmation execution evidence in `reports/{RUN_ID}/`
-- 断线恢复建议先生成接班摘要：
-  - `tools/qf handoff RUN_ID=<run-id>` -> `reports/{RUN_ID}/handoff.md`
-- Repo memory is limited to: `docs/` (rules), `TASKS/STATE.md` (current state),
-  `reports/{RUN_ID}/decision.md` (key decisions), and `MISTAKES/` (postmortems
-  when enabled).
-- When sharing code with an external model, use `project_all_files.txt` as the
-  context snapshot. It is ignored by default and must only be updated via a
-  dedicated task with explicit approval to commit.
-- Hard rule (gate): Uncommitted changes do not exist for other agents or cloud runs.
-- Hard rule (gate): Handoff must be via PR or commit hash, with evidence under
-  `reports/{RUN_ID}/`.
-- Hard rule (gate): If local-only context is needed, record it as structured evidence
-  (`summary.md`, `decision.md`, `MISTAKES/`) or in `TASKS/STATE.md`, not in chat.
-- `TASKS/STATE.md` is the source-of-truth for `CURRENT_PROJECT_ID` and `CURRENT_RUN_ID`.
+对象边界见：
+- [docs/ENTITIES.md](/root/quant-factory-os/docs/ENTITIES.md)
 
-## Sync completion criteria (must be true before execution)
-- `tools/qf init` completed successfully.
-- `tools/qf handoff` completed for continuing runs (auto by init unless explicitly disabled).
-- `tools/qf sync` produced valid `reports/{RUN_ID}/sync_report.json`.
-- `tools/qf learn` produced valid `reports/projects/{project_id}/session/learn.json` (`RUN_ID` optional).
-- `tools/qf ready` produced `reports/{RUN_ID}/ready.json`.
-- `tools/qf orient` produced `SYNC/discussion/{RUN_ID}/orient.json`.
-- `tools/qf choose` produced `reports/{RUN_ID}/orient_choice.json`.
-- `tools/qf council` produced `SYNC/discussion/{RUN_ID}/council.json`.
-- `tools/qf arbiter` produced `reports/{RUN_ID}/execution_contract.json`.
-- `tools/qf slice` produced `reports/{RUN_ID}/slice_state.json`.
-- `tools/qf do queue-next` requires all gates above and then picks via `tools/task.sh --next`.
-- `tools/task.sh --next` prioritizes queue blocks that match `CURRENT_RUN_ID` slice marker before generic first-unchecked fallback.
-- Optional shortcut: `tools/qf execute` can run the same chain with explicit/auto option strategy.
+## 2. 状态机总览
 
-## Codex session startup checklist
-- Do not rely on chat/session memory; rely only on repo memory:
-  `TASKS/STATE.md`, `TASKS/QUEUE.md`, `reports/{RUN_ID}/`.
-- First read owner entrypoint: `SYNC/READ_ORDER.md`.
-- Codex 参数/模式参考：`docs/CODEX_CLI_OPERATION.md`。
-- Preferred entrypoint: `tools/qf` (`init/sync/learn/ready/orient/choose/council/arbiter/slice/execute/do/review/resume`).
-- Compatibility wrappers: `tools/enter.sh` and `tools/onboard.sh` forward to `tools/qf`.
-- 1) 运行 `tools/qf init`（自动 stash 可恢复 + sync main + doctor + onboard）。
-- 1.0) 若希望在终端消费结构化日志，可设置 `QF_EVENT_STREAM=1`（stdout 会追加 JSONL 事件）。
-- 1.1) 可选清理历史临时 stash：先预览 `tools/qf stash-clean`，确认后执行 `tools/qf stash-clean apply KEEP=0`。
-- 2) 若为接力会话（`CURRENT_RUN_ID` 已存在），`tools/qf init` 默认自动执行 `handoff`。
-- 2.1) 如需手动控制，可用：`QF_INIT_AUTO_HANDOFF=0 tools/qf init` 后再手动 `tools/qf handoff`。
-- 3) 按 `SYNC/READ_ORDER.md` 顺序完成阅读与复述。
-- 3.1) 运行 `tools/qf sync` 固化同频证据（读文件清单/项目总况/治理入口/当前阶段/下一步）。
-- 3.2) 新/陌生 agent 建议先完成同频考试：
-  - v2 深度题面：`SYNC/EXAM_PLAN_PROMPT.md`（15+2 问卷）
-  - 按 `SYNC/EXAM_ANSWER_TEMPLATE.md` 输出到 `reports/{RUN_ID}/onboard_answer.md`
-  - 用 `tools/sync_exam.py` 评分，结果写入 `reports/{RUN_ID}/sync_exam_result.json`
-  - 低摩擦首选：`tools/qf exam-auto`（默认缺答卷会自动填答并直接评分）
-  - 手动模式：`tools/qf exam-auto AUTO_FILL=0`（只落模板，不自动填答）
-  - 兼容命令：`tools/qf exam`（只做评分，不自动生成答卷）
-- 3.3) 运行 `tools/qf learn` 固化“上岗学习”证据（项目+宪法+工作流+技能+session+考试），默认打印分步日志。
-  - `RUN_ID` 可选：
-    - 有 `RUN_ID`/`CURRENT_RUN_ID`：复用该 run 的 `sync/exam` 证据。
-    - 无 run 上下文：进入 `session-direct-read`，直接读取必读文档并生成 learn 证据（不隐式绑定历史 run）。
-  - `project_id` 默认来自 `TASKS/STATE.md: CURRENT_PROJECT_ID`（缺省 `project-0`），也可通过环境变量覆盖：`PROJECT_ID` / `QF_PROJECT_ID`。
-    - 无 run 上下文且不存在 session exam 结果时，会打印 `LEARN_EXAM_BYPASS_NO_RUN_CONTEXT: true` 并降级为“仅文档同频门禁”。
-- 4) 运行 `tools/qf ready` 完成复述上岗门禁（默认绑定 `CURRENT_RUN_ID`，默认可自动填充；默认缺失 learn/sync 时可自动补跑）。
-- 4.0) 若 `ready` 提示 unresolved run context，先二选一：
-  - `tools/qf resume RUN_ID=<run-id>`（收尾）
-  - `tools/qf ready RUN_ID=<run-id> DECISION=abandon-new`（明确抛弃旧上下文后继续）
-- 4.1) 运行 `tools/qf orient` 生成方向候选与优先级（L1 方向层）。
-- 4.2) 运行 `tools/qf choose OPTION=<id>` 确认方向后再进入执行层（L2）。
-- 4.2.1) 运行 `tools/qf council` 生成产品/架构/研发/测试独立评审结果（讨论态）。
-- 4.2.2) 运行 `tools/qf arbiter` 收敛为统一执行契约（执行态）。
-- 4.2.3) 运行 `tools/qf slice` 把执行契约拆成最小 queue tasks（幂等入队）。
-- 4.2.4) 低摩擦讨论收敛可用：`tools/qf discuss`（默认停在 prepare，不直接 do）。
-- 4.3) 在关键决策点执行 `tools/qf snapshot NOTE="..."`，把“本轮结论/下一步”写入仓库证据，避免会话丢失。
-- 5) 运行 `tools/qf do queue-next` 领取下一枪（内部强制 ready + choose + council + arbiter + slice 前置；并自动产出一次 non-blocking drift review）。
-- 5.0) 低摩擦可选：`tools/qf execute`
-  - 默认在缺少方向确认时停在 choose（保留人工确认）
-  - 自动推进模式：`QF_EXECUTE_AUTO_CHOOSE=1 tools/qf execute`
-- 5.1) 需求执行完成后，显式运行 `tools/qf review RUN_ID=<run-id> STRICT=1 AUTO_FIX=1`，清空 blocker 后再 ship。
-- 6) Expand that item into `TASKS/TASK-*.md` (from template), then run:
-  implement minimal diff -> `make verify` -> update reports -> `tools/task.sh` ship.
-- Ship failure recovery: `tools/ship.sh` writes `reports/{RUN_ID}/ship_state.json`
-  at key steps. On push/PR/merge/sync failure, run `tools/qf resume RUN_ID=...`.
-- `tools/qf resume` 会先检查是否已存在同分支的已合并 PR；若已合并则跳过重复 `pr create/merge`，直接执行本地 `main` 同步收尾。
-- Ship success behavior: after merge, ship auto-syncs local `main` to `origin/main`.
-- 7) On failure, write failure reason, repro, and next step in
-  `reports/{RUN_ID}/summary.md` + `reports/{RUN_ID}/decision.md` (and `MISTAKES/`
-  or `TASKS/STATE.md` when needed).
+```text
+project
+  -> init
+  -> learn
+  -> ready
+  -> orient
+  -> choose
+  -> council
+  -> arbiter
+  -> slice
+  -> queue/task
+  -> do
+  -> verify
+  -> review
+  -> ship
+  -> run close
+```
 
-## Pause/stop reason taxonomy (required in decision.md)
-- Use one canonical stop reason when pausing/stopping a run:
-  - `task_done`
-  - `needs_human_decision`
-  - `infra_network`
-  - `infra_quota_or_auth`
-  - `tool_or_script_error`
-  - `verify_failed`
-  - `external_blocked`
+## 3. S0 上岗层
 
-## Documentation freshness gate (hard rule)
-- Process/rule/tooling behavior changed in this RUN => update owner docs in this RUN.
-- Minimum documentation set for process changes:
-  - `AGENTS.md`
-  - `docs/WORKFLOW.md`
-  - `SYNC/*` startup docs if order/semantics changed
-  - `TASKS/STATE.md` pointers if run/task context changed
-  - `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-- If documentation is stale, do not ship.
+### 3.1 `init`
 
-## Codex governance and automation
-- Session constitution and operation standard: `AGENTS.md` + `docs/CODEX_CLI_OPERATION.md`
-- Default policy: PR-driven flow with local `make verify`; do not depend on GitHub Actions queues.
-- If automation is ever re-enabled, it must be explicitly requested and documented in task acceptance.
-- `tools/ship.sh` hard gate blocks `.github/workflows/*.yml|*.yaml` by default; explicit override required:
-  - `SHIP_ALLOW_WORKFLOWS=1 tools/ship.sh "<msg>"`
-- `tools/ship.sh` appends process mistakes to `reports/{RUN_ID}/mistake_log.jsonl` on retries/failures.
-- `tools/observe.sh` summarizes these logs under `过程错题（执行/思考）`.
-- Process mistake template reference: `docs/MISTAKES_TEMPLATE.md`.
+命令：
+- `python3 tools/init.py`
+
+目标：
+- 诊断环境和现场
+
+输入：
+- 当前仓库
+- `TASKS/STATE.md`
+- git branch / worktree / remote 状态
+
+输出：
+- 控制台状态打印
+
+关键输出锚点：
+- `INIT_PROJECT_ID`
+- `INIT_RUN_ID`
+- `INIT_TASK_FILE`
+- `INIT_BRANCH`
+- `INIT_DIFF_SUMMARY`
+- `INIT_STATUS`
+- `INIT_NEXT`
+
+职责：
+- 打印账号、版本、分支、工作区差异
+- 确认当前 `project/run/task`
+- 判断当前是正常、脏工作区、还是需要 resume
+
+非职责：
+- 不创建业务 `RUN_ID`
+- 不做项目同频
+- 不生成讨论产物
+- 不授权执行
+
+下一跳：
+- 若 `INIT_STATUS=needs_resume`，先处理恢复
+- 否则进入 `learn`
+
+### 3.2 `learn`
+
+命令：
+- `python3 tools/learn.py`
+
+目标：
+- 完成项目同频和主线回拉
+
+输入：
+- `docs/PROJECT_GUIDE.md`
+- `AGENTS.md`
+- `docs/WORKFLOW.md`
+- 由 `PROJECT_GUIDE` 引导出的必查文件
+- 当前 `TASKS/STATE.md`
+- 当前 run evidence（若存在）
+
+输出：
+- `learn/<project_id>.json`
+- `learn/<project_id>.md`
+- `learn/<project_id>.stdout.log`
+- `learn/<project_id>.model.*`
+
+职责：
+- 通过真实 Codex Plan 模式读取课程与证据
+- 输出主线、当前阶段、下一步
+- 对 `PROJECT_GUIDE` 全量逐题口述
+- 判断是否偏离主线并给出回拉动作
+- 漂移时回到 `PROJECT_GUIDE` 问题体系重答，而不是继续闲聊
+
+固定规则：
+- 真模型交互是硬门禁
+- transport 固定为 `app-server`
+- 必须是真 Plan 模式
+- `PROJECT_GUIDE` 是课程驱动器
+- 不再使用考试分数
+
+关键输出锚点：
+- `LEARN_MAINLINE`
+- `LEARN_CURRENT_STAGE`
+- `LEARN_NEXT_STEP`
+- `LEARN_REQUIRED_FILES_READ_LIST`
+- `LEARN_MODEL_MAINLINE`
+- `LEARN_MODEL_CURRENT_STAGE`
+- `LEARN_MODEL_NEXT_STEP`
+- `LEARN_MODEL_FILES_READ_LIST`
+- `LEARN_MODEL_ORAL_Q_COUNT`
+- `LEARN_MODEL_ORAL_QID1..N`
+- `LEARN_MODEL_ORAL_Q1..N`
+- `LEARN_MODEL_ORAL_A1..N`
+- `LEARN_MODEL_ANCHOR_*`
+
+非职责：
+- 不决定需求方向
+- 不生成 execution contract
+- 不直接进入执行
+
+下一跳：
+- `ready`
+
+### 3.3 `ready`
+
+命令：
+- `python3 tools/ready.py`
+
+目标：
+- 给当前 run/task 出开工许可
+
+输入：
+- `TASKS/STATE.md`
+- 当前 task 合同
+- `learn/<project_id>.json`
+- 必要时当前 run evidence
+
+输出：
+- `reports/<RUN_ID>/ready.json`
+
+职责：
+- 校验 `learn` 是否通过
+- 校验当前 `project/run/task` 是否明确
+- 固定本次工作的最小合同：
+  - `goal`
+  - `scope`
+  - `acceptance`
+  - `stop_condition`
+- 处理 unresolved run decision
+
+非职责：
+- 不再解释项目知识
+- 不再承担学习任务
+- 不生成方向草稿
+- 不自动推进到讨论或执行
+
+关键输出锚点：
+- `READY_PROJECT_ID`
+- `READY_RUN_ID`
+- `READY_TASK_FILE`
+- `READY_DECISION`
+- `READY_FILE`
+- `READY_NEXT_COMMAND`
+
+下一跳：
+- `orient`
+
+## 4. S1 讨论层
+
+### 4.1 `orient`
+
+命令：
+- `python3 tools/orient.py`
+
+目标：
+- 生成候选方向
+
+输入：
+- 当前 `project/run`
+- owner docs
+- `ready.json`
+- 当前 state/evidence
+
+输出：
+- `chatlogs/discussion/<RUN_ID>/orient.json`
+- `chatlogs/discussion/<RUN_ID>/orient.md`
+
+职责：
+- 产出多个方向选项
+- 每个方向说明 why / risk / priority / scope_hint
+
+下一跳：
+- `choose`
+
+### 4.2 `choose`
+
+命令：
+- `python3 tools/choose.py OPTION=<id>`
+
+目标：
+- 明确选择一个方向
+
+输入：
+- `orient.json`
+
+输出：
+- `reports/<RUN_ID>/orient_choice.json`
+- `reports/<RUN_ID>/direction_contract.json`
+- `reports/<RUN_ID>/direction_contract.md`
+
+职责：
+- 固定已选择方向
+- 给后续 council 一个明确输入
+
+下一跳：
+- `council`
+
+### 4.3 `council`
+
+命令：
+- `python3 tools/council.py`
+
+目标：
+- 让多角色独立评审
+
+输入：
+- `orient_choice.json`
+- `direction_contract.json`
+
+输出：
+- `chatlogs/discussion/<RUN_ID>/council.json`
+- `chatlogs/discussion/<RUN_ID>/council.md`
+
+职责：
+- 产品 / 架构 / 研发 / 测试独立给出意见
+- 暴露 blocker / warn / disagreement
+
+下一跳：
+- `arbiter`
+
+### 4.4 `arbiter`
+
+命令：
+- `python3 tools/arbiter.py`
+
+目标：
+- 把讨论收敛成执行合同
+
+输入：
+- `council.json`
+- `direction_contract.json`
+
+输出：
+- `reports/<RUN_ID>/execution_contract.json`
+- `reports/<RUN_ID>/execution_contract.md`
+
+职责：
+- 汇总独立视角
+- 固定目标、非目标、scope、约束、风险
+
+下一跳：
+- `slice`
+
+## 5. S2 拆解层
+
+### 5.1 `slice`
+
+命令：
+- `python3 tools/slice_task.py`
+
+目标：
+- 把 execution contract 拆成 task 切片
+
+输入：
+- `execution_contract.json`
+
+输出：
+- `reports/<RUN_ID>/slice_state.json`
+- `TASKS/QUEUE.md` slice blocks
+
+职责：
+- 生成最小 task 切片
+- 维持 queue 幂等写入
+
+下一跳：
+- queue / task selection
+
+### 5.2 `queue`
+
+目标：
+- 承接待执行切片，不定义需求本身
+
+真相源：
+- `TASKS/QUEUE.md`
+
+规则：
+- queue item 必须来自某个 run 的 slice
+- queue item 被领取后，应实体化成 `TASKS/TASK-*.md`
+
+下一跳：
+- `do`
+
+## 6. S3 执行层
+
+### 6.1 `do`
+
+命令：
+- `bash tools/legacy.sh do queue-next`
+
+目标：
+- 领取并执行下一个 task
+
+输入：
+- `ready.json`
+- `orient_choice.json`
+- `council.json`
+- `execution_contract.json`
+- `slice_state.json`
+- queue 中的待执行项
+
+输出：
+- 代码变更
+- verify 结果
+- run evidence 更新
+
+职责：
+- 领取 queue item
+- 实现最小 diff
+- 保持执行轨迹
+
+门禁：
+- 缺任一前置 gate 时必须失败
+
+下一跳：
+- `verify`
+
+### 6.2 `verify`
+
+目标：
+- 确认实现满足合同
+
+输入：
+- 当前 diff
+- task acceptance
+
+输出：
+- 本地验证结果
+- summary/decision 更新
+
+规则：
+- 本地验证优先
+- 未通过不得进入 ship
+
+### 6.3 `review`
+
+命令：
+- `bash tools/legacy.sh review`
+
+目标：
+- 检查 drift、风险和文档一致性
+
+输入：
+- run evidence
+- verify 结果
+
+输出：
+- `reports/<RUN_ID>/drift_review.json`
+- `reports/<RUN_ID>/drift_review.md`
+
+规则：
+- strict blocker 未清空，不得 ship
+
+下一跳：
+- `smoke`
+
+### 6.4 `smoke`
+
+目标：
+- 做 ship 前的 release-prep 检查
+
+输入：
+- 当前 task 合同
+- verify 结果
+- review 结果
+- 当前 run evidence
+- owner docs 更新状态
+
+输出：
+- ship-ready 结论
+- 缺失材料清单（如有）
+
+规则：
+- smoke 不负责远端交付；它只判断是否具备 ship 条件
+- 至少确认以下内容已经齐备：
+  - verify 已通过
+  - strict review blocker 已清空
+  - `reports/<RUN_ID>/summary.md`
+  - `reports/<RUN_ID>/decision.md`
+  - `reports/<RUN_ID>/meta.json`
+  - 若流程/规则/工具行为变化，对应 owner docs 已同步
+- 缺材料、合同不清、验证未过时，必须退回 task owner / 项目负责人
+
+下一跳：
+- `ship`
+
+## 7. S4 交付层
+
+### 7.1 `ship`
+
+命令：
+- `tools/ship.sh`
+
+目标：
+- 完成交付与同步
+
+输入：
+- 已验证 diff
+- 当前 task 合同
+- 当前 run evidence
+
+输出：
+- commit / push / PR / merge
+- `ship_state.json`（如适用）
+
+规则：
+- one task -> one branch -> one PR
+- ship 前必须更新证据和 owner docs
+- ship 负责 git / branch / commit / push / PR / merge / sync
+- `ship_state.json` 属于 ship 自动回写的交付状态文件；业务材料不在 ship 阶段补写
+- 成功路径下，`ship` 不应在 local commit 之后继续重写已跟踪的 `ship_state.json`，避免为记录成功状态再次弄脏工作区并阻塞后续 PR merge / post-ship sync；失败与恢复状态仍需落 `ship_state.json`
+
+### 7.2 `run close`
+
+目标：
+- 关闭 run 或进入下一个 task
+
+条件：
+- 当前 run 下 task 全部完成
+- 或明确终止
+
+输出：
+- `TASKS/STATE.md` 指针更新
+- `decision.md` 记录 stop reason
+
+## 8. Readiness Completion
+
+进入执行前，至少必须有：
+- `python3 tools/init.py`
+- `python3 tools/learn.py`
+- `python3 tools/ready.py`
+- `python3 tools/orient.py`
+- `python3 tools/choose.py`
+- `python3 tools/council.py`
+- `python3 tools/arbiter.py`
+- `python3 tools/slice_task.py`
+
+执行入口：
+- `bash tools/legacy.sh do queue-next`
+
+## 9. 默认日常流程
+
+推荐日常顺序：
+
+1. `python3 tools/init.py`
+2. `python3 tools/learn.py -daily`
+3. `python3 tools/ready.py`
+4. `python3 tools/orient.py`
+5. `python3 tools/choose.py OPTION=<id>`
+6. `python3 tools/council.py`
+7. `python3 tools/arbiter.py`
+8. `python3 tools/slice_task.py`
+9. `bash tools/legacy.sh do queue-next`
+10. `bash tools/legacy.sh review RUN_ID=<run-id> STRICT=1 AUTO_FIX=1`
+11. `tools/smoke.sh`
+12. `tools/ship.sh`
+
+说明：
+- `-daily` 是日常同频入口，等价于 `-medium`，用于减少档位选择负担；不改变 `learn` 的强同频、app-server 和 oral restatement 硬门禁。
+- `tools/smoke.sh` 是 ship 前的 readiness/checklist 层，不直接执行远端 PR/merge。
+- `tools/task.sh` / `tools/ship.sh` 默认保持当前 active branch 作为发货基线；只有显式以 `main` 为基线时，`ship.sh` 才会执行 `fetch/pull origin main`。
+- 当 `gh pr merge` 前发现 PR 不是 cleanly mergeable 时，`ship.sh` 会以 `pr_merge_blocked` 退出并打印 base-into-head 恢复命令，而不是继续盲重试。
+
+说明：
+- `-daily` 是日常同频入口，等价于 `-medium`，用于减少档位选择负担；不改变 `learn` 的强同频、app-server 和 oral restatement 硬门禁。
+- `tools/task.sh` / `tools/ship.sh` 默认保持当前 active branch 作为发货基线；只有显式以 `main` 为基线时，`ship.sh` 才会执行 `fetch/pull origin main`。
+
+## 10. Pause / Resume
+
+当 run 中断时：
+- 优先用 `bash tools/legacy.sh resume RUN_ID=<run-id>`
+- 必要时先用 `bash tools/legacy.sh handoff RUN_ID=<run-id>` 生成接班摘要
+
+停止原因统一记录到：
+- `reports/<RUN_ID>/decision.md`
+
+标准 stop reason：
+- `task_done`
+- `needs_human_decision`
+- `infra_network`
+- `infra_quota_or_auth`
+- `tool_or_script_error`
+- `verify_failed`
+- `external_blocked`
+
+## 11. Documentation Freshness Gate
+
+流程、规则、工具行为变化时，必须在同一 run 更新：
+- `AGENTS.md`
+- `docs/WORKFLOW.md`
+- `docs/ENTITIES.md`（若对象定义变化）
+- `docs/PROJECT_GUIDE.md`（若学习语义变化）
+- `reports/<RUN_ID>/summary.md`
+- `reports/<RUN_ID>/decision.md`
+
+没有文档同步，不得 ship。

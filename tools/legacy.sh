@@ -1,0 +1,6488 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [[ -z "$repo_root" ]]; then
+  echo "ERROR: not inside a git repository."
+  exit 1
+fi
+cd "$repo_root"
+
+QF_RETRY_MAX="${QF_RETRY_MAX:-3}"
+QF_RETRY_BASE_SEC="${QF_RETRY_BASE_SEC:-1}"
+RETRY_OUTPUT=""
+RETRY_LAST_ERROR=""
+STATE_FILE="${QF_STATE_FILE:-TASKS/STATE.md}"
+DEFAULT_PROJECT_ID="${QF_DEFAULT_PROJECT_ID:-project-0}"
+REQUIRED_READY_FILE=""
+DIRECTION_CHOICE_FILE=""
+COUNCIL_FILE=""
+EXECUTION_CONTRACT_FILE=""
+SLICE_STATE_FILE=""
+
+usage() {
+  cat <<'EOF'
+Usage:
+  python3 tools/init.py [-status|-main]
+  bash tools/legacy.sh onboard RUN_ID
+  bash tools/legacy.sh sync [RUN_ID=<run-id>]
+  python3 tools/learn.py [plan_transport=auto|slash] [-minimal|-low|-medium|-high|-xhigh]
+  python3 tools/ready.py [RUN_ID=<run-id>] [DECISION=resume-close|abandon-new]
+  python3 tools/orient.py [RUN_ID=<run-id>]
+  python3 tools/choose.py [RUN_ID=<run-id>] OPTION=<id>
+  python3 tools/council.py [RUN_ID=<run-id>]
+  python3 tools/arbiter.py [RUN_ID=<run-id>]
+  python3 tools/slice_task.py [RUN_ID=<run-id>]
+  bash tools/legacy.sh discuss [RUN_ID=<run-id>] [PROJECT_ID=<project-id>] [OPTION=<id>] [AUTO_CHOOSE=0|1] [TARGET=prepare|do] [CONFIRM_CONTRACT=0|1] [AUTO_CONFIRM_CONTRACT=0|1]
+  bash tools/legacy.sh execute [RUN_ID=<run-id>] [PROJECT_ID=<project-id>] [OPTION=<id>] [AUTO_CHOOSE=0|1] [TARGET=prepare|do] [CONFIRM_CONTRACT=0|1] [AUTO_CONFIRM_CONTRACT=0|1]
+  bash tools/legacy.sh review [RUN_ID=<run-id>] [AUTO_FIX=0|1] [STRICT=0|1]
+  bash tools/legacy.sh snapshot [RUN_ID=<run-id>] NOTE=<text>
+  bash tools/legacy.sh handoff [RUN_ID=<run-id>]
+  bash tools/legacy.sh exam [RUN_ID=<run-id>] [ANSWER_FILE=<path>] [RUBRIC_FILE=<path>] [OUTPUT_FILE=<path>]
+  bash tools/legacy.sh exam-auto [RUN_ID=<run-id>] [ANSWER_FILE=<path>] [RUBRIC_FILE=<path>] [OUTPUT_FILE=<path>] [AUTO_FILL=0|1]
+  bash tools/legacy.sh plan [N]
+  bash tools/legacy.sh do queue-next
+  bash tools/legacy.sh resume [RUN_ID=<run-id>]
+  bash tools/legacy.sh stash-clean [preview|apply] [KEEP=<n>]
+
+Global optional:
+  PROJECT_ID=<project-id>   # defaults to TASKS/STATE.md CURRENT_PROJECT_ID or project-0
+EOF
+}
+
+is_dirty() {
+  if ! git diff --quiet || ! git diff --cached --quiet || [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
+    return 0
+  fi
+  return 1
+}
+
+print_resume_cmd() {
+  local run_id="$1"
+  if [[ -n "$run_id" ]]; then
+    echo "恢复命令：bash tools/legacy.sh resume RUN_ID=${run_id}"
+  fi
+}
+
+json_escape() {
+  local value="${1:-}"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  value="${value//$'\r'/}"
+  printf "%s" "$value"
+}
+
+should_emit_json_stream() {
+  case "${QF_EVENT_STREAM:-0}" in
+    1|json|jsonl|JSON|JSONL)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+emit_json_event() {
+  local phase="${1:-ops}"
+  local action="${2:-event}"
+  local status="${3:-ok}"
+  local message="${4:-}"
+  if ! should_emit_json_stream; then
+    return 0
+  fi
+  printf '{"ts":"%s","type":"core_event","phase":"%s","action":"%s","status":"%s","message":"%s"}\n' \
+    "$(date -Iseconds)" \
+    "$(json_escape "$phase")" \
+    "$(json_escape "$action")" \
+    "$(json_escape "$status")" \
+    "$(json_escape "$message")"
+}
+
+emit_step() {
+  local phase="${1:-ops}"
+  local index="${2:-0}"
+  local total="${3:-0}"
+  local message="${4:-}"
+  local prefix=""
+  prefix="$(printf "%s" "$phase" | tr '[:lower:]' '[:upper:]')"
+  echo "${prefix}_STEP[${index}/${total}]: ${message}"
+  emit_json_event "$phase" "step" "ok" "${index}/${total} ${message}"
+}
+
+redact_text() {
+  local value="${1:-}"
+  if [[ "${QF_LOG_REDACT:-1}" != "1" ]]; then
+    printf "%s" "$value"
+    return 0
+  fi
+  printf "%s" "$value" | sed -E \
+    -e 's/(token|password|passwd|secret|api[_-]?key)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=<redacted>/Ig' \
+    -e 's/(Authorization:[[:space:]]*Bearer)[[:space:]]+[A-Za-z0-9._-]+/\1 <redacted>/Ig' \
+    -e 's/\b(ghp_[A-Za-z0-9]+)\b/<redacted>/g' \
+    -e 's/\b(sk-[A-Za-z0-9]+)\b/<redacted>/g'
+}
+
+append_execution_event() {
+  local run_id="$1"
+  local phase="$2"
+  local action="$3"
+  local status="$4"
+  local command="${5:-}"
+  local artifacts="${6:-}"
+  local error="${7:-}"
+  local file=""
+  local command_r=""
+  local artifacts_r=""
+  local error_r=""
+  local max_len="${QF_LOG_MAX_LEN:-200}"
+
+  if [[ -z "$run_id" || "${QF_LOG_DISABLE:-0}" == "1" ]]; then
+    return 0
+  fi
+
+  command_r="$(redact_text "$command")"
+  artifacts_r="$(redact_text "$artifacts")"
+  error_r="$(redact_text "$error")"
+  if [[ "${#command_r}" -gt "$max_len" ]]; then
+    command_r="${command_r:0:${max_len}}...(truncated)"
+  fi
+  if [[ "${#artifacts_r}" -gt "$max_len" ]]; then
+    artifacts_r="${artifacts_r:0:${max_len}}...(truncated)"
+  fi
+  if [[ "${#error_r}" -gt "$max_len" ]]; then
+    error_r="${error_r:0:${max_len}}...(truncated)"
+  fi
+
+  file="reports/${run_id}/execution.jsonl"
+  mkdir -p "reports/${run_id}"
+  printf '{"ts":"%s","run_id":"%s","phase":"%s","action":"%s","status":"%s","command":"%s","artifacts":"%s","error":"%s"}\n' \
+    "$(date -Iseconds)" \
+    "$(json_escape "$run_id")" \
+    "$(json_escape "$phase")" \
+    "$(json_escape "$action")" \
+    "$(json_escape "$status")" \
+    "$(json_escape "$command_r")" \
+    "$(json_escape "$artifacts_r")" \
+    "$(json_escape "$error_r")" >> "$file"
+}
+
+append_conversation_checkpoint() {
+  local run_id="$1"
+  local phase="${2:-checkpoint}"
+  local note="${3:-}"
+  local file=""
+  local now_iso=""
+  local branch=""
+  local head=""
+  local status_line=""
+
+  if [[ -z "$run_id" || "${QF_AUTO_CONVERSATION:-1}" != "1" ]]; then
+    return 0
+  fi
+
+  file="reports/${run_id}/conversation.md"
+  mkdir -p "reports/${run_id}"
+  now_iso="$(date -Iseconds)"
+  branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")"
+  head="$(git rev-parse --short HEAD 2>/dev/null || echo "none")"
+  if is_dirty; then
+    status_line="dirty"
+  else
+    status_line="clean"
+  fi
+
+  {
+    echo "## ${now_iso}"
+    echo "- phase: \`${phase}\`"
+    echo "- branch: \`${branch}\`"
+    echo "- head: \`${head}\`"
+    echo "- working_tree: \`${status_line}\`"
+    if [[ -n "$note" ]]; then
+      echo "- note: ${note}"
+    else
+      echo "- note: (empty)"
+    fi
+    echo
+  } >> "$file"
+}
+
+state_field_value() {
+  local key="$1"
+  local py_bin=""
+  if [[ ! -f "$STATE_FILE" ]]; then
+    printf ""
+    return 0
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    printf ""
+    return 0
+  fi
+  "$py_bin" - <<'PY' "$STATE_FILE" "$key"
+import re
+import sys
+
+path, key = sys.argv[1], sys.argv[2]
+pat = re.compile(rf"^\s*{re.escape(key)}:\s*(.*?)\s*$")
+try:
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            m = pat.match(line.rstrip("\n"))
+            if m:
+                print(m.group(1))
+                raise SystemExit(0)
+except FileNotFoundError:
+    pass
+print("")
+PY
+}
+
+resolve_state_current_run_id() {
+  local run_id=""
+  run_id="$(state_field_value "CURRENT_RUN_ID")"
+  if [[ -n "$run_id" ]]; then
+    printf "%s" "$run_id"
+    return 0
+  fi
+  printf ""
+  return 1
+}
+
+normalize_project_id() {
+  local value="${1:-}"
+  value="$(printf "%s" "$value" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
+  if [[ -z "$value" ]]; then
+    printf "%s" "$DEFAULT_PROJECT_ID"
+    return 0
+  fi
+  printf "%s" "$value"
+}
+
+resolve_state_current_project_id() {
+  local project_id=""
+  project_id="$(state_field_value "CURRENT_PROJECT_ID")"
+  project_id="$(normalize_project_id "$project_id")"
+  printf "%s" "$project_id"
+  return 0
+}
+
+resolve_project_id_for_cmd() {
+  local explicit_project_id="${1:-}"
+  local context="${2:-cmd}"
+  local state_project_id=""
+  local resolved=""
+
+  state_project_id="$(resolve_state_current_project_id || true)"
+  if [[ -z "$explicit_project_id" ]]; then
+    if [[ -n "${QF_PROJECT_ID:-}" ]]; then
+      explicit_project_id="${QF_PROJECT_ID}"
+    elif [[ -n "${PROJECT_ID:-}" ]]; then
+      explicit_project_id="${PROJECT_ID}"
+    fi
+  fi
+
+  if [[ -n "$explicit_project_id" ]]; then
+    resolved="$(normalize_project_id "$explicit_project_id")"
+    if [[ -n "$state_project_id" && "$resolved" != "$state_project_id" && "${QF_ALLOW_PROJECT_ID_MISMATCH:-0}" != "1" ]]; then
+      echo "ERROR: ${context} project-id mismatch." >&2
+      echo "  explicit: ${resolved}" >&2
+      echo "  CURRENT_PROJECT_ID (TASKS/STATE.md): ${state_project_id}" >&2
+      echo "  Fix: update TASKS/STATE.md or pass QF_ALLOW_PROJECT_ID_MISMATCH=1 for one-time override." >&2
+      return 1
+    fi
+    printf "%s" "$resolved"
+    return 0
+  fi
+
+  if [[ -n "$state_project_id" ]]; then
+    printf "%s" "$state_project_id"
+    return 0
+  fi
+
+  printf "%s" "$DEFAULT_PROJECT_ID"
+  return 0
+}
+
+resolve_latest_report_run_id() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    printf ""
+    return 1
+  fi
+  "$py_bin" - <<'PY'
+from pathlib import Path
+
+root = Path("reports")
+if not root.exists():
+    raise SystemExit(0)
+
+cands = []
+for d in root.glob("run-*"):
+    if not d.is_dir():
+        continue
+    mt = 0.0
+    for name in ("ready.json", "execution.jsonl", "conversation.md", "handoff.md", "decision.md", "summary.md", "ship_state.json"):
+        p = d / name
+        if p.exists():
+            mt = max(mt, p.stat().st_mtime)
+    if mt > 0:
+        cands.append((mt, d.name))
+
+if cands:
+    cands.sort(reverse=True)
+    print(cands[0][1])
+PY
+}
+
+resolve_run_id_for_cmd() {
+  local explicit_run_id="${1:-}"
+  local context="${2:-cmd}"
+  local state_run_id=""
+  local latest_run_id=""
+
+  state_run_id="$(resolve_state_current_run_id || true)"
+  if [[ -n "$explicit_run_id" ]]; then
+    if [[ -n "$state_run_id" && "$explicit_run_id" != "$state_run_id" && "${QF_ALLOW_RUN_ID_MISMATCH:-0}" != "1" ]]; then
+      echo "ERROR: ${context} run-id mismatch." >&2
+      echo "  explicit: ${explicit_run_id}" >&2
+      echo "  CURRENT_RUN_ID (TASKS/STATE.md): ${state_run_id}" >&2
+      echo "  Fix: update TASKS/STATE.md or pass QF_ALLOW_RUN_ID_MISMATCH=1 for one-time override." >&2
+      return 1
+    fi
+    printf "%s" "$explicit_run_id"
+    return 0
+  fi
+
+  if [[ -n "$state_run_id" ]]; then
+    printf "%s" "$state_run_id"
+    return 0
+  fi
+
+  latest_run_id="$(resolve_latest_report_run_id || true)"
+  if [[ -n "$latest_run_id" ]]; then
+    echo "WARN: ${context} fallback to latest report run-id: ${latest_run_id}" >&2
+    printf "%s" "$latest_run_id"
+    return 0
+  fi
+
+  printf ""
+  return 0
+}
+
+update_state_current() {
+  local run_id="${1:-}"
+  local task_file="${2:-}"
+  local status="${3:-active}"
+  local project_id="${4:-}"
+  local py_bin=""
+
+  if [[ "${QF_STATE_UPDATE_DISABLE:-0}" == "1" ]]; then
+    return 0
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    return 0
+  fi
+
+  if [[ -z "$project_id" ]]; then
+    project_id="$(state_field_value "CURRENT_PROJECT_ID")"
+  fi
+  project_id="$(normalize_project_id "$project_id")"
+
+  "$py_bin" - <<'PY' "$STATE_FILE" "$run_id" "$task_file" "$status" "$project_id"
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+state_file, run_id, task_file, status, project_id = sys.argv[1:]
+path = Path(state_file)
+if path.exists():
+    lines = path.read_text(encoding="utf-8").splitlines()
+else:
+    lines = ["# STATE", ""]
+
+keys = {"CURRENT_PROJECT_ID", "CURRENT_RUN_ID", "CURRENT_TASK_FILE", "CURRENT_STATUS", "CURRENT_UPDATED_AT"}
+filtered = []
+for line in lines:
+    matched = False
+    for key in keys:
+        if re.match(rf"^\s*{re.escape(key)}\s*:", line):
+            matched = True
+            break
+    if not matched:
+        filtered.append(line)
+
+insert_idx = 0
+if filtered and filtered[0].startswith("#"):
+    insert_idx = 1
+    if len(filtered) > 1 and filtered[1].strip() == "":
+        insert_idx = 2
+
+meta = [
+    f"CURRENT_PROJECT_ID: {project_id}",
+    f"CURRENT_RUN_ID: {run_id}",
+    f"CURRENT_TASK_FILE: {task_file}",
+    f"CURRENT_STATUS: {status}",
+    f"CURRENT_UPDATED_AT: {datetime.now(timezone.utc).replace(microsecond=0).isoformat()}",
+    "",
+]
+out = filtered[:insert_idx] + meta + filtered[insert_idx:]
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_text("\n".join(out).rstrip() + "\n", encoding="utf-8")
+PY
+}
+
+run_with_retry_capture() {
+  local step="$1"
+  shift
+  local attempt=1
+  local delay="$QF_RETRY_BASE_SEC"
+  local rc=0
+  local output=""
+
+  RETRY_OUTPUT=""
+  RETRY_LAST_ERROR=""
+  while true; do
+    set +e
+    output="$("$@" 2>&1)"
+    rc=$?
+    set -e
+    if [[ "$rc" -eq 0 ]]; then
+      RETRY_OUTPUT="$output"
+      if [[ -n "$output" ]]; then
+        printf "%s\n" "$output"
+      fi
+      return 0
+    fi
+
+    RETRY_LAST_ERROR="$(printf "%s" "$output" | tail -n 3 | tr '\n' ' ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+    if [[ "$attempt" -ge "$QF_RETRY_MAX" ]]; then
+      if [[ -n "$output" ]]; then
+        printf "%s\n" "$output" >&2
+      fi
+      return "$rc"
+    fi
+    echo "retry[$attempt/$QF_RETRY_MAX] step=$step rc=$rc: ${RETRY_LAST_ERROR:-unknown}" >&2
+    sleep "$delay"
+    attempt=$((attempt + 1))
+    delay=$((delay * 2))
+  done
+}
+
+auto_stash_if_dirty() {
+  local prefix="$1"
+  if ! is_dirty; then
+    return 0
+  fi
+  if [[ "${QF_AUTOSTASH:-1}" != "1" ]]; then
+    echo "❌ 工作区不干净（有未提交改动）"
+    echo "   修复：先处理未提交改动，或设置 QF_AUTOSTASH=1 后重试。"
+    return 1
+  fi
+  local stash_name="legacy-${prefix}-wip-$(date +%Y%m%d-%H%M%S)"
+  echo "Detected local changes. Stashing as: ${stash_name}"
+  git stash push -u -m "$stash_name" >/dev/null
+  local latest_stash
+  latest_stash="$(git stash list -1 | head -n1 || true)"
+  echo "stashed: ${latest_stash:-$stash_name}"
+  echo "恢复指令："
+  echo "  git stash list"
+  echo "  git stash pop stash@{0}"
+}
+
+cmd_onboard() {
+  local run_id="${1:-${RUN_ID:-}}"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: RUN_ID is required. Usage: bash tools/legacy.sh onboard <RUN_ID>" >&2
+    exit 2
+  fi
+
+  local repo_root reports_dir out_dir out_file state_file queue_file decisions_glob recent_limit tmp_recent
+  repo_root="${ONBOARD_REPO_ROOT:-.}"
+  reports_dir="${ONBOARD_REPORTS_DIR:-${repo_root}/reports}"
+  out_dir="${ONBOARD_OUT_DIR:-${reports_dir}/${run_id}}"
+  out_file="${out_dir}/onboard.md"
+  state_file="${ONBOARD_STATE_FILE:-${repo_root}/TASKS/STATE.md}"
+  queue_file="${ONBOARD_QUEUE_FILE:-${repo_root}/TASKS/QUEUE.md}"
+  decisions_glob="${ONBOARD_DECISIONS_GLOB:-${reports_dir}/run-*/decision.md}"
+  recent_limit="${ONBOARD_RECENT_LIMIT:-8}"
+
+  mkdir -p "$out_dir"
+  tmp_recent="$(mktemp)"
+  trap 'rm -f "${tmp_recent:-}"' RETURN
+
+  # shellcheck disable=SC2086
+  ls -1t ${decisions_glob} 2>/dev/null | head -n "${recent_limit}" > "$tmp_recent" || true
+
+  {
+    echo "# Session Onboard"
+    echo
+    echo "RUN_ID: \`${run_id}\`"
+    echo "Generated At: $(date -Iseconds)"
+    echo
+    echo "## 宪法/硬规则入口"
+    echo "- AGENTS.md"
+    echo
+    echo "## 项目背景/阶段入口"
+    echo "- docs/PROJECT_GUIDE.md"
+    echo
+    echo "## 工作流入口"
+    echo "- docs/WORKFLOW.md"
+    echo "- TASKS/STATE.md"
+    echo "- TASKS/QUEUE.md"
+    echo
+    echo "## 强制复述模板入口"
+    echo "- docs/PROJECT_GUIDE.md#强制复述模板"
+    echo
+    echo "## 最近 decision 入口列表"
+    if [[ -s "$tmp_recent" ]]; then
+      while IFS= read -r item; do
+        [[ -z "$item" ]] && continue
+        rel="${item#${repo_root}/}"
+        echo "- ${rel}"
+      done < "$tmp_recent"
+    else
+      echo "- 无（未检出 reports/run-*/decision.md）"
+    fi
+    echo
+    echo "## 快速检查"
+    if [[ -f "$state_file" ]]; then
+      echo "- STATE: ${state_file#${repo_root}/}"
+    else
+      echo "- STATE: missing (${state_file})"
+    fi
+    if [[ -f "$queue_file" ]]; then
+      echo "- QUEUE: ${queue_file#${repo_root}/}"
+    else
+      echo "- QUEUE: missing (${queue_file})"
+    fi
+  } | tee "$out_file"
+
+  echo "ONBOARD_FILE: $out_file"
+}
+
+extract_task_goal_default() {
+  local task_file="$1"
+  if [[ -z "$task_file" || ! -f "$task_file" ]]; then
+    printf ""
+    return 0
+  fi
+  awk '
+    BEGIN { in_goal = 0 }
+    /^##[[:space:]]+Goal/ { in_goal = 1; next }
+    in_goal && /^##[[:space:]]+/ { exit }
+    in_goal {
+      line=$0
+      sub(/\r$/, "", line)
+      if (line ~ /[[:graph:]]/) {
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+        print line
+        exit
+      }
+    }
+  ' "$task_file"
+}
+
+extract_task_scope_default() {
+  local task_file="$1"
+  if [[ -z "$task_file" || ! -f "$task_file" ]]; then
+    printf ""
+    return 0
+  fi
+  awk '
+    BEGIN { in_scope = 0; out = "" }
+    /^##[[:space:]]+Scope/ { in_scope = 1; next }
+    in_scope && /^##[[:space:]]+/ { exit }
+    in_scope && /^[[:space:]]*-[[:space:]]*/ {
+      line=$0
+      sub(/^[[:space:]]*-[[:space:]]*/, "", line)
+      gsub(/`/, "", line)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+      if (line != "") {
+        if (out != "") out = out ", "
+        out = out line
+      }
+    }
+    END {
+      if (out != "") print out
+    }
+  ' "$task_file"
+}
+
+extract_task_acceptance_default() {
+  local task_file="$1"
+  if [[ -z "$task_file" || ! -f "$task_file" ]]; then
+    printf ""
+    return 0
+  fi
+  awk '
+    BEGIN { in_accept = 0; out = "" }
+    /^##[[:space:]]+Acceptance/ { in_accept = 1; next }
+    in_accept && /^##[[:space:]]+/ { exit }
+    in_accept && /^[[:space:]]*-[[:space:]]*/ {
+      line=$0
+      sub(/^[[:space:]]*-[[:space:]]*/, "", line)
+      sub(/^\[[ xX]\][[:space:]]*/, "", line)
+      gsub(/`/, "", line)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+      if (line != "") {
+        if (out != "") out = out "; "
+        out = out line
+      }
+    }
+    END {
+      if (out != "") print out
+    }
+  ' "$task_file"
+}
+
+generate_orient_draft() {
+  local run_id="$1"
+  local project_id="$2"
+  local task_file="$3"
+  local orient_file="$4"
+  local orient_md="$5"
+  local py_bin=""
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required to write orient reports." >&2
+    return 1
+  fi
+
+  "$py_bin" - <<'PY' "$run_id" "$project_id" "$task_file" "$orient_file" "$orient_md"
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+run_id, project_id, task_file, orient_file, orient_md = sys.argv[1:]
+
+def read_text(path: str) -> str:
+    p = Path(path)
+    if not p.is_file():
+        return ""
+    return p.read_text(encoding="utf-8", errors="replace")
+
+def count_open_queue_items(text: str) -> int:
+    return len(re.findall(r"^- \[ \] ", text, flags=re.M))
+
+docs_paths = [
+    "docs/PROJECT_GUIDE.md",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "AGENTS.md",
+    "TASKS/STATE.md",
+    "TASKS/QUEUE.md",
+    f"learn/{project_id}.json",
+    f"chatlogs/discussion/{run_id}/ready_brief.json",
+]
+docs_blob = "\n".join(read_text(p) for p in docs_paths)
+queue_text = read_text("TASKS/QUEUE.md")
+open_items = count_open_queue_items(queue_text)
+low = docs_blob.lower()
+
+def score_for(base: int, keywords) -> int:
+    s = base
+    for k in keywords:
+        s += low.count(k.lower()) * 2
+    return s
+
+directions = [
+    {
+        "id": "ready-exit-resolution",
+        "title": "P0: ready 先处理未收尾 run（收尾/抛弃）",
+        "why": "避免把历史中断状态混入新需求，先做生命周期分流。",
+        "benefit": "减少混乱上下文和重复执行。",
+        "risk": "增加一次显式确认步骤。",
+        "cost": "S",
+        "dependencies": ["TASKS/STATE.md", "reports/<RUN_ID>/ship_state.json"],
+        "scope_hint": ["tools/*.py", "tests/"],
+        "score": score_for(82, ["ready", "resume", "stop reason", "run", "state"]),
+    },
+    {
+        "id": "ready-strong-brief",
+        "title": "P1: ready 输出最强认知摘要与证据链",
+        "why": "ready 通过后立即给出项目理解、宪法解读、工作流和下一步建议。",
+        "benefit": "降低同频误差，提升决策速度。",
+        "risk": "摘要质量受输入文档完整性影响。",
+        "cost": "S",
+        "dependencies": ["AGENTS.md", "docs/PROJECT_GUIDE.md", "learn/<PROJECT_ID>.json"],
+        "scope_hint": ["tools/*.py", "docs/PROJECT_GUIDE.md", "docs/WORKFLOW.md"],
+        "score": score_for(78, ["learn", "ready", "workflow", "constitution", "evidence"]),
+    },
+    {
+        "id": "discussion-execution-split",
+        "title": "P1: 讨论态与执行态证据分层",
+        "why": "未确认方案只写讨论区，确认后再写 reports 执行证据。",
+        "benefit": "保持 report 可审计且低噪声。",
+        "risk": "需要清晰迁移边界。",
+        "cost": "M",
+        "dependencies": ["chatlogs/discussion/", "reports/<RUN_ID>/"],
+        "scope_hint": ["tools/*.py", "docs/WORKFLOW.md", "AGENTS.md", "chatlogs/discussion/"],
+        "score": score_for(76, ["discussion", "report", "confirm", "evidence", "orient"]),
+    },
+    {
+        "id": "council-contract",
+        "title": "P2: 多角色评审博弈 -> 统一执行契约",
+        "why": "产品/架构/研发/测试独立评审，再收敛成单一 contract。",
+        "benefit": "减少单视角偏差，提高执行稳定性。",
+        "risk": "初期输出可能偏模板化。",
+        "cost": "M",
+        "dependencies": ["orient choice", "task contract"],
+        "scope_hint": ["tools/*.py", "reports/<RUN_ID>/"],
+        "score": score_for(70, ["product", "architect", "dev", "qa", "review", "contract"]),
+    },
+    {
+        "id": "post-exec-drift-review",
+        "title": "P2: 执行后偏差审计与自动修复",
+        "why": "需求完成后自动检查目标/实现/测试/文档偏差并回补。",
+        "benefit": "形成闭环，减少累计偏差。",
+        "risk": "规则过严会增加时间成本。",
+        "cost": "M",
+        "dependencies": ["reports/<RUN_ID>/summary.md", "reports/<RUN_ID>/decision.md"],
+        "scope_hint": ["tools/*.py", "tests/", "docs/WORKFLOW.md"],
+        "score": score_for(66, ["review", "drift", "summary", "decision", "verify"]),
+    },
+]
+
+if open_items == 0:
+    for item in directions:
+        if item["id"] in {"discussion-execution-split", "ready-strong-brief"}:
+            item["score"] += 6
+
+directions.sort(key=lambda x: x["score"], reverse=True)
+for idx, item in enumerate(directions):
+    item["priority_rank"] = idx + 1
+    item["priority"] = f"P{idx}"
+
+recommended = directions[0]["id"] if directions else ""
+next_cmd = f"python3 tools/choose.py RUN_ID={run_id} OPTION={recommended}" if recommended else f"python3 tools/choose.py RUN_ID={run_id} OPTION=<id>"
+
+obj = {
+    "project_id": project_id,
+    "run_id": run_id,
+    "created_at_utc": datetime.now(timezone.utc).isoformat(),
+    "discussion_mode": True,
+    "task_file": task_file,
+    "open_queue_items": open_items,
+    "inputs": docs_paths,
+    "directions": directions,
+    "recommended_option": recommended,
+    "next_command": next_cmd,
+}
+
+Path(orient_file).parent.mkdir(parents=True, exist_ok=True)
+Path(orient_file).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+lines = []
+lines.append("# Orientation Draft")
+lines.append("")
+lines.append(f"PROJECT_ID: `{project_id}`")
+lines.append(f"RUN_ID: `{run_id}`")
+lines.append(f"Generated At (UTC): {obj['created_at_utc']}")
+lines.append("Mode: discussion-only (not execution evidence)")
+lines.append(f"Open Queue Items: {open_items}")
+lines.append("")
+lines.append("## Direction Options")
+for item in directions:
+    lines.append(f"- id=`{item['id']}` | priority=`{item['priority']}` | score={item['score']}")
+    lines.append(f"  - title: {item['title']}")
+    lines.append(f"  - why: {item['why']}")
+    lines.append(f"  - benefit: {item['benefit']}")
+    lines.append(f"  - risk: {item['risk']}")
+    lines.append(f"  - cost: {item['cost']}")
+    lines.append(f"  - dependencies: {', '.join(item['dependencies'])}")
+lines.append("")
+lines.append("## Recommended")
+lines.append(f"- `{recommended}`")
+lines.append("")
+lines.append("## Next Command")
+lines.append(f"- `{next_cmd}`")
+lines.append("")
+
+Path(orient_md).write_text("\n".join(lines), encoding="utf-8")
+
+print(f"ORIENT_OPTIONS: {len(directions)}")
+for idx, item in enumerate(directions[:5], start=1):
+    print(
+        f"ORIENT_OPTION_{idx}: id={item['id']} | priority={item['priority']} | "
+        f"benefit={item['benefit']} | risk={item['risk']} | cost={item['cost']}"
+    )
+print(f"ORIENT_RECOMMENDED: {recommended}")
+print(f"ORIENT_NEXT_COMMAND: {next_cmd}")
+print(f"ORIENT_PROJECT_ID: {project_id}")
+PY
+}
+
+resolve_orient_file_for_run() {
+  local run_id="${1:-}"
+  local draft_file=""
+  local legacy_file=""
+  if [[ -z "$run_id" ]]; then
+    printf ""
+    return 1
+  fi
+  draft_file="chatlogs/discussion/${run_id}/orient.json"
+  if [[ -f "$draft_file" ]]; then
+    printf "%s" "$draft_file"
+    return 0
+  fi
+  legacy_file="reports/${run_id}/orient.json"
+  if [[ -f "$legacy_file" ]]; then
+    printf "%s" "$legacy_file"
+    return 0
+  fi
+  printf ""
+  return 1
+}
+
+resolve_council_file_for_run() {
+  local run_id="${1:-}"
+  local council_file=""
+  if [[ -z "$run_id" ]]; then
+    printf ""
+    return 1
+  fi
+  council_file="chatlogs/discussion/${run_id}/council.json"
+  if [[ -f "$council_file" ]]; then
+    printf "%s" "$council_file"
+    return 0
+  fi
+  printf ""
+  return 1
+}
+
+require_council_gate() {
+  local run_id="${1:-}"
+  local council_file=""
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: council gate requires RUN_ID." >&2
+    exit 1
+  fi
+  council_file="$(resolve_council_file_for_run "$run_id" || true)"
+  if [[ -z "$council_file" ]]; then
+    echo "ERROR: council gate not satisfied." >&2
+    echo "Run: python3 tools/council.py RUN_ID=${run_id}" >&2
+    echo "Then: python3 tools/arbiter.py RUN_ID=${run_id}" >&2
+    exit 1
+  fi
+  COUNCIL_FILE="$council_file"
+  echo "COUNCIL_FILE: $council_file"
+}
+
+require_direction_gate() {
+  local run_id="${1:-}"
+  local choice_file=""
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: direction gate requires RUN_ID." >&2
+    exit 1
+  fi
+  choice_file="reports/${run_id}/orient_choice.json"
+  if [[ ! -f "$choice_file" ]]; then
+    echo "ERROR: direction gate not satisfied." >&2
+    echo "Run: python3 tools/orient.py RUN_ID=${run_id}" >&2
+    echo "Then: python3 tools/choose.py RUN_ID=${run_id} OPTION=<id>" >&2
+    echo "Then retry: bash tools/legacy.sh do queue-next" >&2
+    exit 1
+  fi
+  DIRECTION_CHOICE_FILE="$choice_file"
+  echo "DIRECTION_CHOICE_FILE: $choice_file"
+}
+
+require_execution_contract_gate() {
+  local run_id="${1:-}"
+  local file=""
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: execution-contract gate requires RUN_ID." >&2
+    exit 1
+  fi
+  file="reports/${run_id}/execution_contract.json"
+  if [[ ! -f "$file" ]]; then
+    echo "ERROR: execution-contract gate not satisfied." >&2
+    echo "Run: python3 tools/arbiter.py RUN_ID=${run_id}" >&2
+    echo "Then: python3 tools/slice_task.py RUN_ID=${run_id}" >&2
+    echo "Then retry: bash tools/legacy.sh do queue-next" >&2
+    exit 1
+  fi
+  EXECUTION_CONTRACT_FILE="$file"
+  echo "EXECUTION_CONTRACT_FILE: $file"
+}
+
+require_slice_gate() {
+  local run_id="${1:-}"
+  local file=""
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: slice gate requires RUN_ID." >&2
+    exit 1
+  fi
+  file="reports/${run_id}/slice_state.json"
+  if [[ ! -f "$file" ]]; then
+    echo "ERROR: slice gate not satisfied." >&2
+    echo "Run: python3 tools/slice_task.py RUN_ID=${run_id}" >&2
+    echo "Then retry: bash tools/legacy.sh do queue-next" >&2
+    exit 1
+  fi
+  SLICE_STATE_FILE="$file"
+  echo "SLICE_STATE_FILE: $file"
+}
+
+enqueue_contract_task() {
+  local run_id="$1"
+  local contract_file="reports/${run_id}/direction_contract.json"
+  local queue_file="TASKS/QUEUE.md"
+  local py_bin=""
+
+  if [[ -z "$run_id" ]]; then
+    echo "QUEUE_CONTRACT_STATUS: skipped (empty run_id)"
+    return 0
+  fi
+  if [[ ! -f "$contract_file" ]]; then
+    echo "QUEUE_CONTRACT_STATUS: skipped (missing contract)"
+    return 0
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required to enqueue contract task." >&2
+    return 1
+  fi
+
+  "$py_bin" - <<'PY' "$run_id" "$contract_file" "$queue_file"
+import json
+import sys
+from pathlib import Path
+
+run_id, contract_file, queue_file = sys.argv[1:]
+
+def clean(value) -> str:
+    return " ".join(str(value or "").split())
+
+contract_path = Path(contract_file)
+queue_path = Path(queue_file)
+obj = json.loads(contract_path.read_text(encoding="utf-8"))
+
+option = clean(obj.get("selected_option", "direction-option"))
+title_raw = clean(obj.get("selected_title", option))
+goal_raw = clean(obj.get("execution_goal", f"Execute confirmed direction option `{option}`."))
+scope_hint = obj.get("scope_hint") or []
+if not isinstance(scope_hint, list):
+    scope_hint = []
+scope = [clean(x).replace("`", "") for x in scope_hint if clean(x)]
+if not scope:
+    scope = ["tools/*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
+scope_line = ", ".join(f"`{x}`" for x in scope)
+
+title = f"contract-next: {title_raw}"
+marker = f"Contract: run_id={run_id} option={option}"
+
+if queue_path.exists():
+    text = queue_path.read_text(encoding="utf-8")
+else:
+    text = "# QUEUE\n\n## Queue\n\n"
+
+if marker in text:
+    print("QUEUE_CONTRACT_STATUS: exists")
+    print(f"QUEUE_CONTRACT_MARKER: {marker}")
+    raise SystemExit(0)
+
+lines = text.splitlines()
+if not lines:
+    lines = ["# QUEUE", "", "## Queue", ""]
+
+try:
+    queue_idx = next(i for i, line in enumerate(lines) if line.strip() == "## Queue")
+except StopIteration:
+    if lines and lines[-1].strip():
+        lines.append("")
+    lines.extend(["## Queue", ""])
+    queue_idx = len(lines) - 2
+
+insert_at = queue_idx + 1
+while insert_at < len(lines) and lines[insert_at].strip() == "":
+    insert_at += 1
+
+block = [
+    f"- [ ] TODO Title: {title}",
+    f"  Goal: {goal_raw}",
+    f"  Scope: {scope_line}",
+    "  Acceptance:",
+    "  - [ ] Command(s) pass: `make verify`",
+    f"  - [ ] Contract delivered: `reports/{run_id}/direction_contract.json`",
+    "  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`",
+    "  - [ ] Scope remains within declared paths",
+    f"  {marker}",
+    "",
+]
+
+new_lines = lines[:insert_at] + block + lines[insert_at:]
+queue_path.parent.mkdir(parents=True, exist_ok=True)
+queue_path.write_text("\n".join(new_lines).rstrip() + "\n", encoding="utf-8")
+
+print("QUEUE_CONTRACT_STATUS: inserted")
+print(f"QUEUE_CONTRACT_TITLE: {title}")
+print(f"QUEUE_CONTRACT_MARKER: {marker}")
+print(f"QUEUE_CONTRACT_FILE: {queue_file}")
+PY
+}
+
+cmd_sync() {
+  local arg="${1:-}"
+  local run_id=""
+  local explicit_run_id=""
+  local project_id=""
+  local explicit_project_id="${QF_PROJECT_ID:-${PROJECT_ID:-}}"
+  local task_file=""
+  local current_status=""
+  local sync_file=""
+  local sync_md=""
+  local py_bin=""
+
+  if [[ "$arg" =~ ^RUN_ID=.+$ ]]; then
+    explicit_run_id="${arg#RUN_ID=}"
+  elif [[ -n "$arg" ]]; then
+    explicit_run_id="$arg"
+  elif [[ -n "${RUN_ID:-}" ]]; then
+    explicit_run_id="${RUN_ID}"
+  fi
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "sync")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: sync requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    exit 2
+  fi
+  project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "sync")"
+
+  task_file="$(state_field_value "CURRENT_TASK_FILE")"
+  current_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$current_status" ]]; then
+    current_status="active"
+  fi
+
+  mkdir -p "reports/${run_id}"
+  sync_file="reports/${run_id}/sync_report.json"
+  sync_md="reports/${run_id}/sync_report.md"
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required to write sync report." >&2
+    exit 1
+  fi
+
+  "$py_bin" - <<'PY' "$run_id" "$project_id" "$task_file" "$current_status" "$sync_file" "$sync_md"
+import hashlib
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+run_id, project_id, task_file, current_status, sync_file, sync_md = sys.argv[1:]
+
+required_files = [
+    "README.md",
+    "AGENTS.md",
+    "docs/PROJECT_GUIDE.md",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "CODEX_CLI_PLAYBOOK.md",
+    "TASKS/STATE.md",
+    "TASKS/QUEUE.md",
+]
+
+optional_files = [
+    task_file,
+    f"reports/{run_id}/handoff.md",
+    f"reports/{run_id}/conversation.md",
+    f"reports/{run_id}/decision.md",
+    f"reports/{run_id}/summary.md",
+    f"reports/{run_id}/orient_choice.json",
+    f"reports/{run_id}/direction_contract.json",
+    f"reports/{run_id}/execution_contract.json",
+    f"reports/{run_id}/slice_state.json",
+    f"reports/{run_id}/drift_review.json",
+    f"reports/{run_id}/drift_review.md",
+    f"chatlogs/discussion/{run_id}/ready_brief.json",
+    f"chatlogs/discussion/{run_id}/ready_brief.md",
+    f"chatlogs/discussion/{run_id}/orient.json",
+    f"chatlogs/discussion/{run_id}/orient.md",
+    f"chatlogs/discussion/{run_id}/council.json",
+    f"chatlogs/discussion/{run_id}/council.md",
+    f"chatlogs/discussion/{run_id}/drift_todo.md",
+]
+
+
+def read_text(path: str) -> str:
+    p = Path(path)
+    if not p.is_file():
+        return ""
+    return p.read_text(encoding="utf-8", errors="replace")
+
+
+def first_non_empty_line(text: str) -> str:
+    for raw in text.splitlines():
+        line = raw.strip()
+        if line:
+            return line[:160]
+    return ""
+
+
+def count_lines(text: str) -> int:
+    if not text:
+        return 0
+    return len(text.splitlines())
+
+
+read_entries = []
+seen = set()
+for path in required_files + optional_files:
+    if not path or path in seen:
+        continue
+    seen.add(path)
+    p = Path(path)
+    entry = {
+        "path": path,
+        "required": path in required_files,
+        "exists": p.is_file(),
+        "bytes": 0,
+        "lines": 0,
+        "sha256": "",
+        "preview": "",
+    }
+    if p.is_file():
+        data = p.read_bytes()
+        text = data.decode("utf-8", errors="replace")
+        entry["bytes"] = len(data)
+        entry["lines"] = count_lines(text)
+        entry["sha256"] = hashlib.sha256(data).hexdigest()
+        entry["preview"] = first_non_empty_line(text)
+    read_entries.append(entry)
+
+missing_required = [x["path"] for x in read_entries if x["required"] and not x["exists"]]
+sync_passed = len(missing_required) == 0
+
+state_text = read_text("TASKS/STATE.md")
+
+
+def state_field(name: str) -> str:
+    m = re.search(rf"^\s*{re.escape(name)}:\s*(.*?)\s*$", state_text, flags=re.M)
+    if not m:
+        return ""
+    return m.group(1).strip()
+
+
+state_run_id = state_field("CURRENT_RUN_ID") or run_id
+state_project_id = state_field("CURRENT_PROJECT_ID") or project_id
+state_task_file = state_field("CURRENT_TASK_FILE") or task_file
+state_status = state_field("CURRENT_STATUS") or current_status or "active"
+
+project_guide = read_text("docs/PROJECT_GUIDE.md")
+north_star = ""
+guide_lines = project_guide.splitlines()
+for i, raw in enumerate(guide_lines):
+    if "一句话北极星" not in raw:
+        continue
+    for cand in guide_lines[i + 1 :]:
+        s = cand.strip()
+        if not s or s.startswith("#") or s.startswith(">") or s.startswith("-"):
+            continue
+        north_star = s
+        break
+    break
+if not north_star:
+    north_star = "quant-factory-os is an evidence-driven operating system for quant engineering."
+
+readme_text = read_text("README.md")
+project_summary = ""
+for raw in readme_text.splitlines():
+    s = raw.strip()
+    if s and not s.startswith("#"):
+        project_summary = s
+        break
+if not project_summary:
+    project_summary = "quant-factory-os governance/execution base for quant engineering."
+
+def learn_marker_matches_project(path: Path, expected_project_id: str) -> bool:
+    if not path.is_file():
+        return False
+    try:
+        data = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        return False
+    if not data.get("learn_passed"):
+        return False
+    pid = str(data.get("project_id") or "").strip() or "project-0"
+    return pid == expected_project_id
+
+learn_new_path = Path(f"learn/{state_project_id}.json")
+learn_exists = learn_marker_matches_project(learn_new_path, state_project_id)
+ready_exists = Path(f"reports/{run_id}/ready.json").is_file()
+choose_exists = Path(f"reports/{run_id}/orient_choice.json").is_file()
+council_exists = Path(f"chatlogs/discussion/{run_id}/council.json").is_file()
+execution_contract_exists = Path(f"reports/{run_id}/execution_contract.json").is_file()
+slice_exists = Path(f"reports/{run_id}/slice_state.json").is_file()
+orient_draft_path = Path(f"chatlogs/discussion/{run_id}/orient.json")
+orient_legacy_path = Path(f"reports/{run_id}/orient.json")
+orient_path = orient_draft_path if orient_draft_path.is_file() else orient_legacy_path
+recommended_option = ""
+if orient_path.is_file():
+    try:
+        orient_obj = json.loads(orient_path.read_text(encoding="utf-8", errors="replace"))
+        recommended_option = str(orient_obj.get("recommended_option") or "").strip()
+    except Exception:
+        recommended_option = ""
+if not learn_exists:
+    next_command = "python3 tools/learn.py"
+elif not ready_exists:
+    next_command = "python3 tools/ready.py"
+elif not choose_exists:
+    if orient_path.is_file() and recommended_option:
+        next_command = f"python3 tools/choose.py RUN_ID={run_id} OPTION={recommended_option}"
+    elif orient_path.is_file():
+        next_command = f"python3 tools/choose.py RUN_ID={run_id} OPTION=<id>"
+    else:
+        next_command = f"python3 tools/orient.py RUN_ID={run_id}"
+elif not council_exists:
+    next_command = f"python3 tools/council.py RUN_ID={run_id}"
+elif not execution_contract_exists:
+    next_command = f"python3 tools/arbiter.py RUN_ID={run_id}"
+elif not slice_exists:
+    next_command = f"python3 tools/slice_task.py RUN_ID={run_id}"
+else:
+    next_command = "bash tools/legacy.sh do queue-next"
+
+decision_exists = Path(f"reports/{run_id}/decision.md").is_file()
+summary_exists = Path(f"reports/{run_id}/summary.md").is_file()
+handoff_exists = Path(f"reports/{run_id}/handoff.md").is_file()
+session_continuity = "ready_to_continue" if (decision_exists and summary_exists) else "partial_context"
+if handoff_exists and session_continuity == "partial_context":
+    session_continuity = "handoff_available"
+
+obj = {
+    "project_id": state_project_id,
+    "run_id": run_id,
+    "created_at_utc": datetime.now(timezone.utc).isoformat(),
+    "sync_passed": sync_passed,
+    "required_files": required_files,
+    "missing_required_files": missing_required,
+    "files_read": read_entries,
+    "project_overview": {
+        "summary": project_summary,
+        "north_star": north_star,
+    },
+    "governance": {
+        "constitution": "AGENTS.md",
+        "workflow": "docs/WORKFLOW.md",
+        "entities": "docs/ENTITIES.md",
+    },
+    "skill_lookup": {
+        "primary": "AGENTS.md (Skills section)",
+        "fallback": "/root/.codex/skills/.system/*/SKILL.md",
+    },
+    "current_stage": {
+        "current_project_id": state_project_id,
+        "current_run_id": state_run_id,
+        "current_task_file": state_task_file,
+        "current_status": state_status,
+    },
+    "session_handoff": {
+        "continuity": session_continuity,
+        "has_handoff": handoff_exists,
+        "has_decision": decision_exists,
+        "has_summary": summary_exists,
+    },
+    "next_command": next_command,
+    "next_command_low_friction": (
+        f"bash tools/legacy.sh execute RUN_ID={run_id}"
+        if ready_exists
+        else ("python3 tools/ready.py" if learn_exists else "python3 tools/learn.py")
+    ),
+}
+
+Path(sync_file).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+md = []
+md.append("# Sync Report")
+md.append("")
+md.append(f"RUN_ID: `{run_id}`")
+md.append(f"Generated At (UTC): {obj['created_at_utc']}")
+md.append(f"SYNC_PASS: {'true' if sync_passed else 'false'}")
+md.append("")
+md.append("## Files Read")
+for item in read_entries:
+    status = "read" if item["exists"] else "missing"
+    req = "required" if item["required"] else "optional"
+    md.append(f"- `{item['path']}` ({req}, {status}, lines={item['lines']})")
+md.append("")
+md.append("## Project Overview")
+md.append(f"- Summary: {project_summary}")
+md.append(f"- North star: {north_star}")
+md.append("")
+md.append("## Governance")
+md.append("- Constitution: `AGENTS.md`")
+md.append("- Workflow: `docs/WORKFLOW.md`")
+md.append("- Entity map: `docs/ENTITIES.md`")
+md.append("")
+md.append("## Skill Lookup")
+md.append("- Primary: `AGENTS.md` Skills section")
+md.append("- Fallback: `/root/.codex/skills/.system/*/SKILL.md`")
+md.append("")
+md.append("## Current Stage")
+md.append(f"- CURRENT_PROJECT_ID: `{state_project_id}`")
+md.append(f"- CURRENT_RUN_ID: `{state_run_id}`")
+md.append(f"- CURRENT_TASK_FILE: `{state_task_file}`")
+md.append(f"- CURRENT_STATUS: `{state_status}`")
+md.append("")
+md.append("## Session Continuity")
+md.append(f"- continuity: `{session_continuity}`")
+md.append(f"- has_handoff: `{str(handoff_exists).lower()}`")
+md.append(f"- has_decision: `{str(decision_exists).lower()}`")
+md.append(f"- has_summary: `{str(summary_exists).lower()}`")
+md.append("")
+md.append("## Next Command")
+md.append(f"- `{next_command}`")
+md.append(f"- low-friction: `{obj['next_command_low_friction']}`")
+md.append("")
+if missing_required:
+    md.append("## Missing Required Files")
+    for path in missing_required:
+        md.append(f"- `{path}`")
+    md.append("")
+
+Path(sync_md).write_text("\n".join(md) + "\n", encoding="utf-8")
+
+print(f"SYNC_PASS: {'true' if sync_passed else 'false'}")
+print(f"SYNC_FILES_READ: {len(read_entries)}")
+print(f"SYNC_MISSING_REQUIRED: {len(missing_required)}")
+print(f"SYNC_NEXT_COMMAND: {next_command}")
+PY
+
+  append_execution_event "$run_id" "sync" "sync_generated" "ok" "bash tools/legacy.sh sync RUN_ID=${run_id}" "sync_file=${sync_file};sync_md=${sync_md}" ""
+  append_conversation_checkpoint "$run_id" "sync" "sync completed; report generated at ${sync_md}"
+  update_state_current "$run_id" "$task_file" "$current_status" "$project_id"
+  echo "SYNC_REPORT_FILE: ${sync_file}"
+  echo "SYNC_REPORT_MD: ${sync_md}"
+  echo "SYNC_PROJECT_ID: ${project_id}"
+  echo "SYNC_RUN_ID: ${run_id}"
+}
+
+cmd_learn() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+  if [[ -n "$py_bin" && -f "tools/learn.py" ]]; then
+    "$py_bin" tools/learn.py "$@"
+    return $?
+  fi
+
+  local explicit_project_id="${QF_PROJECT_ID:-${PROJECT_ID:-}}"
+  local project_id=""
+  local token=""
+  local ttl_days="${QF_LEARN_TTL_DAYS:-7}"
+  local log_enabled="${QF_LEARN_LOG:-1}"
+  local log_file="${QF_LEARN_LOG_FILE:-}"
+  local model_sync_raw="${QF_LEARN_MODEL_SYNC:-1}"
+  local model_sync_mode="1"
+  local plan_mode_raw="${QF_LEARN_PLAN_MODE:-strong}"
+  local plan_mode="strong"
+  local plan_transport_raw="${QF_LEARN_PLAN_TRANSPORT:-auto}"
+  local plan_transport="auto"
+  local plan_transport_effective="auto"
+  local plan_fallback_exec_raw="${QF_LEARN_PLAN_FALLBACK_EXEC:-0}"
+  local plan_fallback_exec="1"
+  local plan_transport_auto_reason=""
+  local pty_capable="0"
+  local model_name="${QF_LEARN_MODEL:-${MODEL:-}}"
+  local model_sync_pass=0
+  local model_sync_status="fail"
+  local model_sync_reason="pending"
+  local model_rc=0
+  local learn_steps_total=4
+  local learn_file=""
+  local learn_md=""
+  local py_bin=""
+  local model_prompt_file=""
+  local model_raw_file=""
+  local model_json_file=""
+  local model_events_file=""
+  local model_stderr_file=""
+
+  for token in "$@"; do
+    [[ -z "$token" ]] && continue
+    case "$token" in
+      PROJECT_ID=*)
+        explicit_project_id="${token#PROJECT_ID=}"
+        ;;
+      AUTO_EXAM=*)
+        ;;
+      REQUIRE_EXAM=*)
+        ;;
+      TTL_DAYS=*)
+        ttl_days="${token#TTL_DAYS=}"
+        ;;
+      MODEL_SYNC=*)
+        model_sync_raw="${token#MODEL_SYNC=}"
+        ;;
+      PLAN_MODE=*)
+        plan_mode_raw="${token#PLAN_MODE=}"
+        ;;
+      PLAN_TRANSPORT=*)
+        plan_transport_raw="${token#PLAN_TRANSPORT=}"
+        ;;
+      MODEL_TIMEOUT_SEC=*)
+        echo "ERROR: MODEL_TIMEOUT_SEC has been removed from learn." >&2
+        exit 2
+        ;;
+      MODEL=*)
+        model_name="${token#MODEL=}"
+        ;;
+      -log|--log)
+        log_enabled="1"
+        ;;
+      LOG=*)
+        log_enabled="1"
+        log_file="${token#LOG=}"
+        ;;
+      *)
+        if [[ "$token" == *=* ]]; then
+          echo "ERROR: unexpected learn arg: ${token}" >&2
+          usage
+          exit 2
+        fi
+        echo "ERROR: learn does not accept positional args. Use PROJECT_ID=... or flags only." >&2
+        usage
+        exit 2
+        ;;
+    esac
+  done
+  project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "learn")"
+  case "${model_sync_raw,,}" in
+    1|true|yes|y)
+      model_sync_mode="1"
+      ;;
+    *)
+      echo "ERROR: learn requires model sync. Use MODEL_SYNC=1 (or QF_LEARN_MODEL_SYNC=1)." >&2
+      exit 2
+      ;;
+  esac
+  case "${plan_mode_raw,,}" in
+    strong)
+      plan_mode="strong"
+      ;;
+    *)
+      echo "ERROR: learn requires PLAN_MODE=strong (or QF_LEARN_PLAN_MODE=strong)." >&2
+      exit 2
+      ;;
+  esac
+  case "${plan_transport_raw,,}" in
+    auto|slash|exec)
+      plan_transport="${plan_transport_raw,,}"
+      ;;
+    *)
+      echo "ERROR: invalid QF_LEARN_PLAN_TRANSPORT=${plan_transport_raw} (expected auto|slash)." >&2
+      exit 2
+      ;;
+  esac
+  plan_transport_effective="$plan_transport"
+  case "${plan_fallback_exec_raw,,}" in
+    1|true|yes|y)
+      plan_fallback_exec="1"
+      ;;
+    0|false|no|n)
+      plan_fallback_exec="0"
+      ;;
+    *)
+      echo "ERROR: invalid QF_LEARN_PLAN_FALLBACK_EXEC=${plan_fallback_exec_raw} (expected 0|1)." >&2
+      exit 2
+      ;;
+  esac
+  if [[ ! "$ttl_days" =~ ^[0-9]+$ || "$ttl_days" -lt 1 ]]; then
+    echo "ERROR: invalid TTL_DAYS=${ttl_days} (expected positive integer)." >&2
+    exit 2
+  fi
+  case "${log_enabled,,}" in
+    1|true|yes|y) log_enabled="1" ;;
+    0|false|no|n) log_enabled="0" ;;
+    *)
+      echo "ERROR: invalid learn log flag: ${log_enabled} (expected 0|1)." >&2
+      exit 2
+      ;;
+  esac
+
+  if [[ "$log_enabled" == "1" && "${QF_LEARN_LOG_ACTIVE:-0}" != "1" ]]; then
+    if [[ -z "$log_file" ]]; then
+      log_file="learn/${project_id}.stdout.log"
+    fi
+    mkdir -p "$(dirname "$log_file")"
+    echo "LEARN_LOG_FILE: ${log_file}"
+    set +e
+    QF_LEARN_LOG_ACTIVE=1 QF_LEARN_LOG=0 QF_LEARN_LOG_FILE="$log_file" \
+      bash python3 tools/learn.py \
+        "PROJECT_ID=${project_id}" \
+        "TTL_DAYS=${ttl_days}" \
+        "MODEL_SYNC=${model_sync_mode}" \
+        "PLAN_MODE=${plan_mode}" \
+        "PLAN_TRANSPORT=${plan_transport}" \
+        ${model_name:+"MODEL=${model_name}"} 2>&1 | tee "$log_file"
+    local log_rc=${PIPESTATUS[0]}
+    set -e
+    return "$log_rc"
+  fi
+
+  emit_step "learn" 1 "$learn_steps_total" "resolve project context"
+  echo "LEARN_SCOPE_MODE: project-scoped"
+  echo "LEARN_PROJECT_ID: ${project_id}"
+  echo "LEARN_SYNC_MODE: project-direct-read"
+
+  emit_step "learn" 2 "$learn_steps_total" "prepare learn artifact paths"
+  mkdir -p "learn"
+  learn_file="learn/${project_id}.json"
+  learn_md="learn/${project_id}.md"
+  model_prompt_file="learn/${project_id}.model.prompt.txt"
+  model_raw_file="learn/${project_id}.model.raw.txt"
+  model_json_file="learn/${project_id}.model.json"
+  model_events_file="learn/${project_id}.model.events.jsonl"
+  model_stderr_file="learn/${project_id}.model.stderr.log"
+  rm -f "$model_prompt_file" "$model_raw_file" "$model_json_file" "$model_events_file" "$model_stderr_file"
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required for python3 tools/learn.py." >&2
+    exit 1
+  fi
+
+  emit_step "learn" 3 "$learn_steps_total" "generate learn report (project + constitution + workflow + skills)"
+  "$py_bin" - <<'PY' "$project_id" "$learn_file" "$learn_md" "$ttl_days"
+import hashlib
+import json
+import sys
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+project_id, out_json, out_md, ttl_days = sys.argv[1:]
+ttl_days = int(ttl_days)
+
+
+def ordered_unique(items: list[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        s = str(item).strip()
+        if not s or s in seen:
+            continue
+        seen.add(s)
+        out.append(s)
+    return out
+
+
+def file_sha(path: Path) -> tuple[str, str]:
+    if not path.is_file():
+        return ("missing", "missing")
+    try:
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    except Exception:
+        return ("error", "error")
+    return ("ok", digest)
+
+
+default_required_files = [
+    "docs/PROJECT_GUIDE.md",
+    "AGENTS.md",
+    "docs/WORKFLOW.md",
+    "CODEX_CLI_PLAYBOOK.md",
+    "TASKS/STATE.md",
+]
+
+required_files = default_required_files
+required_files_for_digest = [x for x in required_files if x != "TASKS/STATE.md"]
+missing_required = [path for path in required_files if not Path(path).is_file()]
+
+context_files = list(required_files_for_digest)
+context_files = ordered_unique(context_files)
+
+skill_files: list[str] = []
+for root in (Path("/root/.codex/skills/.system"), Path(".codex/skills/.system")):
+    if not root.is_dir():
+        continue
+    for skill in sorted(root.glob("*/SKILL.md")):
+        skill_files.append(str(skill))
+skill_files = ordered_unique(skill_files)
+
+context_entries = []
+for rel in context_files:
+    p = Path(rel)
+    status, digest = file_sha(p)
+    context_entries.append({"path": rel, "status": status, "sha256": digest})
+
+skill_entries = []
+for rel in skill_files:
+    p = Path(rel)
+    status, digest = file_sha(p)
+    skill_entries.append({"path": rel, "status": status, "sha256": digest})
+
+digest_lines = []
+for item in context_entries:
+    digest_lines.append(f"ctx:{item['path']}:{item['sha256']}")
+for item in skill_entries:
+    digest_lines.append(f"skill:{item['path']}:{item['sha256']}")
+digest_lines.sort()
+context_digest = hashlib.sha256("\n".join(digest_lines).encode("utf-8")).hexdigest()
+
+sync_passed = len(missing_required) == 0
+required_total = len(required_files)
+required_read = required_total - len(missing_required)
+
+project_summary = ""
+project_goal = ""
+if not project_summary:
+    readme_text = Path("README.md").read_text(encoding="utf-8", errors="replace") if Path("README.md").is_file() else ""
+    for raw in readme_text.splitlines():
+        s = raw.strip()
+        if s and not s.startswith("#"):
+            project_summary = s
+            break
+if not project_summary:
+    project_summary = "quant-factory-os governance/execution base for quant engineering."
+if not project_goal:
+    project_guide = Path("docs/PROJECT_GUIDE.md").read_text(encoding="utf-8", errors="replace") if Path("docs/PROJECT_GUIDE.md").is_file() else ""
+    guide_lines = project_guide.splitlines()
+    for i, raw in enumerate(guide_lines):
+        if "一句话北极星" not in raw:
+            continue
+        for cand in guide_lines[i + 1 :]:
+            s = cand.strip()
+            if not s or s.startswith("#") or s.startswith(">") or s.startswith("-"):
+                continue
+            project_goal = s
+            break
+        break
+if not project_goal:
+    project_goal = "自动化 -> 自我迭代 -> 涌现智能。"
+
+learn_passed = sync_passed
+
+now = datetime.now(timezone.utc)
+expires = now + timedelta(days=max(ttl_days, 1))
+
+obj = {
+    "schema": "learn.v2",
+    "project_id": project_id,
+    "scope": "project-session",
+    "created_at_utc": now.isoformat(),
+    "expires_at_utc": expires.isoformat(),
+    "learn_passed": bool(learn_passed),
+    "project_understanding": {
+        "summary": project_summary,
+        "goal": project_goal,
+    },
+    "constitution_and_workflow": {
+        "constitution_source": "AGENTS.md",
+        "workflow_source": "docs/WORKFLOW.md",
+    },
+    "session_status": {
+        "continuity": "state_only",
+        "current_stage": {
+            "current_project_id": project_id,
+        },
+    },
+    "sync": {
+        "report_file": "",
+        "mode": "project-direct-read",
+        "passed": sync_passed,
+        "required_total": required_total,
+        "required_read": required_read,
+        "missing_required_files": missing_required,
+    },
+    "skills": {
+        "count": len(skill_entries),
+        "files": [x["path"] for x in skill_entries],
+    },
+    "context_digest": context_digest,
+    "context_files": [x["path"] for x in context_entries],
+    "skill_files": [x["path"] for x in skill_entries],
+    "next_command": "python3 tools/ready.py",
+}
+Path(out_json).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+lines = []
+lines.append("# Learn Report")
+lines.append("")
+lines.append(f"PROJECT_ID: `{project_id}`")
+lines.append(f"Generated At (UTC): {obj['created_at_utc']}")
+lines.append(f"Expires At (UTC): {obj['expires_at_utc']}")
+lines.append(f"Status: `{'pass' if obj['learn_passed'] else 'fail'}`")
+lines.append("")
+lines.append("## Sync")
+lines.append("- report: `(none)`")
+lines.append(f"- required read: {required_read}/{required_total}")
+lines.append(f"- pass: `{str(sync_passed).lower()}`")
+if missing_required:
+    lines.append("- missing required:")
+    for p in missing_required:
+        lines.append(f"  - `{p}`")
+lines.append("")
+lines.append("## Skills")
+lines.append(f"- files: {len(skill_entries)}")
+lines.append("")
+lines.append("## Context Digest")
+lines.append(f"- `{context_digest}`")
+lines.append("")
+lines.append("## Next Command")
+lines.append(f"- `{obj['next_command']}`")
+lines.append("")
+Path(out_md).write_text("\n".join(lines), encoding="utf-8")
+
+print(f"LEARN_STATUS: {'pass' if obj['learn_passed'] else 'fail'}")
+print(f"LEARN_SYNC_REQUIRED_READ: {required_read}/{required_total}")
+print(f"LEARN_SKILLS_COUNT: {len(skill_entries)}")
+print(f"LEARN_CONTEXT_DIGEST: {context_digest}")
+PY
+
+  "$py_bin" - <<'PY' "$learn_file"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+try:
+    obj = json.loads(path.read_text(encoding="utf-8"))
+except Exception:
+    raise SystemExit(1)
+
+def as_single_line(value: str) -> str:
+    return " ".join(str(value).split())
+
+mainline = as_single_line((obj.get("project_understanding") or {}).get("goal", ""))
+stage = obj.get("session_status", {}).get("current_stage", {}) or {}
+stage_text = as_single_line(
+    f"project={obj.get('project_id', '')}"
+)
+next_step = as_single_line(obj.get("next_command", ""))
+required_files = obj.get("context_files") or []
+required_files_text = ",".join([as_single_line(str(x)) for x in required_files if str(x).strip()])
+
+print(f"LEARN_MAINLINE: {mainline}")
+print(f"LEARN_CURRENT_STAGE: {stage_text}")
+print(f"LEARN_NEXT_STEP: {next_step}")
+print(f"LEARN_REQUIRED_FILES_READ_LIST: {required_files_text}")
+PY
+
+  if command -v codex >/dev/null 2>&1; then
+    :
+  else
+    echo "ERROR: learn requires codex CLI (model sync is mandatory)." >&2
+    exit 1
+  fi
+  model_sync_status="fail"
+  model_sync_reason="unknown"
+  echo "LEARN_MODEL_SYNC_MODE: ${model_sync_mode}"
+  echo "LEARN_MODEL_PLAN_MODE: ${plan_mode}"
+  echo "LEARN_MODEL_PLAN_TRANSPORT: ${plan_transport}"
+  if [[ "$plan_transport" == "auto" || "$plan_transport" == "slash" ]]; then
+    if "$py_bin" - <<'PY'
+import pty
+try:
+    m, s = pty.openpty()
+except Exception:
+    raise SystemExit(1)
+import os
+os.close(m)
+os.close(s)
+PY
+    then
+      pty_capable="1"
+    else
+      pty_capable="0"
+    fi
+  fi
+  case "$plan_transport" in
+    auto)
+      if [[ "$pty_capable" == "1" ]]; then
+        plan_transport_effective="slash"
+        plan_transport_auto_reason="pty_available"
+      else
+        plan_transport_effective="exec"
+        plan_transport_auto_reason="no_pty_devices"
+      fi
+      ;;
+    slash)
+      plan_transport_effective="slash"
+      ;;
+    exec)
+      plan_transport_effective="exec"
+      ;;
+  esac
+  if [[ "$plan_transport" == "auto" ]]; then
+    echo "LEARN_MODEL_PLAN_TRANSPORT_AUTO_REASON: ${plan_transport_auto_reason}"
+  fi
+
+    "$py_bin" - <<'PY' "$learn_file" "$model_prompt_file" "$project_id" "$plan_mode"
+import json
+import sys
+from pathlib import Path
+
+learn_file, prompt_file, project_id, plan_mode = sys.argv[1:]
+obj = json.loads(Path(learn_file).read_text(encoding="utf-8"))
+required_files = obj.get("context_files") or []
+required_files = [str(x).strip() for x in required_files if str(x).strip()]
+
+schema_lines = [
+    '{',
+    '  "mainline": "<string>",',
+    '  "current_stage": "<string>",',
+    '  "next_step": "<string>",',
+    '  "files_read": ["<path1>", "<path2>"],',
+]
+if plan_mode == "strong":
+    schema_lines.extend(
+        [
+            '  "plan_protocol": {',
+            '    "goal": "<string>",',
+            '    "non_goal": "<string>",',
+            '    "evidence": ["<path or claim>"],',
+            '    "alternatives": ["<alt1>", "<alt2>"],',
+            '    "rebuttal": "<string>",',
+            '    "decision_stop_condition": "<string>"',
+            '  },',
+            '  "oral_restate": {',
+            '    "project_understanding": "<string>",',
+            '    "constitution_workflow": "<string>",',
+            '    "evidence_chain": "<string>",',
+            '    "session_continuity": "<string>",',
+            '    "current_focus": "<string>",',
+            '    "next_action": "<string>"',
+            '  },',
+            '  "oral_exam": [',
+            '    {"question_id":"Q1","question":"<q1>","answer":"<a1>","score":"pass|fail"},',
+            '    {"question_id":"Q2","question":"<q2>","answer":"<a2>","score":"pass|fail"},',
+            '    {"question_id":"Q3","question":"<q3>","answer":"<a3>","score":"pass|fail"}',
+            '  ],',
+            '  "anchor_realign": {',
+            '    "question_id": "<Q1..Q17 from PROJECT_GUIDE>",',
+            '    "status": "on_track|drifted",',
+            '    "drift_detail": "<what detail drift happened or none>",',
+            '    "return_to_mainline": "<how to return to mainline now>"',
+            '  }',
+        ]
+    )
+schema_lines.append('}')
+
+lines = []
+lines.append("You are performing strict onboarding sync for quant-factory-os.")
+lines.append("Read the listed files with tools/view.sh and reply with JSON only.")
+lines.append("")
+lines.append(f"PROJECT_ID: {project_id}")
+lines.append("Required files to read:")
+for path in required_files:
+    lines.append(f"- {path}")
+lines.append("")
+lines.append("Output requirements:")
+lines.append("- Do not run write commands.")
+lines.append("- Execute only minimal read/shell commands needed to gather evidence from the required files.")
+lines.append("- Do not call python3 tools/init.py/learn/ready inside this model-sync pass.")
+lines.append("- Do not include markdown fences.")
+lines.append("- JSON must follow this schema exactly:")
+lines.extend(schema_lines)
+lines.append("")
+if plan_mode == "strong":
+    lines.append("Strong mode gates:")
+    lines.append("- plan_protocol fields are mandatory.")
+    lines.append("- oral_restate fields are mandatory.")
+    lines.append("- oral_exam must contain at least 3 QA items, each bound to PROJECT_GUIDE question ids (Q1..Q17).")
+    lines.append("- anchor_realign must map to one PROJECT_GUIDE question id (Q1..Q17).")
+    lines.append("")
+lines.append("files_read must be a subset of the required files list above.")
+
+Path(prompt_file).write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY
+
+    set +e
+    if [[ "$plan_transport_effective" == "slash" ]]; then
+      "$py_bin" - <<'PY' "$model_prompt_file" "$model_raw_file" "$model_events_file" "$model_stderr_file" "$model_name"
+import json
+import os
+import pty
+import re
+import select
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+prompt_file, raw_file, events_file, stderr_file, model_name = sys.argv[1:]
+
+try:
+    prompt_text = Path(prompt_file).read_text(encoding="utf-8", errors="replace")
+except Exception as exc:
+    Path(stderr_file).write_text(f"read prompt failed: {exc}\n", encoding="utf-8")
+    raise SystemExit(1)
+
+# Real slash-command transport: run interactive Codex with initial prompt
+# beginning with /plan, then extract JSON packet from TUI transcript.
+cli_prompt = "/plan\n" + prompt_text
+cmd = ["codex", "--sandbox", "read-only", "--ask-for-approval", "never", "--search", "--no-alt-screen"]
+if model_name:
+    cmd.extend(["-m", model_name])
+cmd.append(cli_prompt)
+
+try:
+    master, slave = pty.openpty()
+except Exception as exc:
+    Path(stderr_file).write_text(f"interactive slash /plan unavailable: {exc}\n", encoding="utf-8")
+    raise SystemExit(1)
+start = time.time()
+buf = b""
+stderr_lines = []
+submitted = False
+
+try:
+    proc = subprocess.Popen(cmd, stdin=slave, stdout=slave, stderr=slave, close_fds=True)
+finally:
+    try:
+        os.close(slave)
+    except OSError:
+        pass
+
+while True:
+    if proc.poll() is not None:
+        break
+    if not submitted and (time.time() - start) > 1.0:
+        try:
+            os.write(master, b"\r")
+            submitted = True
+        except Exception:
+            pass
+    r, _, _ = select.select([master], [], [], 0.2)
+    if r:
+        try:
+            chunk = os.read(master, 65536)
+        except OSError:
+            break
+        if not chunk:
+            break
+        buf += chunk
+# Drain remaining output quickly.
+drain_deadline = time.time() + 2
+while time.time() < drain_deadline:
+    r, _, _ = select.select([master], [], [], 0.1)
+    if not r:
+        if proc.poll() is not None:
+            break
+        continue
+    try:
+        chunk = os.read(master, 65536)
+    except OSError:
+        break
+    if not chunk:
+        break
+    buf += chunk
+
+try:
+    os.close(master)
+except OSError:
+    pass
+
+raw_text = buf.decode("utf-8", errors="replace")
+Path(events_file).write_text(raw_text, encoding="utf-8")
+
+# Strip ANSI/OSC noise and recover JSON packet.
+plain = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", raw_text)
+plain = re.sub(r"\x1b\].*?(\x07|\x1b\\)", "", plain, flags=re.S)
+plain = plain.replace("\x1b", "")
+
+def collect_dict_candidates(text: str) -> list[dict]:
+    out: list[dict] = []
+    dec = json.JSONDecoder()
+    for i, ch in enumerate(text):
+        if ch != "{":
+            continue
+        try:
+            obj, _ = dec.raw_decode(text[i:])
+        except Exception:
+            continue
+        if isinstance(obj, dict):
+            out.append(obj)
+    return out
+
+required_keys = {"mainline", "current_stage", "next_step", "files_read"}
+strong_keys = {"plan_protocol", "oral_restate", "oral_exam", "anchor_realign"}
+candidates: list[dict] = []
+candidates.extend(collect_dict_candidates(plain))
+
+# Some terminals print one character per line in transcript; compacting whitespace
+# helps reconstruct model JSON for recovery.
+compact = re.sub(r"\s+", "", plain)
+if compact and compact != plain:
+    candidates.extend(collect_dict_candidates(compact))
+
+best_obj = None
+for obj in candidates:
+    if not required_keys.issubset(set(obj.keys())):
+        continue
+    if not strong_keys.issubset(set(obj.keys())):
+        continue
+    mainline = str(obj.get("mainline", "")).strip()
+    goal = str((obj.get("plan_protocol") or {}).get("goal", "")).strip()
+    files_read = obj.get("files_read") or []
+    looks_placeholder = (
+        mainline in ("", "<string>")
+        or goal in ("", "<string>")
+        or any("<" in str(x) and ">" in str(x) for x in files_read)
+    )
+    if looks_placeholder:
+        continue
+    best_obj = obj
+
+if proc.returncode not in (0, None):
+    stderr_lines.append(f"interactive slash /plan rc={proc.returncode}\n")
+
+if best_obj is None:
+    stderr_lines.append("no non-placeholder JSON object recovered from interactive /plan transcript\n")
+    Path(stderr_file).write_text("".join(stderr_lines), encoding="utf-8")
+    raise SystemExit(1)
+
+Path(raw_file).write_text(json.dumps(best_obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+Path(stderr_file).write_text("".join(stderr_lines), encoding="utf-8")
+
+# Soft-pass semantics: if JSON recovered, let upper layer continue parsing.
+raise SystemExit(0)
+PY
+      model_rc=$?
+    else
+      if [[ -n "$model_name" ]]; then
+        codex --search --ask-for-approval never -m "$model_name" exec \
+          --sandbox read-only \
+          --json \
+          --output-last-message "$model_raw_file" - \
+          < "$model_prompt_file" \
+          > "$model_events_file" \
+          2> "$model_stderr_file"
+      else
+        codex --search --ask-for-approval never exec \
+          --sandbox read-only \
+          --json \
+          --output-last-message "$model_raw_file" - \
+          < "$model_prompt_file" \
+          > "$model_events_file" \
+          2> "$model_stderr_file"
+      fi
+      model_rc=$?
+    fi
+    if [[ "$plan_transport_effective" == "slash" && "$model_rc" -eq 0 ]]; then
+      if ! "$py_bin" - <<'PY' "$model_raw_file"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+try:
+    obj = json.loads(path.read_text(encoding="utf-8"))
+except Exception:
+    raise SystemExit(1)
+
+required = {"mainline", "current_stage", "next_step", "files_read", "plan_protocol", "oral_restate", "oral_exam", "anchor_realign"}
+if not required.issubset(set(obj.keys())):
+    raise SystemExit(1)
+mainline = str(obj.get("mainline", "")).strip()
+goal = str((obj.get("plan_protocol") or {}).get("goal", "")).strip()
+files_read = obj.get("files_read") or []
+if mainline in ("", "<string>"):
+    raise SystemExit(1)
+if goal in ("", "<string>"):
+    raise SystemExit(1)
+if any("<" in str(x) and ">" in str(x) for x in files_read):
+    raise SystemExit(1)
+print("ok")
+PY
+      then
+        :
+      else
+        echo "LEARN_MODEL_PLAN_SLASH_OUTPUT: invalid_or_placeholder"
+        model_rc=2
+      fi
+    fi
+    if [[ "$plan_transport_effective" == "slash" && "$model_rc" -ne 0 && "$plan_fallback_exec" == "1" ]]; then
+      echo "LEARN_MODEL_PLAN_FALLBACK: exec"
+      if [[ -n "$model_name" ]]; then
+        codex --search --ask-for-approval never -m "$model_name" exec \
+          --sandbox read-only \
+          --json \
+          --output-last-message "$model_raw_file" - \
+          < "$model_prompt_file" \
+          > "$model_events_file" \
+          2> "$model_stderr_file"
+      else
+        codex --search --ask-for-approval never exec \
+          --sandbox read-only \
+          --json \
+          --output-last-message "$model_raw_file" - \
+          < "$model_prompt_file" \
+          > "$model_events_file" \
+          2> "$model_stderr_file"
+      fi
+      model_rc=$?
+      plan_transport_effective="exec-fallback"
+      echo "LEARN_MODEL_PLAN_TRANSPORT_EFFECTIVE: ${plan_transport_effective}"
+    fi
+    set -e
+
+    echo "LEARN_MODEL_PLAN_TRANSPORT_EFFECTIVE: ${plan_transport_effective}"
+    echo "LEARN_MODEL_SYNC_RC: ${model_rc}"
+
+    if "$py_bin" - <<'PY' "$model_raw_file" "$model_json_file" "$plan_mode" "$learn_file" "$model_events_file"
+import json
+import re
+import sys
+from pathlib import Path
+
+raw_file, out_json, plan_mode, learn_file, events_file = sys.argv[1:]
+raw_text = Path(raw_file).read_text(encoding="utf-8", errors="replace") if Path(raw_file).is_file() else ""
+if not raw_text.strip():
+    raise SystemExit(1)
+
+obj = None
+try:
+    obj = json.loads(raw_text)
+except Exception:
+    m = re.search(r"\{.*\}", raw_text, flags=re.S)
+    if m:
+        obj = json.loads(m.group(0))
+if not isinstance(obj, dict):
+    raise SystemExit(1)
+
+required = ["mainline", "current_stage", "next_step", "files_read"]
+for key in required:
+    if key not in obj:
+        raise SystemExit(1)
+if not isinstance(obj.get("files_read"), list):
+    raise SystemExit(1)
+files_read = [str(x).strip() for x in (obj.get("files_read") or []) if str(x).strip()]
+if not files_read:
+    raise SystemExit(1)
+
+try:
+    learn_obj = json.loads(Path(learn_file).read_text(encoding="utf-8"))
+except Exception:
+    raise SystemExit(1)
+required_files = [str(x).strip() for x in (learn_obj.get("context_files") or []) if str(x).strip()]
+if not required_files:
+    raise SystemExit(1)
+missing_required = [p for p in required_files if p not in set(files_read)]
+if missing_required:
+    raise SystemExit(1)
+
+if plan_mode == "strong":
+    plan = obj.get("plan_protocol")
+    oral = obj.get("oral_restate")
+    exam = obj.get("oral_exam")
+    anchor = obj.get("anchor_realign")
+    if not isinstance(plan, dict):
+        raise SystemExit(1)
+    for key in ["goal", "non_goal", "evidence", "alternatives", "rebuttal", "decision_stop_condition"]:
+        if key not in plan:
+            raise SystemExit(1)
+    if not isinstance(oral, dict):
+        raise SystemExit(1)
+    for key in ["project_understanding", "constitution_workflow", "evidence_chain", "session_continuity", "current_focus", "next_action"]:
+        if key not in oral:
+            raise SystemExit(1)
+    if not isinstance(exam, list) or len(exam) < 3:
+        raise SystemExit(1)
+    for item in exam:
+        if not isinstance(item, dict):
+            raise SystemExit(1)
+        for key in ["question_id", "question", "answer", "score"]:
+            if key not in item:
+                raise SystemExit(1)
+        qid_exam = str(item.get("question_id", "")).strip().upper()
+        if not re.fullmatch(r"Q([1-9]|1[0-7])", qid_exam):
+            raise SystemExit(1)
+        score_exam = str(item.get("score", "")).strip().lower()
+        if score_exam not in ("pass", "fail"):
+            raise SystemExit(1)
+    if not isinstance(anchor, dict):
+        raise SystemExit(1)
+    for key in ["question_id", "status", "drift_detail", "return_to_mainline"]:
+        if key not in anchor:
+            raise SystemExit(1)
+    status = str(anchor.get("status", "")).strip()
+    if status not in ("on_track", "drifted"):
+        raise SystemExit(1)
+    qid = str(anchor.get("question_id", "")).strip().upper()
+    if not re.fullmatch(r"Q([1-9]|1[0-7])", qid):
+        raise SystemExit(1)
+
+practice_commands = []
+events_path = Path(events_file)
+if events_path.is_file():
+    events_text = events_path.read_text(encoding="utf-8", errors="replace")
+    for raw_line in events_text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            event_obj = json.loads(line)
+        except Exception:
+            continue
+        item = event_obj.get("item")
+        if not isinstance(item, dict):
+            continue
+        if item.get("type") != "command_execution":
+            continue
+        raw_cmd = item.get("raw_input") or item.get("command") or item.get("input")
+        cmd = " ".join(str(raw_cmd or "").split()).strip()
+        if cmd:
+            practice_commands.append(cmd)
+    if not practice_commands:
+        # Interactive /plan transcript fallback: detect at least one actual tool run.
+        plain_events = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", events_text)
+        plain_events = re.sub(r"\x1b\].*?(\x07|\x1b\\)", "", plain_events, flags=re.S)
+        plain_events = plain_events.replace("\x1b", "")
+        for m in re.finditer(r"/bin/bash -lc [^\r\n]+", plain_events):
+            cmd = " ".join(m.group(0).split()).strip()
+            if cmd:
+                practice_commands.append(cmd)
+        if not practice_commands and ("Ran " in plain_events or "command_execution" in plain_events):
+            practice_commands.append("interactive_plan_tool_run_detected")
+if not practice_commands:
+    raise SystemExit(1)
+practice_samples = []
+seen = set()
+for cmd in practice_commands:
+    if cmd in seen:
+        continue
+    seen.add(cmd)
+    practice_samples.append(cmd)
+    if len(practice_samples) >= 3:
+        break
+obj["practice"] = {
+    "command_execution_count": len(practice_commands),
+    "command_samples": practice_samples,
+}
+
+Path(out_json).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+print("LEARN_MODEL_SYNC_STATUS: pass")
+print(f"LEARN_MODEL_MAINLINE: {' '.join(str(obj.get('mainline', '')).split())}")
+print(f"LEARN_MODEL_CURRENT_STAGE: {' '.join(str(obj.get('current_stage', '')).split())}")
+print(f"LEARN_MODEL_NEXT_STEP: {' '.join(str(obj.get('next_step', '')).split())}")
+files_read_text = ",".join(files_read)
+print(f"LEARN_MODEL_FILES_READ_LIST: {files_read_text}")
+if plan_mode == "strong":
+    plan = obj.get("plan_protocol") or {}
+    oral = obj.get("oral_restate") or {}
+    exam = obj.get("oral_exam") or []
+    anchor = obj.get("anchor_realign") or {}
+    practice = obj.get("practice") or {}
+    print(f"LEARN_MODEL_PLAN_GOAL: {' '.join(str(plan.get('goal', '')).split())}")
+    print(f"LEARN_MODEL_PLAN_NON_GOAL: {' '.join(str(plan.get('non_goal', '')).split())}")
+    print(f"LEARN_MODEL_PLAN_REBUTTAL: {' '.join(str(plan.get('rebuttal', '')).split())}")
+    print(f"LEARN_MODEL_PLAN_DECISION_STOP: {' '.join(str(plan.get('decision_stop_condition', '')).split())}")
+    print(f"LEARN_MODEL_ORAL_PROJECT: {' '.join(str(oral.get('project_understanding', '')).split())}")
+    print(f"LEARN_MODEL_ORAL_CONSTITUTION: {' '.join(str(oral.get('constitution_workflow', '')).split())}")
+    print(f"LEARN_MODEL_ORAL_EVIDENCE: {' '.join(str(oral.get('evidence_chain', '')).split())}")
+    print(f"LEARN_MODEL_ORAL_SESSION: {' '.join(str(oral.get('session_continuity', '')).split())}")
+    print(f"LEARN_MODEL_ORAL_CURRENT_FOCUS: {' '.join(str(oral.get('current_focus', '')).split())}")
+    print(f"LEARN_MODEL_ORAL_NEXT_ACTION: {' '.join(str(oral.get('next_action', '')).split())}")
+    print(f"LEARN_MODEL_ANCHOR_QUESTION_ID: {' '.join(str(anchor.get('question_id', '')).split())}")
+    print(f"LEARN_MODEL_ANCHOR_STATUS: {' '.join(str(anchor.get('status', '')).split())}")
+    print(f"LEARN_MODEL_ANCHOR_DRIFT_DETAIL: {' '.join(str(anchor.get('drift_detail', '')).split())}")
+    print(f"LEARN_MODEL_ANCHOR_RETURN_ACTION: {' '.join(str(anchor.get('return_to_mainline', '')).split())}")
+    print(f"LEARN_MODEL_PRACTICE_COMMAND_COUNT: {int(practice.get('command_execution_count', 0))}")
+    samples = practice.get("command_samples") or []
+    idx2 = 1
+    for sample in samples:
+        print(f"LEARN_MODEL_PRACTICE_SAMPLE_{idx2}: {' '.join(str(sample).split())}")
+        idx2 += 1
+    print(f"LEARN_MODEL_ORAL_EXAM_QA_COUNT: {len(exam)}")
+    idx = 1
+    for item in exam:
+        if not isinstance(item, dict):
+            continue
+        qid = " ".join(str(item.get("question_id", "")).split())
+        q = " ".join(str(item.get("question", "")).split())
+        a = " ".join(str(item.get("answer", "")).split())
+        s = " ".join(str(item.get("score", "")).split())
+        print(f"LEARN_MODEL_ORAL_EXAM_QID{idx}: {qid}")
+        print(f"LEARN_MODEL_ORAL_EXAM_Q{idx}: {q}")
+        print(f"LEARN_MODEL_ORAL_EXAM_A{idx}: {a}")
+        print(f"LEARN_MODEL_ORAL_EXAM_SCORE{idx}: {s}")
+        idx += 1
+
+    # Human-readable short readout block for fast console scanning.
+    print("LEARN_READOUT_BEGIN")
+    print(f"LEARN_READOUT_MAINLINE: {' '.join(str(obj.get('mainline', '')).split())}")
+    print(f"LEARN_READOUT_CURRENT_STAGE: {' '.join(str(obj.get('current_stage', '')).split())}")
+    print(f"LEARN_READOUT_NEXT_STEP: {' '.join(str(obj.get('next_step', '')).split())}")
+    print(f"LEARN_READOUT_ORAL_PROJECT: {' '.join(str(oral.get('project_understanding', '')).split())}")
+    print(f"LEARN_READOUT_ORAL_CURRENT_FOCUS: {' '.join(str(oral.get('current_focus', '')).split())}")
+    print(f"LEARN_READOUT_ANCHOR: {' '.join(str(anchor.get('question_id', '')).split())} | {' '.join(str(anchor.get('status', '')).split())}")
+    print(f"LEARN_READOUT_ANCHOR_ACTION: {' '.join(str(anchor.get('return_to_mainline', '')).split())}")
+    print(f"LEARN_READOUT_PRACTICE_COUNT: {int(practice.get('command_execution_count', 0))}")
+    if samples:
+        print(f"LEARN_READOUT_PRACTICE_FIRST: {' '.join(str(samples[0]).split())}")
+    print("LEARN_READOUT_END")
+PY
+    then
+      model_sync_pass=1
+      model_sync_status="pass"
+      model_sync_reason="ok"
+    else
+      model_sync_pass=0
+      model_sync_status="fail"
+      if [[ "$model_rc" -eq 2 ]]; then
+        model_sync_reason="slash-output-invalid"
+      elif [[ "$model_rc" -ne 0 ]]; then
+        if [[ -f "$model_stderr_file" ]] && grep -qiE "interactive slash /plan unavailable|out of pty devices|no pty" "$model_stderr_file"; then
+          model_sync_reason="no-pty-for-slash"
+        else
+          model_sync_reason="codex-exit-${model_rc}"
+        fi
+      else
+        model_sync_reason="schema-parse-failed"
+      fi
+      echo "LEARN_MODEL_SYNC_STATUS: fail"
+      echo "LEARN_MODEL_SYNC_REASON: ${model_sync_reason}"
+    fi
+
+  "$py_bin" - <<'PY' "$learn_file" "$learn_md" "$model_sync_mode" "$plan_mode" "$plan_transport_effective" "$model_sync_status" "$model_sync_reason" "$model_sync_pass" "$model_prompt_file" "$model_raw_file" "$model_json_file" "$model_events_file" "$model_stderr_file"
+import json
+import sys
+from pathlib import Path
+
+learn_file, learn_md, model_sync_mode, plan_mode, plan_transport, model_sync_status, model_sync_reason, model_sync_pass, prompt_file, raw_file, model_json_file, events_file, stderr_file = sys.argv[1:]
+model_sync_pass = model_sync_pass == "1"
+path = Path(learn_file)
+obj = json.loads(path.read_text(encoding="utf-8"))
+
+model_obj = {
+    "mode": model_sync_mode,
+    "plan_mode": plan_mode,
+    "plan_transport": plan_transport,
+    "status": model_sync_status,
+    "passed": model_sync_pass,
+    "reason": model_sync_reason,
+    "prompt_file": prompt_file,
+    "raw_file": raw_file,
+    "json_file": model_json_file,
+    "events_file": events_file,
+    "stderr_file": stderr_file,
+}
+if model_sync_pass and Path(model_json_file).is_file():
+    try:
+        model_obj["result"] = json.loads(Path(model_json_file).read_text(encoding="utf-8"))
+    except Exception:
+        model_obj["result"] = {}
+else:
+    model_obj["result"] = {}
+obj["model_sync"] = model_obj
+
+if model_sync_mode == "1" and not model_sync_pass:
+    obj["learn_passed"] = False
+
+path.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+md_path = Path(learn_md)
+lines = md_path.read_text(encoding="utf-8").splitlines() if md_path.is_file() else []
+lines.append("")
+lines.append("## Model Sync")
+lines.append(f"- mode: `{model_sync_mode}`")
+lines.append(f"- plan_mode: `{plan_mode}`")
+lines.append(f"- status: `{model_sync_status}`")
+lines.append(f"- reason: `{model_sync_reason}`")
+lines.append(f"- prompt: `{prompt_file}`")
+lines.append(f"- raw: `{raw_file}`")
+lines.append(f"- parsed: `{model_json_file}`")
+lines.append(f"- events: `{events_file}`")
+lines.append(f"- stderr: `{stderr_file}`")
+md_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+PY
+
+  if [[ "$model_sync_mode" == "1" && "$model_sync_pass" != "1" ]]; then
+    echo "ERROR: learn model sync strict mode failed." >&2
+    echo "Check: ${model_stderr_file}" >&2
+    exit 1
+  fi
+  if ! learn_file_is_valid "$learn_file" >/dev/null 2>&1; then
+    echo "ERROR: learn output validation failed." >&2
+    echo "Check: ${learn_file}" >&2
+    exit 1
+  fi
+
+  emit_step "learn" 4 "$learn_steps_total" "print learn artifacts"
+  echo "LEARN_FILE: ${learn_file}"
+  echo "LEARN_MD: ${learn_md}"
+  echo "LEARN_MODEL_PROMPT_FILE: ${model_prompt_file}"
+  echo "LEARN_MODEL_RAW_FILE: ${model_raw_file}"
+  echo "LEARN_MODEL_JSON_FILE: ${model_json_file}"
+  echo "LEARN_MODEL_EVENTS_FILE: ${model_events_file}"
+  echo "LEARN_MODEL_STDERR_FILE: ${model_stderr_file}"
+  echo "LEARN_NEXT_COMMAND: python3 tools/ready.py"
+}
+
+resolve_ready_field() {
+  local env_key="$1"
+  local prompt="$2"
+  local default_value="${3:-}"
+  local auto_mode="${QF_READY_AUTO:-1}"
+  local value="${!env_key:-}"
+  if [[ -n "$value" ]]; then
+    printf "%s" "$value"
+    return 0
+  fi
+  if [[ "$auto_mode" == "1" && -n "$default_value" ]]; then
+    printf "%s" "$default_value"
+    return 0
+  fi
+  if [[ -t 0 ]]; then
+    echo -n "$prompt"
+    IFS= read -r value
+    printf "%s" "$value"
+    return 0
+  fi
+  echo "ERROR: missing $env_key and no interactive stdin for prompt: $prompt" >&2
+  return 1
+}
+
+cmd_ready() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+  if [[ -n "$py_bin" && -f "tools/ready.py" ]]; then
+    "$py_bin" tools/ready.py "$@"
+    return $?
+  fi
+
+  local run_id=""
+  local explicit_run_id=""
+  local explicit_project_id="${QF_PROJECT_ID:-${PROJECT_ID:-}}"
+  local project_id=""
+  local continue_decision="${QF_READY_CONTINUE_DECISION:-}"
+  local token=""
+  local goal scope acceptance steps stop
+  local goal_default scope_default acceptance_default steps_default stop_default
+  local task_file=""
+  local state_status=""
+  local ready_file=""
+  local sync_report_file=""
+  local learn_report_file=""
+  local discussion_dir=""
+  local ready_brief_json=""
+  local ready_brief_md=""
+  local orient_file=""
+  local orient_md=""
+  local require_sync="${QF_READY_REQUIRE_SYNC:-0}"
+  local auto_sync="${QF_READY_AUTO_SYNC:-0}"
+  local require_learn_raw="${QF_READY_REQUIRE_LEARN:-auto}"
+  local require_learn="${QF_READY_REQUIRE_LEARN:-auto}"
+  local auto_learn="${QF_READY_AUTO_LEARN:-1}"
+  local resolution_required=0
+  local has_run_context=0
+  local prior_resolution_decision=""
+  local py_bin=""
+  local ready_steps_total=12
+
+  for token in "$@"; do
+    [[ -z "$token" ]] && continue
+    case "$token" in
+      RUN_ID=*)
+        explicit_run_id="${token#RUN_ID=}"
+        ;;
+      PROJECT_ID=*)
+        explicit_project_id="${token#PROJECT_ID=}"
+        ;;
+      DECISION=*)
+        continue_decision="${token#DECISION=}"
+        ;;
+      *)
+        if [[ -z "$explicit_run_id" ]]; then
+          explicit_run_id="$token"
+        elif [[ -z "$continue_decision" ]]; then
+          continue_decision="$token"
+        fi
+        ;;
+    esac
+  done
+  if [[ -z "$explicit_run_id" && -n "${RUN_ID:-}" ]]; then
+    explicit_run_id="${RUN_ID}"
+  fi
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "ready")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: ready requires RUN_ID (from explicit arg/env or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    echo "Usage: python3 tools/ready.py [RUN_ID=<run-id>] [DECISION=resume-close|abandon-new]" >&2
+    exit 2
+  fi
+  project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "ready")"
+  emit_step "ready" 1 "$ready_steps_total" "resolve run context"
+
+  case "${require_learn_raw,,}" in
+    auto)
+      require_learn="1"
+      ;;
+    1|true|yes|y)
+      require_learn="1"
+      ;;
+    0|false|no|n)
+      require_learn="0"
+      ;;
+    *)
+      echo "ERROR: invalid QF_READY_REQUIRE_LEARN=${require_learn_raw} (expected auto|0|1)." >&2
+      exit 2
+      ;;
+  esac
+  case "${auto_learn,,}" in
+    1|true|yes|y) auto_learn="1" ;;
+    0|false|no|n) auto_learn="0" ;;
+    *)
+      echo "ERROR: invalid QF_READY_AUTO_LEARN=${auto_learn} (expected 0|1)." >&2
+      exit 2
+      ;;
+  esac
+
+  emit_step "ready" 2 "$ready_steps_total" "enforce learn gate (auto-learn if missing)"
+  if [[ "$require_learn" == "1" ]]; then
+    learn_report_file="$(resolve_learn_file_for_project "$project_id" || true)"
+    if [[ -z "$learn_report_file" && "$auto_learn" == "1" ]]; then
+      echo "LEARN_AUTO_RUN: python3 tools/learn.py"
+      cmd_learn
+      learn_report_file="$(resolve_learn_file_for_project "$project_id" || true)"
+    fi
+    if [[ -z "$learn_report_file" ]]; then
+      echo "ERROR: learn gate not satisfied." >&2
+      echo "Run: python3 tools/learn.py" >&2
+      echo "Then retry: python3 tools/ready.py RUN_ID=${run_id}" >&2
+      exit 1
+    fi
+  fi
+
+  emit_step "ready" 3 "$ready_steps_total" "resolve sync report (optional compatibility)"
+  sync_report_file="$(resolve_sync_file_for_run "$run_id" || true)"
+  if [[ "$require_sync" == "1" ]]; then
+    if [[ -z "$sync_report_file" && "$auto_sync" == "1" ]]; then
+      echo "SYNC_AUTO_RUN: bash tools/legacy.sh sync RUN_ID=${run_id}"
+      cmd_sync "RUN_ID=${run_id}"
+      sync_report_file="$(resolve_sync_file_for_run "$run_id" || true)"
+    fi
+    if [[ -z "$sync_report_file" ]]; then
+      echo "ERROR: sync gate not satisfied for run ${run_id}." >&2
+      echo "Run: bash tools/legacy.sh sync RUN_ID=${run_id}" >&2
+      echo "Then retry: python3 tools/ready.py RUN_ID=${run_id}" >&2
+      exit 1
+    fi
+  fi
+
+  emit_step "ready" 4 "$ready_steps_total" "load task/state and detect unresolved run context"
+  task_file="$(state_field_value "CURRENT_TASK_FILE")"
+  state_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$state_status" ]]; then
+    state_status="active"
+  fi
+
+  if [[ -f "reports/${run_id}/ready.json" || -f "reports/${run_id}/ship_state.json" || -f "reports/${run_id}/handoff.md" ]]; then
+    has_run_context=1
+  fi
+  prior_resolution_decision="$(resolve_ready_prior_decision_for_run "$run_id" || true)"
+  if [[ "$state_status" != "done" && "$has_run_context" -eq 1 ]]; then
+    case "$prior_resolution_decision" in
+      abandon-new|continue)
+        resolution_required=0
+        if [[ -z "$continue_decision" ]]; then
+          continue_decision="$prior_resolution_decision"
+        fi
+        ;;
+      *)
+        resolution_required=1
+        ;;
+    esac
+  fi
+
+  emit_step "ready" 5 "$ready_steps_total" "resolve run decision (resume-close / abandon-new / continue)"
+  if [[ "$resolution_required" -eq 1 ]]; then
+    if [[ -z "$continue_decision" ]]; then
+      echo "READY_NEEDS_DECISION: true"
+      echo "READY_DECISION_REASON: unresolved run context detected for ${run_id} (CURRENT_STATUS=${state_status})"
+      echo "READY_DECISION_OPTIONS: resume-close | abandon-new"
+      echo "READY_NEXT_1: bash tools/legacy.sh resume RUN_ID=${run_id}"
+      echo "READY_NEXT_2: python3 tools/ready.py RUN_ID=${run_id} DECISION=abandon-new"
+      exit 1
+    fi
+    case "$continue_decision" in
+      resume-close)
+        echo "READY_DECISION: resume-close"
+        echo "READY_NEXT_COMMAND: bash tools/legacy.sh resume RUN_ID=${run_id}"
+        exit 1
+        ;;
+      abandon-new)
+        ;;
+      *)
+        echo "ERROR: invalid DECISION=${continue_decision}. expected resume-close or abandon-new." >&2
+        exit 2
+        ;;
+    esac
+  fi
+  if [[ -z "$continue_decision" ]]; then
+    continue_decision="continue"
+  fi
+
+  emit_step "ready" 6 "$ready_steps_total" "derive restatement defaults from task contract"
+  goal_default="$(extract_task_goal_default "$task_file")"
+  scope_default="$(extract_task_scope_default "$task_file")"
+  acceptance_default="$(extract_task_acceptance_default "$task_file")"
+  if [[ -z "$goal_default" ]]; then
+    goal_default="Continue ${run_id} with a scoped, minimal, verifiable change."
+  fi
+  if [[ -z "$scope_default" ]]; then
+    if [[ -n "$task_file" ]]; then
+      scope_default="Follow declared scope in ${task_file}"
+    else
+      scope_default="Follow active task scope"
+    fi
+  fi
+  if [[ -z "$acceptance_default" ]]; then
+    acceptance_default="make verify; update reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md; keep scope clean"
+  fi
+  steps_default="evidence -> implement -> verify -> reports -> ship"
+  stop_default="finish and wait for next instruction; if blocked, record stop reason in decision.md"
+
+  emit_step "ready" 7 "$ready_steps_total" "capture restatement fields"
+  goal="$(resolve_ready_field "QF_READY_GOAL" "Goal (one sentence): " "$goal_default")" || exit 1
+  scope="$(resolve_ready_field "QF_READY_SCOPE" "Scope (exact paths): " "$scope_default")" || exit 1
+  acceptance="$(resolve_ready_field "QF_READY_ACCEPTANCE" "Acceptance (verify/evidence/scope): " "$acceptance_default")" || exit 1
+  steps="$(resolve_ready_field "QF_READY_STEPS" "Execution steps: " "$steps_default")" || exit 1
+  stop="$(resolve_ready_field "QF_READY_STOP" "Stop condition: " "$stop_default")" || exit 1
+
+  if [[ -z "$goal" || -z "$scope" || -z "$acceptance" || -z "$steps" || -z "$stop" ]]; then
+    echo "ERROR: ready fields cannot be empty." >&2
+    exit 1
+  fi
+
+  mkdir -p "reports/${run_id}"
+  ready_file="reports/${run_id}/ready.json"
+  discussion_dir="chatlogs/discussion/${run_id}"
+  ready_brief_json="${discussion_dir}/ready_brief.json"
+  ready_brief_md="${discussion_dir}/ready_brief.md"
+  orient_file="${discussion_dir}/orient.json"
+  orient_md="${discussion_dir}/orient.md"
+  mkdir -p "$discussion_dir"
+
+  emit_step "ready" 8 "$ready_steps_total" "write ready artifacts (ready.json + ready brief)"
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required to write ready.json" >&2
+    exit 1
+  fi
+
+  "$py_bin" - <<'PY' "$ready_file" "$run_id" "$project_id" "$goal" "$scope" "$acceptance" "$steps" "$stop" "$learn_report_file" "$require_learn" "$sync_report_file" "$require_sync" "$resolution_required" "$continue_decision" "$ready_brief_json" "$ready_brief_md"
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+out, run_id, project_id, goal, scope, acceptance, steps, stop, learn_report_file, require_learn, sync_report_file, require_sync, resolution_required, continue_decision, ready_brief_json, ready_brief_md = sys.argv[1:]
+learn_required = require_learn == "1"
+required = require_sync == "1"
+resolution_required = resolution_required == "1"
+
+def read_text(path: str) -> str:
+    p = Path(path)
+    if not p.is_file():
+        return ""
+    return p.read_text(encoding="utf-8", errors="replace")
+
+sync_obj = {}
+if sync_report_file:
+    try:
+        sync_obj = json.loads(read_text(sync_report_file))
+    except Exception:
+        sync_obj = {}
+
+project_summary = (sync_obj.get("project_overview") or {}).get("summary", "")
+north_star = (sync_obj.get("project_overview") or {}).get("north_star", "")
+if not project_summary:
+    readme_text = read_text("README.md")
+    for raw in readme_text.splitlines():
+        s = raw.strip()
+        if s and not s.startswith("#"):
+            project_summary = s
+            break
+if not project_summary:
+    project_summary = "quant-factory-os governance/execution base for quant engineering."
+
+if not north_star:
+    project_guide = read_text("docs/PROJECT_GUIDE.md")
+    guide_lines = project_guide.splitlines()
+    for i, raw in enumerate(guide_lines):
+        if "一句话北极星" not in raw:
+            continue
+        for cand in guide_lines[i + 1 :]:
+            s = cand.strip()
+            if not s or s.startswith("#") or s.startswith(">") or s.startswith("-"):
+                continue
+            north_star = s
+            break
+        break
+if not north_star:
+    north_star = "自动化 -> 自我迭代 -> 涌现智能。"
+
+decision_exists = Path(f"reports/{run_id}/decision.md").is_file()
+summary_exists = Path(f"reports/{run_id}/summary.md").is_file()
+conversation_exists = Path(f"reports/{run_id}/conversation.md").is_file()
+execution_exists = Path(f"reports/{run_id}/execution.jsonl").is_file()
+ship_state_exists = Path(f"reports/{run_id}/ship_state.json").is_file()
+
+workflow_interpretation = "流程以门禁推进：sync 同频 -> ready 上岗 -> orient/choose 定方向 -> council/arbiter 收敛 -> slice 拆解 -> do 执行 -> verify/review/ship 收尾。"
+constitution_interpretation = "约束是任务驱动、证据优先、scope 严格、文档新鲜度硬门禁。"
+
+session_handoff = sync_obj.get("session_handoff") or {}
+current_stage = sync_obj.get("current_stage") or {}
+
+evidence_chain = {
+    "learn_report_file": learn_report_file,
+    "sync_report_file": sync_report_file,
+    "ready_file": out,
+    "decision_exists": decision_exists,
+    "summary_exists": summary_exists,
+    "conversation_exists": conversation_exists,
+    "execution_exists": execution_exists,
+    "ship_state_exists": ship_state_exists,
+}
+
+obj = {
+    "project_id": project_id,
+    "run_id": run_id,
+    "created_at_utc": datetime.now(timezone.utc).isoformat(),
+    "constitution_read": True,
+    "workflow_read": True,
+    "sync_gate": {
+        "required": required,
+        "sync_report_file": sync_report_file,
+        "sync_passed": (bool(sync_report_file) if required else True),
+    },
+    "learn_gate": {
+        "required": learn_required,
+        "learn_report_file": learn_report_file,
+        "learn_passed": (bool(learn_report_file) if learn_required else True),
+    },
+    "restatement_passed": True,
+    "restatement": {
+        "goal": goal,
+        "scope": scope,
+        "acceptance": acceptance,
+        "steps": steps,
+        "stop_condition": stop,
+    },
+    "prior_run_resolution": {
+        "required": resolution_required,
+        "decision": continue_decision,
+    },
+    "understanding": {
+        "project_summary": project_summary,
+        "project_goal": north_star,
+        "constitution_interpretation": constitution_interpretation,
+        "workflow_interpretation": workflow_interpretation,
+        "evidence_chain": evidence_chain,
+        "session_continuity": session_handoff.get("continuity", "unknown"),
+        "current_stage": current_stage,
+        "suggested_next_step": f"python3 tools/orient.py RUN_ID={run_id}",
+    },
+}
+Path(out).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+brief_obj = {
+    "project_id": project_id,
+    "run_id": run_id,
+    "created_at_utc": obj["created_at_utc"],
+    "project_summary": project_summary,
+    "project_goal": north_star,
+    "constitution_interpretation": constitution_interpretation,
+    "workflow_interpretation": workflow_interpretation,
+    "evidence_chain": evidence_chain,
+    "session_continuity": session_handoff.get("continuity", "unknown"),
+    "current_stage": current_stage,
+    "restatement": obj["restatement"],
+    "prior_run_resolution": obj["prior_run_resolution"],
+}
+Path(ready_brief_json).parent.mkdir(parents=True, exist_ok=True)
+Path(ready_brief_json).write_text(json.dumps(brief_obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+lines = []
+lines.append("# Ready Brief (Discussion Draft)")
+lines.append("")
+lines.append(f"PROJECT_ID: `{project_id}`")
+lines.append(f"RUN_ID: `{run_id}`")
+lines.append(f"Generated At (UTC): {obj['created_at_utc']}")
+lines.append("Mode: discussion-only (pre-confirmation)")
+lines.append("")
+lines.append("## 项目理解")
+lines.append(f"- Summary: {project_summary}")
+lines.append(f"- Goal: {north_star}")
+lines.append("")
+lines.append("## 宪法与工作流解读")
+lines.append(f"- Constitution: {constitution_interpretation}")
+lines.append(f"- Workflow: {workflow_interpretation}")
+lines.append("")
+lines.append("## 证据链状态")
+for key, value in evidence_chain.items():
+    lines.append(f"- {key}: {value}")
+lines.append("")
+lines.append("## Session 承接")
+lines.append(f"- continuity: {session_handoff.get('continuity', 'unknown')}")
+lines.append(f"- current_run_id: {current_stage.get('current_run_id', run_id)}")
+lines.append(f"- current_task_file: {current_stage.get('current_task_file', '(unknown)')}")
+lines.append(f"- current_status: {current_stage.get('current_status', '(unknown)')}")
+lines.append("")
+lines.append("## Restatement")
+lines.append(f"- Goal: {goal}")
+lines.append(f"- Scope: {scope}")
+lines.append(f"- Acceptance: {acceptance}")
+lines.append(f"- Steps: {steps}")
+lines.append(f"- Stop: {stop}")
+lines.append("")
+lines.append("## Run 决策")
+lines.append(f"- resolution_required: {str(resolution_required).lower()}")
+lines.append(f"- decision: {continue_decision}")
+lines.append("")
+Path(ready_brief_md).write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY
+
+  emit_step "ready" 9 "$ready_steps_total" "generate orientation draft"
+  if ! generate_orient_draft "$run_id" "$project_id" "$task_file" "$orient_file" "$orient_md"; then
+    echo "ERROR: failed to generate orientation draft from ready." >&2
+    exit 1
+  fi
+
+  emit_step "ready" 10 "$ready_steps_total" "append execution/conversation checkpoints"
+  append_execution_event "$run_id" "ready" "ready_passed" "ok" "python3 tools/ready.py" "ready_file=${ready_file};learn_report=${learn_report_file};sync_report=${sync_report_file};task_file=${task_file};brief=${ready_brief_md};orient=${orient_file}" ""
+  append_conversation_checkpoint "$run_id" "ready" "ready gate passed; brief=${ready_brief_md}; orient=${orient_file}"
+  emit_step "ready" 11 "$ready_steps_total" "update TASKS/STATE pointer"
+  update_state_current "$run_id" "$(state_field_value "CURRENT_TASK_FILE")" "active" "$project_id"
+  emit_step "ready" 12 "$ready_steps_total" "print output artifacts"
+  echo "READY_PROJECT_ID: $project_id"
+  echo "READY_FILE: $ready_file"
+  echo "READY_RUN_ID: $run_id"
+  if [[ -n "$learn_report_file" ]]; then
+    echo "READY_LEARN_REPORT: $learn_report_file"
+  fi
+  if [[ -n "$sync_report_file" ]]; then
+    echo "READY_SYNC_REPORT: $sync_report_file"
+  fi
+  if [[ -n "$task_file" ]]; then
+    echo "READY_TASK_FILE: $task_file"
+  fi
+  echo "READY_DISCUSSION_BRIEF_JSON: $ready_brief_json"
+  echo "READY_DISCUSSION_BRIEF_MD: $ready_brief_md"
+  echo "READY_ORIENT_FILE: $orient_file"
+  echo "READY_ORIENT_MD: $orient_md"
+}
+
+cmd_orient() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+  if [[ -n "$py_bin" && -f "tools/orient.py" ]]; then
+    "$py_bin" tools/orient.py "$@"
+    return $?
+  fi
+
+  local run_id=""
+  local explicit_run_id=""
+  local explicit_project_id="${QF_PROJECT_ID:-${PROJECT_ID:-}}"
+  local project_id=""
+  local token=""
+  local orient_file=""
+  local orient_md=""
+  local task_file=""
+  local current_status=""
+
+  for token in "$@"; do
+    [[ -z "$token" ]] && continue
+    case "$token" in
+      RUN_ID=*)
+        explicit_run_id="${token#RUN_ID=}"
+        ;;
+      PROJECT_ID=*)
+        explicit_project_id="${token#PROJECT_ID=}"
+        ;;
+      *)
+        if [[ -z "$explicit_run_id" ]]; then
+          explicit_run_id="$token"
+        fi
+        ;;
+    esac
+  done
+  if [[ -z "$explicit_run_id" && -n "${RUN_ID:-}" ]]; then
+    explicit_run_id="${RUN_ID}"
+  fi
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "orient")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: orient requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    exit 2
+  fi
+  project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "orient")"
+
+  task_file="$(state_field_value "CURRENT_TASK_FILE")"
+  current_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$current_status" ]]; then
+    current_status="active"
+  fi
+
+  orient_file="chatlogs/discussion/${run_id}/orient.json"
+  orient_md="chatlogs/discussion/${run_id}/orient.md"
+  mkdir -p "chatlogs/discussion/${run_id}"
+  if ! generate_orient_draft "$run_id" "$project_id" "$task_file" "$orient_file" "$orient_md"; then
+    echo "ERROR: orient generation failed." >&2
+    exit 1
+  fi
+
+  append_execution_event "$run_id" "orient" "orient_generated" "ok" "python3 tools/orient.py RUN_ID=${run_id}" "orient_file=${orient_file};orient_md=${orient_md}" ""
+  append_conversation_checkpoint "$run_id" "orient" "orientation draft updated in chatlogs/discussion; recommended option ready for choose"
+  update_state_current "$run_id" "$task_file" "$current_status" "$project_id"
+  echo "ORIENT_FILE: ${orient_file}"
+  echo "ORIENT_MD: ${orient_md}"
+  echo "ORIENT_PROJECT_ID: ${project_id}"
+  echo "ORIENT_RUN_ID: ${run_id}"
+}
+
+cmd_choose() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+  if [[ -n "$py_bin" && -f "tools/choose.py" ]]; then
+    "$py_bin" tools/choose.py "$@"
+    return $?
+  fi
+
+  local run_id=""
+  local explicit_run_id=""
+  local explicit_project_id="${QF_PROJECT_ID:-${PROJECT_ID:-}}"
+  local project_id=""
+  local token=""
+  local option="${QF_ORIENT_OPTION:-}"
+  local orient_file=""
+  local choice_file=""
+  local contract_json=""
+  local contract_md=""
+  local py_bin=""
+  local current_status=""
+  local task_file=""
+
+  for token in "$@"; do
+    [[ -z "$token" ]] && continue
+    case "$token" in
+      RUN_ID=*)
+        explicit_run_id="${token#RUN_ID=}"
+        ;;
+      PROJECT_ID=*)
+        explicit_project_id="${token#PROJECT_ID=}"
+        ;;
+      OPTION=*)
+        option="${token#OPTION=}"
+        ;;
+      *)
+        if [[ -z "$option" ]]; then
+          option="$token"
+        fi
+        ;;
+    esac
+  done
+  if [[ -z "$explicit_run_id" && -n "${RUN_ID:-}" ]]; then
+    explicit_run_id="${RUN_ID}"
+  fi
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "choose")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: choose requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    exit 2
+  fi
+  project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "choose")"
+
+  orient_file="$(resolve_orient_file_for_run "$run_id" || true)"
+  choice_file="reports/${run_id}/orient_choice.json"
+  contract_json="reports/${run_id}/direction_contract.json"
+  contract_md="reports/${run_id}/direction_contract.md"
+  if [[ -z "$orient_file" || ! -f "$orient_file" ]]; then
+    echo "ERROR: missing orientation file for run: ${run_id}" >&2
+    echo "Run: python3 tools/orient.py RUN_ID=${run_id}" >&2
+    exit 1
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required to write choose result." >&2
+    exit 1
+  fi
+
+  "$py_bin" - <<'PY' "$orient_file" "$choice_file" "$contract_json" "$contract_md" "$option" "$project_id"
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+orient_path, out_path, contract_json, contract_md, option, project_id = sys.argv[1:]
+obj = json.loads(Path(orient_path).read_text(encoding="utf-8"))
+directions = obj.get("directions", [])
+if not directions:
+    raise SystemExit("ERROR: orient report has no direction options.")
+
+ids = {x.get("id"): x for x in directions if x.get("id")}
+selected = option.strip() if option else ""
+if not selected:
+    selected = obj.get("recommended_option", "")
+if selected not in ids:
+    known = ", ".join(sorted(ids))
+    raise SystemExit(f"ERROR: invalid OPTION={selected!r}. valid: {known}")
+
+picked = ids[selected]
+scope_hint = picked.get("scope_hint", [])
+if not isinstance(scope_hint, list):
+    scope_hint = []
+
+role_reviews = [
+    {
+        "role": "product",
+        "focus": "value and scope relevance",
+        "independent_view": "确认方向是否解决真实问题，并限制在最小可交付范围内。",
+        "must_hold": [
+            "目标可验证",
+            "非目标明确",
+            "不做伪需求扩张",
+        ],
+    },
+    {
+        "role": "architect",
+        "focus": "boundary and extensibility",
+        "independent_view": "检查状态机边界、证据边界、兼容迁移路径是否明确。",
+        "must_hold": [
+            "讨论态与执行态边界清晰",
+            "旧流程兼容/迁移说明完整",
+            "失败可恢复",
+        ],
+    },
+    {
+        "role": "dev",
+        "focus": "minimal diff and operability",
+        "independent_view": "优先小步改动，确保命令链可重复执行并便于调试。",
+        "must_hold": [
+            "最小差异实现",
+            "命令输出可操作",
+            "错误提示可恢复",
+        ],
+    },
+    {
+        "role": "qa",
+        "focus": "behavioral regression and gates",
+        "independent_view": "独立验证门禁和回归，不受开发路径影响。",
+        "must_hold": [
+            "关键路径有回归测试",
+            "失败路径有断言",
+            "文档门禁可验证",
+        ],
+    },
+]
+
+contract = {
+    "project_id": project_id,
+    "run_id": obj.get("run_id"),
+    "created_at_utc": datetime.now(timezone.utc).isoformat(),
+    "selected_option": selected,
+    "selected_title": picked.get("title", ""),
+    "execution_goal": picked.get("why", ""),
+    "scope_hint": scope_hint,
+    "priority": picked.get("priority", ""),
+    "delivery_contract": {
+        "steps": [
+            "council-review",
+            "arbiter-contract",
+            "slice-into-tasks",
+            "implement",
+            "verify",
+            "review-and-align",
+            "reports-and-ship",
+        ],
+        "quality_gates": [
+            "make verify green",
+            "scope remains bounded",
+            "owner docs updated in same run",
+            "reports evidence updated",
+        ],
+    },
+    "role_reviews": role_reviews,
+    "next_command": "python3 tools/council.py RUN_ID={}".format(obj.get("run_id") or ""),
+}
+out = {
+    "project_id": project_id,
+    "run_id": obj.get("run_id"),
+    "created_at_utc": datetime.now(timezone.utc).isoformat(),
+    "selected_option": selected,
+    "selected_title": picked.get("title", ""),
+    "priority": picked.get("priority", ""),
+    "reason": picked.get("why", ""),
+    "source_orient_file": orient_path,
+    "discussion_confirmed": True,
+    "contract_json": contract_json,
+    "contract_md": contract_md,
+    "next_command": f"python3 tools/council.py RUN_ID={obj.get('run_id')}",
+}
+Path(out_path).write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+Path(contract_json).write_text(json.dumps(contract, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+lines = []
+lines.append("# Direction Contract")
+lines.append("")
+lines.append(f"PROJECT_ID: `{project_id}`")
+lines.append(f"RUN_ID: `{out.get('run_id', '')}`")
+lines.append(f"Generated At (UTC): {contract['created_at_utc']}")
+lines.append(f"Selected Option: `{selected}`")
+lines.append(f"Title: {picked.get('title', '')}")
+lines.append("")
+lines.append("## Why")
+lines.append(f"- {picked.get('why', '')}")
+lines.append("")
+lines.append("## Scope Hint")
+if scope_hint:
+    for x in scope_hint:
+        lines.append(f"- `{x}`")
+else:
+    lines.append("- `(empty)`")
+lines.append("")
+lines.append("## Multi-Role Independent Reviews")
+for rv in role_reviews:
+    lines.append(f"- role: `{rv['role']}` | focus: {rv['focus']}")
+    lines.append(f"  - view: {rv['independent_view']}")
+    lines.append("  - must_hold:")
+    for gate in rv["must_hold"]:
+        lines.append(f"    - {gate}")
+lines.append("")
+lines.append("## Delivery Contract")
+for st in contract["delivery_contract"]["steps"]:
+    lines.append(f"- step: {st}")
+for gate in contract["delivery_contract"]["quality_gates"]:
+    lines.append(f"- gate: {gate}")
+lines.append("")
+lines.append("## Next Command")
+lines.append(f"- `python3 tools/council.py RUN_ID={obj.get('run_id')}`")
+lines.append("")
+Path(contract_md).write_text("\n".join(lines), encoding="utf-8")
+
+print(f"CHOOSE_OPTION: {selected}")
+print(f"CHOOSE_TITLE: {picked.get('title', '')}")
+print(f"CHOOSE_NEXT_COMMAND: python3 tools/council.py RUN_ID={obj.get('run_id')}")
+print(f"CHOOSE_CONTRACT_JSON: {contract_json}")
+print(f"CHOOSE_CONTRACT_MD: {contract_md}")
+print(f"CHOOSE_PROJECT_ID: {project_id}")
+PY
+
+  task_file="$(state_field_value "CURRENT_TASK_FILE")"
+  current_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$current_status" ]]; then
+    current_status="active"
+  fi
+  append_execution_event "$run_id" "orient" "orient_chosen" "ok" "python3 tools/choose.py RUN_ID=${run_id} OPTION=${option}" "choice_file=${choice_file};contract=${contract_json}" ""
+  append_conversation_checkpoint "$run_id" "choose" "direction selected and contract written; next step council"
+  update_state_current "$run_id" "$task_file" "$current_status" "$project_id"
+  echo "CHOOSE_FILE: ${choice_file}"
+  echo "CHOOSE_CONTRACT_JSON: ${contract_json}"
+  echo "CHOOSE_CONTRACT_MD: ${contract_md}"
+  echo "CHOOSE_PROJECT_ID: ${project_id}"
+  echo "CHOOSE_RUN_ID: ${run_id}"
+}
+
+cmd_council() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+  if [[ -n "$py_bin" && -f "tools/council.py" ]]; then
+    "$py_bin" tools/council.py "$@"
+    return $?
+  fi
+
+  local run_id=""
+  local explicit_run_id=""
+  local explicit_project_id="${QF_PROJECT_ID:-${PROJECT_ID:-}}"
+  local project_id=""
+  local token=""
+  local choice_file=""
+  local contract_json=""
+  local council_json=""
+  local council_md=""
+  local task_file=""
+  local current_status=""
+  local py_bin=""
+
+  for token in "$@"; do
+    [[ -z "$token" ]] && continue
+    case "$token" in
+      RUN_ID=*)
+        explicit_run_id="${token#RUN_ID=}"
+        ;;
+      PROJECT_ID=*)
+        explicit_project_id="${token#PROJECT_ID=}"
+        ;;
+      *)
+        if [[ -z "$explicit_run_id" ]]; then
+          explicit_run_id="$token"
+        fi
+        ;;
+    esac
+  done
+  if [[ -z "$explicit_run_id" && -n "${RUN_ID:-}" ]]; then
+    explicit_run_id="${RUN_ID}"
+  fi
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "council")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: council requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    exit 2
+  fi
+  project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "council")"
+
+  require_direction_gate "$run_id"
+  choice_file="$DIRECTION_CHOICE_FILE"
+  contract_json="reports/${run_id}/direction_contract.json"
+  if [[ ! -f "$contract_json" ]]; then
+    echo "ERROR: missing direction contract: $contract_json" >&2
+    echo "Run: python3 tools/choose.py RUN_ID=${run_id} OPTION=<id>" >&2
+    exit 1
+  fi
+
+  council_json="chatlogs/discussion/${run_id}/council.json"
+  council_md="chatlogs/discussion/${run_id}/council.md"
+  mkdir -p "chatlogs/discussion/${run_id}"
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required to generate council artifacts." >&2
+    exit 1
+  fi
+
+  "$py_bin" - <<'PY' "$run_id" "$project_id" "$contract_json" "$council_json" "$council_md"
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+run_id, project_id, contract_file, out_json, out_md = sys.argv[1:]
+
+
+def read_json(path: str) -> dict:
+    p = Path(path)
+    if not p.is_file():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def read_text(path: str) -> str:
+    p = Path(path)
+    if not p.is_file():
+        return ""
+    return p.read_text(encoding="utf-8", errors="replace")
+
+
+def normalize_scope(raw_scope) -> list[str]:
+    if not isinstance(raw_scope, list):
+        return []
+    out = []
+    for item in raw_scope:
+        s = str(item).strip()
+        if s:
+            out.append(s.replace("`", ""))
+    return out
+
+
+def check_status(passed: bool, failed_level: str) -> str:
+    return "pass" if passed else failed_level
+
+
+contract = read_json(contract_file)
+title = str(contract.get("selected_title", "")).strip() or "confirmed direction"
+goal = str(contract.get("execution_goal", "")).strip()
+scope = normalize_scope(contract.get("scope_hint"))
+if not scope:
+    scope = ["tools/*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
+
+delivery_contract = contract.get("delivery_contract") or {}
+quality_gates = delivery_contract.get("quality_gates") or []
+if not isinstance(quality_gates, list):
+    quality_gates = []
+steps = delivery_contract.get("steps") or []
+if not isinstance(steps, list):
+    steps = []
+
+learn_obj = read_json(f"learn/{project_id}.json")
+ready_obj = read_json(f"reports/{run_id}/ready.json")
+queue_text = read_text("TASKS/QUEUE.md")
+queue_open_items = len(re.findall(r"^- \[ \] ", queue_text, flags=re.M))
+
+learn_passed = bool(learn_obj.get("learn_passed")) if learn_obj else False
+ready_passed = bool(ready_obj.get("restatement_passed")) if ready_obj else False
+goal_clear = len(goal) >= 24
+scope_present = len(scope) > 0
+scope_bounded = len(scope) <= 8 if scope_present else False
+verify_gate = any("verify" in str(x).lower() for x in quality_gates)
+docs_gate = any(("doc" in str(x).lower() or "owner docs" in str(x).lower()) for x in quality_gates)
+steps_bounded = len(steps) <= 8 if steps else True
+queue_pressure_ok = queue_open_items <= 20
+
+checks = [
+    {
+        "id": "learn_gate",
+        "label": "learn report is available and passed",
+        "status": check_status(learn_passed, "block"),
+        "detail": "learn.json missing or learn_passed=false" if not learn_passed else "ok",
+    },
+    {
+        "id": "ready_gate",
+        "label": "ready gate is passed",
+        "status": check_status(ready_passed, "block"),
+        "detail": "ready.json missing or restatement_passed=false" if not ready_passed else "ok",
+    },
+    {
+        "id": "goal_clarity",
+        "label": "direction goal clarity",
+        "status": check_status(goal_clear, "warn"),
+        "detail": "execution_goal is too short; refine expected business outcome" if not goal_clear else "ok",
+    },
+    {
+        "id": "scope_present",
+        "label": "scope is declared",
+        "status": check_status(scope_present, "block"),
+        "detail": "scope_hint is empty" if not scope_present else "ok",
+    },
+    {
+        "id": "scope_bounded",
+        "label": "scope remains bounded",
+        "status": check_status(scope_bounded, "warn"),
+        "detail": "scope paths are too broad (>8)" if not scope_bounded else "ok",
+    },
+    {
+        "id": "verify_gate",
+        "label": "delivery contract includes verify gate",
+        "status": check_status(verify_gate, "warn"),
+        "detail": "quality_gates missing make verify clause" if not verify_gate else "ok",
+    },
+    {
+        "id": "docs_gate",
+        "label": "delivery contract includes docs freshness gate",
+        "status": check_status(docs_gate, "warn"),
+        "detail": "quality_gates missing docs freshness clause" if not docs_gate else "ok",
+    },
+    {
+        "id": "steps_bounded",
+        "label": "delivery steps are operable",
+        "status": check_status(steps_bounded, "warn"),
+        "detail": "delivery steps are too many (>8)" if not steps_bounded else "ok",
+    },
+    {
+        "id": "queue_pressure",
+        "label": "queue pressure is manageable",
+        "status": check_status(queue_pressure_ok, "warn"),
+        "detail": f"open queue items={queue_open_items} (>20)" if not queue_pressure_ok else f"open queue items={queue_open_items}",
+    },
+]
+
+status_by_id = {c["id"]: c["status"] for c in checks}
+
+
+def role_decision(refs: list[str], concerns: list[str]) -> str:
+    has_block = any(status_by_id.get(x) == "block" for x in refs)
+    if has_block:
+        return "reject_until_fixed"
+    if concerns:
+        return "accept_with_conditions"
+    return "accept"
+
+
+product_concerns = []
+if not goal_clear:
+    product_concerns.append("goal needs clearer user/business outcome statement")
+if queue_open_items > 30:
+    product_concerns.append("queue backlog is high; prioritize minimal deliverable")
+if not docs_gate:
+    product_concerns.append("missing docs freshness gate may cause acceptance drift")
+product_refs = ["goal_clarity", "queue_pressure", "docs_gate"]
+
+architect_concerns = []
+if not learn_passed:
+    architect_concerns.append("learn evidence missing; onboarding continuity risk")
+if not ready_passed:
+    architect_concerns.append("ready gate missing; lifecycle invariant is broken")
+if not scope_present or not scope_bounded:
+    architect_concerns.append("scope boundary is unclear or too broad")
+architect_refs = ["learn_gate", "ready_gate", "scope_present", "scope_bounded"]
+
+dev_concerns = []
+if not steps_bounded:
+    dev_concerns.append("delivery steps are too many; reduce friction for execution")
+if queue_open_items > 20:
+    dev_concerns.append("queue pressure high; slice tasks should stay minimal")
+if not verify_gate:
+    dev_concerns.append("verify gate missing; hard to keep deterministic feedback loop")
+dev_refs = ["steps_bounded", "queue_pressure", "verify_gate"]
+
+qa_concerns = []
+if not verify_gate:
+    qa_concerns.append("verify gate missing from quality contract")
+if not docs_gate:
+    qa_concerns.append("docs freshness gate missing; regression in process docs likely")
+if not ready_passed:
+    qa_concerns.append("ready gate missing; test baseline cannot be trusted")
+qa_refs = ["verify_gate", "docs_gate", "ready_gate"]
+
+roles = [
+    {
+        "role": "product",
+        "independent_view": "Validate real user value and keep deliverable minimal before execution starts.",
+        "decision": role_decision(product_refs, product_concerns),
+        "concerns": product_concerns,
+        "evidence_refs": product_refs,
+    },
+    {
+        "role": "architect",
+        "independent_view": "Verify lifecycle invariants, boundary clarity, and recoverability before build.",
+        "decision": role_decision(architect_refs, architect_concerns),
+        "concerns": architect_concerns,
+        "evidence_refs": architect_refs,
+    },
+    {
+        "role": "dev",
+        "independent_view": "Keep implementation minimal, operable, and deterministic for fast iteration.",
+        "decision": role_decision(dev_refs, dev_concerns),
+        "concerns": dev_concerns,
+        "evidence_refs": dev_refs,
+    },
+    {
+        "role": "qa",
+        "independent_view": "Independently enforce behavioral tests, failure paths, and documentation gates.",
+        "decision": role_decision(qa_refs, qa_concerns),
+        "concerns": qa_concerns,
+        "evidence_refs": qa_refs,
+    },
+]
+
+decision_set = sorted({r["decision"] for r in roles})
+disagreements = []
+if len(decision_set) > 1:
+    disagreements.append("role decisions are not uniform yet; arbiter must converge conditions.")
+warn_count = sum(1 for c in checks if c["status"] == "warn")
+block_count = sum(1 for c in checks if c["status"] == "block")
+if block_count:
+    disagreements.append("blocking evidence checks exist and must be resolved before final execution.")
+elif warn_count:
+    disagreements.append("warning-level concerns exist; execution must include guardrails.")
+
+obj = {
+    "project_id": project_id,
+    "run_id": run_id,
+    "created_at_utc": datetime.now(timezone.utc).isoformat(),
+    "source_contract": contract_file,
+    "direction_title": title,
+    "direction_goal": goal,
+    "scope_hint": scope,
+    "queue_open_items": queue_open_items,
+    "evidence_summary": {
+        "pass": sum(1 for c in checks if c["status"] == "pass"),
+        "warn": warn_count,
+        "block": block_count,
+    },
+    "evidence_checks": checks,
+    "roles": roles,
+    "disagreements": disagreements,
+    "consensus_rule": "independent evidence review first, arbiter convergence second",
+    "next_command": f"python3 tools/arbiter.py RUN_ID={run_id}",
+}
+Path(out_json).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+lines = []
+lines.append("# Council Review (Discussion)")
+lines.append("")
+lines.append(f"PROJECT_ID: `{project_id}`")
+lines.append(f"RUN_ID: `{run_id}`")
+lines.append(f"Generated At (UTC): {obj['created_at_utc']}")
+lines.append(f"Direction: {title}")
+lines.append(f"Queue Open Items: {queue_open_items}")
+lines.append("")
+lines.append("## Evidence Checks")
+for c in checks:
+    lines.append(f"- [{c['status']}] `{c['id']}`: {c['label']} | {c['detail']}")
+lines.append("")
+lines.append("## Independent Roles")
+for role in roles:
+    lines.append(f"- role: `{role['role']}`")
+    lines.append(f"  - view: {role['independent_view']}")
+    lines.append(f"  - decision: {role['decision']}")
+    lines.append(f"  - evidence_refs: {', '.join(role['evidence_refs'])}")
+    if role["concerns"]:
+        lines.append("  - concerns:")
+        for c in role["concerns"]:
+            lines.append(f"    - {c}")
+    else:
+        lines.append("  - concerns: none")
+lines.append("")
+lines.append("## Disagreements")
+if disagreements:
+    for d in disagreements:
+        lines.append(f"- {d}")
+else:
+    lines.append("- none")
+lines.append("")
+lines.append("## Next Command")
+lines.append(f"- `python3 tools/arbiter.py RUN_ID={run_id}`")
+lines.append("")
+Path(out_md).write_text("\n".join(lines), encoding="utf-8")
+
+print(f"COUNCIL_ROLES: {len(roles)}")
+print(f"COUNCIL_WARNINGS: {warn_count}")
+print(f"COUNCIL_BLOCKERS: {block_count}")
+print(f"COUNCIL_NEXT_COMMAND: python3 tools/arbiter.py RUN_ID={run_id}")
+print(f"COUNCIL_PROJECT_ID: {project_id}")
+PY
+
+  task_file="$(state_field_value "CURRENT_TASK_FILE")"
+  current_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$current_status" ]]; then
+    current_status="active"
+  fi
+  append_execution_event "$run_id" "council" "council_generated" "ok" "python3 tools/council.py RUN_ID=${run_id}" "choice_file=${choice_file};council=${council_json}" ""
+  append_conversation_checkpoint "$run_id" "council" "council reviews generated; next step arbiter"
+  update_state_current "$run_id" "$task_file" "$current_status" "$project_id"
+  echo "COUNCIL_FILE_JSON: ${council_json}"
+  echo "COUNCIL_FILE_MD: ${council_md}"
+  echo "COUNCIL_PROJECT_ID: ${project_id}"
+  echo "COUNCIL_RUN_ID: ${run_id}"
+}
+
+cmd_arbiter() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+  if [[ -n "$py_bin" && -f "tools/arbiter.py" ]]; then
+    "$py_bin" tools/arbiter.py "$@"
+    return $?
+  fi
+
+  local run_id=""
+  local explicit_run_id=""
+  local explicit_project_id="${QF_PROJECT_ID:-${PROJECT_ID:-}}"
+  local project_id=""
+  local token=""
+  local council_file=""
+  local direction_contract=""
+  local out_json=""
+  local out_md=""
+  local task_file=""
+  local current_status=""
+  local py_bin=""
+
+  for token in "$@"; do
+    [[ -z "$token" ]] && continue
+    case "$token" in
+      RUN_ID=*)
+        explicit_run_id="${token#RUN_ID=}"
+        ;;
+      PROJECT_ID=*)
+        explicit_project_id="${token#PROJECT_ID=}"
+        ;;
+      *)
+        if [[ -z "$explicit_run_id" ]]; then
+          explicit_run_id="$token"
+        fi
+        ;;
+    esac
+  done
+  if [[ -z "$explicit_run_id" && -n "${RUN_ID:-}" ]]; then
+    explicit_run_id="${RUN_ID}"
+  fi
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "arbiter")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: arbiter requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    exit 2
+  fi
+  project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "arbiter")"
+
+  require_council_gate "$run_id"
+  council_file="$COUNCIL_FILE"
+  direction_contract="reports/${run_id}/direction_contract.json"
+  if [[ ! -f "$direction_contract" ]]; then
+    echo "ERROR: missing direction contract: $direction_contract" >&2
+    echo "Run: python3 tools/choose.py RUN_ID=${run_id} OPTION=<id>" >&2
+    exit 1
+  fi
+
+  out_json="reports/${run_id}/execution_contract.json"
+  out_md="reports/${run_id}/execution_contract.md"
+  mkdir -p "reports/${run_id}"
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required to generate execution contract." >&2
+    exit 1
+  fi
+
+  "$py_bin" - <<'PY' "$run_id" "$project_id" "$direction_contract" "$council_file" "$out_json" "$out_md"
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+run_id, project_id, direction_contract_file, council_file, out_json, out_md = sys.argv[1:]
+
+
+def read_json(path: str) -> dict:
+    p = Path(path)
+    if not p.is_file():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def normalize_scope(raw_scope) -> list[str]:
+    if not isinstance(raw_scope, list):
+        return []
+    out = []
+    for item in raw_scope:
+        s = str(item).strip()
+        if s:
+            out.append(s.replace("`", ""))
+    return out
+
+
+direction = read_json(direction_contract_file)
+council = read_json(council_file)
+
+scope = normalize_scope(direction.get("scope_hint"))
+if not scope:
+    scope = ["tools/*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
+
+title = str(direction.get("selected_title", "")).strip() or "confirmed direction"
+goal = str(direction.get("execution_goal", "")).strip() or "Deliver the confirmed direction with minimal safe tasks."
+priority = str(direction.get("priority", "")).strip()
+selected_option = str(direction.get("selected_option", "")).strip()
+
+checks = council.get("evidence_checks") or []
+if not isinstance(checks, list):
+    checks = []
+roles = council.get("roles") or []
+if not isinstance(roles, list):
+    roles = []
+disagreements = council.get("disagreements") or []
+if not isinstance(disagreements, list):
+    disagreements = []
+
+blockers = [c for c in checks if isinstance(c, dict) and c.get("status") == "block"]
+warnings = [c for c in checks if isinstance(c, dict) and c.get("status") == "warn"]
+role_conditions = []
+for role in roles:
+    if not isinstance(role, dict):
+        continue
+    role_name = str(role.get("role", "role")).strip() or "role"
+    concerns = role.get("concerns") or []
+    if not isinstance(concerns, list):
+        continue
+    for concern in concerns:
+        text = str(concern).strip()
+        if text:
+            role_conditions.append(f"{role_name}: {text}")
+
+dedup_conditions = []
+seen = set()
+for item in role_conditions:
+    key = item.lower()
+    if key in seen:
+        continue
+    seen.add(key)
+    dedup_conditions.append(item)
+role_conditions = dedup_conditions
+
+tasks = []
+
+core_acceptance = [
+    f"deliver selected direction option `{selected_option or 'unknown'}` with bounded scope",
+    "command(s) pass: make verify",
+    "reports summary/decision updated for this slice",
+]
+tasks.append(
+    {
+        "task_id": "slice-1",
+        "title": f"{title} - core delivery",
+        "goal": goal,
+        "scope": scope,
+        "acceptance": core_acceptance,
+    }
+)
+
+if blockers or warnings or role_conditions:
+    concern_acceptance = []
+    for c in role_conditions[:5]:
+        concern_acceptance.append(f"condition closed: {c}")
+    if blockers:
+        concern_acceptance.append("all blocker-level evidence checks are resolved")
+    if warnings:
+        concern_acceptance.append("warning-level checks are either resolved or explicitly accepted in decision.md")
+    tasks.append(
+        {
+            "task_id": "slice-2",
+            "title": f"{title} - close council conditions",
+            "goal": "Resolve cross-role concerns raised by council before/while executing.",
+            "scope": ["tools/*.py", "tests/", "chatlogs/discussion/", "reports/{RUN_ID}/"],
+            "acceptance": concern_acceptance or ["no open council conditions"],
+        }
+    )
+else:
+    tasks.append(
+        {
+            "task_id": "slice-2",
+            "title": f"{title} - enforce guardrail tests",
+            "goal": "Add or refine guardrail tests to lock behavior of the selected direction.",
+            "scope": ["tests/", "tools/*.py"],
+            "acceptance": [
+                "critical path regression tests added or refreshed",
+                "failure-path assertions are explicit and actionable",
+            ],
+        }
+    )
+
+tasks.append(
+    {
+        "task_id": "slice-3",
+        "title": f"{title} - evidence and docs alignment",
+        "goal": "Keep evidence and owner docs aligned with final behavior of this direction.",
+        "scope": ["AGENTS.md", "docs/WORKFLOW.md", "chatlogs/discussion/", "reports/{RUN_ID}/"],
+        "acceptance": [
+            "owner docs updated in same run when behavior/rules changed",
+            "bash tools/legacy.sh review STRICT=1 AUTO_FIX=1 passes",
+            "decision records accepted tradeoffs and residual risks",
+        ],
+    }
+)
+
+obj = {
+    "project_id": project_id,
+    "run_id": run_id,
+    "created_at_utc": datetime.now(timezone.utc).isoformat(),
+    "direction": {
+        "selected_option": selected_option,
+        "selected_title": title,
+        "goal": goal,
+        "priority": priority,
+    },
+    "council_source": council_file,
+    "arbiter_rule": "converge independent evidence-based reviews into one executable contract",
+    "arbiter_summary": {
+        "blockers": len(blockers),
+        "warnings": len(warnings),
+        "role_conditions": len(role_conditions),
+        "disagreements": len(disagreements),
+    },
+    "role_conditions": role_conditions,
+    "tasks": tasks,
+    "next_command": f"python3 tools/slice_task.py RUN_ID={run_id}",
+}
+Path(out_json).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+lines = []
+lines.append("# Execution Contract")
+lines.append("")
+lines.append(f"PROJECT_ID: `{project_id}`")
+lines.append(f"RUN_ID: `{run_id}`")
+lines.append(f"Generated At (UTC): {obj['created_at_utc']}")
+lines.append(f"Direction: {title}")
+lines.append(f"Arbiter Summary: blockers={len(blockers)} warnings={len(warnings)} conditions={len(role_conditions)}")
+lines.append("")
+lines.append("## Convergence Input")
+if role_conditions:
+    for c in role_conditions:
+        lines.append(f"- {c}")
+else:
+    lines.append("- no unresolved role conditions")
+if disagreements:
+    lines.append("")
+    lines.append("## Disagreements")
+    for d in disagreements:
+        lines.append(f"- {d}")
+lines.append("")
+lines.append("## Converged Task Slices")
+for t in tasks:
+    lines.append(f"- task_id: `{t['task_id']}` | title: {t['title']}")
+    lines.append(f"  - goal: {t['goal']}")
+    lines.append(f"  - scope: {', '.join(t['scope'])}")
+    lines.append("  - acceptance:")
+    for a in t["acceptance"]:
+        lines.append(f"    - {a}")
+lines.append("")
+lines.append("## Next Command")
+lines.append(f"- `python3 tools/slice_task.py RUN_ID={run_id}`")
+lines.append("")
+Path(out_md).write_text("\n".join(lines), encoding="utf-8")
+
+print(f"ARBITER_TASKS: {len(tasks)}")
+print(f"ARBITER_BLOCKERS: {len(blockers)}")
+print(f"ARBITER_WARNINGS: {len(warnings)}")
+print(f"ARBITER_NEXT_COMMAND: python3 tools/slice_task.py RUN_ID={run_id}")
+print(f"ARBITER_PROJECT_ID: {project_id}")
+PY
+
+  task_file="$(state_field_value "CURRENT_TASK_FILE")"
+  current_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$current_status" ]]; then
+    current_status="active"
+  fi
+  append_execution_event "$run_id" "arbiter" "arbiter_generated" "ok" "python3 tools/arbiter.py RUN_ID=${run_id}" "council_file=${council_file};execution_contract=${out_json}" ""
+  append_conversation_checkpoint "$run_id" "arbiter" "execution contract generated; next step slice"
+  update_state_current "$run_id" "$task_file" "$current_status" "$project_id"
+  echo "EXECUTION_CONTRACT_JSON: ${out_json}"
+  echo "EXECUTION_CONTRACT_MD: ${out_md}"
+  echo "ARBITER_PROJECT_ID: ${project_id}"
+  echo "ARBITER_RUN_ID: ${run_id}"
+}
+
+cmd_slice() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+  if [[ -n "$py_bin" && -f "tools/slice_task.py" ]]; then
+    "$py_bin" tools/slice_task.py "$@"
+    return $?
+  fi
+
+  local run_id=""
+  local explicit_run_id=""
+  local explicit_project_id="${QF_PROJECT_ID:-${PROJECT_ID:-}}"
+  local project_id=""
+  local token=""
+  local execution_contract=""
+  local queue_file="TASKS/QUEUE.md"
+  local out_json=""
+  local py_bin=""
+  local task_file=""
+  local current_status=""
+
+  for token in "$@"; do
+    [[ -z "$token" ]] && continue
+    case "$token" in
+      RUN_ID=*)
+        explicit_run_id="${token#RUN_ID=}"
+        ;;
+      PROJECT_ID=*)
+        explicit_project_id="${token#PROJECT_ID=}"
+        ;;
+      *)
+        if [[ -z "$explicit_run_id" ]]; then
+          explicit_run_id="$token"
+        fi
+        ;;
+    esac
+  done
+  if [[ -z "$explicit_run_id" && -n "${RUN_ID:-}" ]]; then
+    explicit_run_id="${RUN_ID}"
+  fi
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "slice")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: slice requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    exit 2
+  fi
+  project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "slice")"
+
+  require_execution_contract_gate "$run_id"
+  execution_contract="$EXECUTION_CONTRACT_FILE"
+  out_json="reports/${run_id}/slice_state.json"
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required to slice execution contract." >&2
+    exit 1
+  fi
+
+  "$py_bin" - <<'PY' "$run_id" "$project_id" "$execution_contract" "$queue_file" "$out_json"
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+run_id, project_id, contract_file, queue_file, out_json = sys.argv[1:]
+contract = json.loads(Path(contract_file).read_text(encoding="utf-8"))
+tasks = contract.get("tasks") or []
+if not isinstance(tasks, list):
+    tasks = []
+
+queue_path = Path(queue_file)
+if queue_path.exists():
+    text = queue_path.read_text(encoding="utf-8")
+else:
+    text = "# QUEUE\n\n## Queue\n\n"
+
+lines = text.splitlines()
+if not lines:
+    lines = ["# QUEUE", "", "## Queue", ""]
+try:
+    queue_idx = next(i for i, line in enumerate(lines) if line.strip() == "## Queue")
+except StopIteration:
+    if lines and lines[-1].strip():
+        lines.append("")
+    lines.extend(["## Queue", ""])
+    queue_idx = len(lines) - 2
+
+insert_at = queue_idx + 1
+while insert_at < len(lines) and lines[insert_at].strip() == "":
+    insert_at += 1
+
+existing = 0
+inserted = 0
+blocks = []
+for raw in tasks:
+    if not isinstance(raw, dict):
+        continue
+    task_id = str(raw.get("task_id", "")).strip() or f"slice-{len(blocks)+1}"
+    title = str(raw.get("title", "")).strip() or f"Slice task {task_id}"
+    goal = str(raw.get("goal", "")).strip() or "Execute task slice."
+    scope = raw.get("scope") or []
+    if not isinstance(scope, list):
+        scope = []
+    scope = [str(x).strip().replace("`", "") for x in scope if str(x).strip()]
+    if not scope:
+        scope = ["tools/*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
+    scope_line = ", ".join(f"`{x}`" for x in scope)
+    acceptance = raw.get("acceptance") or []
+    if not isinstance(acceptance, list):
+        acceptance = []
+    acceptance = [str(x).strip() for x in acceptance if str(x).strip()]
+    if not acceptance:
+        acceptance = ["slice acceptance placeholder"]
+
+    marker = f"Slice: run_id={run_id} task_id={task_id}"
+    if marker in text:
+        existing += 1
+        continue
+    inserted += 1
+    block = [
+        f"- [ ] TODO Title: slice-next: {title}",
+        f"  Goal: {goal}",
+        f"  Scope: {scope_line}",
+        "  Acceptance:",
+    ]
+    for a in acceptance:
+        block.append(f"  - [ ] {a}")
+    block.append("  - [ ] Command(s) pass: `make verify`")
+    block.append("  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`")
+    block.append(f"  {marker}")
+    block.append("")
+    blocks.append(block)
+
+if blocks:
+    flat = []
+    for b in blocks:
+        flat.extend(b)
+    lines = lines[:insert_at] + flat + lines[insert_at:]
+    queue_path.parent.mkdir(parents=True, exist_ok=True)
+    queue_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+
+state = {
+    "project_id": project_id,
+    "run_id": run_id,
+    "created_at_utc": datetime.now(timezone.utc).isoformat(),
+    "source_contract": contract_file,
+    "tasks_total": len(tasks),
+    "queue_inserted": inserted,
+    "queue_existing": existing,
+    "next_command": "bash tools/legacy.sh do queue-next",
+}
+Path(out_json).write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+print(f"SLICE_TASKS_TOTAL: {len(tasks)}")
+print(f"SLICE_QUEUE_INSERTED: {inserted}")
+print(f"SLICE_QUEUE_EXISTING: {existing}")
+print("SLICE_NEXT_COMMAND: bash tools/legacy.sh do queue-next")
+print(f"SLICE_PROJECT_ID: {project_id}")
+PY
+
+  task_file="$(state_field_value "CURRENT_TASK_FILE")"
+  current_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$current_status" ]]; then
+    current_status="active"
+  fi
+  append_execution_event "$run_id" "slice" "slice_generated" "ok" "python3 tools/slice_task.py RUN_ID=${run_id}" "execution_contract=${execution_contract};slice_state=${out_json}" ""
+  append_conversation_checkpoint "$run_id" "slice" "execution contract sliced into queue tasks; next step do"
+  update_state_current "$run_id" "$task_file" "$current_status" "$project_id"
+  echo "SLICE_STATE_FILE: ${out_json}"
+  echo "SLICE_QUEUE_FILE: ${queue_file}"
+  echo "SLICE_PROJECT_ID: ${project_id}"
+  echo "SLICE_RUN_ID: ${run_id}"
+}
+
+cmd_execute() {
+  local run_id=""
+  local explicit_run_id="${RUN_ID:-}"
+  local explicit_project_id="${QF_PROJECT_ID:-${PROJECT_ID:-}}"
+  local project_id=""
+  local option="${QF_EXECUTE_OPTION:-}"
+  local auto_choose="${QF_EXECUTE_AUTO_CHOOSE:-0}"
+  local confirm_contract="${QF_EXECUTE_CONFIRM_CONTRACT:-0}"
+  local auto_confirm_contract="${QF_EXECUTE_AUTO_CONFIRM_CONTRACT:-0}"
+  local target="${QF_EXECUTE_TARGET:-do}"
+  local token=""
+  local ready_file=""
+  local orient_file=""
+  local recommended=""
+  local contract_confirm_file=""
+  local py_bin=""
+  local execute_steps_total=7
+
+  for token in "$@"; do
+    [[ -z "$token" ]] && continue
+    case "$token" in
+      RUN_ID=*)
+        explicit_run_id="${token#RUN_ID=}"
+        ;;
+      PROJECT_ID=*)
+        explicit_project_id="${token#PROJECT_ID=}"
+        ;;
+      OPTION=*)
+        option="${token#OPTION=}"
+        ;;
+      AUTO_CHOOSE=*)
+        auto_choose="${token#AUTO_CHOOSE=}"
+        ;;
+      CONFIRM_CONTRACT=*)
+        confirm_contract="${token#CONFIRM_CONTRACT=}"
+        ;;
+      AUTO_CONFIRM_CONTRACT=*)
+        auto_confirm_contract="${token#AUTO_CONFIRM_CONTRACT=}"
+        ;;
+      TARGET=*)
+        target="${token#TARGET=}"
+        ;;
+      *)
+        if [[ -z "$option" ]]; then
+          option="$token"
+        fi
+        ;;
+    esac
+  done
+
+  case "${auto_choose,,}" in
+    1|true|yes|y) auto_choose="1" ;;
+    0|false|no|n) auto_choose="0" ;;
+    *)
+      echo "ERROR: invalid AUTO_CHOOSE=${auto_choose} (expected 0|1)." >&2
+      exit 2
+      ;;
+  esac
+  case "${confirm_contract,,}" in
+    1|true|yes|y) confirm_contract="1" ;;
+    0|false|no|n) confirm_contract="0" ;;
+    *)
+      echo "ERROR: invalid CONFIRM_CONTRACT=${confirm_contract} (expected 0|1)." >&2
+      exit 2
+      ;;
+  esac
+  case "${auto_confirm_contract,,}" in
+    1|true|yes|y) auto_confirm_contract="1" ;;
+    0|false|no|n) auto_confirm_contract="0" ;;
+    *)
+      echo "ERROR: invalid AUTO_CONFIRM_CONTRACT=${auto_confirm_contract} (expected 0|1)." >&2
+      exit 2
+      ;;
+  esac
+  case "${target,,}" in
+    do) target="do" ;;
+    prepare) target="prepare" ;;
+    *)
+      echo "ERROR: invalid TARGET=${target} (expected prepare|do)." >&2
+      exit 2
+      ;;
+  esac
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "execute")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: execute requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    exit 2
+  fi
+  project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "execute")"
+
+  emit_step "execute" 1 "$execute_steps_total" "resolve run and enforce ready gate"
+  require_ready_gate "$run_id"
+  ready_file="$REQUIRED_READY_FILE"
+  if [[ -n "$ready_file" ]]; then
+    run_id="$(basename "$(dirname "$ready_file")")"
+  fi
+
+  append_execution_event "$run_id" "execute" "execute_start" "ok" "bash tools/legacy.sh execute RUN_ID=${run_id}" "project_id=${project_id};option=${option};auto_choose=${auto_choose};confirm_contract=${confirm_contract};auto_confirm_contract=${auto_confirm_contract};target=${target}" ""
+
+  emit_step "execute" 2 "$execute_steps_total" "ensure orientation draft"
+  orient_file="$(resolve_orient_file_for_run "$run_id" || true)"
+  if [[ -z "$orient_file" || ! -f "$orient_file" ]]; then
+    echo "EXECUTE_STEP: orient"
+    cmd_orient "RUN_ID=${run_id}" "PROJECT_ID=${project_id}"
+    orient_file="$(resolve_orient_file_for_run "$run_id" || true)"
+  fi
+  if [[ -z "$orient_file" || ! -f "$orient_file" ]]; then
+    append_execution_event "$run_id" "execute" "execute_orient_missing" "fail" "bash tools/legacy.sh execute RUN_ID=${run_id}" "" "orient file missing after orient step"
+    echo "ERROR: execute cannot continue because orient file is missing." >&2
+    exit 1
+  fi
+
+  emit_step "execute" 3 "$execute_steps_total" "resolve/confirm direction option"
+  if [[ -z "$option" || ! -f "reports/${run_id}/orient_choice.json" ]]; then
+    if command -v python3 >/dev/null 2>&1; then
+      py_bin="python3"
+    elif command -v python >/dev/null 2>&1; then
+      py_bin="python"
+    else
+      echo "ERROR: python is required for execute option resolution." >&2
+      exit 1
+    fi
+    recommended="$("$py_bin" - <<'PY' "$orient_file"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+try:
+    obj = json.loads(path.read_text(encoding="utf-8"))
+except Exception:
+    print("")
+    raise SystemExit(0)
+print(str(obj.get("recommended_option") or "").strip())
+PY
+)"
+  fi
+
+  if [[ ! -f "reports/${run_id}/orient_choice.json" ]]; then
+    if [[ -z "$option" ]]; then
+      if [[ "$auto_choose" == "1" && -n "$recommended" ]]; then
+        option="$recommended"
+      else
+        echo "EXECUTE_NEEDS_OPTION: true"
+        if [[ -n "$recommended" ]]; then
+          echo "EXECUTE_RECOMMENDED_OPTION: ${recommended}"
+          echo "EXECUTE_NEXT_COMMAND: python3 tools/choose.py RUN_ID=${run_id} OPTION=${recommended}"
+        else
+          echo "EXECUTE_NEXT_COMMAND: python3 tools/choose.py RUN_ID=${run_id} OPTION=<id>"
+        fi
+        append_execution_event "$run_id" "execute" "execute_wait_option" "fail" "bash tools/legacy.sh execute RUN_ID=${run_id}" "recommended=${recommended}" "missing option confirmation"
+        exit 1
+      fi
+    fi
+    echo "EXECUTE_STEP: choose OPTION=${option}"
+    cmd_choose "RUN_ID=${run_id}" "PROJECT_ID=${project_id}" "OPTION=${option}"
+  fi
+
+  emit_step "execute" 4 "$execute_steps_total" "run council review"
+  if [[ ! -f "chatlogs/discussion/${run_id}/council.json" ]]; then
+    echo "EXECUTE_STEP: council"
+    cmd_council "RUN_ID=${run_id}" "PROJECT_ID=${project_id}"
+  fi
+  emit_step "execute" 5 "$execute_steps_total" "run arbiter convergence"
+  if [[ ! -f "reports/${run_id}/execution_contract.json" ]]; then
+    echo "EXECUTE_STEP: arbiter"
+    cmd_arbiter "RUN_ID=${run_id}" "PROJECT_ID=${project_id}"
+  fi
+  emit_step "execute" 6 "$execute_steps_total" "slice execution contract into queue tasks"
+  if [[ ! -f "reports/${run_id}/slice_state.json" ]]; then
+    echo "EXECUTE_STEP: slice"
+    cmd_slice "RUN_ID=${run_id}" "PROJECT_ID=${project_id}"
+  fi
+
+  emit_step "execute" 7 "$execute_steps_total" "dispatch by target (prepare/do)"
+  contract_confirm_file="reports/${run_id}/execution_contract_confirm.json"
+  if [[ "$confirm_contract" == "1" || "$auto_confirm_contract" == "1" ]]; then
+    if command -v python3 >/dev/null 2>&1; then
+      py_bin="python3"
+    elif command -v python >/dev/null 2>&1; then
+      py_bin="python"
+    else
+      echo "ERROR: python is required to write execution contract confirmation." >&2
+      exit 1
+    fi
+    "$py_bin" - <<'PY' "$contract_confirm_file" "$project_id" "$run_id" "$confirm_contract" "$auto_confirm_contract"
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+path, project_id, run_id, confirm_contract, auto_confirm_contract = sys.argv[1:]
+source = "manual"
+if confirm_contract != "1" and auto_confirm_contract == "1":
+    source = "auto"
+obj = {
+    "project_id": project_id,
+    "run_id": run_id,
+    "created_at_utc": datetime.now(timezone.utc).isoformat(),
+    "source": source,
+}
+p = Path(path)
+p.parent.mkdir(parents=True, exist_ok=True)
+p.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+print(str(p))
+PY
+    echo "EXECUTE_CONTRACT_CONFIRM_FILE: ${contract_confirm_file}"
+  fi
+
+  if [[ "$target" == "do" && ! -f "$contract_confirm_file" ]]; then
+    echo "EXECUTE_NEEDS_CONTRACT_CONFIRM: true"
+    echo "EXECUTE_NEXT_COMMAND: bash tools/legacy.sh execute RUN_ID=${run_id} PROJECT_ID=${project_id} CONFIRM_CONTRACT=1 TARGET=do"
+    append_execution_event "$run_id" "execute" "execute_wait_contract_confirm" "fail" "bash tools/legacy.sh execute RUN_ID=${run_id}" "project_id=${project_id};contract_confirm_file=${contract_confirm_file}" "missing execution contract confirmation"
+    exit 1
+  fi
+
+  if [[ "$target" == "prepare" ]]; then
+    append_execution_event "$run_id" "execute" "execute_prepared" "ok" "bash tools/legacy.sh execute RUN_ID=${run_id} TARGET=prepare" "project_id=${project_id};contract_confirm_file=${contract_confirm_file}" ""
+    echo "EXECUTE_STATUS: prepared"
+    echo "EXECUTE_NEXT_COMMAND: bash tools/legacy.sh do queue-next"
+    return 0
+  fi
+
+  echo "EXECUTE_STEP: do"
+  RUN_ID="$run_id" cmd_do "queue-next"
+  append_execution_event "$run_id" "execute" "execute_done" "ok" "bash tools/legacy.sh execute RUN_ID=${run_id}" "project_id=${project_id};contract_confirm_file=${contract_confirm_file}" ""
+}
+
+cmd_discuss() {
+  local token=""
+  local has_target=0
+  local args=()
+  for token in "$@"; do
+    [[ -z "$token" ]] && continue
+    case "$token" in
+      TARGET=*)
+        has_target=1
+        ;;
+    esac
+    args+=("$token")
+  done
+
+  if [[ "$has_target" -eq 0 && -z "${QF_EXECUTE_TARGET:-}" ]]; then
+    cmd_execute "${args[@]}" "TARGET=prepare"
+  else
+    cmd_execute "${args[@]}"
+  fi
+}
+
+cmd_review() {
+  local run_id=""
+  local explicit_run_id="${RUN_ID:-}"
+  local auto_fix="${QF_REVIEW_AUTO_FIX:-0}"
+  local strict="${QF_REVIEW_STRICT:-auto}"
+  local non_blocking="${QF_REVIEW_NON_BLOCKING:-0}"
+  local token=""
+  local py_bin=""
+  local task_file=""
+  local state_run_id=""
+  local current_status=""
+  local output=""
+  local rc=0
+
+  for token in "$@"; do
+    [[ -z "$token" ]] && continue
+    case "$token" in
+      RUN_ID=*)
+        explicit_run_id="${token#RUN_ID=}"
+        ;;
+      AUTO_FIX=*)
+        auto_fix="${token#AUTO_FIX=}"
+        ;;
+      STRICT=*)
+        strict="${token#STRICT=}"
+        ;;
+      NON_BLOCKING=*)
+        non_blocking="${token#NON_BLOCKING=}"
+        ;;
+      *)
+        if [[ -z "$explicit_run_id" ]]; then
+          explicit_run_id="$token"
+        fi
+        ;;
+    esac
+  done
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "review")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: review requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    exit 2
+  fi
+
+  case "${auto_fix,,}" in
+    1|true|yes|y) auto_fix="1" ;;
+    0|false|no|n) auto_fix="0" ;;
+    *)
+      echo "ERROR: invalid AUTO_FIX=${auto_fix} (expected 0|1)." >&2
+      exit 2
+      ;;
+  esac
+  case "${non_blocking,,}" in
+    1|true|yes|y) non_blocking="1" ;;
+    0|false|no|n) non_blocking="0" ;;
+    *)
+      echo "ERROR: invalid NON_BLOCKING=${non_blocking} (expected 0|1)." >&2
+      exit 2
+      ;;
+  esac
+  case "${strict,,}" in
+    1|true|yes|y) strict="1" ;;
+    0|false|no|n) strict="0" ;;
+    auto)
+      state_run_id="$(resolve_state_current_run_id || true)"
+      current_status="$(state_field_value "CURRENT_STATUS")"
+      if [[ "$run_id" == "$state_run_id" && "$current_status" == "done" ]]; then
+        strict="1"
+      else
+        strict="0"
+      fi
+      ;;
+    *)
+      echo "ERROR: invalid STRICT=${strict} (expected 0|1|auto)." >&2
+      exit 2
+      ;;
+  esac
+
+  task_file="$(state_field_value "CURRENT_TASK_FILE")"
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required for review." >&2
+    exit 1
+  fi
+
+  set +e
+  output="$("$py_bin" - <<'PY' "$run_id" "$task_file" "$auto_fix" "$strict" "$non_blocking"
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+run_id, task_file, auto_fix, strict, non_blocking = sys.argv[1:]
+auto_fix = auto_fix == "1"
+strict = strict == "1"
+non_blocking = non_blocking == "1"
+
+run_dir = Path("reports") / run_id
+run_dir.mkdir(parents=True, exist_ok=True)
+sync_discussion = Path("chatlogs/discussion") / run_id
+sync_discussion.mkdir(parents=True, exist_ok=True)
+
+summary_path = run_dir / "summary.md"
+decision_path = run_dir / "decision.md"
+ready_path = run_dir / "ready.json"
+choice_path = run_dir / "orient_choice.json"
+contract_path = run_dir / "direction_contract.json"
+drift_json = run_dir / "drift_review.json"
+drift_md = run_dir / "drift_review.md"
+drift_todo = sync_discussion / "drift_todo.md"
+
+checks = []
+fixes = []
+blockers = []
+warnings = []
+
+STOP_REASONS = {
+    "task_done",
+    "needs_human_decision",
+    "infra_network",
+    "infra_quota_or_auth",
+    "tool_or_script_error",
+    "verify_failed",
+    "external_blocked",
+}
+
+def add_check(name: str, status: str, message: str, fixed: bool = False) -> None:
+    checks.append({"name": name, "status": status, "message": message, "fixed": fixed})
+    if status == "block":
+        blockers.append(message)
+    elif status == "warn":
+        warnings.append(message)
+
+def ensure_file(path: Path, content: str, name: str) -> str:
+    if path.exists():
+        add_check(name, "pass", f"{path} exists")
+        return path.read_text(encoding="utf-8", errors="replace")
+    if auto_fix:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        fixes.append(f"created {path}")
+        add_check(name, "pass", f"{path} missing -> auto-created", fixed=True)
+        return content
+    add_check(name, "block", f"{path} is missing")
+    return ""
+
+summary = ensure_file(
+    summary_path,
+    "\n".join(
+        [
+            "# Summary",
+            "",
+            f"RUN_ID: `{run_id}`",
+            "",
+            "## What changed",
+            "- ",
+            "",
+            "## Commands / Outputs",
+            "- make verify (record pending)",
+            "",
+            "## Notes",
+            "- ",
+            "",
+        ]
+    ),
+    "summary_file",
+)
+decision = ensure_file(
+    decision_path,
+    "\n".join(
+        [
+            "# Decision",
+            "",
+            f"RUN_ID: `{run_id}`",
+            "",
+            "## Why",
+            "- ",
+            "",
+            "## Options considered",
+            "- ",
+            "",
+            "## Risks / Rollback",
+            "- ",
+            "",
+            "## Stop Reason",
+            "- needs_human_decision",
+            "",
+        ]
+    ),
+    "decision_file",
+)
+
+if ready_path.exists():
+    add_check("ready_gate", "pass", f"{ready_path} exists")
+else:
+    add_check("ready_gate", "warn", f"{ready_path} missing")
+
+if choice_path.exists():
+    add_check("direction_choice", "pass", f"{choice_path} exists")
+else:
+    level = "block" if strict else "warn"
+    add_check("direction_choice", level, f"{choice_path} missing")
+
+if contract_path.exists():
+    add_check("direction_contract", "pass", f"{contract_path} exists")
+else:
+    level = "block" if strict else "warn"
+    add_check("direction_contract", level, f"{contract_path} missing")
+
+summary_low = summary.lower()
+if "make verify" in summary_low:
+    add_check("verify_record", "pass", "summary includes make verify record")
+else:
+    if auto_fix:
+        patch = "\n## Commands / Outputs\n- make verify (record pending)\n"
+        if "## Commands / Outputs" in summary:
+            summary = summary.rstrip() + "\n- make verify (record pending)\n"
+        else:
+            summary = summary.rstrip() + patch
+        summary_path.write_text(summary.rstrip() + "\n", encoding="utf-8")
+        fixes.append("added verify record placeholder in summary")
+        add_check("verify_record", "warn", "missing verify record -> auto-fixed placeholder", fixed=True)
+    else:
+        level = "block" if strict else "warn"
+        add_check("verify_record", level, "summary missing make verify record")
+
+def has_stop_reason(text: str) -> bool:
+    for raw in text.splitlines():
+        line = raw.strip().lstrip("-").strip()
+        line = line.strip("`")
+        if line in STOP_REASONS:
+            return True
+    return False
+
+if has_stop_reason(decision):
+    add_check("stop_reason", "pass", "decision contains stop reason")
+else:
+    if auto_fix:
+        decision = decision.rstrip() + "\n\n## Stop Reason\n- needs_human_decision\n"
+        decision_path.write_text(decision, encoding="utf-8")
+        fixes.append("added stop reason placeholder in decision")
+        add_check("stop_reason", "warn", "missing stop reason -> auto-fixed placeholder", fixed=True)
+    else:
+        level = "block" if strict else "warn"
+        add_check("stop_reason", level, "decision missing stop reason")
+
+if task_file and Path(task_file).exists():
+    add_check("task_contract", "pass", f"{task_file} exists")
+else:
+    add_check("task_contract", "warn", f"task file missing or unknown: {task_file or '(empty)'}")
+
+status = "pass" if not blockers else "fail"
+next_cmd = f"bash tools/legacy.sh do queue-next" if status == "pass" else f"bash tools/legacy.sh snapshot RUN_ID={run_id} NOTE=\"review blockers\""
+
+obj = {
+    "run_id": run_id,
+    "created_at_utc": datetime.now(timezone.utc).isoformat(),
+    "auto_fix": auto_fix,
+    "strict": strict,
+    "non_blocking": non_blocking,
+    "status": status,
+    "blockers_count": len(blockers),
+    "warnings_count": len(warnings),
+    "checks": checks,
+    "fixes": fixes,
+    "next_command": next_cmd,
+}
+drift_json.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+lines = []
+lines.append("# Drift Review")
+lines.append("")
+lines.append(f"RUN_ID: `{run_id}`")
+lines.append(f"Generated At (UTC): {obj['created_at_utc']}")
+lines.append(f"Status: `{status}`")
+lines.append(f"Strict: `{str(strict).lower()}` | Auto-fix: `{str(auto_fix).lower()}` | Non-blocking: `{str(non_blocking).lower()}`")
+lines.append("")
+lines.append("## Checks")
+for c in checks:
+    marker = "fixed" if c.get("fixed") else "raw"
+    lines.append(f"- [{c['status']}] {c['name']}: {c['message']} ({marker})")
+lines.append("")
+lines.append("## Fixes")
+if fixes:
+    for f in fixes:
+        lines.append(f"- {f}")
+else:
+    lines.append("- none")
+lines.append("")
+lines.append("## Blockers")
+if blockers:
+    for b in blockers:
+        lines.append(f"- {b}")
+else:
+    lines.append("- none")
+lines.append("")
+lines.append("## Next Command")
+lines.append(f"- `{next_cmd}`")
+lines.append("")
+drift_md.write_text("\n".join(lines), encoding="utf-8")
+
+if blockers:
+    todo_lines = []
+    todo_lines.append("# Drift TODO")
+    todo_lines.append("")
+    todo_lines.append(f"RUN_ID: `{run_id}`")
+    todo_lines.append(f"Generated At (UTC): {obj['created_at_utc']}")
+    todo_lines.append("")
+    todo_lines.append("## Blockers")
+    for b in blockers:
+        todo_lines.append(f"- {b}")
+    todo_lines.append("")
+    todo_lines.append("## Suggested discussion")
+    todo_lines.append("- 明确需求与实现偏差边界，确认是否需要改 Contract。")
+    todo_lines.append("- 明确是否补充 verify 证据和 stop reason。")
+    todo_lines.append("")
+    drift_todo.write_text("\n".join(todo_lines), encoding="utf-8")
+
+print(f"REVIEW_FILE_JSON: {drift_json}")
+print(f"REVIEW_FILE_MD: {drift_md}")
+print(f"REVIEW_STATUS: {status}")
+print(f"REVIEW_BLOCKERS: {len(blockers)}")
+print(f"REVIEW_WARNINGS: {len(warnings)}")
+if fixes:
+    print(f"REVIEW_FIXES: {len(fixes)}")
+if blockers:
+    print(f"REVIEW_TODO: {drift_todo}")
+
+if blockers and not non_blocking:
+    raise SystemExit(1)
+PY
+)"
+  rc=$?
+  set -e
+  printf "%s\n" "$output"
+
+  if [[ "$rc" -ne 0 ]]; then
+    append_execution_event "$run_id" "review" "review_failed" "fail" "bash tools/legacy.sh review RUN_ID=${run_id} AUTO_FIX=${auto_fix} STRICT=${strict}" "task_file=${task_file}" "$output"
+    append_conversation_checkpoint "$run_id" "review" "review failed; see drift_review.md"
+    return "$rc"
+  fi
+
+  append_execution_event "$run_id" "review" "review_passed" "ok" "bash tools/legacy.sh review RUN_ID=${run_id} AUTO_FIX=${auto_fix} STRICT=${strict}" "task_file=${task_file}" ""
+  append_conversation_checkpoint "$run_id" "review" "review completed; drift report updated"
+  return 0
+}
+
+cmd_snapshot() {
+  local run_id=""
+  local explicit_run_id="${RUN_ID:-}"
+  local note="${QF_SNAPSHOT_NOTE:-}"
+  local arg=""
+  local snapshot_file=""
+  local now_iso=""
+  local branch=""
+  local head=""
+  local status_line=""
+  local current_status=""
+
+  for arg in "$@"; do
+    case "$arg" in
+      RUN_ID=*)
+        explicit_run_id="${arg#RUN_ID=}"
+        ;;
+      NOTE=*)
+        note="${arg#NOTE=}"
+        ;;
+      *)
+        if [[ -z "$explicit_run_id" ]]; then
+          explicit_run_id="$arg"
+        elif [[ -z "$note" ]]; then
+          note="$arg"
+        fi
+        ;;
+    esac
+  done
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "snapshot")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: snapshot requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    exit 2
+  fi
+
+  mkdir -p "reports/${run_id}"
+  snapshot_file="reports/${run_id}/conversation.md"
+  now_iso="$(date -Iseconds)"
+  branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")"
+  head="$(git rev-parse --short HEAD 2>/dev/null || echo "none")"
+  if is_dirty; then
+    status_line="dirty"
+  else
+    status_line="clean"
+  fi
+
+  {
+    echo "## ${now_iso}"
+    echo "- branch: \`${branch}\`"
+    echo "- head: \`${head}\`"
+    echo "- working_tree: \`${status_line}\`"
+    if [[ -n "$note" ]]; then
+      echo "- note: ${note}"
+    else
+      echo "- note: (empty)"
+    fi
+    echo
+  } >> "$snapshot_file"
+
+  current_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$current_status" ]]; then
+    current_status="active"
+  fi
+  update_state_current "$run_id" "$(state_field_value "CURRENT_TASK_FILE")" "$current_status"
+  echo "SNAPSHOT_FILE: $snapshot_file"
+  echo "SNAPSHOT_RUN_ID: $run_id"
+}
+
+cmd_handoff() {
+  local arg="${1:-}"
+  local run_id=""
+  local explicit_run_id=""
+  local ready_file=""
+  local convo_file=""
+  local exec_file=""
+  local ship_file=""
+  local out_file=""
+  local py_bin=""
+  local current_status=""
+
+  if [[ "$arg" =~ ^RUN_ID=.+$ ]]; then
+    explicit_run_id="${arg#RUN_ID=}"
+  elif [[ -n "$arg" ]]; then
+    explicit_run_id="$arg"
+  elif [[ -n "${RUN_ID:-}" ]]; then
+    explicit_run_id="${RUN_ID}"
+  fi
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "handoff")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: handoff requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    exit 2
+  fi
+
+  ready_file="reports/${run_id}/ready.json"
+  convo_file="reports/${run_id}/conversation.md"
+  exec_file="reports/${run_id}/execution.jsonl"
+  ship_file="reports/${run_id}/ship_state.json"
+  out_file="reports/${run_id}/handoff.md"
+  mkdir -p "reports/${run_id}"
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required to generate handoff.md" >&2
+    exit 1
+  fi
+
+  "$py_bin" - <<'PY' "$run_id" "$ready_file" "$convo_file" "$exec_file" "$ship_file" "$out_file"
+import json
+import os
+import sys
+from datetime import datetime, timezone
+
+run_id, ready_file, convo_file, exec_file, ship_file, out_file = sys.argv[1:]
+
+def tail_lines(path: str, n: int) -> list[str]:
+    if not os.path.exists(path):
+        return []
+    with open(path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    return [x.rstrip("\n") for x in lines[-n:]]
+
+def read_ready(path: str) -> dict:
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def read_ship(path: str) -> dict:
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def read_exec_tail(path: str, n: int) -> list[dict]:
+    if not os.path.exists(path):
+        return []
+    items = []
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                items.append(json.loads(line))
+            except Exception:
+                continue
+    return items[-n:]
+
+def short_text(value: str, max_len: int = 120) -> str:
+    v = (value or "").strip()
+    if len(v) <= max_len:
+        return v
+    return v[:max_len] + "...(truncated)"
+
+def extract_notes(lines: list[str], n: int) -> list[str]:
+    notes = []
+    for line in lines:
+        s = line.strip()
+        if not s:
+            continue
+        if s.startswith("- note:"):
+            notes.append(s[len("- note:"):].strip())
+        elif s.startswith("- "):
+            notes.append(s[2:].strip())
+    out = []
+    for x in notes[-n:]:
+        x = short_text(x, 160)
+        if x:
+            out.append(x)
+    return out
+
+ready = read_ready(ready_file)
+ship = read_ship(ship_file)
+exec_tail = read_exec_tail(exec_file, 8)
+convo_tail = tail_lines(convo_file, 20)
+notes = extract_notes(convo_tail, 3)
+
+choice_file = f"reports/{run_id}/orient_choice.json"
+council_file = f"chatlogs/discussion/{run_id}/council.json"
+execution_contract_file = f"reports/{run_id}/execution_contract.json"
+slice_state_file = f"reports/{run_id}/slice_state.json"
+orient_file = f"chatlogs/discussion/{run_id}/orient.json"
+
+if not ready:
+    next_cmd = "python3 tools/ready.py"
+elif ship and ship.get("last_error"):
+    next_cmd = "bash tools/legacy.sh resume"
+elif not os.path.exists(choice_file):
+    if os.path.exists(orient_file):
+        next_cmd = f"python3 tools/choose.py RUN_ID={run_id} OPTION=<id>"
+    else:
+        next_cmd = f"python3 tools/orient.py RUN_ID={run_id}"
+elif not os.path.exists(council_file):
+    next_cmd = f"python3 tools/council.py RUN_ID={run_id}"
+elif not os.path.exists(execution_contract_file):
+    next_cmd = f"python3 tools/arbiter.py RUN_ID={run_id}"
+elif not os.path.exists(slice_state_file):
+    next_cmd = f"python3 tools/slice_task.py RUN_ID={run_id}"
+else:
+    next_cmd = "bash tools/legacy.sh do queue-next"
+
+missing = []
+for p in (ready_file, convo_file, exec_file, ship_file):
+    if not os.path.exists(p):
+        missing.append(p)
+
+latest_event = {}
+if exec_tail:
+    latest_event = exec_tail[-1]
+
+main_lines = []
+if notes:
+    for n in notes:
+        main_lines.append(f"- {n}")
+else:
+    main_lines.append("- missing: conversation.md")
+    if ready:
+        rst = ready.get("restatement", {})
+        if rst.get("goal"):
+            main_lines.append(f"- 目标复述：{short_text(str(rst.get('goal')), 160)}")
+
+conclusion_lines = []
+if ready:
+    rst = ready.get("restatement", {})
+    conclusion_lines.append("- ready 门禁：已通过。")
+    if rst.get("goal"):
+        conclusion_lines.append(f"- 当前目标：{short_text(str(rst.get('goal')), 160)}")
+else:
+    conclusion_lines.append("- ready 门禁：未通过（missing: ready.json）。")
+
+if latest_event:
+    phase = latest_event.get("phase", "")
+    action = latest_event.get("action", "")
+    status = latest_event.get("status", "")
+    artifacts = short_text(str(latest_event.get("artifacts", "")), 120)
+    conclusion_lines.append(f"- 最近执行：{phase}/{action} ({status}) {artifacts}".rstrip())
+elif not os.path.exists(exec_file):
+    conclusion_lines.append("- 执行轨迹：missing: execution.jsonl。")
+
+if ship:
+    step = ship.get("step", "(missing)")
+    pr_url = ship.get("pr_url", "(none)")
+    last_error = ship.get("last_error", "")
+    conclusion_lines.append(f"- 交付状态：step={step}, pr={pr_url}")
+    if last_error:
+        conclusion_lines.append(f"- 交付异常：{short_text(str(last_error), 160)}")
+elif not os.path.exists(ship_file):
+    conclusion_lines.append("- 交付状态：missing: ship_state.json。")
+
+thinking_lines = []
+if any((x.get("status") == "fail") for x in exec_tail):
+    thinking_lines.append("- 最近出现失败事件，建议先 `bash tools/legacy.sh resume` 处理恢复，再继续新任务。")
+elif missing:
+    thinking_lines.append("- 接班信息有缺口；后续在关键决策点执行 `bash tools/legacy.sh snapshot NOTE=\"...\"` 提升连续性。")
+else:
+    thinking_lines.append("- 当前信息链完整，建议保持“短总结 + 证据链接”节奏，避免文档噪音。")
+
+lines = []
+lines.append("# Session 总结")
+lines.append("")
+lines.append(f"RUN_ID: `{run_id}`")
+lines.append(f"Generated At: {datetime.now(timezone.utc).isoformat()}")
+lines.append("")
+lines.append("## 本次沟通主线")
+lines.extend(main_lines)
+lines.append("")
+lines.append("## 关键结论")
+lines.extend(conclusion_lines)
+lines.append("")
+lines.append("## 少量思考摘要")
+lines.extend(thinking_lines)
+lines.append("")
+lines.append("## 下一步（单条）")
+lines.append(f"- {next_cmd}")
+lines.append("")
+lines.append("## 缺失输入（可选补齐）")
+if missing:
+    for p in missing:
+        lines.append(f"- {p}")
+else:
+    lines.append("- none")
+
+with open(out_file, "w", encoding="utf-8") as f:
+    f.write("\n".join(lines) + "\n")
+PY
+
+  append_execution_event "$run_id" "handoff" "handoff_generated" "ok" "bash tools/legacy.sh handoff RUN_ID=${run_id}" "handoff_file=${out_file}" ""
+  current_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$current_status" ]]; then
+    current_status="active"
+  fi
+  update_state_current "$run_id" "$(state_field_value "CURRENT_TASK_FILE")" "$current_status"
+  echo "HANDOFF_FILE: $out_file"
+  echo "HANDOFF_RUN_ID: $run_id"
+}
+
+sync_file_is_valid() {
+  local sync_file="$1"
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    return 1
+  fi
+  "$py_bin" - <<'PY' "$sync_file"
+import json
+import sys
+
+path = sys.argv[1]
+try:
+    with open(path, "r", encoding="utf-8") as f:
+        obj = json.load(f)
+except Exception:
+    raise SystemExit(1)
+if not obj.get("sync_passed"):
+    raise SystemExit(1)
+if obj.get("missing_required_files"):
+    raise SystemExit(1)
+if not obj.get("files_read"):
+    raise SystemExit(1)
+print(path)
+PY
+}
+
+resolve_sync_file_for_run() {
+  local run_id="${1:-}"
+  local sync_file=""
+  if [[ -z "$run_id" ]]; then
+    printf ""
+    return 1
+  fi
+  sync_file="reports/${run_id}/sync_report.json"
+  if [[ -f "$sync_file" ]] && sync_file_is_valid "$sync_file" >/dev/null 2>&1; then
+    printf "%s" "$sync_file"
+    return 0
+  fi
+  printf ""
+  return 1
+}
+
+learn_file_is_valid() {
+  local learn_file="$1"
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    return 1
+  fi
+  "$py_bin" - <<'PY' "$learn_file"
+import hashlib
+import json
+import os
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+path = Path(sys.argv[1])
+try:
+    obj = json.loads(path.read_text(encoding="utf-8"))
+except Exception:
+    raise SystemExit(1)
+
+if not obj.get("learn_passed"):
+    raise SystemExit(1)
+
+model_sync = obj.get("model_sync")
+if not isinstance(model_sync, dict):
+    raise SystemExit(1)
+if str(model_sync.get("mode", "")).strip() != "1":
+    raise SystemExit(1)
+if str(model_sync.get("plan_mode", "")).strip() != "strong":
+    raise SystemExit(1)
+if str(model_sync.get("status", "")).strip() != "pass":
+    raise SystemExit(1)
+if not bool(model_sync.get("passed")):
+    raise SystemExit(1)
+model_result = model_sync.get("result")
+if not isinstance(model_result, dict):
+    raise SystemExit(1)
+for key in ["mainline", "current_stage", "next_step", "files_read", "plan_protocol", "oral_restate", "oral_exam", "anchor_realign", "practice"]:
+    if key not in model_result:
+        raise SystemExit(1)
+if not isinstance(model_result.get("files_read"), list) or not model_result.get("files_read"):
+    raise SystemExit(1)
+anchor = model_result.get("anchor_realign") or {}
+if not isinstance(anchor, dict):
+    raise SystemExit(1)
+for key in ["question_id", "status", "drift_detail", "return_to_mainline"]:
+    if key not in anchor:
+        raise SystemExit(1)
+if str(anchor.get("status", "")).strip() not in ("on_track", "drifted"):
+    raise SystemExit(1)
+practice = model_result.get("practice") or {}
+if not isinstance(practice, dict):
+    raise SystemExit(1)
+if int(practice.get("command_execution_count", 0)) < 1:
+    raise SystemExit(1)
+samples = practice.get("command_samples")
+if not isinstance(samples, list) or not samples:
+    raise SystemExit(1)
+
+if os.environ.get("QF_READY_IGNORE_LEARN_TTL", "0") != "1":
+    expires = str(obj.get("expires_at_utc", "")).strip()
+    if not expires:
+        raise SystemExit(1)
+    try:
+        exp = datetime.fromisoformat(expires.replace("Z", "+00:00"))
+    except Exception:
+        raise SystemExit(1)
+    now = datetime.now(timezone.utc)
+    if exp.tzinfo is None:
+        exp = exp.replace(tzinfo=timezone.utc)
+    if exp < now:
+        raise SystemExit(1)
+
+def file_sha(target: Path) -> str:
+    if not target.is_file():
+        return "missing"
+    try:
+        return hashlib.sha256(target.read_bytes()).hexdigest()
+    except Exception:
+        return "error"
+
+context_files = obj.get("context_files") or []
+skill_files = obj.get("skill_files") or []
+if not isinstance(context_files, list):
+    context_files = []
+if not isinstance(skill_files, list):
+    skill_files = []
+
+digest_lines = []
+for rel in context_files:
+    p = Path(str(rel))
+    digest_lines.append(f"ctx:{rel}:{file_sha(p)}")
+for rel in skill_files:
+    p = Path(str(rel))
+    digest_lines.append(f"skill:{rel}:{file_sha(p)}")
+digest_lines.sort()
+current = hashlib.sha256("\n".join(digest_lines).encode("utf-8")).hexdigest()
+if current != str(obj.get("context_digest", "")).strip():
+    raise SystemExit(1)
+
+print(str(path))
+PY
+}
+
+learn_file_matches_project() {
+  local learn_file="$1"
+  local project_id="$2"
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    return 1
+  fi
+  "$py_bin" - <<'PY' "$learn_file" "$project_id" "$DEFAULT_PROJECT_ID"
+import json
+import sys
+from pathlib import Path
+
+learn_file, expected_project_id, default_project_id = sys.argv[1:4]
+path = Path(learn_file)
+try:
+    obj = json.loads(path.read_text(encoding="utf-8"))
+except Exception:
+    raise SystemExit(1)
+
+project_id = str(obj.get("project_id") or "").strip() or default_project_id
+if project_id != str(expected_project_id).strip():
+    raise SystemExit(1)
+print(str(path))
+PY
+}
+
+resolve_learn_file_for_project() {
+  local project_id="${1:-}"
+  local learn_file=""
+  project_id="$(normalize_project_id "$project_id")"
+  learn_file="learn/${project_id}.json"
+  if [[ -f "$learn_file" ]] \
+    && learn_file_is_valid "$learn_file" >/dev/null 2>&1 \
+    && learn_file_matches_project "$learn_file" "$project_id" >/dev/null 2>&1; then
+    printf "%s" "$learn_file"
+    return 0
+  fi
+  printf ""
+  return 1
+}
+
+resolve_learn_file() {
+  local project_id=""
+  project_id="$(resolve_project_id_for_cmd "" "learn-gate" || true)"
+  if [[ -z "$project_id" ]]; then
+    project_id="$DEFAULT_PROJECT_ID"
+  fi
+  resolve_learn_file_for_project "$project_id"
+}
+
+resolve_learn_file_for_run() {
+  resolve_learn_file
+}
+
+ready_file_is_valid() {
+  local ready_file="$1"
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    return 1
+  fi
+  "$py_bin" - <<'PY' "$ready_file"
+import json
+import os
+import sys
+
+path = sys.argv[1]
+try:
+    with open(path, "r", encoding="utf-8") as f:
+        obj = json.load(f)
+except Exception:
+    raise SystemExit(1)
+if not obj.get("restatement_passed"):
+    raise SystemExit(1)
+sync_gate = obj.get("sync_gate") or {}
+required_flag = sync_gate.get("required")
+if required_flag is None:
+    require_sync = os.environ.get("QF_READY_REQUIRE_SYNC", "0") == "1"
+else:
+    require_sync = bool(required_flag)
+if require_sync:
+    if not sync_gate.get("sync_passed"):
+        raise SystemExit(1)
+    if not sync_gate.get("sync_report_file"):
+        raise SystemExit(1)
+print(path)
+PY
+}
+
+resolve_ready_file() {
+  local ready_file=""
+  if [[ -n "${QF_READY_RUN_ID:-}" ]]; then
+    ready_file="reports/${QF_READY_RUN_ID}/ready.json"
+    if [[ -f "$ready_file" ]] && ready_file_is_valid "$ready_file" >/dev/null 2>&1; then
+      printf "%s" "$ready_file"
+      return 0
+    fi
+    printf ""
+    return 1
+  fi
+
+  local current_run_id=""
+  current_run_id="$(resolve_state_current_run_id || true)"
+  if [[ -n "$current_run_id" ]]; then
+    ready_file="reports/${current_run_id}/ready.json"
+    if [[ -f "$ready_file" ]] && ready_file_is_valid "$ready_file" >/dev/null 2>&1; then
+      printf "%s" "$ready_file"
+      return 0
+    fi
+  fi
+
+  ready_file="$(ls -1t reports/run-*/ready.json 2>/dev/null | head -n1 || true)"
+  if [[ -n "$ready_file" ]] && ready_file_is_valid "$ready_file" >/dev/null 2>&1; then
+    printf "%s" "$ready_file"
+    return 0
+  fi
+
+  printf ""
+  return 1
+}
+
+resolve_ready_file_for_run() {
+  local run_id="${1:-}"
+  local ready_file=""
+  if [[ -n "$run_id" ]]; then
+    ready_file="reports/${run_id}/ready.json"
+    if [[ -f "$ready_file" ]] && ready_file_is_valid "$ready_file" >/dev/null 2>&1; then
+      printf "%s" "$ready_file"
+      return 0
+    fi
+    printf ""
+    return 1
+  fi
+  resolve_ready_file
+}
+
+resolve_ready_prior_decision_for_run() {
+  local run_id="${1:-}"
+  local ready_file=""
+  local py_bin=""
+  if [[ -z "$run_id" ]]; then
+    printf ""
+    return 0
+  fi
+  ready_file="reports/${run_id}/ready.json"
+  if [[ ! -f "$ready_file" ]]; then
+    printf ""
+    return 0
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    printf ""
+    return 0
+  fi
+  "$py_bin" - <<'PY' "$ready_file"
+import json
+import sys
+
+path = sys.argv[1]
+try:
+    with open(path, "r", encoding="utf-8") as f:
+        obj = json.load(f)
+except Exception:
+    print("")
+    raise SystemExit(0)
+
+prior = obj.get("prior_run_resolution") or {}
+if isinstance(prior, dict):
+    value = prior.get("decision")
+    if value is not None:
+        print(str(value).strip())
+        raise SystemExit(0)
+print("")
+PY
+}
+
+require_ready_gate() {
+  local requested_run_id="${1:-}"
+  local ready_file=""
+  ready_file="$(resolve_ready_file_for_run "$requested_run_id" || true)"
+  if [[ -z "$ready_file" ]]; then
+    echo "ERROR: readiness gate not satisfied." >&2
+    if [[ -n "$requested_run_id" ]]; then
+      echo "Expected ready marker: reports/${requested_run_id}/ready.json" >&2
+    fi
+    echo "Run: python3 tools/ready.py" >&2
+    echo "Then retry: bash tools/legacy.sh do queue-next" >&2
+    exit 1
+  fi
+  REQUIRED_READY_FILE="$ready_file"
+  echo "READY_FILE: $ready_file"
+}
+
+sync_main() {
+  local run_id="$1"
+  if [[ "${QF_SKIP_SYNC:-0}" == "1" ]]; then
+    echo "sync skipped (QF_SKIP_SYNC=1)"
+    return 0
+  fi
+  if ! run_with_retry_capture "sync_checkout_main" git checkout main; then
+    print_resume_cmd "$run_id"
+    exit 1
+  fi
+  if ! run_with_retry_capture "sync_pull_main" git pull --rebase origin main; then
+    print_resume_cmd "$run_id"
+    exit 1
+  fi
+}
+
+cleanup_pick_candidate_dirs() {
+  if [[ ! -d "reports" ]]; then
+    return 0
+  fi
+  while IFS= read -r dir; do
+    [[ -z "$dir" ]] && continue
+    rm -rf "$dir"
+    echo "CLEANED: $dir"
+  done < <(find reports -maxdepth 1 -type d -name 'run-*-pick-candidate' | sort)
+}
+
+cmd_init() {
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+  if [[ -n "$py_bin" && -f "tools/init.py" ]]; then
+    "$py_bin" tools/init.py "$@"
+    return $?
+  fi
+
+  local init_mode="check"
+  local init_context_id="${RUN_ID:-session-$(date +%Y%m%d-%H%M%S)-init}"
+  local current_run_id=""
+  local current_project_id=""
+  local current_task_file=""
+  local current_status=""
+  local init_steps_total=7
+  local gh_status="missing"
+  local gh_version="(not installed)"
+  local codex_version="(not installed)"
+  local git_version=""
+  local python_version="(missing)"
+  local branch=""
+  local upstream=""
+  local remote_url=""
+  local ahead_count="n/a"
+  local behind_count="n/a"
+  local git_dir=""
+  local git_op_reason=""
+  local init_status="ok"
+  local next_cmd="python3 tools/learn.py"
+  local reason_codes_text="none"
+  local worktree_dirty=0
+  local staged_count=0
+  local unstaged_count=0
+  local untracked_count=0
+  local show_resume_hint=1
+  local commit_head="(none)"
+  local commit_time="(none)"
+  local commit_subject="(none)"
+  local line=""
+  local -a reason_codes=()
+  local -a diff_preview=()
+  local -a commit_files=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -status)
+        init_mode="status"
+        ;;
+      -main)
+        init_mode="main"
+        ;;
+      *)
+        echo "ERROR: unknown init option: $1" >&2
+        usage
+        exit 2
+        ;;
+    esac
+    shift
+  done
+  if [[ "$init_mode" == "status" ]]; then
+    show_resume_hint=0
+  fi
+
+  current_run_id="$(resolve_state_current_run_id || true)"
+  current_project_id="$(resolve_state_current_project_id || true)"
+  current_task_file="$(state_field_value "CURRENT_TASK_FILE")"
+  current_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$current_status" ]]; then
+    current_status="active"
+  fi
+  if [[ -n "$current_run_id" ]]; then
+    init_context_id="$current_run_id"
+  fi
+
+  emit_step "init" 1 "$init_steps_total" "resolve mode and run context"
+  echo "INIT_MODE: ${init_mode}"
+  echo "INIT_CONTEXT_ID: ${init_context_id}"
+  echo "INIT_PROJECT_ID: ${current_project_id:-$DEFAULT_PROJECT_ID}"
+  echo "INIT_TASK_FILE: ${current_task_file:-"(none)"}"
+  echo "INIT_TASK_STATUS: ${current_status}"
+  if [[ -n "$current_run_id" ]]; then
+    echo "INIT_RUN_ID_SOURCE: CURRENT_RUN_ID"
+    echo "INIT_RUN_ID: ${current_run_id}"
+  else
+    echo "INIT_RUN_ID_SOURCE: session-context-only (init does not create business RUN_ID)"
+    echo "INIT_RUN_ID: (none)"
+  fi
+
+  emit_step "init" 2 "$init_steps_total" "print account and tool versions"
+  if command -v gh >/dev/null 2>&1; then
+    gh_version="$(gh --version | head -n1 || true)"
+    if gh auth status -h github.com >/dev/null 2>&1; then
+      gh_status="logged_in"
+    else
+      gh_status="not_logged_in"
+    fi
+  fi
+  if command -v codex >/dev/null 2>&1; then
+    codex_version="$(codex --version 2>/dev/null | head -n1 || true)"
+  fi
+  git_version="$(git --version 2>/dev/null || true)"
+  if command -v python3 >/dev/null 2>&1; then
+    python_version="$(python3 --version 2>/dev/null || true)"
+  elif command -v python >/dev/null 2>&1; then
+    python_version="$(python --version 2>/dev/null || true)"
+  fi
+  echo "INIT_GH_STATUS: ${gh_status}"
+  echo "INIT_GH_VERSION: ${gh_version}"
+  echo "INIT_CODEX_VERSION: ${codex_version}"
+  echo "INIT_GIT_VERSION: ${git_version}"
+  echo "INIT_PYTHON_VERSION: ${python_version}"
+
+  emit_step "init" 3 "$init_steps_total" "print branch and remote status"
+  branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")"
+  remote_url="$(git remote get-url origin 2>/dev/null || echo "(missing)")"
+  upstream="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)"
+  if [[ -n "$upstream" ]]; then
+    read -r behind_count ahead_count < <(git rev-list --left-right --count "${upstream}...HEAD" 2>/dev/null || printf "n/a n/a\n")
+  fi
+  echo "INIT_BRANCH: ${branch}"
+  echo "INIT_REMOTE_ORIGIN: ${remote_url}"
+  echo "INIT_UPSTREAM: ${upstream:-"(none)"}"
+  echo "INIT_AHEAD_COUNT: ${ahead_count}"
+  echo "INIT_BEHIND_COUNT: ${behind_count}"
+  if [[ "$branch" != "main" ]]; then
+    reason_codes+=("BRANCH_NOT_MAIN")
+  fi
+
+  emit_step "init" 4 "$init_steps_total" "inspect worktree and git operation state"
+  git_dir="$(git rev-parse --git-dir 2>/dev/null || echo ".git")"
+  if [[ -f "${git_dir}/MERGE_HEAD" ]]; then
+    git_op_reason="merge_in_progress"
+  elif [[ -d "${git_dir}/rebase-merge" || -d "${git_dir}/rebase-apply" ]]; then
+    git_op_reason="rebase_in_progress"
+  elif [[ -f "${git_dir}/CHERRY_PICK_HEAD" ]]; then
+    git_op_reason="cherry_pick_in_progress"
+  elif [[ -f "${git_dir}/REVERT_HEAD" ]]; then
+    git_op_reason="revert_in_progress"
+  fi
+  if [[ -n "$git_op_reason" ]]; then
+    reason_codes+=("GIT_OPERATION_IN_PROGRESS")
+  fi
+  if is_dirty; then
+    worktree_dirty=1
+    reason_codes+=("WORKTREE_DIRTY")
+  fi
+  staged_count="$(git diff --cached --name-only | wc -l | tr -d '[:space:]')"
+  unstaged_count="$(git diff --name-only | wc -l | tr -d '[:space:]')"
+  untracked_count="$(git ls-files --others --exclude-standard | wc -l | tr -d '[:space:]')"
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    diff_preview+=("$line")
+  done < <(git status --short | head -n 20)
+  echo "INIT_GIT_OPERATION: ${git_op_reason:-none}"
+  echo "INIT_DIFF_SUMMARY: staged=${staged_count},unstaged=${unstaged_count},untracked=${untracked_count}"
+  if [[ "${#diff_preview[@]}" -gt 0 ]]; then
+    echo "INIT_DIFF_FILES_START"
+    for line in "${diff_preview[@]}"; do
+      echo "${line}"
+    done
+    echo "INIT_DIFF_FILES_END"
+  else
+    echo "INIT_DIFF_FILES: (clean)"
+  fi
+
+  emit_step "init" 5 "$init_steps_total" "print current run/task pointer"
+  echo "INIT_RUN_CONTEXT: project_id=${current_project_id:-$DEFAULT_PROJECT_ID},run_id=${current_run_id:-"(none)"},task=${current_task_file:-"(none)"},status=${current_status}"
+
+  emit_step "init" 6 "$init_steps_total" "print last change evidence"
+  if [[ "$worktree_dirty" -eq 1 ]]; then
+    echo "INIT_LAST_CHANGE_SOURCE: worktree"
+    if [[ "${#diff_preview[@]}" -gt 0 ]]; then
+      echo "INIT_LAST_CHANGE_FILES_START"
+      for line in "${diff_preview[@]}"; do
+        echo "${line}"
+      done
+      echo "INIT_LAST_CHANGE_FILES_END"
+    fi
+  else
+    commit_head="$(git rev-parse --short HEAD 2>/dev/null || echo "(none)")"
+    commit_time="$(git log -1 --pretty=%cI 2>/dev/null || echo "(none)")"
+    commit_subject="$(git log -1 --pretty=%s 2>/dev/null || echo "(none)")"
+    echo "INIT_LAST_CHANGE_SOURCE: last_commit"
+    echo "INIT_LAST_COMMIT: ${commit_head}"
+    echo "INIT_LAST_COMMIT_TIME: ${commit_time}"
+    echo "INIT_LAST_COMMIT_SUBJECT: ${commit_subject}"
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      commit_files+=("$line")
+    done < <(git show --name-only --pretty=format: HEAD 2>/dev/null | sed '/^$/d' | head -n 20)
+    if [[ "${#commit_files[@]}" -gt 0 ]]; then
+      echo "INIT_LAST_COMMIT_FILES_START"
+      for line in "${commit_files[@]}"; do
+        echo "${line}"
+      done
+      echo "INIT_LAST_COMMIT_FILES_END"
+    fi
+  fi
+
+  emit_step "init" 7 "$init_steps_total" "evaluate status and print next action"
+  if [[ "${#reason_codes[@]}" -gt 0 ]]; then
+    reason_codes_text="$(IFS=,; echo "${reason_codes[*]}")"
+  fi
+  if [[ "$init_mode" == "main" && "${#reason_codes[@]}" -gt 0 ]]; then
+    init_status="blocked"
+  elif [[ "${#reason_codes[@]}" -gt 0 ]]; then
+    init_status="needs_resume"
+  fi
+  if [[ "$init_status" != "ok" ]]; then
+    if [[ -n "$current_run_id" ]]; then
+      next_cmd="bash tools/legacy.sh resume RUN_ID=${current_run_id}"
+    else
+      next_cmd="bash tools/legacy.sh resume"
+    fi
+  fi
+  echo "INIT_STATUS: ${init_status}"
+  echo "INIT_REASON_CODES: ${reason_codes_text}"
+  echo "INIT_NEXT: ${next_cmd}"
+  if [[ "$init_status" != "ok" && "$show_resume_hint" -eq 1 ]]; then
+    echo "INIT_HINT: repository state indicates unfinished/abnormal previous cycle; run resume before new work."
+  elif [[ "$init_mode" == "status" ]]; then
+    echo "INIT_HINT: status-only mode, no resume reminder emitted."
+  fi
+
+  if [[ "$init_mode" == "main" && "$init_status" != "ok" ]]; then
+    exit 1
+  fi
+  if [[ "$init_mode" == "check" ]]; then
+    echo "== 建议流程 =="
+    echo "1) python3 tools/learn.py"
+    echo "2) python3 tools/ready.py"
+    echo "3) bash tools/legacy.sh discuss TARGET=prepare"
+    echo "4) bash tools/legacy.sh do queue-next"
+  else
+    echo "== 状态查询完成 =="
+  fi
+}
+
+cmd_plan() {
+  local n="${1:-20}"
+  local explicit_run_id="${RUN_ID:-}"
+  local run_id=""
+  local proposal_file="${TASK_PLAN_OUTPUT_FILE:-TASKS/TODO_PROPOSAL.md}"
+  local proposal_copy="${QF_PLAN_COPY_PATH:-/tmp/todo_proposal.md}"
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "plan")"
+  if [[ -z "$run_id" ]]; then
+    run_id="run-$(date +%Y-%m-%d)-plan"
+  fi
+
+  auto_stash_if_dirty "plan"
+  sync_main "$run_id"
+  bash tools/task.sh --plan "$n"
+
+  if [[ -f "$proposal_file" ]]; then
+    cp "$proposal_file" "$proposal_copy"
+    echo "PROPOSAL_COPY: $proposal_copy"
+  else
+    echo "ERROR: proposal file missing: $proposal_file"
+    exit 1
+  fi
+
+  if [[ -f "TASKS/TODO_PROPOSAL.md" ]]; then
+    if git ls-files --error-unmatch TASKS/TODO_PROPOSAL.md >/dev/null 2>&1; then
+      git restore TASKS/TODO_PROPOSAL.md || true
+    else
+      rm -f TASKS/TODO_PROPOSAL.md || true
+    fi
+  fi
+  cleanup_pick_candidate_dirs
+
+  if [[ -n "$(git status --porcelain)" ]]; then
+    echo "ERROR: ops plan polluted working tree."
+    git status --porcelain
+    exit 1
+  fi
+}
+
+cmd_do() {
+  local target="${1:-}"
+  local run_id=""
+  local explicit_run_id="${RUN_ID:-}"
+  local output=""
+  local task_file=""
+  local task_run_id=""
+  local evidence_path=""
+  local ready_file=""
+  local choice_file=""
+  local council_file=""
+  local execution_contract=""
+  local slice_state=""
+  local review_run_id=""
+  local review_output=""
+  local review_rc=0
+  local rc=0
+
+  if [[ "$target" != "queue-next" ]]; then
+    echo "ERROR: only 'queue-next' is supported."
+    usage
+    exit 2
+  fi
+
+  cleanup_pick_candidate_dirs
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "do")"
+  require_ready_gate "$run_id"
+  ready_file="$REQUIRED_READY_FILE"
+  if [[ -n "$ready_file" ]]; then
+    run_id="$(basename "$(dirname "$ready_file")")"
+  elif [[ -z "$run_id" ]]; then
+    run_id="run-$(date +%Y-%m-%d)-do"
+  fi
+  require_direction_gate "$run_id"
+  choice_file="$DIRECTION_CHOICE_FILE"
+  require_council_gate "$run_id"
+  council_file="$COUNCIL_FILE"
+  require_execution_contract_gate "$run_id"
+  execution_contract="$EXECUTION_CONTRACT_FILE"
+  require_slice_gate "$run_id"
+  slice_state="$SLICE_STATE_FILE"
+  if is_dirty; then
+    echo "DO_SYNC_SKIPPED: working tree dirty; keep in-run artifacts untouched."
+    append_execution_event "$run_id" "do" "do_sync_skipped_dirty" "ok" "bash tools/legacy.sh do queue-next" "reason=dirty_worktree" ""
+  else
+    sync_main "$run_id"
+  fi
+  append_execution_event "$run_id" "do" "do_start" "ok" "bash tools/legacy.sh do queue-next" "ready_file=${ready_file};choice_file=${choice_file};council_file=${council_file};execution_contract=${execution_contract};slice_state=${slice_state}" ""
+
+  set +e
+  output="$(bash tools/task.sh --next 2>&1)"
+  rc=$?
+  set -e
+  if [[ "$rc" -ne 0 ]]; then
+    printf "%s\n" "$output" >&2
+    append_execution_event "$run_id" "do" "do_pick_failed" "fail" "bash tools/task.sh --next" "" "$output"
+    if [[ "$output" == *"QUEUE 中没有未完成项"* ]]; then
+      echo "下一步建议：python3 tools/orient.py RUN_ID=${run_id}" >&2
+    fi
+    print_resume_cmd "$run_id"
+    exit "$rc"
+  fi
+  printf "%s\n" "$output"
+
+  task_file="$(printf "%s\n" "$output" | awk -F': ' '/^TASK_FILE:/ {print $2; exit}')"
+  task_run_id="$(printf "%s\n" "$output" | awk -F': ' '/^RUN_ID:/ {print $2; exit}')"
+  evidence_path="$(printf "%s\n" "$output" | awk -F': ' '/^EVIDENCE_PATH:/ {print $2; exit}')"
+  if [[ -n "$task_file" ]]; then
+    echo "TASK_FILE: $task_file"
+  fi
+  if [[ -n "$task_run_id" ]]; then
+    echo "RUN_ID: $task_run_id"
+  fi
+  if [[ -n "$evidence_path" ]]; then
+    echo "EVIDENCE_PATH: $evidence_path"
+  fi
+  if [[ -n "$task_run_id" ]]; then
+    append_execution_event "$task_run_id" "do" "do_pick_success" "ok" "bash tools/task.sh --next" "task_file=${task_file};evidence=${evidence_path}" ""
+    update_state_current "$task_run_id" "$task_file" "active"
+    review_run_id="$task_run_id"
+  else
+    append_execution_event "$run_id" "do" "do_pick_success" "ok" "bash tools/task.sh --next" "task_file=${task_file};evidence=${evidence_path}" ""
+    update_state_current "$run_id" "$task_file" "active"
+    review_run_id="$run_id"
+  fi
+
+  if [[ "${QF_DO_AUTO_REVIEW:-1}" == "1" ]]; then
+    echo "AUTO_REVIEW: bash tools/legacy.sh review RUN_ID=${review_run_id} AUTO_FIX=${QF_DO_REVIEW_AUTO_FIX:-1}"
+    set +e
+    review_output="$(cmd_review "RUN_ID=${review_run_id}" "AUTO_FIX=${QF_DO_REVIEW_AUTO_FIX:-1}" "NON_BLOCKING=1" 2>&1)"
+    review_rc=$?
+    set -e
+    if [[ -n "$review_output" ]]; then
+      printf "%s\n" "$review_output"
+    fi
+    if [[ "$review_rc" -ne 0 ]]; then
+      append_execution_event "$review_run_id" "do" "do_auto_review_failed" "fail" "bash tools/legacy.sh review RUN_ID=${review_run_id}" "" "$review_output"
+      echo "WARN: auto review failed (non-blocking)."
+    else
+      append_execution_event "$review_run_id" "do" "do_auto_review_done" "ok" "bash tools/legacy.sh review RUN_ID=${review_run_id}" "" ""
+    fi
+  fi
+}
+
+is_legacy_stash_cleanup_candidate() {
+  local subject="${1:-}"
+  case "$subject" in
+    *": ship-wip-"*|*": init-wip-"*|*": ops-init-wip-"*|*": resume-cleanup-run-"*|*": legacy-resume-cleanup-run-"*|*": ops-resume-cleanup-run-"*|*": tmp-ship-cleanup-"*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+cmd_stash_clean() {
+  local mode="${1:-preview}"
+  local keep_arg="${2:-}"
+  local keep_latest="${QF_STASH_CLEAN_KEEP_LATEST:-2}"
+  local run_id=""
+  local ref=""
+  local subject=""
+  local total=0
+  local drop_count=0
+  local i=0
+  local action=""
+  local command_line=""
+  local -a refs=()
+  local -a subjects=()
+
+  if [[ "$mode" != "preview" && "$mode" != "apply" ]]; then
+    if [[ "$mode" =~ ^KEEP=[0-9]+$ ]]; then
+      keep_arg="$mode"
+      mode="preview"
+    else
+      echo "ERROR: stash-clean mode must be preview or apply." >&2
+      usage
+      exit 2
+    fi
+  fi
+
+  if [[ -n "$keep_arg" ]]; then
+    if [[ "$keep_arg" =~ ^KEEP=([0-9]+)$ ]]; then
+      keep_latest="${BASH_REMATCH[1]}"
+    else
+      echo "ERROR: invalid KEEP argument. expected KEEP=<non-negative-int>." >&2
+      exit 2
+    fi
+  fi
+
+  if [[ ! "$keep_latest" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: keep_latest must be a non-negative integer." >&2
+    exit 2
+  fi
+
+  while IFS='|' read -r ref subject; do
+    [[ -z "$ref" ]] && continue
+    if is_legacy_stash_cleanup_candidate "$subject"; then
+      refs+=("$ref")
+      subjects+=("$subject")
+    fi
+  done < <(git stash list --format='%gd|%gs')
+
+  total="${#refs[@]}"
+  if (( total == 0 )); then
+    echo "stash-clean: no ops/ship cleanup stashes found."
+    return 0
+  fi
+
+  if (( total > keep_latest )); then
+    drop_count=$((total - keep_latest))
+  fi
+
+  echo "stash-clean mode=${mode} keep_latest=${keep_latest} candidates=${total} drop=${drop_count}"
+  for ((i=0; i<total; i++)); do
+    action="keep"
+    if (( i >= keep_latest )); then
+      action="drop"
+    fi
+    echo "- [${action}] ${refs[$i]} | ${subjects[$i]}"
+  done
+
+  if [[ "$mode" != "apply" ]]; then
+    echo "next: bash tools/legacy.sh stash-clean apply KEEP=${keep_latest}"
+    return 0
+  fi
+
+  if (( drop_count == 0 )); then
+    echo "stash-clean: nothing to drop."
+    return 0
+  fi
+
+  command_line="bash tools/legacy.sh stash-clean apply KEEP=${keep_latest}"
+  run_id="$(resolve_state_current_run_id || true)"
+
+  # Drop from oldest to newest to avoid stash index shifting issues.
+  for ((i=total-1; i>=keep_latest; i--)); do
+    if git stash drop "${refs[$i]}" >/dev/null 2>&1; then
+      echo "dropped: ${refs[$i]} | ${subjects[$i]}"
+    else
+      echo "ERROR: failed to drop ${refs[$i]}" >&2
+      if [[ -n "$run_id" ]]; then
+        append_execution_event "$run_id" "stash-clean" "stash_clean_failed" "fail" "$command_line" "target=${refs[$i]}" "drop failed"
+      fi
+      exit 1
+    fi
+  done
+
+  if [[ -n "$run_id" ]]; then
+    append_execution_event "$run_id" "stash-clean" "stash_clean_applied" "ok" "$command_line" "drop_count=${drop_count}" ""
+  fi
+  echo "stash-clean done: dropped=${drop_count}"
+}
+
+cmd_exam_auto_fill_answer() {
+  local run_id="$1"
+  local answer_file="$2"
+  local task_file=""
+  local current_status=""
+  local stop_reason="tool_or_script_error"
+  local latest_subject=""
+  local latest_commit=""
+  local py_bin=""
+
+  task_file="$(state_field_value "CURRENT_TASK_FILE")"
+  current_status="$(state_field_value "CURRENT_STATUS")"
+  if [[ -z "$task_file" ]]; then
+    task_file="TASKS/TASK-unknown.md"
+  fi
+  if [[ "$current_status" == "done" ]]; then
+    stop_reason="task_done"
+  fi
+  latest_subject="$(git log -1 --pretty=%s 2>/dev/null || true)"
+  latest_commit="$(git rev-parse --short HEAD 2>/dev/null || true)"
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required for bash tools/legacy.sh exam-auto." >&2
+    exit 1
+  fi
+
+  "$py_bin" - <<'PY' "$run_id" "$answer_file" "$task_file" "$stop_reason" "$latest_subject" "$latest_commit"
+from pathlib import Path
+import sys
+
+run_id, answer_file, task_file, stop_reason, latest_subject, latest_commit = sys.argv[1:7]
+latest_subject = latest_subject.strip()
+latest_commit = latest_commit.strip()
+if not latest_subject:
+    latest_subject = "recent main update"
+if not latest_commit:
+    latest_commit = "unknown"
+
+text = f"""## 问答 1：项目使命、背景、目标、最终结果、开发方式
+- 回答：项目是 quant-factory-os 基建系统，目标是自动化执行 + 证据驱动学习 + 多角色协作收敛，最终形成可复用的项目操作系统；开发方式是 task 驱动、门禁驱动、PR 驱动。
+- 证据文件路径：`README.md`、`docs/PROJECT_GUIDE.md`、`docs/WORKFLOW.md`、`AGENTS.md`
+
+## 问答 2：阶段性目标、当前阶段、各阶段已完成事项
+- 回答：阶段目标按基建硬化 -> 同频/考试 -> 讨论收敛 -> 执行闭环推进；当前在同频与自动化增强阶段，已完成 ready/discuss/execute/review 等主链路建设。
+- 证据文件路径：`docs/PROJECT_GUIDE.md`、`TASKS/QUEUE.md`、`reports/{run_id}/summary.md`
+
+## 问答 3：基建完成后第一个项目如何落地（插件 vs 独立项目）与同频承接方法
+- 回答：优先独立项目落地，通过 integration contract 与基座解耦；插件化作为后续分发形态。承接方式是先读 STATE/QUEUE/REPORTS 再进实施。
+- 证据文件路径：`docs/PROJECT_GUIDE.md`、`docs/WORKFLOW.md`
+- 推理结论与依据（若有）：推理结论=先独立后插件；依据=基建期需要降低耦合和升级风险。
+
+## 问答 4：GPT 网页端（大脑）与 Codex CLI（手脚）如何同频，是否一致，操作顺序与优化
+- 回答：原则一致但职责不同：GPT做策略/评审，Codex做执行/验证。顺序是 init -> learn -> ready -> discuss/execute -> review/ship。建议优化 learn 的模型同频证据和失败语义。
+- 同频操作指南路径：`docs/WORKFLOW.md`、`docs/PROJECT_GUIDE.md`
+- 证据文件路径：`AGENTS.md`、`tools/*.py`、`reports/{run_id}/conversation.md`
+
+## 问答 5：当前项目“宪法”是什么、是否合理、可优化点
+- 回答：宪法是 AGENTS.md 的硬规则，核心是 task syscall、evidence memory、gate first、doc freshness。总体合理，需持续优化同频可见性和自动化体验。
+- 证据文件路径：`AGENTS.md`
+
+## 问答 6：当前工作流是什么（总流程/子流程/操作指南/涉及文件）
+- 回答：总流程是 init -> learn -> ready -> orient/choose -> council/arbiter -> slice -> do -> review -> ship；子流程包含讨论态与执行态分层。
+- 操作指南路径：`docs/WORKFLOW.md`
+- 证据文件路径：`docs/WORKFLOW.md`、`docs/PROJECT_GUIDE.md`、`AGENTS.md`
+
+## 问答 7：未完成任务与最新讨论批次是什么，如何查询
+- 回答：通过 `TASKS/STATE.md` 看当前 run/task，通过 `TASKS/QUEUE.md` 看未完成项，通过 `reports/<RUN_ID>/` 与 `chatlogs/discussion/<RUN_ID>/` 看最新批次讨论。
+- 操作指南路径：`docs/WORKFLOW.md#Codex-session-startup-checklist`
+- 证据文件路径：`TASKS/STATE.md`、`TASKS/QUEUE.md`、`reports/{run_id}/conversation.md`
+
+## 问答 8：最近 session 说了什么，从哪里查，如何追溯源文件，是否偏离主线
+- 回答：先看 summary/decision/conversation，再回看具体产物文件与脚本。当前主线是强化 learn 同频和自动化编排，不应偏离到无关细节。
+- 操作指南路径：`AGENTS.md` + `docs/PROJECT_GUIDE.md`
+- 最近 session 总结路径：`reports/{run_id}/summary.md`
+- 源文件路径：`reports/{run_id}/conversation.md`、`reports/{run_id}/decision.md`
+- 偏离判断：若改动不能提升同频、门禁或执行闭环，即判定偏离。
+
+## 问答 9：基建项目“讨论”应使用的流程
+- 回答：采用 orient -> choose -> council -> arbiter -> slice 的讨论收敛流，再进入 do。
+- 操作指南路径：`docs/WORKFLOW.md`
+- 证据文件路径：`tools/*.py`、`chatlogs/discussion/{run_id}/`
+
+## 问答 10：基建项目“代码实施”流程、角色定义、独立思考保障、当前实现状态
+- 回答：实施流程是 do + verify + review + ship；角色为产品/架构/研发/测试，独立思考通过 council 分角色输出与 arbiter 统一裁决保障。
+- 操作手册路径：`docs/WORKFLOW.md`
+- 证据文件路径：`tools/*.py`、`chatlogs/discussion/{run_id}/council.json`
+
+## 问答 11：task / pr / run / project 等概念与生命周期管理
+- 回答：task 是合同，run 是证据命名空间，pr 是交付单元，project 是上层项目命名空间；生命周期由 STATE/QUEUE 与 reports 协同推进。
+- 流程入口与操作指南：`docs/ENTITIES.md`、`docs/WORKFLOW.md`
+- 证据文件路径：`docs/ENTITIES.md`、`TASKS/STATE.md`
+
+## 问答 12：准备工作完成后，需求方向讨论从哪一步开始，如何保存与多角色协作
+- 回答：从 orient 开始；方向保存于 `chatlogs/discussion/<RUN_ID>/orient.*` 与 `reports/<RUN_ID>/orient_choice.json`；多角色通过 council/arbiter 收敛。
+- 方向保存位置：`chatlogs/discussion/{run_id}/orient.json`、`reports/{run_id}/orient_choice.json`
+- 讨论流程与入口：`bash tools/legacy.sh discuss` 或分步命令
+- 证据文件路径：`docs/WORKFLOW.md`、`tools/*.py`
+
+## 问答 13：分支与代码管理策略，当前是否满足需求
+- 回答：策略是一 task 一分支一 PR，title 含 RUN_ID，body 包含 Why/What/Verify/Evidence。当前满足基础需求，但仍需继续降低 ship 摩擦。
+- 操作手册路径：`AGENTS.md`、`tools/ship.sh`
+- 证据文件路径：`AGENTS.md`、`TASKS/QUEUE.md`
+
+## 问答 14：每次任务完成后必须做什么
+- 回答：必须 verify、更新 summary/decision、通过 review 校验偏差，再 ship；流程/规则变化还必须同步 owner docs。
+- 操作指南路径：`docs/WORKFLOW.md`、`AGENTS.md`
+- 证据文件路径：`reports/{run_id}/summary.md`、`reports/{run_id}/decision.md`
+
+## 问答 15：如果目标是“简单、爽用、自动化高”，当前必须优化的点
+- 回答：优先优化 learn 的模型同频可见锚点、run 级事件流审计稳定性、讨论与执行组合入口体验，以及文档自动更新门禁。
+- 优先级与理由：P0=learn同频可信度；P1=单入口编排体验；P2=细节脚本重构。
+- 证据文件路径：`tools/*.py`、`docs/WORKFLOW.md`、`AGENTS.md`
+
+## 实操技能 1：Codex 正确打开方式、版本、项目内用法、样例与实操结果
+- Codex CLI 版本：`codex-cli 0.106.0`
+- 操作手册路径：`CODEX_CLI_PLAYBOOK.md`
+- 实操涉及文件：`test_codex/artifacts/exec_json.events.jsonl`、`test_codex/artifacts/exec_basic_last_message.txt`、`test_codex/logs/smoke.log`
+- 我实际执行的命令与结果：`codex --search --ask-for-approval never exec --sandbox read-only --json --output-last-message ...` 已执行并落盘事件流。
+- 证据文件路径：`CODEX_CLI_PLAYBOOK.md`、`CODEX_CLI_SOURCE_AUDIT.md`、`test_codex/artifacts/exec_json.events.jsonl`
+
+## 拉回主线 2：是否偏离当前最重要任务，原因，下一步动作
+- 判断：不偏离，当前最重要任务就是强化 learn 同频与考试标准化。
+- 原因：这是所有后续自动化与多角色博弈质量的前置条件。
+- 下一步唯一命令：`python3 tools/learn.py`
+- 证据文件路径：`TASKS/STATE.md`、`reports/{run_id}/conversation.md`
+"""
+
+path = Path(answer_file)
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_text(text.rstrip() + "\n", encoding="utf-8")
+PY
+}
+
+cmd_exam() {
+  local explicit_run_id="${RUN_ID:-}"
+  local run_id=""
+  local answer_file=""
+  local rubric_file="${SYNC_EXAM_RUBRIC_FILE:-docs/LEARN_EXAM_RUBRIC.json}"
+  local output_file=""
+  local py_bin=""
+  local arg=""
+  local output=""
+  local rc=0
+  local status="ok"
+  local cmd_text=""
+
+  for arg in "$@"; do
+    case "$arg" in
+      RUN_ID=*)
+        explicit_run_id="${arg#RUN_ID=}"
+        ;;
+      ANSWER_FILE=*)
+        answer_file="${arg#ANSWER_FILE=}"
+        ;;
+      RUBRIC_FILE=*)
+        rubric_file="${arg#RUBRIC_FILE=}"
+        ;;
+      OUTPUT_FILE=*)
+        output_file="${arg#OUTPUT_FILE=}"
+        ;;
+      *)
+        if [[ -z "$answer_file" ]]; then
+          answer_file="$arg"
+        else
+          echo "ERROR: unexpected arg for exam: $arg" >&2
+          usage
+          exit 2
+        fi
+        ;;
+    esac
+  done
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "exam")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: exam requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    exit 2
+  fi
+
+  if [[ -z "$answer_file" ]]; then
+    answer_file="reports/${run_id}/onboard_answer.md"
+  fi
+  if [[ -z "$output_file" ]]; then
+    output_file="reports/${run_id}/sync_exam_result.json"
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required for bash tools/legacy.sh exam." >&2
+    exit 1
+  fi
+
+  if [[ ! -f "$answer_file" ]]; then
+    append_execution_event "$run_id" "exam" "exam_missing_answer" "fail" "bash tools/legacy.sh exam RUN_ID=${run_id}" "answer_file=${answer_file}" "missing answer file"
+    echo "ERROR: answer file not found: $answer_file" >&2
+    exit 1
+  fi
+
+  mkdir -p "reports/${run_id}"
+  cmd_text="tools/sync_exam.py --answer-file ${answer_file} --rubric-file ${rubric_file} --output-file ${output_file} --run-id ${run_id}"
+  set +e
+  output="$("$py_bin" tools/sync_exam.py \
+    --answer-file "$answer_file" \
+    --rubric-file "$rubric_file" \
+    --output-file "$output_file" \
+    --run-id "$run_id" 2>&1)"
+  rc=$?
+  set -e
+  printf "%s\n" "$output"
+
+  if [[ "$rc" -ne 0 ]]; then
+    status="fail"
+  fi
+  append_execution_event "$run_id" "exam" "exam_graded" "$status" "bash tools/legacy.sh exam RUN_ID=${run_id}" "answer=${answer_file};rubric=${rubric_file};output=${output_file}" "$output"
+  if [[ "$rc" -ne 0 ]]; then
+    exit "$rc"
+  fi
+}
+
+cmd_exam_auto() {
+  local explicit_run_id="${RUN_ID:-}"
+  local run_id=""
+  local answer_file=""
+  local rubric_file="${SYNC_EXAM_RUBRIC_FILE:-docs/LEARN_EXAM_RUBRIC.json}"
+  local output_file=""
+  local template_file="${SYNC_EXAM_TEMPLATE_FILE:-docs/LEARN_EXAM_ANSWER_TEMPLATE.md}"
+  local auto_fill="${QF_EXAM_AUTO_FILL:-1}"
+  local arg=""
+  local command_line=""
+
+  for arg in "$@"; do
+    case "$arg" in
+      RUN_ID=*)
+        explicit_run_id="${arg#RUN_ID=}"
+        ;;
+      ANSWER_FILE=*)
+        answer_file="${arg#ANSWER_FILE=}"
+        ;;
+      RUBRIC_FILE=*)
+        rubric_file="${arg#RUBRIC_FILE=}"
+        ;;
+      OUTPUT_FILE=*)
+        output_file="${arg#OUTPUT_FILE=}"
+        ;;
+      AUTO_FILL=*)
+        auto_fill="${arg#AUTO_FILL=}"
+        ;;
+      *)
+        if [[ -z "$answer_file" ]]; then
+          answer_file="$arg"
+        else
+          echo "ERROR: unexpected arg for exam-auto: $arg" >&2
+          usage
+          exit 2
+        fi
+        ;;
+    esac
+  done
+
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "exam-auto")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: exam-auto requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    exit 2
+  fi
+
+  if [[ -z "$answer_file" ]]; then
+    answer_file="reports/${run_id}/onboard_answer.md"
+  fi
+  if [[ -z "$output_file" ]]; then
+    output_file="reports/${run_id}/sync_exam_result.json"
+  fi
+
+  case "${auto_fill,,}" in
+    1|true|yes|y)
+      auto_fill="1"
+      ;;
+    0|false|no|n)
+      auto_fill="0"
+      ;;
+    *)
+      echo "ERROR: invalid AUTO_FILL value: $auto_fill (expected 0|1)." >&2
+      exit 2
+      ;;
+  esac
+
+  mkdir -p "reports/${run_id}"
+  if [[ "$auto_fill" == "1" && -f "$answer_file" ]]; then
+    local check_py_bin=""
+    if command -v python3 >/dev/null 2>&1; then
+      check_py_bin="python3"
+    elif command -v python >/dev/null 2>&1; then
+      check_py_bin="python"
+    fi
+    if [[ -z "$check_py_bin" ]]; then
+      echo "ERROR: python is required for bash tools/legacy.sh exam-auto." >&2
+      exit 1
+    fi
+    if ! "$check_py_bin" - <<'PY' "$answer_file"
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8", errors="replace") if path.is_file() else ""
+required = "## 问答 1：项目使命、背景、目标、最终结果、开发方式"
+raise SystemExit(0 if required in text else 1)
+PY
+    then
+      cmd_exam_auto_fill_answer "$run_id" "$answer_file"
+      append_execution_event "$run_id" "exam-auto" "exam_auto_answer_migrated" "ok" "bash tools/legacy.sh exam-auto RUN_ID=${run_id}" "answer_file=${answer_file}" ""
+      echo "EXAM_ANSWER_AUTOFILLED: $answer_file"
+    fi
+  fi
+  if [[ ! -f "$answer_file" ]]; then
+    command_line="bash tools/legacy.sh exam-auto RUN_ID=${run_id}"
+    if [[ "$auto_fill" == "0" ]]; then
+      if [[ ! -f "$template_file" ]]; then
+        append_execution_event "$run_id" "exam-auto" "exam_auto_missing_template" "fail" "$command_line" "template_file=${template_file}" "missing template file"
+        echo "ERROR: exam template file not found: $template_file" >&2
+        exit 1
+      fi
+      cp "$template_file" "$answer_file"
+      append_execution_event "$run_id" "exam-auto" "exam_auto_answer_scaffolded" "ok" "$command_line" "answer_file=${answer_file}" ""
+      echo "EXAM_ANSWER_SCAFFOLDED: $answer_file"
+      echo "请先按模板补全答案，再运行：bash tools/legacy.sh exam-auto RUN_ID=${run_id}"
+      return 3
+    fi
+
+    cmd_exam_auto_fill_answer "$run_id" "$answer_file"
+    append_execution_event "$run_id" "exam-auto" "exam_auto_answer_autofilled" "ok" "$command_line" "answer_file=${answer_file}" ""
+    echo "EXAM_ANSWER_AUTOFILLED: $answer_file"
+  fi
+
+  cmd_exam "RUN_ID=${run_id}" "ANSWER_FILE=${answer_file}" "RUBRIC_FILE=${rubric_file}" "OUTPUT_FILE=${output_file}"
+  command_line="bash tools/legacy.sh exam-auto RUN_ID=${run_id}"
+  append_execution_event "$run_id" "exam-auto" "exam_auto_done" "ok" "$command_line" "answer_file=${answer_file};output_file=${output_file}" ""
+}
+
+read_state_field() {
+  local file="$1"
+  local key="$2"
+  local py_bin=""
+  if command -v python3 >/dev/null 2>&1; then
+    py_bin="python3"
+  elif command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  else
+    echo "ERROR: python is required for parsing ship_state.json" >&2
+    exit 1
+  fi
+  "$py_bin" - <<'PY' "$file" "$key"
+import json
+import sys
+path, key = sys.argv[1], sys.argv[2]
+with open(path, "r", encoding="utf-8") as f:
+    obj = json.load(f)
+val = obj.get(key, "")
+if val is None:
+    val = ""
+print(str(val))
+PY
+}
+
+cmd_resume() {
+  local arg="${1:-}"
+  local run_id=""
+  local explicit_run_id=""
+  local state_file=""
+  local step=""
+  local branch=""
+  local pr_url=""
+  local merged_pr_url=""
+  local skip_ship_steps=0
+  local msg=""
+  local pr_body=""
+  local state=""
+
+  if [[ "$arg" =~ ^RUN_ID=.+$ ]]; then
+    explicit_run_id="${arg#RUN_ID=}"
+  elif [[ -n "$arg" ]]; then
+    explicit_run_id="$arg"
+  elif [[ -n "${RUN_ID:-}" ]]; then
+    explicit_run_id="${RUN_ID}"
+  fi
+  run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "resume")"
+  if [[ -z "$run_id" ]]; then
+    echo "ERROR: resume requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)."
+    usage
+    exit 2
+  fi
+
+  state_file="reports/${run_id}/ship_state.json"
+  if [[ ! -f "$state_file" ]]; then
+    append_execution_event "$run_id" "resume" "resume_missing_state" "fail" "bash tools/legacy.sh resume RUN_ID=${run_id}" "state_file=${state_file}" "missing state file"
+    echo "ERROR: missing state file: $state_file"
+    print_resume_cmd "$run_id"
+    exit 1
+  fi
+
+  append_execution_event "$run_id" "resume" "resume_start" "ok" "bash tools/legacy.sh resume RUN_ID=${run_id}" "state_file=${state_file}" ""
+
+  step="$(read_state_field "$state_file" "step")"
+  branch="$(read_state_field "$state_file" "branch")"
+  pr_url="$(read_state_field "$state_file" "pr_url")"
+  msg="$(read_state_field "$state_file" "msg")"
+  if [[ -z "$msg" ]]; then
+    msg="${run_id}: resume ship"
+  fi
+
+  echo "resume state: step=${step:-unknown} branch=${branch:-unknown} pr_url=${pr_url:-none}"
+  if [[ -z "$branch" ]]; then
+    echo "ERROR: ship_state.json has empty branch."
+    print_resume_cmd "$run_id"
+    exit 1
+  fi
+
+  run_with_retry_capture "resume_fetch" git fetch origin || {
+    append_execution_event "$run_id" "resume" "resume_fetch_failed" "fail" "git fetch origin" "" "${RETRY_LAST_ERROR:-fetch failed}"
+    print_resume_cmd "$run_id"
+    exit 1
+  }
+
+  if [[ -n "$pr_url" && "$pr_url" != "null" ]]; then
+    run_with_retry_capture "resume_pr_state_precheck" gh pr view "$pr_url" --json state -q .state || true
+    state="$(printf "%s\n" "$RETRY_OUTPUT" | tail -n1 | tr -d '\r')"
+    if [[ "$state" == "MERGED" ]]; then
+      skip_ship_steps=1
+      append_execution_event "$run_id" "resume" "resume_pr_already_merged" "ok" "gh pr view $pr_url --json state -q .state" "pr_url=${pr_url}" ""
+      echo "resume: detected merged PR, skip push/create/merge: $pr_url"
+    fi
+  fi
+
+  if [[ "$skip_ship_steps" -eq 0 && ( -z "$pr_url" || "$pr_url" == "null" ) ]]; then
+    run_with_retry_capture "resume_pr_lookup_merged" gh pr list --head "$branch" --base main --state merged --limit 1 --json url -q '.[0].url' || true
+    merged_pr_url="$(printf "%s\n" "$RETRY_OUTPUT" | awk '/^https:\/\/github\.com\/.*\/pull\/[0-9]+$/ {print; exit}')"
+    if [[ -n "$merged_pr_url" ]]; then
+      pr_url="$merged_pr_url"
+      skip_ship_steps=1
+      append_execution_event "$run_id" "resume" "resume_pr_already_merged" "ok" "gh pr list --head $branch --base main --state merged" "pr_url=${pr_url}" ""
+      echo "resume: found merged PR by head branch, skip push/create/merge: $pr_url"
+    fi
+  fi
+
+  if [[ "$skip_ship_steps" -eq 0 ]]; then
+    if git show-ref --verify --quiet "refs/heads/${branch}"; then
+      run_with_retry_capture "resume_checkout_branch" git checkout "$branch" || {
+        append_execution_event "$run_id" "resume" "resume_checkout_failed" "fail" "git checkout $branch" "" "${RETRY_LAST_ERROR:-checkout failed}"
+        print_resume_cmd "$run_id"
+        exit 1
+      }
+    else
+      run_with_retry_capture "resume_checkout_branch" git checkout -b "$branch" "origin/$branch" || {
+        append_execution_event "$run_id" "resume" "resume_checkout_failed" "fail" "git checkout -b $branch origin/$branch" "" "${RETRY_LAST_ERROR:-checkout failed}"
+        print_resume_cmd "$run_id"
+        exit 1
+      }
+    fi
+
+    run_with_retry_capture "resume_push" git push -u origin "$branch" || {
+      append_execution_event "$run_id" "resume" "resume_push_failed" "fail" "git push -u origin $branch" "" "${RETRY_LAST_ERROR:-push failed}"
+      print_resume_cmd "$run_id"
+      exit 1
+    }
+
+    if [[ -z "$pr_url" || "$pr_url" == "null" ]]; then
+      pr_body="Resume ship for ${run_id}."
+      if [[ -f "reports/${run_id}/pr_body_excerpt.md" ]]; then
+        pr_body="$(cat "reports/${run_id}/pr_body_excerpt.md")"
+      fi
+      run_with_retry_capture "resume_pr_create" gh pr create --base main --head "$branch" --title "$msg" --body "$pr_body" || {
+        append_execution_event "$run_id" "resume" "resume_pr_create_failed" "fail" "gh pr create --base main --head $branch" "" "${RETRY_LAST_ERROR:-pr create failed}"
+        print_resume_cmd "$run_id"
+        exit 1
+      }
+      pr_url="$(printf "%s\n" "$RETRY_OUTPUT" | awk '/^https:\/\/github\.com\/.*\/pull\/[0-9]+$/ {print; exit}')"
+      if [[ -z "$pr_url" ]]; then
+        echo "ERROR: failed to parse PR url from gh output."
+        print_resume_cmd "$run_id"
+        exit 1
+      fi
+      echo "PR: $pr_url"
+    fi
+
+    run_with_retry_capture "resume_pr_merge_auto" gh pr merge --auto --squash --delete-branch "$pr_url" || true
+    run_with_retry_capture "resume_pr_state" gh pr view "$pr_url" --json state -q .state || {
+      append_execution_event "$run_id" "resume" "resume_pr_state_failed" "fail" "gh pr view $pr_url --json state -q .state" "" "${RETRY_LAST_ERROR:-pr state failed}"
+      print_resume_cmd "$run_id"
+      exit 1
+    }
+    state="$(printf "%s\n" "$RETRY_OUTPUT" | tail -n1 | tr -d '\r')"
+    if [[ "$state" != "MERGED" ]]; then
+      run_with_retry_capture "resume_pr_merge" gh pr merge --squash --delete-branch "$pr_url" || {
+        append_execution_event "$run_id" "resume" "resume_pr_merge_failed" "fail" "gh pr merge --squash --delete-branch $pr_url" "" "${RETRY_LAST_ERROR:-pr merge failed}"
+        print_resume_cmd "$run_id"
+        exit 1
+      }
+    fi
+  fi
+
+  # Resume may append execution logs/ship state during retries. Auto-stash dirty
+  # changes before switching back to main to avoid self-blocking checkout.
+  if ! auto_stash_if_dirty "resume-cleanup-run-${run_id}"; then
+    append_execution_event "$run_id" "resume" "resume_autostash_failed" "fail" "auto_stash_if_dirty resume-cleanup-run-${run_id}" "" "workspace dirty and autostash disabled"
+    print_resume_cmd "$run_id"
+    exit 1
+  fi
+
+  run_with_retry_capture "resume_sync_checkout_main" git checkout main || {
+    append_execution_event "$run_id" "resume" "resume_sync_checkout_failed" "fail" "git checkout main" "" "${RETRY_LAST_ERROR:-checkout main failed}"
+    print_resume_cmd "$run_id"
+    exit 1
+  }
+  run_with_retry_capture "resume_sync_pull_main" git pull --rebase origin main || {
+    append_execution_event "$run_id" "resume" "resume_sync_pull_failed" "fail" "git pull --rebase origin main" "" "${RETRY_LAST_ERROR:-sync pull failed}"
+    print_resume_cmd "$run_id"
+    exit 1
+  }
+  append_execution_event "$run_id" "resume" "resume_done" "ok" "bash tools/legacy.sh resume RUN_ID=${run_id}" "pr_url=${pr_url}" ""
+  update_state_current "$run_id" "$(state_field_value "CURRENT_TASK_FILE")" "done"
+  echo "resume done: ${run_id}"
+}
+
+subcmd="${1:-}"
+case "$subcmd" in
+  init)
+    shift
+    cmd_init "$@"
+    ;;
+  onboard)
+    shift
+    cmd_onboard "${1:-}"
+    ;;
+  sync)
+    shift
+    cmd_sync "${1:-}"
+    ;;
+  learn)
+    shift
+    cmd_learn "$@"
+    ;;
+  ready)
+    shift
+    cmd_ready "$@"
+    ;;
+  orient)
+    shift
+    cmd_orient "$@"
+    ;;
+  choose)
+    shift
+    cmd_choose "$@"
+    ;;
+  council)
+    shift
+    cmd_council "$@"
+    ;;
+  arbiter)
+    shift
+    cmd_arbiter "$@"
+    ;;
+  slice)
+    shift
+    cmd_slice "$@"
+    ;;
+  execute)
+    shift
+    cmd_execute "$@"
+    ;;
+  discuss)
+    shift
+    cmd_discuss "$@"
+    ;;
+  review)
+    shift
+    cmd_review "$@"
+    ;;
+  snapshot)
+    shift
+    cmd_snapshot "$@"
+    ;;
+  handoff)
+    shift
+    cmd_handoff "${1:-}"
+    ;;
+  exam)
+    shift
+    cmd_exam "$@"
+    ;;
+  exam-auto)
+    shift
+    cmd_exam_auto "$@"
+    ;;
+  plan)
+    shift
+    cmd_plan "${1:-20}"
+    ;;
+  do)
+    shift
+    cmd_do "${1:-}"
+    ;;
+  stash-clean)
+    shift
+    cmd_stash_clean "${1:-preview}" "${2:-}"
+    ;;
+  resume)
+    shift
+    cmd_resume "${1:-}"
+    ;;
+  *)
+    usage
+    exit 2
+    ;;
+esac

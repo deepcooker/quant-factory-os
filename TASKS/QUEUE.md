@@ -1,498 +1,143 @@
 # QUEUE
 
-Purpose: this is the "next-shot" queue for new Codex sessions. On startup, only
-`TASKS/STATE.md` + `TASKS/QUEUE.md` are used to decide what to do next.
-
-## Item format (minimum)
-- Title
-- Goal (one sentence)
-- Scope (allowed files/directories)
-- Acceptance (3 checks: verify, evidence, scope)
-- Optional: RUN_ID (if omitted, generate at execution time)
-
 ## Queue
 
-- [x] TODO Title: qf resume reliability: avoid self-block on checkout main  Picked: run-2026-03-04-resume-self-block-fix 2026-03-04T14:23:57+0800
-  Done: PR #163, RUN_ID=run-2026-03-04-resume-self-block-fix
-  Goal: 修复 `tools/qf resume` 在收尾同步阶段因自身写日志导致工作区变脏而卡住 `git checkout main` 的问题。
-  Scope: `tools/qf`, `tests/`, `AGENTS.md`, `docs/WORKFLOW.md`, `TASKS/STATE.md`, `reports/{RUN_ID}/`
+- [x] TODO Title: slice-next: P0: 收敛 learn 的日常同频体验 - core delivery  Picked: run-2026-03-06-slice-next-p0-learn-core-delivery 2026-03-06T19:40:11+0800
+  Goal: 当前合同直接把 learn 和 PROJECT_GUIDE 同频列为增量重点；结合最新 learn focus，下一步最合理的是继续收敛强同频输出和主线回拉体验：继续围绕当前 active run 收敛 learn 主线、流程边界和日常使用体验。
+  Scope: `tools/learn.py`, `docs/PROJECT_GUIDE.md`, `docs/WORKFLOW.md`, `AGENTS.md`
   Acceptance:
-  - [ ] `tools/qf resume` 在 merged PR 场景不会因 `execution.jsonl/ship_state.json` 自阻塞
-  - [ ] 新增回归测试覆盖此场景并通过
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-
-- [x] TODO Title: plan-execute governance: /plan 与 qf plan 去歧义 + /compact 策略落地  Picked: run-2026-03-04-plan-execute-governance 2026-03-04T12:44:21+0800
-  Done: PR #160, RUN_ID=run-2026-03-04-plan-execute-governance
-  Goal: 统一 Plan->Confirm->Execute 语义，明确 `/plan`、`tools/qf plan`、`/compact` 的边界与触发规则。
-  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `docs/CODEX_CLI_OPERATION.md`, `docs/PROJECT_GUIDE.md`, `TASKS/STATE.md`, `reports/{RUN_ID}/`
-  Acceptance:
-  - [ ] 文档明确区分：Codex `/plan` 与 `tools/qf plan`
-  - [ ] 文档写清 Plan->Confirm->Execute 的触发点
-  - [ ] 文档写清 `/compact` 的触发规则（非每 task 强制）
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-
-- [x] TODO Title: docs governance cleanup: 同频文档全量清理与边界重定义  Picked: run-2026-03-04-docs-governance-cleanup 2026-03-04T02:17:41+0800
-  Done: PR #159, RUN_ID=run-2026-03-04-docs-governance-cleanup
-  Goal: 统一 AGENTS/README/docs/SYNC 的职责边界，删除噪声与重复，细化同频标准，形成可执行且可审计的文档体系。
-  Scope: `AGENTS.md`, `README.md`, `docs/`, `SYNC/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - [ ] 形成“保留/删除/合并/细化”清单并落地到文档
-  - [ ] 明确并写入边界规则：哪个问题归哪个 owner 文档
-  - [ ] 同频入口读序与考试问答保持一致，无冲突项
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-
-- [x] TODO Title: docs cleanup: PROJECT_GUIDE 仅保留问答 + 新增财富系统新建项目引导  Picked: run-2026-03-04-docs-cleanup-project-guide 2026-03-04T02:01:25+0800
-  Done: PR #158, RUN_ID=run-2026-03-04-docs-cleanup-project-guide
-  Goal: 把同频入口压缩成“问题-标准回答”格式，并单独提供财富系统项目落地引导文档，降低新会话学习噪音。
-  Scope: `docs/PROJECT_GUIDE.md`, `docs/WEALTH_SYSTEM_NEW_PROJECT_GUIDE.md`, `reports/{RUN_ID}/`
-  Acceptance:
-  - [ ] `docs/PROJECT_GUIDE.md` 仅保留问答条目（问题+回答+证据），不保留其他叙述章节
-  - [ ] 新增财富系统新建项目引导文件并包含可执行步骤清单
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-
-- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - core delivery  Picked: run-2026-03-02-slice-next-p0-ready-run-core-delivery 2026-03-02T15:55:55+0800
-  Done: PR #150, RUN_ID=run-2026-03-02-slice-next-p0-ready-run-core-delivery
-  Goal: 避免把历史中断状态混入新需求，先做生命周期分流。
-  Scope: `tools/qf`, `tests/`
-  Acceptance:
-  - [ ] deliver selected direction option `ready-exit-resolution` with bounded scope
+  - [ ] deliver selected direction option `learn-daily-ergonomics` with bounded scope
   - [ ] command(s) pass: make verify
-  - [ ] reports summary/decision updated for this slice
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-  Slice: run_id=run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment task_id=slice-1
-
-- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - enforce guardrail tests  Picked: run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests 2026-03-02T15:58:36+0800
-  Done: PR #151, RUN_ID=run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests
-  Goal: Add or refine guardrail tests to lock behavior of the selected direction.
-  Scope: `tests/`, `tools/qf`
-  Acceptance:
+  - [ ] reports summary/decision updated for this run
+  - [ ] owner docs updated in same run when behavior/rules changed
   - [ ] critical path regression tests added or refreshed
   - [ ] failure-path assertions are explicit and actionable
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-  Slice: run_id=run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment task_id=slice-2
-
-- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment
-  Goal: Keep evidence and owner docs aligned with final behavior of this direction.
-  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `SYNC/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - [ ] owner docs updated in same run when behavior/rules changed
-  - [ ] tools/qf review STRICT=1 AUTO_FIX=1 passes
+  - [ ] bash tools/legacy.sh review STRICT=1 AUTO_FIX=1 passes
   - [ ] decision records accepted tradeoffs and residual risks
   - [ ] Command(s) pass: `make verify`
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-  Slice: run_id=run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment task_id=slice-3
+  Slice: run_id=run-2026-03-05-ops-vnext-release task_id=slice-1
+  Done: commit `8c0342c`
 
-- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - core delivery  Picked: run-2026-03-02-slice-next-p0-ready-run-core-delivery 2026-03-02T15:37:04+0800
-  Goal: 避免把历史中断状态混入新需求，先做生命周期分流。
-  Scope: `tools/qf`, `tests/`
+- [x] TODO Title: task ship safety: keep active run branch on task/ship handoff  Picked: run-2026-03-06-task-ship-branch-safety 2026-03-06T20:05:00+0800
+  Goal: 修复 `tools/task.sh` / `tools/ship.sh` 在收尾时强制切到 `main` 导致活跃 run 分支和 Python-first 基线错位的问题。
+  Scope: `tools/task.sh`, `tools/ship.sh`, `tests/`, `TASKS/`, `reports/`, `docs/`
   Acceptance:
-  - [ ] deliver selected direction option `ready-exit-resolution` with bounded scope
-  - [ ] command(s) pass: make verify
-  - [ ] reports summary/decision updated for this slice
+  - [ ] `tools/task.sh` 在活跃 run 分支上不会把收尾流程带到错误基线
+  - [ ] `tools/ship.sh` 的分支切换策略与当前 run / branch continuity 一致
+  - [ ] 新增或刷新关键回归测试
   - [ ] Command(s) pass: `make verify`
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-  Slice: run_id=run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests task_id=slice-1
+  Done: branch continuity defaulted to active base branch; review pass recorded in run-2026-03-06-task-ship-branch-safety
 
-- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - enforce guardrail tests  Picked: run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests 2026-03-02T16:01:04+0800
-  Done: PR #152, RUN_ID=run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests
-  Goal: Add or refine guardrail tests to lock behavior of the selected direction.
-  Scope: `tests/`, `tools/qf`
-  Acceptance:
-  - [ ] critical path regression tests added or refreshed
-  - [ ] failure-path assertions are explicit and actionable
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-  Slice: run_id=run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests task_id=slice-2
-
-- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment  Picked: run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment 2026-03-02T16:04:02+0800
-  Done: PR #153, RUN_ID=run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment
-  Goal: Keep evidence and owner docs aligned with final behavior of this direction.
-  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `SYNC/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - [ ] owner docs updated in same run when behavior/rules changed
-  - [ ] tools/qf review STRICT=1 AUTO_FIX=1 passes
-  - [ ] decision records accepted tradeoffs and residual risks
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-  Slice: run_id=run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests task_id=slice-3
-
-- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - core delivery  Picked: run-2026-03-02-slice-next-p0-ready-run-core-delivery 2026-03-02T15:17:56+0800
-  Done: PR #147, RUN_ID=run-2026-03-02-slice-next-p0-ready-run-core-delivery
-  Goal: 避免把历史中断状态混入新需求，先做生命周期分流。
-  Scope: `tools/qf`, `tests/`
-  Acceptance:
-  - [ ] deliver selected direction option `ready-exit-resolution` with bounded scope
-  - [ ] command(s) pass: make verify
-  - [ ] reports summary/decision updated for this slice
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-  Slice: run_id=run-2026-03-02-slice-next-p0-ready-run-core-delivery task_id=slice-1
-
-- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - enforce guardrail tests  Picked: run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests 2026-03-02T15:34:36+0800
-  Done: PR #148, RUN_ID=run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests
-  Goal: Add or refine guardrail tests to lock behavior of the selected direction.
-  Scope: `tests/`, `tools/qf`
-  Acceptance:
-  - [ ] critical path regression tests added or refreshed
-  - [ ] failure-path assertions are explicit and actionable
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-  Slice: run_id=run-2026-03-02-slice-next-p0-ready-run-core-delivery task_id=slice-2
-
-- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment  Picked: run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment 2026-03-02T15:45:17+0800
-  Goal: Keep evidence and owner docs aligned with final behavior of this direction.
-  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `SYNC/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - [ ] owner docs updated in same run when behavior/rules changed
-  - [ ] tools/qf review STRICT=1 AUTO_FIX=1 passes
-  - [ ] decision records accepted tradeoffs and residual risks
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-  Slice: run_id=run-2026-03-02-slice-next-p0-ready-run-core-delivery task_id=slice-3
-
-- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - core delivery  Picked: run-2026-03-02-slice-next-p0-ready-run-core-delivery 2026-03-02T14:49:25+0800
-  Done: PR #146, RUN_ID=run-2026-03-02-slice-next-p0-ready-run-core-delivery
-  Goal: 避免把历史中断状态混入新需求，先做生命周期分流。
-  Scope: `tools/qf`, `tests/`
-  Acceptance:
-  - [ ] deliver selected direction option `ready-exit-resolution` with bounded scope
-  - [ ] command(s) pass: make verify
-  - [ ] reports summary/decision updated for this slice
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-  Slice: run_id=run-2026-03-02-contract-next-p0-ready-run task_id=slice-1
-
-- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - enforce guardrail tests
-  Goal: Add or refine guardrail tests to lock behavior of the selected direction.
-  Scope: `tests/`, `tools/qf`
-  Acceptance:
-  - [ ] critical path regression tests added or refreshed
-  - [ ] failure-path assertions are explicit and actionable
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-  Slice: run_id=run-2026-03-02-contract-next-p0-ready-run task_id=slice-2
-
-- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment
-  Goal: Keep evidence and owner docs aligned with final behavior of this direction.
-  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `SYNC/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - [ ] owner docs updated in same run when behavior/rules changed
-  - [ ] tools/qf review STRICT=1 AUTO_FIX=1 passes
-  - [ ] decision records accepted tradeoffs and residual risks
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-  Slice: run_id=run-2026-03-02-contract-next-p0-ready-run task_id=slice-3
-
-- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - core delivery  Picked: run-2026-03-02-slice-next-p0-ready-run-core-delivery 2026-03-02T14:23:03+0800
-  Goal: 避免把历史中断状态混入新需求，先做生命周期分流。
-  Scope: `tools/qf`, `tests/`
-  Acceptance:
-  - [ ] deliver selected direction option `ready-exit-resolution` with bounded scope
-  - [ ] command(s) pass: make verify
-  - [ ] reports summary/decision updated for this slice
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-  Slice: run_id=run-2026-03-02-qf-ready task_id=slice-1
-
-- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - enforce guardrail tests  Picked: run-2026-03-02-slice-next-p0-ready-run-enforce-guardrail-tests 2026-03-02T14:30:59+0800
-  Goal: Add or refine guardrail tests to lock behavior of the selected direction.
-  Scope: `tests/`, `tools/qf`
-  Acceptance:
-  - [ ] critical path regression tests added or refreshed
-  - [ ] failure-path assertions are explicit and actionable
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-  Slice: run_id=run-2026-03-02-qf-ready task_id=slice-2
-
-- [x] TODO Title: slice-next: P0: ready 先处理未收尾 run（收尾/抛弃） - evidence and docs alignment  Picked: run-2026-03-02-slice-next-p0-ready-run-evidence-and-docs-alignment 2026-03-02T14:33:10+0800
-  Goal: Keep evidence and owner docs aligned with final behavior of this direction.
-  Scope: `AGENTS.md`, `docs/WORKFLOW.md`, `SYNC/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - [ ] owner docs updated in same run when behavior/rules changed
-  - [ ] tools/qf review STRICT=1 AUTO_FIX=1 passes
-  - [ ] decision records accepted tradeoffs and residual risks
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-  Slice: run_id=run-2026-03-02-qf-ready task_id=slice-3
-
-- [x] TODO Title: contract-next: P0: ready 先处理未收尾 run（收尾/抛弃）  Picked: run-2026-03-02-contract-next-p0-ready-run 2026-03-02T14:38:33+0800
-  Done: PR #145, RUN_ID=run-2026-03-02-contract-next-p0-ready-run
-  Goal: 避免把历史中断状态混入新需求，先做生命周期分流。
-  Scope: `tools/qf`, `tests/`
-  Acceptance:
-  - [ ] Command(s) pass: `make verify`
-  - [ ] Contract delivered: `reports/run-2026-03-02-qf-ready/direction_contract.json`
-  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
-  - [ ] Scope remains within declared paths
-  Contract: run_id=run-2026-03-02-qf-ready option=ready-exit-resolution
-
-- [x] TODO Title: qf ready 讨论执行分离 + 强认知输出 + 多角色评审闭环  Picked: run-2026-03-02-qf-ready 2026-03-02T12:58:05+0800
-  Done: PR #155, RUN_ID=run-2026-03-02-qf-ready
-  Goal: 把 `ready` 升级为“先判定会话状态、再给方向、确认后执行”的决策中枢，并将讨论态与执行态证据彻底分层。
-  Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `AGENTS.md`, `SYNC/`, `TASKS/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - [ ] `tools/qf ready` 在检测到上次 run 非完成态时，必须先给出“收尾（resume-close）/抛弃并新开（abandon-new）”决策，不得直接进入新方向。
-  - [ ] `ready` 输出固定包含：项目目标解读、宪法/工作流解读、证据链状态、session 承接状态、风险/阻塞、建议下一步。
-  - [ ] `ready` 通过后自动产出 3-5 个方向候选（含优先级/收益/风险/成本/依赖）并支持用户确认；用户确认前不写入 `reports/{RUN_ID}/` 执行证据。
-  - [ ] 确认方向后进入多角色评审（产品/架构/研发/测试）并产出统一执行契约；执行结束后自动做偏差审计（需求/实现/测试/文档）与必要修复。
-  - [ ] 文档更新为硬门禁：流程或规则变更若未同步 owner docs 和 run evidence，不能通过收尾。
-  - [ ] `make verify` 通过；新增回归测试覆盖“讨论态不入 report、确认后入 report、旧 run 决策分流”。
-
-- [x] TODO Title: qf 做强模式 v1：L1方向层 + do/plan 稳定性修复 + 文档强门禁  Picked: run-2026-03-02-qf-v1-l1-do-plan 2026-03-02T12:18:09+0800
-  Done: local verify passed, RUN_ID=run-2026-03-02-qf-v1-l1-do-plan
-  Goal: 把 `ready->plan->do` 升级为“先方向确认后执行”的做强模式入口，并修复 `do/plan` 的低摩擦稳定性问题。
-  Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `AGENTS.md`, `SYNC/`, `TASKS/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - [x] 新增 L1 方向层入口（`orient/choose` 或等价命令）：基于 `docs/PROJECT_GUIDE.md` + `docs/*` + state/evidence 生成多方向候选与优先级，并落证据文件。
-  - [x] `tools/qf do queue-next` 不再因内部日志写入导致 pull 前工作区变脏；失败时仍保留可恢复命令。
-  - [x] `tools/qf do` 的 auto-plan 与 pick 链路修复：内部自动 plan 后能继续 pick，不再出现“proposal missing”断链。
-  - [x] Queue 为空时提供“回到方向层确认”的明确下一步，不是直接死路。
-  - [x] `make verify` 通过；owner 文档（`AGENTS.md`/`docs/WORKFLOW.md`/`SYNC/*`）与本 RUN evidence 同步更新。
-
-- [x] TODO Title: qf sync 自动同频 + ready 硬门禁 + 对话证据自动更新  Picked: run-2026-03-01-qf-sync-ready 2026-03-01T01:30:01+0800
-  Done: local verify passed, RUN_ID=run-2026-03-01-qf-sync-ready
-  Goal: 把同频阶段做成高自动化闭环：自动读取必读链路、自动生成同频报告、ready 强制校验同频完成，并在关键命令自动更新会话证据。
-  Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `AGENTS.md`, `SYNC/`, `TASKS/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - [x] 新增 `tools/qf sync`：自动读取必读文件并落盘 `reports/{RUN_ID}/sync_report.json` 与 `sync_report.md`，包含“已读文件清单、项目总况、宪法、工作流、技能查找入口、当前任务阶段、会话承接状态、下一条命令”。
-  - [x] `tools/qf ready` 在缺失有效同频报告时不得通过；默认自动补跑同频后再写 `ready.json`（可通过开关关闭自动补跑）。
-  - [x] `tools/qf plan` 在常见脏工作区（STATE/execution/report 变更）下不再反复卡住，保持低摩擦可用。
-  - [x] `make verify` 通过；本 RUN 的 `reports/{RUN_ID}/summary.md` 与 `decision.md` 记录变更、验证和风险。
-
-- [x] TODO Title: qf exam-auto 默认自动填答并自动评分  Picked: run-2026-02-28-qf-exam-auto 2026-02-28T15:02:01+0800
-  Done: PR #142, RUN_ID=run-2026-02-28-qf-exam-auto
-  Goal: 让 `tools/qf exam-auto` 在答卷缺失时默认自动生成可评分答案并立刻评分，避免人工先填模板再重跑。
-  Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `TASKS/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - [ ] `tools/qf exam-auto` 在缺答卷时默认不再返回 3，而是自动填答并产出 `sync_exam_result.json`。
-  - [ ] 保留手动模式开关（可显式只生成模板不自动填答）。
-  - [ ] 新增/更新回归测试覆盖“默认自动化”和“手动模式”两条路径。
-  - [ ] `make verify` 通过，证据写入 `reports/{RUN_ID}/`。
-
-- [x] TODO Title: qf resume 已合并场景避免重复创建 PR  Picked: run-2026-02-28-qf-resume-pr 2026-02-28T12:01:19+0800
-  Done: PR #141, RUN_ID=run-2026-02-28-qf-resume-pr
-  Goal: 当 `tools/qf resume` 读取到的 `ship_state` 对应 PR 已经 `MERGED` 时，直接走本地同步收尾，不再重复创建新 PR。
-  Scope: `tools/qf`, `tests/`, `docs/WORKFLOW.md`, `TASKS/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - [ ] 复现路径下（`ship_state` 已有 `pr_url` 且 PR 已合并），`tools/qf resume` 不再调用 `gh pr create`。
-  - [ ] 仍完成 `checkout main + pull --rebase origin main`，并输出 `resume done`。
-  - [ ] 新增/更新回归测试覆盖该分支逻辑。
-  - [ ] `make verify` 通过，证据写入 `reports/{RUN_ID}/`。
-
-- [x] TODO Title: tools/qf 三命令收敛：init/plan/do + git 自愈（sync/retry/resume）+ 临时产物隔离  Picked: run-2026-02-26-tools-qf-init-plan-do-git-sync-retry-resume 2026-02-26T16:28:23+0800
-  Done: PR #109, RUN_ID=run-2026-02-26-tools-qf-init-plan-do-git-sync-retry-resume
-  Goal: 将 enter/onboard/task/ship 收敛到一个产品级入口 `tools/qf`，固定为三命令 `init/plan/do`，并补齐 git 自愈与临时产物隔离。
-  Scope: `tools/`, `tests/`, `docs/WORKFLOW.md`, `TASKS/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - `tools/qf init` 处理 dirty（可恢复 stash）、强制 sync main、执行 doctor/onboard 并输出下一步提示。
-  - `tools/qf plan [N]` 生成候选且不污染工作区；proposal 落在 `/tmp` 或 `reports/{RUN_ID}/` 并打印路径。
-  - `tools/qf do queue-next` 在 plan 前置下自动领取任务并输出 `TASK_FILE`/`RUN_ID`/`EVIDENCE_PATH`。
-  - 关键 git 步骤支持 retry/resume，失败记录写入 `reports/{RUN_ID}/ship_state.json`。
-  - 临时产物隔离后不再污染工作区，`make verify` 全绿。
-
-
-
-
-- [x] TODO Title: risk guardrail: recurring risk/rollback from decisions  Picked: run-2026-02-25-risk-guardrail-recurring-risk-rollback-from-decisions 2026-02-25T19:21:51+0800
-  Done: PR #107, RUN_ID=run-2026-02-25-risk-guardrail-recurring-risk-rollback-from-decisions
-  Goal: Aggregate recurring risk/rollback signals in recent decisions and add one preventive guardrail task.
-  Scope: `TASKS/STATE.md`, `tests/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - Guardrail task is queue-ready
-  - make verify
-
-
-- [x] TODO Title: 强化 tools/task.sh --plan：Queue 为空时生成 Suggested tasks（可复制入队）  Picked: run-2026-02-25-tools-task-sh-plan-queue-suggested-tasks 2026-02-25T13:15:27+0800
-  Done: PR #105, RUN_ID=run-2026-02-25-tools-task-sh-plan-queue-suggested-tasks
-  Goal: 当 Queue candidates 为 none 时，--plan 仍应基于 repo 证据（reports/*/decision.md、TASKS/STATE.md、可选 MISTAKES/）生成 10~20 条 Suggested tasks，并输出可直接粘贴的 QUEUE item 片段（含 Title/Goal/Scope/Acceptance 骨架），把“自动拿任务”真正做成单行可用。
-  Scope: `tools/task.sh`, `tests/`, `docs/WORKFLOW.md`, `TASKS/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - `tools/task.sh --plan 20` 生成的 `TASKS/TODO_PROPOSAL.md` 新增 `## Suggested tasks`：
-    - Queue 为空时也至少产出 5 条建议
-    - 每条包含可复制的 QUEUE item 片段（TODO Title/Goal/Scope/Acceptance）
-  - Suggested tasks 的来源至少覆盖：
-    - 最近 N 个 reports/run-*/decision.md（抓取 next/todo/suggest/风险/rollback 等信号）
-    - TASKS/STATE.md（风险/未完成信号）
-    - 若存在 MISTAKES/ 则读取其中 *.md（抓取 recurring issue/action）
-  - docs/WORKFLOW.md 补充：Queue 为空时，用 Suggested tasks 选一条入队→再 --next/--pick
-  - `make verify` 全绿
-
-
-- [x] TODO Title: enter.sh 支持显式自动 stash（ENTER_AUTOSTASH=1）并打印 stash 名  Picked: run-2026-02-25-enter-sh-stash-enter-autostash-1-stash 2026-02-25T01:55:06+0800
-  Done: PR #103, RUN_ID=run-2026-02-25-enter-sh-stash-enter-autostash-1-stash
-  Goal: 解决单人开发常见摩擦：工作区不干净时 enter.sh 直接失败。新增显式开关 ENTER_AUTOSTASH=1，使 enter.sh 在同步前自动 git stash push -u，并打印 stash 名与恢复指令；默认行为保持严格失败。
-  Scope: `tools/enter.sh`, `tests/`, `docs/WORKFLOW.md`, `TASKS/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - 默认 enter.sh：工作区不干净仍失败（不改变安全默认）。
-  - 设置 ENTER_AUTOSTASH=1 时：
-    - 自动 stash（含 untracked），并打印：stash 名 + 如何恢复（git stash list / pop）
-    - enter 正常继续 pull/doctor
-  - make verify 全绿
-  - docs/WORKFLOW.md 补充这一用法
-
-
-- [x] TODO Title: 领取任务时自动 make evidence + 打印下一步清单（避免人肉步骤）  Picked: run-2026-02-25-make-evidence 2026-02-25T01:00:03+0800
-  Done: PR #101, RUN_ID=run-2026-02-25-make-evidence
-  Goal: 在 tools/task.sh --next 与 --pick queue-next 领取任务时自动生成 reports/{RUN_ID}/ 证据三件套，并打印标准下一步清单；若 evidence 失败则回滚 QUEUE 变更，避免出现 [>] 锁死需要手动修复。
-  Scope: `tools/task.sh`, `tests/`, `docs/WORKFLOW.md`, `TASKS/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - `tools/task.sh --next` 领取后默认自动执行 make evidence，并输出：TASK_FILE/RUN_ID/EVIDENCE_PATH + “下一步清单”。
-  - `tools/task.sh --pick queue-next` 同样默认自动 evidence + 下一步清单。
-  - 若 evidence 失败：QUEUE 不应从 `[ ]` 变为 `[>]`（自动回滚），并给出明确错误提示。
-  - docs/WORKFLOW.md 补充：领取任务已自动生成 evidence，无需再手动 make evidence。
-  - `make verify` 全绿。
-
-
-- [x] TODO Title: ship 成功后自动同步本地 main 到最新（无需手动 enter）  Picked: run-2026-02-25-ship-main-enter 2026-02-25T00:46:47+0800
-  Done: PR #99, RUN_ID=run-2026-02-25-ship-main-enter
-  Goal: 解决单人开发“PR 合并后本地 main 不更新”的摩擦：在 tools/ship.sh 成功结束时强制执行 git 同步，把本地 main fast-forward/rebase 到 origin/main 最新，避免每次手动 ./tools/enter.sh 才看到最新队列与代码。
-  Scope: `tools/`, `tests/`, `docs/`, `TASKS/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - ship 成功后（PR 创建/合并流程结束），脚本会自动执行 sync：`git fetch` + `git checkout main` + `git pull --rebase origin main`，并打印同步后的 main HEAD。
-  - 同步前若工作区不干净，明确报错并退出（不做隐式覆盖）。
-  - 不引入额外慢检查：不调用 doctor/pytest（只做 git 同步）。
-  - 更新 docs/WORKFLOW.md：说明“ship 后 main 已自动同步，本地无需再手动 enter 才能看到最新”。
-  - `make verify` 全绿，并为该 RUN_ID 写齐 evidence 三件套。
-
-
-- [x] TODO Title: 自动生成任务候选清单（plan）并支持确认后领取（pick）  Picked: run-2026-02-25-plan-pick 2026-02-25T00:19:46+0800
-  Done: PR #97, RUN_ID=run-2026-02-25-plan-pick
-  Goal: 新增非交互式“计划/确认”机制：Codex 根据 repo 证据与当前 QUEUE/STATE 生成 10~20 条候选任务清单供人确认；确认后可一键领取当前队列任务（串行接力），减少人肉写 queue/拼命令。
-  Scope: `tools/`, `docs/`, `tests/`, `TASKS/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - 新增命令：`tools/task.sh --plan N=20`（或默认 N=20）生成 `TASKS/TODO_PROPOSAL.md`，并在 stdout 打印摘要（top N + 如何 pick）。
-  - 清单至少包含两块信息：
-    1) 当前可执行的 QUEUE 候选（未完成项），标注“推荐下一枪”（queue-next）
-    2) 从最近 reports/*/decision.md（可选含 MISTAKES/、STATE）提取的“建议新任务”（只做建议，不直接改 QUEUE）
-  - 新增命令：`tools/task.sh --pick queue-next`：在已生成 proposal 的前提下，执行领取（等价于 `tools/task.sh --next`）并打印 TASK_FILE/RUN_ID；默认不自动写代码、不自动 ship。
-  - 更新 docs/WORKFLOW.md：补充 plan/pick 的使用方式（用于 session 内串行接力）。
-  - `make verify` 全绿，并为该 RUN_ID 写齐 evidence 三件套。
-
-
-- [x] TODO Title: Session 一键初始化（onboard）+ 串行接下一枪（after-ship next）  Picked: run-2026-02-24-session-onboard-after-ship-next 2026-02-24T23:36:31+0800
-  Done: PR #95, RUN_ID=run-2026-02-24-session-onboard-after-ship-next
-  Goal: 新增一次-session 的自动入职/对齐脚本（同步+环境确认+必读清单+强制复述模板+最近 decision/PR 摘要），并在 ship 成功后自动提示下一枪命令（可选自动生成下一 TASK_FILE+RUN_ID，但不自动改代码）。
-  Scope: `tools/`, `tests/`, `docs/`, `TASKS/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - 新增入口：`tools/onboard.sh`（或 `make onboard`）可运行；输出包含：宪法/背景/阶段/工作流/复述模板/最近 decision 入口。
-  - ship 成功后输出 “下一枪建议”：若 QUEUE 还有 `[ ]`，提示 `tools/task.sh --next`；可选：在开关启用时自动执行 `--next` 并打印 TASK_FILE/RUN_ID。
-  - `make verify` 全绿，并为该 RUN_ID 写齐 evidence 三件套。
-
-
-- [x] TODO Title: 修复 {RUN_ID} 占位符渲染 + 忽略 pytest 缓存确保工作区干净  Picked: run-2026-02-24-run-id-pytest 2026-02-24T22:27:17+0800
-  Done: PR #93, RUN_ID=run-2026-02-24-run-id-pytest
-  Goal: 将 repo 中用于文档/队列/模板的 `{RUN_ID}` 占位符替换为 `{RUN_ID}`（或转义为 `&lt;RUN_ID&gt;`），避免 Markdown 渲染吞字符；同时把 `.pytest_cache/` 加入 `.gitignore`，避免 doctor/pytest 造成工作区“脏”。
-  Scope: `.gitignore`, `TASKS/QUEUE.md`, `TASKS/_TEMPLATE.md`, `docs/WORKFLOW.md`, `tests/`（如需补回归）
-  Acceptance:
-  - GitHub 渲染下不再出现 `reports//`、`RUN_ID=` 这种空洞显示（示例：QUEUE 与模板中的占位符可读）。
-  - `tools/doctor.sh`（含 pytest）运行后，工作区保持干净（无未忽略的新增缓存文件）。
-  - `make verify` 全绿。
-
-
-- [x] TODO Title: 增加只读 Observer 周报（awareness digest）  Picked: run-2026-02-24-observer-awareness-digest 2026-02-24T21:21:37+0800
-  Done: PR #91, RUN_ID=run-2026-02-24-observer-awareness-digest
-  Goal: 新增只读观察器，从 repo 证据链（reports/*、TASKS/STATE.md、可选 MISTAKES/）生成周报报告，落到 reports/{RUN_ID}/awareness.md，形成可审计“学习产物”。
-  Scope: `tools/`, `tests/`, `docs/`, `TASKS/`, `reports/{RUN_ID}/`
-  Acceptance:
-  - 新增入口：`make awareness RUN_ID={RUN_ID}`（或等价 tools/observe.sh）可运行。
-  - 输出：`reports/{RUN_ID}/awareness.md`，并在 summary/decision 里引用。
-  - 周报至少包含：本周 shipped runs（扫描 reports/run-*/decision.md）、重复失败模式（可选扫描 MISTAKES/）、当前风险（读 STATE）、下一枪建议（<=5 条、task-shaped）。
-  - `make verify` 全绿。
-
-
-- [x] TODO Title: auto-mark queue done on successful ship  Picked: run-2026-02-22-auto-mark-queue-done-on-successful-ship 2026-02-22T03:15:24+0800
-  Done: PR #89, RUN_ID=run-2026-02-22-auto-mark-queue-done-on-successful-ship
-  Goal: after a successful ship/PR open (and/or merge), automatically mark the picked `[>]` queue item as `[x]` and append `Done: PR #<n>, RUN_ID=<id>`.
-  Scope: `tools/task.sh`, `tools/ship.sh` (if needed), `TASKS/QUEUE.md`, `tests/`
-  Acceptance:
-  - When shipping a task created by `--next`, the corresponding queue item is updated from `[>]` to `[x]` with Done metadata.
-  - No effect if ship fails or no matching picked item exists.
-  - `make verify` passes and evidence recorded under `reports/{RUN_ID}/`.
-  RUN_ID: (optional)
-
-
-- [x] TODO Title: bootstrap next: normalize Scope + validate scope bullets  Picked: run-2026-02-22-bootstrap-next-normalize-scope-validate-scope-bullets 2026-02-22T02:17:45+0800
-  Goal: `tools/task.sh --next` must render Scope as one-path-per-bullet and fail fast if Scope cannot be parsed into valid bullets.
-  Scope: `tools/task.sh`
-  Acceptance:
-  - Generated task Scope is multi-line bullets (each bullet is a single backticked path).
-  - No non-path explanatory bullet is appended to Scope.
-  - If Scope has no valid bullet paths, `--next` exits non-zero with a clear error.
-  - `make verify` passes and evidence recorded under `reports/{RUN_ID}/`.
-  RUN_ID: (optional)
-  Done: PR #86, RUN_ID=run-2026-02-22-bootstrap-next-normalize-scope-validate-scope-bullets
-
-- [x] TODO Title: add minimal regression tests for workflow gates (P1)
-  Goal: cover scope gate / expected-files gate / single-run guard with small
-  regression tests to prevent workflow regressions.
-  Scope: ship/task tooling tests and minimal test fixtures.
-  Acceptance:
-  - `make verify` passes.
-  - Evidence recorded under `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`.
-  - No changes outside declared scope.
-  RUN_ID: (optional)
-  Done: PR #81, RUN_ID=run-2026-02-21-add-minimal-regression-tests-for-workflow-gates-p1
-
-- [x] TODO Title: startup prints session entrypoints + active RUN_ID (P0)
-  Goal: make `tools/start.sh` or `tools/enter.sh` print startup entrypoints
-  (`TASKS/STATE.md`, `TASKS/QUEUE.md`, `docs/WORKFLOW.md`) and current `RUN_ID`.
-  Scope: `tools/start.sh`, `tools/enter.sh`, startup docs/tests only as needed.
-  Acceptance:
-  - `make verify` passes.
-  - Evidence recorded under `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`.
-  - No changes outside declared scope.
-  RUN_ID: (optional)
-  Done: PR #78, RUN_ID=run-2026-02-21-startup-entrypoints-runid
-
-- [x] TODO Title: ENTITIES.md minimal dictionary sync (P1)
-  Goal: ensure `docs/ENTITIES.md` has minimal definitions for existing entities:
-  Task, PR, RUN_ID, Evidence, STATE, MISTAKES, Gate, Tool.
-  Scope: `docs/ENTITIES.md` and narrowly related docs references if required.
-  Acceptance:
-  - `make verify` passes.
-  - Evidence recorded under `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`.
-  - No changes outside declared scope.
-  RUN_ID: (optional)
-  Done: PR #77, RUN_ID=run-2026-02-12-entities-min-dict
-
-- [x] TODO Title: ship allowlist includes docs
-  Goal: update `tools/ship.sh` so untracked allowlist includes `docs/*`.
-  Scope: `tools/ship.sh`, tests/docs directly related to this rule.
-  Acceptance:
-  - `make verify` passes.
-  - Evidence recorded under `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`.
-  - No changes outside declared scope.
-  RUN_ID: (optional)
-
-- [x] TODO Title: ship expected-files gate
-  Goal: add expected-files guard so ship validates task-declared allowed files.
-  Scope: ship/task tooling and related workflow docs/tests.
-  Acceptance:
-  - `make verify` passes.
-  - Evidence recorded under `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`.
-  - No changes outside declared scope.
-  RUN_ID: (optional)
-
-- [x] TODO Title: add `.codex_read_denylist` baseline
-  Goal: add default read denylist to reduce noisy context snapshots.
-  Scope: `.codex_read_denylist` and minimal workflow docs references only.
-  Acceptance:
-  - `make verify` passes.
-  - Evidence recorded under `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`.
-  - No changes outside declared scope.
-  RUN_ID: (optional)
+- [x] TODO Title: vnext release baseline  Picked: run-2026-03-06-vnext-release-baseline 2026-03-06T21:20:00+0800
   
-- [x] TODO Title: queue pick lock (in-progress marker)
-  Goal: when `tools/task.sh --next` picks the top item, mark it as in-progress (`[>]`) and record RUN_ID+timestamp to avoid duplicate picks across sessions.
-  Scope: `tools/task.sh`, `TASKS/QUEUE.md`, minimal tests for queue parsing/locking.
+- [x] TODO Title: task ship smoke: real task-to-ship continuity check  Picked: run-2026-03-06-task-ship-smoke 2026-03-06T20:18:00+0800
+  Done: PR #166, RUN_ID=run-2026-03-06-task-ship-smoke
+  Goal: 用一个最小无害改动真实演练 `tools/task.sh -> tools/ship.sh`，验证新的 branch continuity 策略不会把会话带到错误基线。
+  Scope: `TASKS/`, `reports/`, `docs/`
   Acceptance:
-  - Picking changes `[ ]` -> `[>]` and appends `Picked: {RUN_ID} <timestamp>`.
-  - Re-running `--next` does not pick the same `[>]` item again.
-  - `make verify` passes and evidence recorded under `reports/{RUN_ID}/`.
-  RUN_ID: (optional)
+  - [ ] 真实执行 `tools/task.sh -> tools/ship.sh`
+  - [ ] 发货前后 active branch continuity 符合预期
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
+- [x] TODO Title: ship post-sync cleanliness: avoid self-dirty ship_state on merged PR flow  Picked: run-2026-03-06-ship-post-sync-cleanliness 2026-03-06T20:25:00+0800
+  Goal: 修复 `tools/ship.sh` 在 PR 合并后因自身写入 `ship_state.json` 导致 post-ship sync 被脏工作区拦住的问题。
+  Scope: `tools/ship.sh`, `tests/`, `TASKS/`, `reports/`, `docs/`
+  Acceptance:
+  - [ ] merged PR 路径下不会被 `ship_state.json` 自身阻塞 post-ship sync
+  - [ ] 新增或刷新关键回归测试
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+  Done: commit `4e5aed6`
+
+- [x] TODO Title: ship post-sync smoke: real merged-PR sync continuity check  Picked: run-2026-03-06-ship-post-sync-smoke 2026-03-06T20:40:00+0800
+  Done: self-dirty `ship_state.json` no longer blocked post-ship sync; PR #167 exposed next gap at `pr_merge`
+  Goal: 用一个最小无害改动真实演练 `tools/task.sh -> tools/ship.sh`，确认 merged PR 后 post-ship sync 不再被当前 run 的 `ship_state.json` 自身阻塞。
+  Scope: `TASKS/`, `reports/`, `docs/`
+  Acceptance:
+  - [ ] 真实执行 `tools/task.sh -> tools/ship.sh`
+  - [ ] merged PR 后 post-ship sync 成功越过 `ship_state.json` 自脏点
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
+- [x] TODO Title: ship pr-merge resilience: handle non-clean merge path without losing continuity  Picked: run-2026-03-06-ship-pr-merge-resilience 2026-03-06T20:55:00+0800
+  Goal: 修复 `tools/ship.sh` 在 PR 已创建但 `gh pr merge` 遇到 non-clean merge 时的处理策略，确保错误可恢复且不污染本地 continuity。
+  Scope: `tools/ship.sh`, `tests/`, `TASKS/`, `reports/`, `docs/`
+  Acceptance:
+  - [ ] `pr_merge` 冲突路径有明确、可恢复、低副作用的处理策略
+  - [ ] 新增或刷新关键回归测试
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+  Done: clear `pr_merge_blocked` guard added; review pass recorded in run-2026-03-06-ship-pr-merge-resilience
+
+- [x] TODO Title: ship pr-merge recovery guidance  Picked: run-2026-03-06-ship-pr-merge-recovery-guidance 2026-03-06T21:55:00+0800
+  Goal: 收紧 `tools/ship.sh` 在 `pr_merge_blocked` 之后的恢复指引，让 base-into-head 的冲突恢复路径更明确、低风险、可复制。
+  Scope: `tools/ship.sh`, `tests/`, `TASKS/`, `reports/`, `docs/`
+  Acceptance:
+  - [ ] `pr_merge_blocked` 输出包含明确的 base-into-head 恢复命令
+  - [ ] `ship_state.json` 保留足够恢复上下文
+  - [ ] 新增或刷新关键回归测试
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
+- [x] TODO Title: automation 1.0 definition  Picked: run-2026-03-06-automation-1-0-definition 2026-03-06T22:05:00+0800
+  Goal: 把“自动化 1.0”的成功定义正式落到 foundation repo 文档：明确它是面向业务项目交付的单入口目标、基座退后台、1.0 验收到交付为止，以及 foundation repo / business project repo 的分层关系。
+  Scope: `docs/`, `AGENTS.md`, `TASKS/`, `reports/`
+  Acceptance:
+  - [ ] `Automation 1.0` 的成功定义形成正式文档
+  - [ ] 文档与 `ENTITIES / WORKFLOW / PROJECT_GUIDE` 现有术语保持一致
+  - [ ] 明确 1.0 到交付为止，不把运行迭代闭环算入当前验收
+  - [ ] 明确 foundation repo 与 business project repo 的分层关系
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
+- [ ] TODO Title: vnext release baseline
+  Goal: 进入开发设计阶段的新版本基线，保持流程最小可用并可继续迭代。
+  Scope: `TASKS/`, `reports/`, `tools/`, `docs/`, `tests/`
+  Acceptance:
+  - [ ] `tools/*.py` 命令链可用
+  - [ ] task/report 历史噪音已清理
+  - [ ] 提交 PR
+
+- [x] TODO Title: ship post-merge checkout cleanliness  Picked: run-2026-03-06-ship-post-merge-checkout-cleanliness 2026-03-06T16:00:00+0000
+  Goal: 修复 `tools/ship.sh` 在 PR merged 后因当前 run 的 `ship_state.json` 未提交改动阻塞切回 base branch / post-ship sync 的问题。
+  Scope: `tools/ship.sh`, `tests/`, `TASKS/`, `reports/`, `docs/`
+  Acceptance:
+  - [ ] merged PR 后切回 base branch 的 sync 路径不会再被当前 run 的 `ship_state.json` 拦住
+
+- [x] TODO Title: ship post-commit state cleanliness  Picked: run-2026-03-06-ship-post-commit-state-cleanliness 2026-03-06T16:05:00+0000
+  Goal: 修复 `tools/ship.sh` 在 local commit 之后继续写成功态 `ship_state.json` 导致工作区重新变脏、阻塞 PR merge 与 post-ship sync continuity 的问题。
+  Scope: `tools/ship.sh`, `tests/`, `TASKS/`, `reports/`, `docs/`
+  Acceptance:
+  - [ ] local commit 之后的成功路径不再重写 tracked `ship_state.json`
+  - [ ] PR create / merge / post-ship sync 不会再被当前 run 的 `ship_state.json` 未提交改动拦住
+  - [ ] 新增或刷新关键回归测试
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
+- [x] TODO Title: ship retry success-state cleanliness  Picked: run-2026-03-07-ship-retry-success-state-cleanliness 2026-03-07T00:06:00+0000
+  Goal: 修复 `tools/ship.sh` 的 `run_with_retry_capture()` 在成功步骤统一重写 `ship_state.json` 的行为，确保 local commit 之后的成功路径不再通过 helper 隐式弄脏工作区。
+  Scope: `tools/ship.sh`, `tests/`, `TASKS/`, `reports/`, `docs/`
+  Acceptance:
+  - [ ] `run_with_retry_capture()` 的成功态 `ship_state` 写入可按阶段关闭
+  - [ ] local commit 之后，helper 不再为 `push / pr_create / pr_state / sync_checkout_base` 等成功步骤重写 tracked `ship_state.json`
+  - [ ] 新增或刷新关键回归测试
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
+- [x] TODO Title: learn model packet finalization  Picked: run-2026-03-07-learn-model-packet-finalization 2026-03-07T00:40:00+0000
+  Goal: 修复 `tools/learn.py` / `tools/codex_transport.py` 在 app-server 真实 plan 同频后未稳定落出 `learn/<project_id>.model.json` 的问题，确保 `ready` 能基于有效 model packet 继续通过。
+  Scope: `tools/learn.py`, `tools/codex_transport.py`, `tests/`, `TASKS/`, `reports/`, `docs/`
+  Acceptance:
+  - [ ] app-server final-answer 事件可稳定产出可解析的 learn model packet
+  - [ ] `learn/<project_id>.model.json` 在真实 `learn` 运行后稳定落盘
+  - [ ] `python3 tools/ready.py` 在完成 `learn` 后恢复通过
+  - [ ] 新增或刷新关键回归测试
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
+- [x] TODO Title: project guide mainline reinforcement  Picked: run-2026-03-07-project-guide-mainline-reinforcement 2026-03-07T01:35:00+0000
+  Goal: 在不改变题库骨架的前提下，把 `PROJECT_GUIDE.md` 进一步收紧成 `learn` 的高质量提问主课程，并先生成 `PROJECT_GUIDE_1.0_backup.md`。
+  Scope: `docs/PROJECT_GUIDE.md`, `docs/PROJECT_GUIDE_1.0_backup.md`, `docs/WORKFLOW.md`, `AGENTS.md`, `TASKS/`, `reports/`
