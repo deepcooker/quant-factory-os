@@ -31,6 +31,17 @@
   Done: branch continuity defaulted to active base branch; review pass recorded in run-2026-03-06-task-ship-branch-safety
 
 - [ ] TODO Title: vnext release baseline
+  
+- [>] TODO Title: task ship smoke: real task-to-ship continuity check  Picked: run-2026-03-06-task-ship-smoke 2026-03-06T20:18:00+0800
+  Goal: 用一个最小无害改动真实演练 `tools/task.sh -> tools/ship.sh`，验证新的 branch continuity 策略不会把会话带到错误基线。
+  Scope: `TASKS/`, `reports/`, `docs/`
+  Acceptance:
+  - [ ] 真实执行 `tools/task.sh -> tools/ship.sh`
+  - [ ] 发货前后 active branch continuity 符合预期
+  - [ ] `make verify` 通过
+  - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
+- [ ] TODO Title: vnext release baseline
   Goal: 进入开发设计阶段的新版本基线，保持流程最小可用并可继续迭代。
   Scope: `TASKS/`, `reports/`, `tools/`, `docs/`, `tests/`
   Acceptance:
