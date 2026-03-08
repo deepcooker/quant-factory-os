@@ -15,9 +15,13 @@ RUN_ID: `run-2026-03-08-remove-templates-pivot`
 - Remove the directly dependent tests.
 - Remove the rest of the repository tests as well, per current reset direction.
 - Remove the project-repo / adoption docs instead of keeping them as dormant references.
-- Keep only negative mentions in owner docs where needed to make the new direction explicit.
-- Preserve prior run references as historical evidence rather than rewriting history.
+- Remove the separate `AUTOMATION_1_0` logic and wealth bootstrap guide, and keep only the four core owner docs as the active cognition surface.
+- Treat `PROJECT_GUIDE` question design and structure as owner-fixed curriculum assets; only answers or minimal tuning may change.
+- Clear old `reports/run-*` evidence as well, and keep only the current active run evidence.
+- Remove `chatlogs/discussion` and `chatlogs/sync` as non-essential historical materials.
+- Remove `CHARTER.md` and `CONTRIBUTING.md` as non-owner docs that no longer match the active process, and remove CI's dependency on `CHARTER.md`.
+- Normalize the repo definition around one runtime split: CLI for development/debug takeover, app-server for programmatic runtime integration.
 
 ## Risks / Rollback
-- Risk: historical reports from the previous run will still mention template outputs that no longer exist in the worktree.
+- Risk: deleting historical run evidence removes old in-repo audit trails and makes older references in task files point to non-existent paths.
 - Rollback: restore deleted files from git history if the template route needs to be revisited.

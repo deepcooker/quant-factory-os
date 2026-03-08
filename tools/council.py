@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import json
 import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+try:
+    from tools.common_helpers import normalize_scope, read_json, read_text
+except Exception:  # pragma: no cover
+    from common_helpers import normalize_scope, read_json, read_text  # type: ignore
 from ready import (
     append_conversation_checkpoint,
     append_execution_event,
@@ -18,6 +21,7 @@ from ready import (
 )
 
 
+# 6001 中文：解析 council 的命令行参数。
 def parse_args(argv: list[str]) -> dict[str, str]:
     explicit_run_id = ""
     explicit_project_id = ""
@@ -42,38 +46,12 @@ def parse_args(argv: list[str]) -> dict[str, str]:
     return {"explicit_run_id": explicit_run_id, "explicit_project_id": explicit_project_id}
 
 
-def read_json(path: str) -> dict[str, Any]:
-    p = Path(path)
-    if not p.is_file():
-        return {}
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-
-def read_text(path: str) -> str:
-    p = Path(path)
-    if not p.is_file():
-        return ""
-    return p.read_text(encoding="utf-8", errors="replace")
-
-
-def normalize_scope(raw_scope: Any) -> list[str]:
-    if not isinstance(raw_scope, list):
-        return []
-    out: list[str] = []
-    for item in raw_scope:
-        s = str(item).strip()
-        if s:
-            out.append(s.replace("`", ""))
-    return out
-
-
+# 6002 中文：把布尔通过结果映射成门禁状态。
 def check_status(passed: bool, failed_level: str) -> str:
     return "pass" if passed else failed_level
 
 
+# 6003 中文：根据检查结果和关注点得出角色结论。
 def role_decision(status_by_id: dict[str, str], refs: list[str], concerns: list[str]) -> str:
     has_block = any(status_by_id.get(x) == "block" for x in refs)
     if has_block:
@@ -83,6 +61,7 @@ def role_decision(status_by_id: dict[str, str], refs: list[str], concerns: list[
     return "accept"
 
 
+# 6004 中文：执行 council 主流程，生成多角色独立评审结果。
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "council")

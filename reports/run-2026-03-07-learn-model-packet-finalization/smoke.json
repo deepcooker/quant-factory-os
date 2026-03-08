@@ -1,1 +1,0 @@
-{"schema":"qf_smoke.v1","run_id":"run-2026-03-07-learn-model-packet-finalization","task_file":"TASKS/TASK-learn-model-packet-finalization.md","status":"pass","drift_review_status":"pass","missing_items":[],"next_command":"tools/ship.sh \"<message>\"","updated_at":"2026-03-07T01:06:00+08:00"}

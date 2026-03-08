@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+try:
+    from tools.common_helpers import dedup_lines, normalize_scope, read_json
+except Exception:  # pragma: no cover
+    from common_helpers import dedup_lines, normalize_scope, read_json  # type: ignore
 from ready import (
     append_conversation_checkpoint,
     append_execution_event,
@@ -17,6 +20,7 @@ from ready import (
 )
 
 
+# 7001 中文：解析 arbiter 的命令行参数。
 def parse_args(argv: list[str]) -> dict[str, str]:
     explicit_run_id = ""
     explicit_project_id = ""
@@ -41,39 +45,7 @@ def parse_args(argv: list[str]) -> dict[str, str]:
     return {"explicit_run_id": explicit_run_id, "explicit_project_id": explicit_project_id}
 
 
-def read_json(path: str) -> dict[str, Any]:
-    p = Path(path)
-    if not p.is_file():
-        return {}
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-
-def normalize_scope(raw_scope: Any) -> list[str]:
-    if not isinstance(raw_scope, list):
-        return []
-    out: list[str] = []
-    for item in raw_scope:
-        s = str(item).strip()
-        if s:
-            out.append(s.replace("`", ""))
-    return out
-
-
-def dedup_lines(items: list[str]) -> list[str]:
-    seen: set[str] = set()
-    out: list[str] = []
-    for item in items:
-        key = item.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(item)
-    return out
-
-
+# 7002 中文：根据 scope 推导本轮非目标。
 def non_goals_from_scope(scope: list[str]) -> list[str]:
     base = [
         "不扩展到当前 selected direction 之外的其他流程层级",
@@ -87,6 +59,7 @@ def non_goals_from_scope(scope: list[str]) -> list[str]:
     return dedup_lines(base)
 
 
+# 7003 中文：执行 arbiter 主流程，把多角色意见收敛成 execution contract。
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "arbiter")

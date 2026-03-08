@@ -1,269 +1,274 @@
 {
-  "mainline": "自动化 -> 自我迭代 -> 涌现智能；当前主线是把 quant-factory-os 做成依赖仓库证据、门禁和工作流的同频与执行基座，而不是依赖聊天记忆的脚本集合。",
-  "current_stage": "项目仍处于基座强化阶段；当前 active run `run-2026-03-07-learn-model-packet-finalization` 刚把 `learn -> ready` 的 model packet 严格门禁补回可用，重点仍是强化 learn 同频核心而不是扩新业务。",
-  "next_step": "保持严格 gate 不降级，在当前 learn/ready 闭环恢复后，继续围绕 learn 日常同频体验、流程降噪和后续 vnext baseline 进入讨论优先路径，而不是直接扩功能。",
+  "mainline": "把 AI 协作从依赖聊天记忆改造成依赖仓库证据、门禁和状态机的工程化闭环，并最终让 business project repo 以单入口稳定接真实项目。",
+  "current_stage": "项目仍处于 foundation 强化阶段，但最新 run 已把 business project repo 的单入口 skeleton 定义为自动化 1.0 的下一步落地方向。",
+  "next_step": "在不削弱 learn/ready 强同频门禁的前提下，完成当前 run/state 的连续性收口，并进入 `TASKS/QUEUE.md` 中唯一未完成的 `vnext release baseline`。",
   "files_read": [
     "docs/PROJECT_GUIDE.md",
     "AGENTS.md",
     "docs/WORKFLOW.md",
     "docs/ENTITIES.md",
+    "docs/AUTOMATION_1_0.md",
     "TASKS/STATE.md",
     "TASKS/QUEUE.md",
-    "reports/run-2026-03-07-learn-model-packet-finalization/summary.md",
-    "reports/run-2026-03-07-learn-model-packet-finalization/decision.md",
+    "reports/run-2026-03-07-business-project-repo-skeleton/summary.md",
+    "reports/run-2026-03-07-business-project-repo-skeleton/decision.md",
     "CODEX_CLI_PLAYBOOK.md",
     "CODEX_CLI_SOURCE_AUDIT.md"
   ],
   "plan_protocol": {
-    "goal": "按 PROJECT_GUIDE 的题库与必查文件完成一次证据驱动的严格 onboarding sync，确认主线、当前阶段、当前 run 焦点和下一步都与 owner docs 一致。",
-    "non_goal": "不执行代码改动、不补做实现、不扩展到未列出的历史材料或额外仓库探索。",
+    "goal": "基于 `PROJECT_GUIDE` 的题库与必查文件映射，完成一次严格 onboarding sync，并把当前主线、阶段、下一步和 Q1-Q17 的口述答案都绑定到仓库证据。",
+    "non_goal": "不做实现、不补历史漫游、不用记忆替代证据、也不超出列出的 required files 重建额外解释体系。",
     "evidence": [
-      "docs/PROJECT_GUIDE.md#一句话北极星: 主线被明确定义为“自动化 -> 自我迭代 -> 涌现智能”，且 learn 必须先读本文件并按每题必查文件取证。",
-      "AGENTS.md#4) Mandatory session gate (once per session): 实施前必须先过 `init -> learn -> ready`，且 learn 必须输出 mainline/current_stage/next_step 与全量 oral restatement。",
-      "docs/WORKFLOW.md#3.2 `learn`: learn 的职责是通过真实 Codex Plan 模式读取课程与证据，输出主线、当前阶段、下一步，并逐题口述 PROJECT_GUIDE。"
+      "docs/PROJECT_GUIDE.md#Q17: 当前最重要任务是把 `learn` 做成真正的同频核心，漂移时要回到题库按题重答。",
+      "AGENTS.md#4) Mandatory session gate: 任何实现前都必须先跑 `init -> learn -> ready`，且 `learn` 必须覆盖 owner files 与逐题 oral restatement。",
+      "docs/WORKFLOW.md#1.1 流程分层: 当前状态机固定为上岗层、讨论层、拆解层、执行层、交付层五层。"
     ],
     "alternatives": [
-      "按 PROJECT_GUIDE 逐题取证并以 owner docs 为锚完成强同步。",
-      "只读当前 run summary/decision 做会话摘要式回答。"
+      "按记忆直接总结项目而不逐题回证据。",
+      "跳过当前 run/state 证据，只复述 owner docs 的通用规则。"
     ],
-    "rebuttal": "第二种做法会跳过 owner docs 和题库映射，无法满足强同步门禁，也不能证明回答回到了项目主线。",
-    "decision_stop_condition": "当 owner files 与附加必读文件都已用 `tools/view.sh` 读取到足以覆盖 Q1-Q17 的证据，并且每题都能按 GUIDE 顺序给出带证据的简明回答时立即停止。"
+    "rebuttal": "这两种做法都会丢掉当前阶段、当前 run 和主线回拉能力，违背 `PROJECT_GUIDE` 与 `AGENTS.md` 的强同频门禁。",
+    "decision_stop_condition": "当 owner files 与 additional required files 已通过 `tools/view.sh` 读取到足以覆盖每题必查文件，并且 Q1-Q17 都能按顺序给出证据化答案时立即停止。"
   },
   "oral_restate": {
-    "project_understanding": "这是一个 quant-engineering foundation repo，目标是把 AI 协作固化为 Task + Gate + Evidence + Verify + Ship 的工程闭环，并让新 agent 能靠仓库证据快速同频。",
-    "constitution_workflow": "`AGENTS.md` 是硬宪法，`docs/WORKFLOW.md` 是状态机，`docs/PROJECT_GUIDE.md` 是 learn 课程与主线回拉器；执行必须先过 `init -> learn -> ready`，复杂需求再走 `orient -> choose -> council -> arbiter -> slice -> do -> verify -> review -> smoke -> ship`。",
-    "evidence_chain": "当前真相链是 `TASKS/STATE.md` 指向 active run/task，`reports/<RUN_ID>/summary.md` 与 `decision.md` 记录本轮结论，`TASKS/QUEUE.md` 记录未完成与最新批次焦点，`docs/ENTITIES.md` 统一对象边界。",
-    "session_continuity": "最近 session 一直在压缩流程噪音并强化 learn；当前 run 的直接 blocker 是 app-server plan 同频后 model packet 未稳定落盘，现已通过 transport 与 learn 解析路径补强恢复 `ready` 通过。",
-    "current_focus": "当前最重要的不是扩功能，而是继续把 learn 做成真实、稳定、低噪音的同频核心，并维持严格 gate 不被弱化。",
-    "next_action": "在现有 learn packet 修复被接受后，按讨论优先路径继续收敛 learn 日常体验与 vnext baseline，而不是直接进入新的实现扩张。"
+    "project_understanding": "`quant-factory-os` 不是普通脚本仓，而是把任务、门禁、证据、验证和交付固化到仓库内的 quant-engineering OS。",
+    "constitution_workflow": "`AGENTS.md` 是宪法，`docs/WORKFLOW.md` 是状态机，复杂工作必须先 `Plan -> Confirm -> Execute`，且 discussion 必须先于 execution。",
+    "evidence_chain": "本次同频先读 `docs/PROJECT_GUIDE.md` 取题库和必查映射，再读 owner files、对象模型、Automation 1.0、state/queue 与当前 run summary/decision，最后补 Codex CLI 操作与审计证据。",
+    "session_continuity": "当前真相源是 `TASKS/STATE.md` 指向的 `run-2026-03-07-business-project-repo-skeleton`，连续性由该 run 的 `summary.md` 和 `decision.md` 补足。",
+    "current_focus": "主线仍是 foundation 强化与 learn 同频质量，但最新 run 已把“business project repo 单入口骨架”定成接项目的下一步落地方向。",
+    "next_action": "保持 strong plan-mode onboarding 不退化，先收口当前 run/state，再围绕未完成的 `vnext release baseline` 进入下一轮讨论与合同化。"
   },
   "guide_oral": [
     {
       "question_id": "Q1",
       "question": "整个项目是做什么的，背景，目标是什么，我最终要什么，我是用什么开发方式来完成这个项目的？",
-      "answer": "`quant-factory-os` 是一个把 AI 协作变成仓库内证据、门禁和工作流闭环的基建型执行与治理系统，最终目标是让新 agent 能快速同频、按主线执行并持续沉淀证据。开发方式不是随手改代码，而是以 task/run 为入口，经过 gate、evidence、verify、ship 的确定性流程完成工作。",
+      "answer": "`quant-factory-os` 是一个基建型执行与治理系统，目标是让 AI 协作依赖仓库证据、门禁和工作流，而不是聊天记忆；最终要的是新 agent 能快速同频、按规则执行并持续留下可恢复证据。开发方式是 `Task + Gate + Evidence + Verify + Ship`，先绑定 task/run，再同频、规划、最小改动、验证、更新证据与交付。",
       "standard_alignment": "aligned",
       "evidence": [
-        "AGENTS.md#0) Scope: 仓库被定义为 quant-engineering OS，强调确定性 workflow 而非 ad-hoc chat。",
-        "docs/WORKFLOW.md#1.1 流程分层: 全流程被固定为上岗、讨论、拆解、执行、交付五层状态机而不是普通代码仓。",
-        "docs/ENTITIES.md#1.1 分层原则: project/run/task/evidence/discussion artifacts 的边界被单独定义，说明该仓核心是治理与执行对象模型。"
+        "AGENTS.md#0) Scope: 仓库被定义为 `quant-engineering OS`，要求 deterministic workflow 而不是 ad-hoc chat。",
+        "docs/WORKFLOW.md#3.2 `learn`: `learn` 的目标是完成项目同频和主线回拉，且不直接进入执行。",
+        "docs/ENTITIES.md#7.1 定义: evidence 是仓库内记忆，不依赖聊天上下文。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "回到“证据化协作基座”而不是把仓库理解成脚本工具集。"
+      "return_to_mainline": "把项目先定义为治理闭环，再进入阶段、工作流和当前 run。"
     },
     {
       "question_id": "Q2",
       "question": "项目有几个阶段性目标，现在完成到哪个阶段，每个阶段都完成了什么？",
-      "answer": "项目按基座强化、讨论与执行闭环、再到承接业务项目的方向推进；现在仍在基座强化阶段，重点是把 `init/learn/ready` 和讨论到交付链路做稳。当前 active run 已把 `learn -> ready` 的 model packet 严格门禁修复回可用，队列里仍保留未完成的 `vnext release baseline`。",
+      "answer": "项目阶段可概括为 foundation 强化、讨论与执行闭环稳定、再到 business project repo 单入口接项目；当前仍在 foundation 强化向项目入口过渡的阶段。现有成果是五层状态机与 Python-first gate 已成型，而最新 run 已定义 business project repo skeleton 作为自动化 1.0 的下一步形态；队列里仍有一个未完成的 `vnext release baseline`。",
       "standard_alignment": "aligned",
       "evidence": [
-        "docs/WORKFLOW.md#1.1 流程分层: 当前目标形态被分成上岗、讨论、拆解、执行、交付五层，表明项目在做完整基座链路。",
-        "TASKS/STATE.md#STATE: 当前 active 指针是 `project-0 / run-2026-03-07-learn-model-packet-finalization / TASKS/TASK-learn-model-packet-finalization.md`。",
-        "TASKS/QUEUE.md#Queue: 队列中 `learn model packet finalization` 已被领取，本轮之后仍有未勾选的 `vnext release baseline`。",
-        "reports/run-2026-03-07-learn-model-packet-finalization/summary.md#What changed: 本轮刚修复 app-server final-answer 提取与 events fallback，使 `ready.py` 恢复通过。"
+        "docs/WORKFLOW.md#1.1 流程分层: 当前流程已固定为上岗、讨论、拆解、执行、交付五层。",
+        "docs/AUTOMATION_1_0.md#5. 当前仓库与 1.0 的关系: 当前仓库仍处于 foundation 强化阶段，还不是最终 business project repo 日常入口。",
+        "TASKS/STATE.md#STATE: `CURRENT_RUN_ID` 指向 `run-2026-03-07-business-project-repo-skeleton` 且状态为 `active`。",
+        "TASKS/QUEUE.md#Queue: 仅剩一个未勾选项 `vnext release baseline`，其余近期事项已完成。",
+        "reports/run-2026-03-07-business-project-repo-skeleton/summary.md#What changed: 当前 run 已定义 minimal business project repo target shape 与 single-entry v0 scaffold。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "把当前定位为基座强化而不是误认为已完成自动化终局。"
+      "return_to_mainline": "先确认我们仍在 foundation 强化期，再决定后续动作不能把终态当现状。"
     },
     {
       "question_id": "Q3",
       "question": "这个基建项目做完之后，它会作为基座的项目，我们接下来第一个项目将完成什么，你会怎么去落地，我们现在设计的结构是把这个变成一个插件好呢还是独立项目好，项目最难的是读懂和同频我的意图，你读了项目后，你准备用什么样的方式来接？",
-      "answer": "这个仓应继续作为流程与治理基座，后续真实业务项目应以独立项目优先接入，而不是现在就插件化，因为当前最难的是稳定同频和理解意图，不是接口复用。我的承接方式是先按 owner docs 和当前 run/task 做同频，再走讨论收敛合同，最后才进入最小执行切片。",
+      "answer": "基建仓完成后应退到 foundation 角色，下一步第一个真实项目是以 business project repo 形态承接具体业务，而不是把当前基座过早插件化；最新 run 已用 `a9quant-strategy` 做首个项目映射并强调 existing-repo adoption。我的承接方式是先按 `learn -> ready` 同频当前 `project/run/task` 与 run evidence，再进入讨论层，而不是直接把业务塞回 foundation 仓。",
       "standard_alignment": "aligned",
       "evidence": [
-        "docs/WORKFLOW.md#1.2 边界原则: `learn` 不决定方向、discussion 先于 execution，说明基座职责是流程骨架而非直接承载业务实现。",
-        "docs/ENTITIES.md#1.1 分层原则: `project`、`run`、`task` 与 discussion artifacts 被严格分层，适合业务仓独立接入而不是混做插件杂糅。",
-        "reports/run-2026-03-07-learn-model-packet-finalization/decision.md#Why: 当前 active blocker 被定义为 `learn -> ready` 严格门禁，而不是业务扩展问题。"
+        "docs/WORKFLOW.md#补充定位: 本文件描述的是 foundation repo 当前状态机，business project repo 单入口目标形态见 `docs/AUTOMATION_1_0.md`。",
+        "docs/ENTITIES.md#1.1 分层原则: `project` 管长期上下文，`run` 管一轮周期，`task` 只管最小执行切片。",
+        "docs/AUTOMATION_1_0.md#2.2 Business Project Repo: 业务项目仓是自动化 1.0 的日常运行载体，对用户只暴露一个正式入口。",
+        "reports/run-2026-03-07-business-project-repo-skeleton/decision.md#Chosen: 已选择先定义 minimal business project repo skeleton，并对真实项目优先采用 existing-repo adoption。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "先稳基座同频与流程，再承接独立业务项目。"
+      "return_to_mainline": "把 foundation 与业务承接分层，避免继续把所有问题堆回基建仓。"
     },
     {
       "question_id": "Q4",
       "question": "如果完成这个项目，我把 gpt 网页端当做大脑，codex cli 当做手脚，你是怎么让 codex cli 和 gpt 保持同频的，一样吗，如果不一样，都需要怎么做？",
-      "answer": "网页端和 Codex CLI 不同：前者更适合方向讨论与博弈，后者更适合本地读仓、验证和落证据；它们保持同频的方式不是共享聊天记忆，而是共享 owner docs、state 指针和 run evidence。CLI 侧必须先过 `init -> learn -> ready`，网页端也必须围绕 `AGENTS.md`、`PROJECT_GUIDE.md`、`WORKFLOW.md` 与当前 state/run 讨论，而不能脱离仓库空谈。",
+      "answer": "网页端更适合方向讨论和反驳收敛，Codex CLI 更适合本地读仓、跑 gate、验证和落证据；两者不一样，但必须通过同一套 owner docs、`TASKS/STATE.md` 和 run evidence 同频，而不是共享聊天记忆。Codex CLI 侧的硬门禁是 `init -> learn -> ready`，其中 `learn` 固定用 strong `/plan` 与 app-server；网页端若作为大脑，也必须先回到同样的 owner docs 和当前 run/state。 ",
       "standard_alignment": "aligned",
       "evidence": [
-        "AGENTS.md#4) Mandatory session gate (once per session): 本地实施前必须先执行 `python3 tools/init.py`、`python3 tools/learn.py`、`python3 tools/ready.py`。",
-        "docs/WORKFLOW.md#3.2 `learn`: learn 必须通过真实 Codex Plan 模式读取课程与证据，并输出 oral restatement 与主线锚点。",
-        "CODEX_CLI_PLAYBOOK.md#1.1 讨论模式（只读）: Codex 讨论模式明确使用 `codex --sandbox read-only --ask-for-approval never --search`，与实现模式分离。",
-        "TASKS/STATE.md#STATE: 当前同频锚点由 `CURRENT_PROJECT_ID/CURRENT_RUN_ID/CURRENT_TASK_FILE` 固定。"
+        "AGENTS.md#4) Mandatory session gate: 实现前必须先执行 `python3 tools/init.py`、`python3 tools/learn.py`、`python3 tools/ready.py`。",
+        "docs/WORKFLOW.md#3.2 `learn`: `learn` 固定要求真实 Codex Plan 模式、app-server transport、逐题口述与主线回拉。",
+        "CODEX_CLI_PLAYBOOK.md#1.1 讨论模式（只读）: 讨论模式是 `codex --sandbox read-only --ask-for-approval never --search`。",
+        "TASKS/STATE.md#STATE: 当前同步真相源由 `CURRENT_PROJECT_ID / CURRENT_RUN_ID / CURRENT_TASK_FILE` 固定。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "同频靠仓库真相源，而不是靠两个界面的记忆同步。"
+      "return_to_mainline": "把脑和手都绑回同一套文件真相源与 gate，而不是继续依赖上下文记忆。"
     },
     {
       "question_id": "Q5",
       "question": "这个项目当前的宪法是什么样的？",
-      "answer": "项目当前宪法是 `AGENTS.md`，它定义 task/run 入口、session gate、允许命令、证据门禁、文档新鲜度和 PR discipline；`WORKFLOW.md` 只是在这个硬契约下补充状态机和步骤细节。",
+      "answer": "当前宪法就是 `AGENTS.md`；它定义任务入口、session gate、允许命令、证据门禁、文档新鲜度和 PR discipline。`docs/WORKFLOW.md` 只补状态机与步骤细节，不替代硬规则。",
       "standard_alignment": "aligned",
       "evidence": [
-        "AGENTS.md#1) Entry Rule: Task + Run are mandatory: 未绑定 `TASK_ID + RUN_ID` 不得编辑代码或文档，体现硬约束属性。",
-        "docs/WORKFLOW.md#开头说明: 本文件声明对象定义以 `docs/ENTITIES.md` 为准，硬规则以 `AGENTS.md` 为准。"
+        "AGENTS.md#AGENTS.md (Hard Rules for Codex / Agents): 文件标题直接将其定义为 hard rules。",
+        "docs/WORKFLOW.md#开头定位: 对象定义以 `docs/ENTITIES.md` 为准，硬规则以 `AGENTS.md` 为准。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "先认清谁是硬规则，再谈具体流程。"
+      "return_to_mainline": "先确认谁是硬规则，后续所有流程判断才不会失真。"
     },
     {
       "question_id": "Q6",
       "question": "这个项目当前工作流是什么样的？",
-      "answer": "当前工作流是分层状态机：`init -> learn -> ready -> orient -> choose -> council -> arbiter -> slice -> do -> verify -> review -> smoke -> ship -> run close`。复杂工作必须遵守 `Plan -> Confirm -> Execute`，不能跳过讨论层直接实施。",
+      "answer": "当前工作流是五层状态机：`init -> learn -> ready -> orient -> choose -> council -> arbiter -> slice -> queue/task -> do -> verify -> review -> ship -> run close`。复杂工作必须先 `Plan -> Confirm -> Execute`，不能跳过讨论层直接写代码。",
       "standard_alignment": "aligned",
       "evidence": [
-        "docs/WORKFLOW.md#2. 状态机总览: 主线状态机完整列出了从 `init` 到 `ship` 的链路。",
-        "AGENTS.md#5) Working mode: Plan -> Confirm -> Execute: 复杂工作必须先计划与确认，`legacy plan` 不等于执行许可。"
+        "docs/WORKFLOW.md#2. 状态机总览: 状态机总览明确列出了从 `init` 到 `run close` 的完整主线。",
+        "AGENTS.md#5) Working mode: 复杂工作必须遵循 `Plan -> Confirm -> Execute`。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "把所有动作挂回状态机，而不是按聊天节奏随意跳步。"
+      "return_to_mainline": "把回答重新落到状态机主线，避免把单个命令误当完整流程。"
     },
     {
       "question_id": "Q7",
       "question": "我们现在的项目有没有未完成的任务呢，最新的批次在讨论什么问题，你是怎么查的？",
-      "answer": "有未完成任务；`TASKS/QUEUE.md` 里仍有未勾选的 `vnext release baseline`，而当前 batch 聚焦的是 learn 同频链路的严格门禁修复与流程降噪。我的查法是先看 `TASKS/STATE.md` 锁定 active run/task，再看 `QUEUE` 的未完成项，最后用当前 run 的 `summary/decision` 确认最近批次焦点。",
+      "answer": "有，`TASKS/QUEUE.md` 里还剩一个未勾选的 `vnext release baseline`；当前 `STATE` 仍指向 `run-2026-03-07-business-project-repo-skeleton`，而该 run 的 summary/decision 显示最新批次讨论的是从 foundation-only hardening 迈向 business project repo 单入口 skeleton 与 existing-repo adoption。我的查询顺序是先看 `STATE` 定位当前 run，再看 `QUEUE` 判断未完成项，最后读该 run 的 `summary.md` 和 `decision.md`。",
       "standard_alignment": "aligned",
       "evidence": [
-        "TASKS/STATE.md#STATE: 当前 active run 是 `run-2026-03-07-learn-model-packet-finalization`。",
-        "TASKS/QUEUE.md#Queue: 仍存在未勾选的 `vnext release baseline`，且当前 task 是 `learn model packet finalization`。",
-        "reports/run-2026-03-07-learn-model-packet-finalization/summary.md#Notes: 当前批次的直接 blocker 是 `learn/project-0.model.json` 未稳定产生，导致 `ready` 无法通过。",
-        "reports/run-2026-03-07-learn-model-packet-finalization/decision.md#Chosen: 本轮选择加固 transport 与 learn parsing，保持严格 gate 不变。"
+        "TASKS/STATE.md#STATE: 当前指针是 `project-0 / run-2026-03-07-business-project-repo-skeleton / TASK-business-project-repo-skeleton.md`。",
+        "TASKS/QUEUE.md#Queue: 当前唯一未完成的队列项是 `vnext release baseline`。",
+        "reports/run-2026-03-07-business-project-repo-skeleton/summary.md#What changed: 最新 run 定义了 business project repo 单入口 scaffold，并为 `a9quant-strategy` 提供了映射与 adoption 路径。",
+        "reports/run-2026-03-07-business-project-repo-skeleton/decision.md#Why this order: 当前缺的是 project-facing shape，而不是继续 foundation self-iteration。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "先看当前指针和当前 run 证据，再判断项目现在在做什么。"
+      "return_to_mainline": "把项目介绍拉回当前未完成事项和最新 run 议题，避免空谈蓝图。"
     },
     {
       "question_id": "Q8",
       "question": "你查了最近的 session 说了什么，你是从哪里查的？",
-      "answer": "最近 session 的主线是在继续压缩流程噪音并把 `learn` 做成真正的同频核心；这次具体说的是 app-server plan 同频后 model packet 不稳定，必须先修复 `learn -> ready` 再谈后续工作。我是从 `TASKS/STATE.md` 锁定当前 run，再读当前 run 的 `summary.md` 和 `decision.md` 得出的，而不是靠聊天记忆猜。",
+      "answer": "最近 session 的主线不是靠聊天记忆，而是靠 `TASKS/STATE.md` 和当前 run 的 `summary.md`、`decision.md` 查出来的；这轮连续性显示最新讨论是在 learn 问题延后后，开始确定 business project repo 单入口 skeleton 与 existing-repo adoption。也就是说，当前 session 不是一个全新方向，而是接着自动化 1.0 的“接项目”落地方向继续推进。",
       "standard_alignment": "aligned",
       "evidence": [
-        "TASKS/STATE.md#STATE: 当前 continuity 指向 `run-2026-03-07-learn-model-packet-finalization`。",
-        "reports/run-2026-03-07-learn-model-packet-finalization/summary.md#What changed: 本轮围绕 app-server final-answer 提取与 events-only recovery 修复 learn model packet。",
-        "reports/run-2026-03-07-learn-model-packet-finalization/decision.md#Why: 当前最先要解决的是 `learn -> ready` 严格 session gate 被 model packet 缺失卡住。"
+        "TASKS/STATE.md#STATE: `CURRENT_RUN_ID` 明确告诉我应该去读哪个 run 的证据。",
+        "reports/run-2026-03-07-business-project-repo-skeleton/summary.md#Notes: 当前 run 被描述为从 foundation hardening 迈向 project-facing single-entry workflow 的第一步。",
+        "reports/run-2026-03-07-business-project-repo-skeleton/decision.md#Chosen: 已明确先定义 skeleton，再做更深层 orchestration。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "session continuity 只从当前 run 证据读取，不靠回忆。"
+      "return_to_mainline": "把 session continuity 绑定到仓库证据，避免换会话后失忆。"
     },
     {
       "question_id": "Q9",
       "question": "基建项目讨论项目应该用哪个流程？",
-      "answer": "基建项目讨论需求必须走 `orient -> choose -> council -> arbiter -> slice` 的讨论优先流程，先形成方向草案、用户选择、多角色独立评审和执行合同，再切成最小 task。`/plan` 是规划协议，`legacy plan` 只是队列建议，都不等于执行许可。",
+      "answer": "基建项目讨论必须走 `orient -> choose -> council -> arbiter -> slice` 的讨论优先流程；只有方向被确认、合同被收敛并切成 task 后，才允许进入 `do`。`legacy plan` 只是队列提议，不等于 `/plan`，更不等于执行许可。",
       "standard_alignment": "aligned",
       "evidence": [
-        "docs/WORKFLOW.md#4. S1 讨论层: 讨论层被明确拆成 `orient`、`choose`、`council`、`arbiter`，之后才进入 `slice`。",
-        "AGENTS.md#5) Working mode: Plan -> Confirm -> Execute: 复杂工作必须先计划和确认，且 `bash tools/legacy.sh plan` 不打开 execute gate。"
+        "docs/WORKFLOW.md#4. S1 讨论层: `orient`、`choose`、`council`、`arbiter` 明确组成讨论收敛链路，`arbiter` 的下一跳才是 `slice`。",
+        "AGENTS.md#5) Working mode: `Plan -> Confirm -> Execute` 是硬约束，不能把计划直接当执行门票。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "守住“讨论先于执行”的硬边界。"
+      "return_to_mainline": "先守住讨论层，再谈实现层，避免先写代码后补理由。"
     },
     {
       "question_id": "Q10",
       "question": "基建项目的代码实施流程是什么样的，它需要哪些 agent 进行协作呢，怎么保证这些角色都是独立思考的，他们每一个角色的定义是什么样子的，怎么保证其独立思考的，我们现在都实现了吗，怎么实现的？",
-      "answer": "代码实施应在讨论收敛后进入 `do -> verify -> review -> ship`；理想协作角色是产品、架构、研发、测试，分别负责目标边界、系统约束、最小实现与失败路径验证。独立思考靠 `council` 的分角色产出和 `arbiter` 的统一收敛，而当前仓库实现的是这套流程骨架，不是完整的高并发独立 agent 团队。",
+      "answer": "代码实施是在讨论收敛成 execution contract 之后，进入 `do -> verify -> review -> ship`；多角色理想上包括产品、架构、研发、测试，而独立思考靠 `council` 先分别给意见、再由 `arbiter` 收敛，而不是口头要求。当前项目已经有 `orient/council/arbiter/slice` 骨架，但仍是 foundation 强化阶段，还不是一个真正并发的独立 agent 团队实现。",
       "standard_alignment": "aligned",
       "evidence": [
-        "docs/WORKFLOW.md#4.3 `council`: council 的职责是让产品/架构/研发/测试独立给出意见并暴露 blocker、warn、disagreement。",
-        "AGENTS.md#6) Workflow skeleton: 当前推荐路径明确要求先走 discuss lane，再进入 `do`/`execute`，说明多角色协作首先以流程骨架落地。"
+        "docs/WORKFLOW.md#4.3 `council`: `council` 的职责是让产品/架构/研发/测试独立给出意见，下一跳才是 `arbiter`。",
+        "AGENTS.md#6) Workflow skeleton: 讨论优先推荐路径要求先完成 `choose/council/arbiter/slice_task`，再进入 `do`。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "承认当前只实现了独立评审骨架，避免把理想形态说成既成事实。"
+      "return_to_mainline": "把多角色协作落回已有骨架与当前实现边界，避免夸大完成度。"
     },
     {
       "question_id": "Q11",
       "question": "项目基建里的 task，pr，run，project 的都是什么意思，还有其他的概念吗，他们的生命周期管理是怎么样的？",
-      "answer": "`project` 是长期命名空间，`run` 是一轮方向到交付的周期容器，`task` 是 run 内最小可执行切片，`PR` 是交付与审查单元；除此之外还有 discussion artifacts、queue、gate、evidence 等对象。生命周期主线是 `QUEUE -> TASK -> RUN evidence -> verify/review -> ship/PR -> state update`，并且当前真相源分别固定在 STATE、TASK、reports、owner docs 中。",
+      "answer": "`project` 是长期上下文命名空间，`run` 是一轮从讨论到交付的周期容器，`task` 是 run 内最小可执行切片，`PR` 是交付审查单元；另外还有 discussion artifacts、queue、evidence、gate 等概念。生命周期是 `project -> run -> discussion artifacts -> slice -> task -> verify/review -> ship/PR -> state update`。",
       "standard_alignment": "aligned",
       "evidence": [
-        "docs/ENTITIES.md#2. Project: `project_id` 被定义为长期命名空间，默认 `project-0`。",
-        "docs/WORKFLOW.md#2. 状态机总览: 从 `project` 到 `ship -> run close` 的状态流明确体现对象生命周期。",
-        "AGENTS.md#7) Evidence is memory (hard gate): 每个 run 都必须更新 `meta.json/summary.md/decision.md`，说明 evidence 是 run 生命周期的一部分。"
+        "docs/ENTITIES.md#1.1 分层原则: `project` 管长期上下文，`run` 管一轮周期，`task` 管最小可执行切片，`queue` 只是执行入口池。",
+        "docs/WORKFLOW.md#5.1 `slice`: `slice` 负责把 execution contract 拆成最小 task 切片，并写入 `TASKS/QUEUE.md`。",
+        "AGENTS.md#13) PR discipline: 当前 PR 纪律是 `one task -> one branch -> one PR`。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "统一对象名词系统，避免把 session、run、task 混为一谈。"
+      "return_to_mainline": "先统一名词系统，再避免后续把 run、task、session 混为一谈。"
     },
     {
       "question_id": "Q12",
       "question": "我们在项目的准备工作做好后，我们一个需求讨论方向，从流程的哪一步开始？",
-      "answer": "准备工作完成后，需求讨论应从 `orient` 开始，而不是直接进入 `do`；随后按 `choose -> council -> arbiter -> slice` 收敛方向与合同。当前 run summary 也说明近期焦点仍在把 learn/ready 门禁修稳，这进一步说明准备完成后的正确下一步是讨论收敛，不是越过合同直接编码。",
+      "answer": "准备工作完成后，需求讨论应从 `orient` 开始，而不是直接 `do`；接下来依次是 `choose -> council -> arbiter -> slice`。当前 run summary 也表明，真正的推进方式是先固定方向形态，再往更深的 orchestration 走。",
       "standard_alignment": "aligned",
       "evidence": [
-        "docs/WORKFLOW.md#3.3 `ready`: `ready` 的下一跳被明确定义为 `orient`。",
-        "AGENTS.md#6) Workflow skeleton: 推荐的 discussion-first lane 是 `discuss -> choose -> council -> arbiter -> slice_task -> do`。",
-        "reports/run-2026-03-07-learn-model-packet-finalization/summary.md#Commands / Outputs: 当前 run 先恢复了 `learn.py` 与 `ready.py` 的通过，再为后续流程铺路。"
+        "docs/WORKFLOW.md#3.3 `ready`: `ready` 的下一跳明确是 `orient`。",
+        "AGENTS.md#6) Workflow skeleton: 推荐讨论优先路径从 `discuss TARGET=prepare`、`choose`、`council`、`arbiter`、`slice_task` 开始。",
+        "reports/run-2026-03-07-business-project-repo-skeleton/summary.md#Notes: 当前 run 明确先固定 target shape 与 scaffolding，而不是直接做 full integration。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "把 ready 视为开工许可，不把它误读成直接可写代码。"
+      "return_to_mainline": "把“准备好之后做什么”重新钉回 workflow 的下一跳。"
     },
     {
       "question_id": "Q13",
       "question": "我们分支代码的管理是怎么样的，现在满足需求吗？",
-      "answer": "当前分支管理纪律是 `one task -> one branch -> one PR`，PR 标题必须带 `RUN_ID`，ship 负责 branch/commit/push/PR/merge/sync，这套规则对当前基建阶段是够用的。它的重点不是复杂分支模型，而是保证每次改动都能回到 task、run 和证据，并在成功路径上保持分支连续性与干净工作区。",
+      "answer": "当前分支纪律是 `one task -> one branch -> one PR`，PR 标题必须带 `RUN_ID`，正文必须包含 Why / What / Verify / Evidence paths；对于当前基建阶段，这套纪律是够用的，因为重点是把每次改动都可回溯到 task、run 与证据。工作流还补充了 ship 遇到 non-clean merge 时要停在可恢复状态，而不是盲重试。",
       "standard_alignment": "aligned",
       "evidence": [
-        "AGENTS.md#13) PR discipline: 明确要求一任务一分支一 PR，且 PR 标题和正文有固定证据字段。",
-        "docs/WORKFLOW.md#7.1 `ship`: ship 负责 git/branch/commit/push/PR/merge/sync，并要求 one task -> one branch -> one PR。"
+        "AGENTS.md#13) PR discipline: 明确要求一任务一分支一 PR，且 PR 标题必须包含 `RUN_ID`。",
+        "docs/WORKFLOW.md#9. 默认日常流程: `ship.sh` 在 PR 非 cleanly mergeable 时会以 `pr_merge_blocked` 退出并打印恢复命令。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "把交付纪律绑回 task/run/evidence，而不是追求更复杂的分支花样。"
+      "return_to_mainline": "把代码管理问题拉回当前交付纪律，而不是扩展成复杂分支模型设计。"
     },
     {
       "question_id": "Q14",
       "question": "每次做完任务，你必须要做什么事情？",
-      "answer": "每次做完任务必须先验证，再更新 `summary.md`、`decision.md`、`meta.json` 等 run evidence；若流程、规则或工具行为变化，还必须同步 owner docs。之后还要过 `review` 和 `smoke`，确认 ship-ready 后才能交付，因此“代码写完”并不等于任务完成。",
+      "answer": "每次任务完成后，必须先验证，再更新 run evidence，并在流程/规则/工具行为变更时同步 owner docs；之后还要经过 `smoke` 的 ship-ready 检查，再进入 `ship`。最低 evidence 集是 `meta.json`、`summary.md`、`decision.md`，当前 run 的 summary/decision 也正是这种收尾证据。",
       "standard_alignment": "aligned",
       "evidence": [
-        "AGENTS.md#7) Evidence is memory (hard gate): 每个 run 至少要更新 `meta.json`、`summary.md`、`decision.md`。",
-        "docs/WORKFLOW.md#6.4 `smoke`: ship 前至少要确认 verify 通过、strict review blocker 清空、run evidence 完整且 owner docs 已同步。",
-        "reports/run-2026-03-07-learn-model-packet-finalization/summary.md#Commands / Outputs: 当前 run 的证据已经记录 `make verify`、`tools/learn.py`、`tools/ready.py` 等验证动作。",
-        "reports/run-2026-03-07-learn-model-packet-finalization/decision.md#Stop Reason: 本轮即使修复完成，仍明确记录了 `needs_human_decision` 作为 stop reason。"
+        "AGENTS.md#7) Evidence is memory (hard gate): 每个 run 必须更新 `meta.json`、`summary.md`、`decision.md`。",
+        "docs/WORKFLOW.md#6.4 `smoke`: `smoke` 会检查 verify、review、run evidence 和 owner docs 新鲜度后才允许进入 `ship`。",
+        "reports/run-2026-03-07-business-project-repo-skeleton/summary.md#Commands / Outputs: 当前 run 已记录验证命令与 `make verify` 结果。",
+        "reports/run-2026-03-07-business-project-repo-skeleton/decision.md#Stop Reason: 当前 run 用 `task_done` 收口。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "把完成定义为验证加证据闭环，而不是单纯代码改动。"
+      "return_to_mainline": "重新定义“完成”必须包含验证、证据和 ship readiness，而不是只看代码。"
     },
     {
       "question_id": "Q15",
       "question": "这个项目是基建项目吗，如果我要的体验是为了用起来很爽，完全自动化，有哪些必要的需要优化的？",
-      "answer": "这是基建项目，想要“用起来很爽”的关键不是堆更多命令，而是把 learn 同频质量、主路径降噪、文档硬门禁和失败恢复先做真。当前 run decision 也表明最先修的是 learn 严格门禁，而不是放松 gate 或扩新功能，这和基建项目的优先级一致。",
+      "answer": "这是典型基建项目，目标不是堆更多命令，而是让底层门禁、同频、合同、证据和恢复路径足够稳定，从而把 foundation 逐步退到后台。必要优化优先级仍是做真 `learn`、减少流程噪音与手工分叉、强制文档新鲜度、清晰失败恢复，并持续逼近自动化 1.0 的 business project repo 单入口目标。",
       "standard_alignment": "aligned",
       "evidence": [
-        "docs/WORKFLOW.md#1.1 流程分层: 仓库以完整状态机和基座流程为中心，而非单一业务功能。",
-        "AGENTS.md#12) Documentation freshness gate: 流程/规则/工具行为变化必须同步 owner docs，说明自动化体验依赖硬门禁而不是口头约定。",
-        "reports/run-2026-03-07-learn-model-packet-finalization/decision.md#Why: 当前首要 blocker 被定义为 learn 严格门禁失效，而非新增功能需求。"
+        "docs/WORKFLOW.md#开头定位: 本文件描述的是 foundation repo 当前状态机，而不是最终业务入口。",
+        "AGENTS.md#12) Documentation freshness gate: 只要流程/规则/工具行为变了，就必须在同一 run 同步 owner docs，否则不能 ship。",
+        "docs/AUTOMATION_1_0.md#3. 基座退到后台: 1.0 成熟后，日常运行不应再显式重学基座，而应让规则产品化到后台。",
+        "reports/run-2026-03-07-business-project-repo-skeleton/decision.md#Why this order: 当前重点是先定义 project-facing shape，减少继续 foundation self-iteration。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "优先优化 learn、主路径和恢复能力，而不是为了“爽”增加表面功能。"
+      "return_to_mainline": "把“用起来很爽”解释为更强自动化与更少噪音，而不是更多表面功能。"
     },
     {
       "question_id": "Q16",
       "question": "这个项目 codex 的正确打开方式你会吗，所有的 codex 正确的方法你会使用，我们项目中用到了哪些，你能列出来吗？",
-      "answer": "会；本项目把 Codex 明确分成讨论模式、learn 的 app-server `/plan` 强同步模式，以及可写执行模式，并要求用官方文档和本地审计一起校对真实能力边界。当前可直接列出的正确用法包括 `read-only` 讨论、`workspace-write` 执行、`learn.py` 的 app-server 强计划模式，以及非交互审计、review、sandbox、mcp 等补充能力。",
+      "answer": "会，项目中最核心的 Codex 打开方式有三类：只读讨论模式、`learn` 的 app-server strong `/plan` 模式、以及可写执行模式；项目强调的是区分讨论、同频、执行的边界，而不是把所有 CLI 子命令都混成默认路径。源码审计还证明了非交互 JSON 事件流、`--output-last-message`、`--search` 等能力确实可用于可审计的 learn/exec 场景。",
       "standard_alignment": "partial",
       "evidence": [
-        "CODEX_CLI_PLAYBOOK.md#1) 默认流程（只记这 3 条）: 项目默认区分讨论模式、learn 同频模式和执行模式，并给出各自命令形态。",
-        "CODEX_CLI_SOURCE_AUDIT.md#3) 官方文档 vs 本地核对（关键结论）: 本地审计确认了 sandbox、审批策略、`--search`、`exec --json`、`/plan`、`/compact` 等关键行为。",
-        "AGENTS.md#4) Mandatory session gate (once per session): 项目把 `learn` 作为真实模型同频硬门禁，而不是普通聊天用法。"
+        "CODEX_CLI_PLAYBOOK.md#1) 默认流程: 默认流程明确区分了只读讨论模式、`learn` 同频模式和可写执行模式。",
+        "CODEX_CLI_SOURCE_AUDIT.md#4.2 learn 场景相关实测: 已验证 `codex --search --ask-for-approval never exec --sandbox read-only --json --output-last-message <path>` 的真实模型交互形态。",
+        "AGENTS.md#5) Working mode: 项目硬约束要求复杂工作遵循 `Plan -> Confirm -> Execute`，与 CLI 模式边界一致。"
       ],
-      "drift_note": "PLAYBOOK 版本基线是 0.110.0，但 SOURCE_AUDIT 记录的本机审计版本仍是 0.106.0。",
-      "return_to_mainline": "正确打开方式的核心是分清模式边界，并用项目门禁把 Codex 能力嵌回工作流。"
+      "drift_note": "PLAYBOOK 的版本基线是 0.110.0，但 SOURCE_AUDIT 记录的本机实测版本仍是 0.106.0。",
+      "return_to_mainline": "把 Codex 用法收束为项目实际采用的三种模式与其证据化边界。"
     },
     {
       "question_id": "Q17",
       "question": "根据最新的 session，你现在做的东西是否偏离了我们现在最重要的任务，你是否认为我们偏离了主线，为什么，接下来我们应该怎么做？",
-      "answer": "按当前证据看，这一轮没有偏离主线，因为最近 session 的最重要任务就是把 `learn` 做成真实、稳定、可继续驱动 `ready` 的同频核心，而当前 run 正是在修这个 active blocker。接下来应继续围绕 learn 真实性、流程自动化体验和文档一致性收敛，再从讨论层推进后续 baseline，而不是跳去做不相关的新功能。",
+      "answer": "根据当前 state 与最新 run evidence，我认为没有根本偏离主线，因为这轮是在 learn 问题延后后，把自动化 1.0 的 project-facing single-entry skeleton 明确下来；但如果后续继续扩模板而不回到 learn/ready/workflow 的强同频与单入口连续性，就会开始漂移。接下来应先完成当前 run/state 的连续性收口，再围绕 `vnext release baseline` 继续把 foundation 稳定性、learn 主线回拉能力和 business project repo 单入口接上。",
       "standard_alignment": "aligned",
       "evidence": [
-        "TASKS/STATE.md#STATE: 当前工作仍指向 `run-2026-03-07-learn-model-packet-finalization` 这一 learn 核心修复任务。",
-        "reports/run-2026-03-07-learn-model-packet-finalization/summary.md#Notes: 本轮 blocker 是 `ready` 因缺失 model packet 无法通过，现已闭环恢复。",
-        "reports/run-2026-03-07-learn-model-packet-finalization/decision.md#Chosen: 决策是修 transport 与 learn parsing 并保持 strict gate，不绕过门禁。",
-        "docs/WORKFLOW.md#3.2 `learn`: learn 被定义为项目同频和主线回拉核心，并要求真实 Plan 模式和全量 oral restatement。"
+        "TASKS/STATE.md#STATE: 当前仍停在 `run-2026-03-07-business-project-repo-skeleton` 的 active 指针上。",
+        "reports/run-2026-03-07-business-project-repo-skeleton/summary.md#Notes: 该 run 被定义为从 foundation hardening 走向 project-facing single-entry workflow 的第一步。",
+        "reports/run-2026-03-07-business-project-repo-skeleton/decision.md#Why this order: 当前选择 skeleton-first 是为了让 Automation 1.0 聚焦“接项目”而不是继续 foundation 自我元迭代。",
+        "docs/WORKFLOW.md#3.2 `learn`: `learn` 仍被定义为完成项目同频和主线回拉的核心门禁。",
+        "docs/AUTOMATION_1_0.md#6. 一句话总结: 1.0 的成功是让 foundation 稳定到 business project repo 可以用单入口接需求并交付。"
       ],
       "drift_note": "none",
-      "return_to_mainline": "继续把 learn 当当前最重要任务，后续动作都以是否强化主线回拉与自动化体验为判断标准。"
+      "return_to_mainline": "用当前 run 证明 skeleton 工作仍服务于 Automation 1.0，同时提醒下一步必须回到 learn 与 state continuity。"
     }
   ],
   "anchor_realign": {
     "question_id": "Q17",
     "status": "on_track",
     "drift_detail": "none",
-    "return_to_mainline": "保持当前对 `learn` 严格门禁、主线回拉和流程降噪的优先级，下一步先走讨论优先流程收敛后续 baseline。"
+    "return_to_mainline": "以当前 run 的 skeleton 证据为边界，先收口 state/run 连续性，再把下一轮工作限定在 `learn` 强同频、workflow 稳定性与 project-facing single-entry 的直接增量上。"
   }
 }

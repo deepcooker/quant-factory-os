@@ -6,6 +6,8 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 - Work only inside this repository.
 - Never invent data. Never assume prod access.
 - No secrets in files, logs, or commits.
+- This repo's current goal is to harden the `tools` automation R&D system itself.
+- Codex CLI is the development/debug/takeover interface; the long-term runtime target is Python orchestrator + Codex app-server.
 
 ## 1) Entry Rule: Task + Run are mandatory
 - All implementation starts from `TASKS/TASK-*.md`.
@@ -17,6 +19,10 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
   - `AGENTS.md` (hard contract)
   - `docs/PROJECT_GUIDE.md` (learning curriculum + question bank + standard answers + mainline anchor)
 - `PROJECT_GUIDE.md` is not a passive reference; it is the high-quality reverse-questioning course that forces reading owner docs, evidence, and session continuity before coding.
+- `PROJECT_GUIDE.md` 的题目设计与结构是 owner 精选后的固定课程资产，不得随意重写、重排或替换题库。
+- 允许的变更只有两类：
+  - 因项目真实变化而更新标准答案
+  - 为保持同频质量而做最小必要微调
 - If the session drifts, return to `docs/PROJECT_GUIDE.md` questions and re-answer from evidence before coding.
 
 ## 3) Single source map (owner files)
@@ -24,13 +30,11 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 - Project cognition / Q&A anchor: `docs/PROJECT_GUIDE.md`
 - Execution state machine: `docs/WORKFLOW.md`
 - Entity dictionary: `docs/ENTITIES.md`
-- Automation 1.0 target shape: `docs/AUTOMATION_1_0.md`
 - Codex CLI operations: `CODEX_CLI_PLAYBOOK.md`
 - Codex CLI source audit: `CODEX_CLI_SOURCE_AUDIT.md`
 - Current active pointers: `TASKS/STATE.md`
 - Queue intent: `TASKS/QUEUE.md`
 - Run evidence: `reports/<RUN_ID>/`
-- Discussion drafts (non-governance): `chatlogs/discussion/<RUN_ID>/`
 
 ## 4) Mandatory session gate (once per session)
 Before any implementation:
@@ -115,7 +119,6 @@ Discussion-first recommended lane:
 Execution gate artifacts required before `do`:
 - `reports/<RUN_ID>/ready.json`
 - `reports/<RUN_ID>/orient_choice.json`
-- `chatlogs/discussion/<RUN_ID>/council.json`
 - `reports/<RUN_ID>/execution_contract.json`
 - `reports/<RUN_ID>/slice_state.json`
 
@@ -145,6 +148,7 @@ Use only these unless task explicitly authorizes more:
 - `python3 tools/council.py`
 - `python3 tools/arbiter.py`
 - `python3 tools/slice_task.py`
+- `python3 tools/run_main.py`
 - `bash tools/legacy.sh ...`
 - `tools/doctor.sh`
 - `tools/enter.sh`

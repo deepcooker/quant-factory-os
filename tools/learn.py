@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import re
@@ -12,6 +11,27 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+try:
+    from tools.common_helpers import (
+        file_sha,
+        normalize_block,
+        normalize_list,
+        ordered_unique,
+        read_json,
+        read_text,
+        write_json,
+    )
+except Exception:  # pragma: no cover
+    from common_helpers import (  # type: ignore
+        file_sha,
+        normalize_block,
+        normalize_list,
+        ordered_unique,
+        read_json,
+        read_text,
+        write_json,
+    )
 
 try:
     from tools.codex_transport import (
@@ -77,17 +97,20 @@ class GuideQuestion:
 
 
 
+# 2001 中文：向标准错误输出 learn 阶段的错误提示。
 def eprint(msg: str) -> None:
     print(msg, file=sys.stderr)
 
 
 
+# 2002 中文：规范化 project_id，缺省时回退默认项目。
 def normalize_project_id(value: str | None) -> str:
     v = (value or "").strip()
     return v if v else DEFAULT_PROJECT_ID
 
 
 
+# 2003 中文：从 TASKS/STATE.md 读取指定字段值。
 def state_field_value(key: str) -> str:
     if not STATE_FILE.is_file():
         return ""
@@ -103,6 +126,7 @@ def state_field_value(key: str) -> str:
 
 
 
+# 2004 中文：读取当前 project/run/task 的状态快照。
 def read_state_snapshot() -> dict[str, str]:
     return {
         "current_project_id": normalize_project_id(state_field_value("CURRENT_PROJECT_ID")),
@@ -113,6 +137,7 @@ def read_state_snapshot() -> dict[str, str]:
 
 
 
+# 2005 中文：解析 learn 使用的 project_id，并校验是否与状态一致。
 def resolve_project_id_for_cmd(explicit_project_id: str, context: str) -> str:
     state_project_id = normalize_project_id(state_field_value("CURRENT_PROJECT_ID"))
     explicit = explicit_project_id.strip()
@@ -132,12 +157,14 @@ def resolve_project_id_for_cmd(explicit_project_id: str, context: str) -> str:
 
 
 
+# 2006 中文：判断 learn 是否需要输出 JSON 事件流。
 def should_emit_json_stream() -> bool:
     value = os.environ.get("QF_EVENT_STREAM", "0").strip().lower()
     return value in {"1", "json", "jsonl"}
 
 
 
+# 2007 中文：输出 learn 阶段的步骤锚点。
 def emit_step(index: int, total: int, detail: str) -> None:
     print(f"LEARN_STEP[{index}/{total}]: {detail}")
     if should_emit_json_stream():
@@ -153,73 +180,7 @@ def emit_step(index: int, total: int, detail: str) -> None:
 
 
 
-def ordered_unique(items: list[str]) -> list[str]:
-    out: list[str] = []
-    seen: set[str] = set()
-    for item in items:
-        s = str(item).strip()
-        if not s or s in seen:
-            continue
-        seen.add(s)
-        out.append(s)
-    return out
-
-
-
-def file_sha(path: Path) -> tuple[str, str]:
-    if not path.is_file():
-        return ("missing", "missing")
-    try:
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    except Exception:
-        return ("error", "error")
-    return ("ok", digest)
-
-
-
-def read_json(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-
-def write_json(path: Path, obj: dict[str, Any]) -> None:
-    path.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-
-
-def read_text(path: Path) -> str:
-    if not path.is_file():
-        return ""
-    return path.read_text(encoding="utf-8", errors="replace")
-
-
-
-def normalize_block(lines: list[str]) -> str:
-    parts: list[str] = []
-    for raw in lines:
-        s = raw.strip()
-        if not s:
-            continue
-        if s.startswith("- "):
-            s = s[2:].strip()
-        parts.append(s)
-    return " ".join(parts)
-
-
-
-def normalize_list(lines: list[str]) -> list[str]:
-    items: list[str] = []
-    for raw in lines:
-        s = raw.strip()
-        if not s:
-            continue
-        if s.startswith("- "):
-            s = s[2:].strip()
-        items.append(s)
-    return items
-
-
-
+# 2008 中文：解析 PROJECT_GUIDE 的北极星主线。
 def parse_north_star(lines: list[str]) -> str:
     for idx, raw in enumerate(lines):
         if raw.strip() != "## 一句话北极星":
@@ -235,6 +196,7 @@ def parse_north_star(lines: list[str]) -> str:
 
 
 
+# 2009 中文：解析带有 project/run 占位符的动态路径。
 def resolve_dynamic_path(raw_path: str, project_id: str, current_run_id: str) -> str:
     path = str(raw_path or "").strip()
     if not path:
@@ -249,6 +211,7 @@ def resolve_dynamic_path(raw_path: str, project_id: str, current_run_id: str) ->
 
 
 
+# 2010 中文：解析 PROJECT_GUIDE 题库、答案与必查文件结构。
 def parse_project_guide(path: Path, project_id: str, current_run_id: str) -> tuple[str, list[GuideQuestion]]:
     text = read_text(path)
     if not text.strip():
@@ -326,6 +289,7 @@ def parse_project_guide(path: Path, project_id: str, current_run_id: str) -> tup
 
 
 
+# 2011 中文：解析 learn 的命令行参数与运行配置。
 def parse_cli(argv: list[str]) -> dict[str, Any]:
     reasoning_profile = LEARN_REASONING_DEFAULT_PROFILE
     model_name = LEARN_MODEL_NAME
@@ -428,6 +392,7 @@ def parse_cli(argv: list[str]) -> dict[str, Any]:
 
 
 
+# 2012 中文：以日志镜像模式重启 learn 自身。
 def run_logged_self(project_id: str, cfg: dict[str, Any]) -> int:
     log_file = LEARN_LOG_FILE_TEMPLATE.format(project_id=project_id)
     print(f"LEARN_LOG_FILE: {log_file}")
@@ -465,13 +430,15 @@ def run_logged_self(project_id: str, cfg: dict[str, Any]) -> int:
 
 
 
+# 2013 中文：生成基础 learn 产物骨架与证据上下文。
 def build_base_learn(project_id: str, learn_file: Path, learn_md: Path, state: dict[str, str]) -> None:
     north_star, questions = parse_project_guide(Path("docs/PROJECT_GUIDE.md"), project_id, state["current_run_id"])
     required_files = ordered_unique(OWNER_FILES + [path for q in questions for path in q.must_read_files])
     missing_required = [path for path in required_files if not Path(path).is_file()]
     context_entries: list[dict[str, str]] = []
     for rel in required_files:
-        status, digest = file_sha(Path(rel))
+        digest = file_sha(Path(rel))
+        status = "ok" if digest not in {"missing", "error"} else digest
         context_entries.append({"path": rel, "status": status, "sha256": digest})
     digest_lines = [f"ctx:{item['path']}:{item['sha256']}" for item in context_entries]
     digest_lines.sort()
@@ -581,6 +548,7 @@ def build_base_learn(project_id: str, learn_file: Path, learn_md: Path, state: d
 
 
 
+# 2014 中文：打印基础 learn 锚点信息。
 def print_base_anchors(learn_file: Path) -> None:
     obj = read_json(learn_file)
     stage = obj.get("session_status", {}).get("current_stage", {})
@@ -598,6 +566,7 @@ def print_base_anchors(learn_file: Path) -> None:
 
 
 
+# 2015 中文：生成发给 Codex 的 learn prompt。
 def generate_prompt(learn_file: Path, prompt_file: Path, project_id: str, plan_mode: str) -> None:
     obj = read_json(learn_file)
     guide_questions = obj.get("guide_questions") or []
@@ -725,6 +694,7 @@ def generate_prompt(learn_file: Path, prompt_file: Path, project_id: str, plan_m
 
 
 
+# 2016 中文：判断模型输出里的路径引用是否匹配要求文件。
 def path_reference_matches(text: str, required_path: str) -> bool:
     value = str(text or "").strip()
     target = str(required_path or "").strip()
@@ -735,6 +705,7 @@ def path_reference_matches(text: str, required_path: str) -> bool:
 
 
 
+# 2017 中文：从原始文本中提取首个合法 learn JSON 数据块。
 def extract_first_learn_json_dict(raw_text: str) -> dict[str, Any] | None:
     text = str(raw_text or "").strip()
     if not text:
@@ -753,6 +724,7 @@ def extract_first_learn_json_dict(raw_text: str) -> dict[str, Any] | None:
     return None
 
 
+# 2018 中文：从事件流文件中恢复 learn JSON 结果。
 def extract_learn_json_from_events(model_events_file: Path) -> dict[str, Any] | None:
     parsed = extract_final_answer_json_from_events(model_events_file)
     if not parsed:
@@ -765,6 +737,7 @@ def extract_learn_json_from_events(model_events_file: Path) -> dict[str, Any] | 
 
 
 
+# 2019 中文：解析模型原始输出并提取结构化 learn 结果。
 def parse_model_output(model_raw_file: Path, model_json_file: Path, plan_mode: str, learn_file: Path, model_events_file: Path) -> dict[str, Any]:
     raw_text = model_raw_file.read_text(encoding="utf-8", errors="replace") if model_raw_file.is_file() else ""
     obj: dict[str, Any] | None = None
@@ -913,6 +886,7 @@ def parse_model_output(model_raw_file: Path, model_json_file: Path, plan_mode: s
 
 
 
+# 2020 中文：打印模型侧 learn 锚点信息。
 def print_model_anchors(obj: dict[str, Any], plan_mode: str) -> None:
     print("LEARN_MODEL_SYNC_STATUS: pass")
     print(f"LEARN_MODEL_MAINLINE: {' '.join(str(obj.get('mainline', '')).split())}")
@@ -968,6 +942,7 @@ def print_model_anchors(obj: dict[str, Any], plan_mode: str) -> None:
 
 
 
+# 2021 中文：把模型结果回写到 learn 主产物。
 def update_learn_with_model(
     learn_file: Path,
     learn_md: Path,
@@ -1044,6 +1019,7 @@ def update_learn_with_model(
 
 
 
+# 2022 中文：校验 learn 主文件是否满足门禁要求。
 def learn_file_is_valid(learn_file: Path) -> bool:
     try:
         obj = read_json(learn_file)
@@ -1096,13 +1072,14 @@ def learn_file_is_valid(learn_file: Path) -> bool:
     context_files = obj.get("context_files") or []
     if not isinstance(context_files, list):
         context_files = []
-    digest_lines = [f"ctx:{rel}:{file_sha(Path(str(rel)))[1]}" for rel in context_files]
+    digest_lines = [f"ctx:{rel}:{file_sha(Path(str(rel)))}" for rel in context_files]
     digest_lines.sort()
     current = hashlib.sha256("\n".join(digest_lines).encode("utf-8")).hexdigest()
     return current == str(obj.get("context_digest", "")).strip()
 
 
 
+# 2023 中文：检查 learn 文件是否属于当前项目。
 def learn_file_matches_project(path: Path, project_id: str) -> bool:
     try:
         obj = read_json(path)
@@ -1113,6 +1090,7 @@ def learn_file_matches_project(path: Path, project_id: str) -> bool:
 
 
 
+# 2024 中文：定位当前项目对应的 learn 文件。
 def resolve_learn_file_for_project(project_id: str) -> str:
     learn_file = Path("learn") / f"{project_id}.json"
     if learn_file.is_file() and learn_file_is_valid(learn_file) and learn_file_matches_project(learn_file, project_id):
@@ -1121,6 +1099,7 @@ def resolve_learn_file_for_project(project_id: str) -> str:
 
 
 
+# 2025 中文：执行 learn 主流程，完成同频、提问、模型调用和结果落盘。
 def main(argv: list[str]) -> int:
     cfg = parse_cli(argv)
     project_id = resolve_project_id_for_cmd(cfg["explicit_project_id"], "learn")

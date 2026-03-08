@@ -8,6 +8,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+try:
+    from tools.common_helpers import read_json, short_text, split_scope
+except Exception:  # pragma: no cover
+    from common_helpers import read_json, short_text, split_scope  # type: ignore
 from ready import (
     append_conversation_checkpoint,
     append_execution_event,
@@ -19,6 +23,7 @@ from ready import (
 )
 
 
+# 4001 中文：解析 orient 的命令行参数。
 def parse_args(argv: list[str]) -> dict[str, str]:
     explicit_run_id = ""
     explicit_project_id = ""
@@ -38,33 +43,7 @@ def parse_args(argv: list[str]) -> dict[str, str]:
         explicit_project_id = os.environ.get("QF_PROJECT_ID", os.environ.get("PROJECT_ID", ""))
     return {"explicit_run_id": explicit_run_id, "explicit_project_id": explicit_project_id}
 
-
-def read_json(path: str) -> dict[str, Any]:
-    p = Path(path)
-    if not p.is_file():
-        return {}
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-
-def split_scope(scope_text: str) -> list[str]:
-    out: list[str] = []
-    for raw in str(scope_text).split(","):
-        item = raw.strip().replace("`", "")
-        if item:
-            out.append(item)
-    return out
-
-
-def short_text(text: str, limit: int = 140) -> str:
-    s = " ".join(str(text).split())
-    if len(s) <= limit:
-        return s
-    return s[: limit - 3].rstrip() + "..."
-
-
+# 4002 中文：生成方向草案与 orient 输出物。
 def generate_orient_draft(run_id: str, project_id: str, task_file: str, orient_file: str, orient_md: str) -> None:
     ready_obj = read_json(f"reports/{run_id}/ready.json")
     summary_text = read_text(f"reports/{run_id}/summary.md")
@@ -215,6 +194,7 @@ def generate_orient_draft(run_id: str, project_id: str, task_file: str, orient_f
     print(f"ORIENT_PROJECT_ID: {project_id}")
 
 
+# 4003 中文：执行 orient 主流程，产出候选方向。
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "orient")

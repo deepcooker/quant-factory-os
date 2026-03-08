@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import re
@@ -11,20 +10,28 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+try:
+    from tools.common_helpers import file_sha, parse_bool_flag, read_json, read_text
+except Exception:  # pragma: no cover
+    from common_helpers import file_sha, parse_bool_flag, read_json, read_text  # type: ignore
+
 
 STATE_FILE = Path(os.environ.get("QF_STATE_FILE", "TASKS/STATE.md"))
 DEFAULT_PROJECT_ID = os.environ.get("QF_DEFAULT_PROJECT_ID", "project-0")
 
 
+# 3001 中文：向标准错误输出 ready 阶段的错误提示。
 def eprint(msg: str) -> None:
     print(msg, file=sys.stderr)
 
 
+# 3002 中文：判断 ready 是否需要输出 JSON 事件流。
 def should_emit_json_stream() -> bool:
     value = os.environ.get("QF_EVENT_STREAM", "0").strip().lower()
     return value in {"1", "json", "jsonl"}
 
 
+# 3003 中文：输出 ready 阶段的 JSON 结构化事件。
 def emit_json_event(phase: str, action: str, status: str, message: str) -> None:
     if not should_emit_json_stream():
         return
@@ -39,11 +46,13 @@ def emit_json_event(phase: str, action: str, status: str, message: str) -> None:
     print(json.dumps(payload, ensure_ascii=False))
 
 
+# 3004 中文：输出 ready 阶段的步骤锚点。
 def emit_step(index: int, total: int, message: str) -> None:
     print(f"READY_STEP[{index}/{total}]: {message}")
     emit_json_event("ready", "step", "ok", f"{index}/{total} {message}")
 
 
+# 3005 中文：执行直接命令并返回完整进程结果。
 def run_cmd(args: list[str], *, input_text: str | None = None) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         args,
@@ -54,10 +63,12 @@ def run_cmd(args: list[str], *, input_text: str | None = None) -> subprocess.Com
     )
 
 
+# 3006 中文：通过 shell 执行命令字符串。
 def run_shell(cmd: str) -> subprocess.CompletedProcess[str]:
     return run_cmd(["bash", "-lc", cmd])
 
 
+# 3007 中文：从 TASKS/STATE.md 读取指定字段值。
 def state_field_value(key: str) -> str:
     if not STATE_FILE.is_file():
         return ""
@@ -72,19 +83,23 @@ def state_field_value(key: str) -> str:
     return ""
 
 
+# 3008 中文：规范化 project_id。
 def normalize_project_id(value: str | None) -> str:
     v = (value or "").strip()
     return v if v else DEFAULT_PROJECT_ID
 
 
+# 3009 中文：读取当前 active project_id。
 def resolve_state_current_project_id() -> str:
     return normalize_project_id(state_field_value("CURRENT_PROJECT_ID"))
 
 
+# 3010 中文：读取当前 active run_id。
 def resolve_state_current_run_id() -> str:
     return state_field_value("CURRENT_RUN_ID").strip()
 
 
+# 3011 中文：在没有显式 run_id 时回退到最近的报告目录。
 def resolve_latest_report_run_id() -> str:
     root = Path("reports")
     if not root.exists():
@@ -106,6 +121,7 @@ def resolve_latest_report_run_id() -> str:
     return ""
 
 
+# 3012 中文：解析 ready 使用的 run_id 并校验一致性。
 def resolve_run_id_for_cmd(explicit_run_id: str, context: str) -> str:
     state_run_id = resolve_state_current_run_id()
     if explicit_run_id:
@@ -125,6 +141,7 @@ def resolve_run_id_for_cmd(explicit_run_id: str, context: str) -> str:
     return ""
 
 
+# 3013 中文：解析 ready 使用的 project_id 并校验一致性。
 def resolve_project_id_for_cmd(explicit_project_id: str, context: str) -> str:
     state_project_id = resolve_state_current_project_id()
     explicit = explicit_project_id.strip()
@@ -142,19 +159,7 @@ def resolve_project_id_for_cmd(explicit_project_id: str, context: str) -> str:
     return DEFAULT_PROJECT_ID
 
 
-def file_sha(path: Path) -> str:
-    if not path.is_file():
-        return "missing"
-    try:
-        return hashlib.sha256(path.read_bytes()).hexdigest()
-    except Exception:
-        return "error"
-
-
-def read_json(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
+# 3014 中文：校验 learn 文件是否可作为 ready 输入。
 def learn_file_is_valid(path: Path) -> bool:
     try:
         obj = read_json(path)
@@ -220,6 +225,7 @@ def learn_file_is_valid(path: Path) -> bool:
     return current == str(obj.get("context_digest", "")).strip()
 
 
+# 3015 中文：检查 learn 文件是否属于当前项目。
 def learn_file_matches_project(path: Path, project_id: str) -> bool:
     try:
         obj = read_json(path)
@@ -229,6 +235,7 @@ def learn_file_matches_project(path: Path, project_id: str) -> bool:
     return pid == project_id
 
 
+# 3016 中文：定位当前项目对应的 learn 文件。
 def resolve_learn_file_for_project(project_id: str) -> str:
     learn_file = Path("learn") / f"{project_id}.json"
     if learn_file.is_file() and learn_file_is_valid(learn_file) and learn_file_matches_project(learn_file, project_id):
@@ -236,6 +243,7 @@ def resolve_learn_file_for_project(project_id: str) -> str:
     return ""
 
 
+# 3017 中文：校验同步文件是否有效。
 def sync_file_is_valid(path: Path) -> bool:
     try:
         obj = read_json(path)
@@ -250,6 +258,7 @@ def sync_file_is_valid(path: Path) -> bool:
     return True
 
 
+# 3018 中文：定位指定 run 的同步文件。
 def resolve_sync_file_for_run(run_id: str) -> str:
     sync_file = Path("reports") / run_id / "sync_report.json"
     if sync_file.is_file() and sync_file_is_valid(sync_file):
@@ -257,6 +266,7 @@ def resolve_sync_file_for_run(run_id: str) -> str:
     return ""
 
 
+# 3019 中文：读取 ready 前已有的决策说明。
 def resolve_ready_prior_decision_for_run(run_id: str) -> str:
     if not run_id:
         return ""
@@ -275,6 +285,7 @@ def resolve_ready_prior_decision_for_run(run_id: str) -> str:
     return ""
 
 
+# 3020 中文：从 task 文件中提取默认 Goal。
 def extract_task_goal_default(task_file: str) -> str:
     p = Path(task_file) if task_file else None
     if not p or not p.is_file():
@@ -292,6 +303,7 @@ def extract_task_goal_default(task_file: str) -> str:
     return ""
 
 
+# 3021 中文：从 task 文件中提取默认 Scope。
 def extract_task_scope_default(task_file: str) -> str:
     p = Path(task_file) if task_file else None
     if not p or not p.is_file():
@@ -313,6 +325,7 @@ def extract_task_scope_default(task_file: str) -> str:
     return ", ".join(out)
 
 
+# 3022 中文：从 task 文件中提取默认 Acceptance。
 def extract_task_acceptance_default(task_file: str) -> str:
     p = Path(task_file) if task_file else None
     if not p or not p.is_file():
@@ -335,6 +348,7 @@ def extract_task_acceptance_default(task_file: str) -> str:
     return "; ".join(out)
 
 
+# 3023 中文：解析 ready 字段的环境变量或默认值。
 def resolve_ready_field(env_key: str, prompt: str, default_value: str) -> str:
     value = os.environ.get(env_key, "")
     auto_mode = os.environ.get("QF_READY_AUTO", "1")
@@ -351,6 +365,7 @@ def resolve_ready_field(env_key: str, prompt: str, default_value: str) -> str:
     raise SystemExit(1)
 
 
+# 3024 中文：更新 TASKS/STATE.md 的当前指针。
 def update_state_current(run_id: str, task_file: str, status: str, project_id: str) -> None:
     if os.environ.get("QF_STATE_UPDATE_DISABLE", "0") == "1":
         return
@@ -387,10 +402,12 @@ def update_state_current(run_id: str, task_file: str, status: str, project_id: s
     path.write_text("\n".join(out).rstrip() + "\n", encoding="utf-8")
 
 
+# 3025 中文：判断当前工作区是否脏。
 def is_dirty() -> bool:
     return run_shell('! git diff --quiet || ! git diff --cached --quiet || [[ -n "$(git ls-files --others --exclude-standard)" ]]').returncode == 0
 
 
+# 3026 中文：把执行事件追加到 run 级 execution 日志。
 def append_execution_event(run_id: str, phase: str, action: str, status: str, command: str, artifacts: str, error: str) -> None:
     if not run_id or os.environ.get("QF_LOG_DISABLE", "0") == "1":
         return
@@ -416,6 +433,7 @@ def append_execution_event(run_id: str, phase: str, action: str, status: str, co
         f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
 
+# 3027 中文：写入 run 级会话检查点文本。
 def append_conversation_checkpoint(run_id: str, phase: str, note: str) -> None:
     if not run_id or os.environ.get("QF_AUTO_CONVERSATION", "1") != "1":
         return
@@ -434,25 +452,7 @@ def append_conversation_checkpoint(run_id: str, phase: str, note: str) -> None:
         f.write(f"- note: {note if note else '(empty)'}\n\n")
 
 
-def read_text(path: str) -> str:
-    p = Path(path)
-    if not p.is_file():
-        return ""
-    return p.read_text(encoding="utf-8", errors="replace")
-
-
-def parse_bool_flag(raw: str, name: str, *, allow_auto: bool = False, auto_as: str = "1") -> str:
-    v = raw.strip().lower()
-    if allow_auto and v == "auto":
-        return auto_as
-    if v in {"1", "true", "yes", "y"}:
-        return "1"
-    if v in {"0", "false", "no", "n"}:
-        return "0"
-    eprint(f"ERROR: invalid {name}={raw}" + (" (expected auto|0|1)." if allow_auto else " (expected 0|1)."))
-    raise SystemExit(2)
-
-
+# 3028 中文：解析 ready 的命令行参数。
 def parse_args(argv: list[str]) -> dict[str, Any]:
     explicit_run_id = ""
     explicit_project_id = os.environ.get("QF_PROJECT_ID", os.environ.get("PROJECT_ID", ""))
@@ -480,6 +480,7 @@ def parse_args(argv: list[str]) -> dict[str, Any]:
     }
 
 
+# 3029 中文：执行 ready 主流程，校验 learn、task、run 并生成 ready.json。
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "ready")

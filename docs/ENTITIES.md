@@ -34,6 +34,11 @@
 - 硬规则真相源：`AGENTS.md`
 - 流程状态机真相源：`docs/WORKFLOW.md`
 
+### 1.4 运行时边界
+- `tools` 是本仓自动化研发体系的执行层。
+- Codex CLI 是研发期的人机调试/接管界面，不是长期产品入口。
+- Codex app-server 是程序化运行时接口；长期应由 Python orchestrator 通过它驱动智能交互。
+
 ## 2. Project
 
 ### 2.1 定义
@@ -134,8 +139,7 @@ discussion artifacts 是 run 内从模糊需求到执行合同的中间对象，
 - 说明 each option 的 why / risk / priority / scope_hint
 
 典型文件：
-- `chatlogs/discussion/<RUN_ID>/orient.json`
-- `chatlogs/discussion/<RUN_ID>/orient.md`
+- `reports/<RUN_ID>/orient_choice.json`
 
 ### 5.2 Selection
 定义：用户确认后的方向选择结果。
@@ -156,8 +160,7 @@ discussion artifacts 是 run 内从模糊需求到执行合同的中间对象，
 - 暴露 blocker / warn / disagreement
 
 典型文件：
-- `chatlogs/discussion/<RUN_ID>/council.json`
-- `chatlogs/discussion/<RUN_ID>/council.md`
+- `reports/<RUN_ID>/execution_contract.json`
 
 ### 5.4 Execution Contract
 定义：讨论收敛后的可执行合同。

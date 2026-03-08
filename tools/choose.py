@@ -18,6 +18,7 @@ from ready import (
 )
 
 
+# 5001 中文：定位当前 run 可用的 orient 结果文件。
 def resolve_orient_file_for_run(run_id: str) -> str:
     if not run_id:
         return ""
@@ -30,6 +31,7 @@ def resolve_orient_file_for_run(run_id: str) -> str:
     return ""
 
 
+# 5002 中文：解析 choose 的命令行参数。
 def parse_args(argv: list[str]) -> dict[str, str]:
     explicit_run_id = ""
     explicit_project_id = os.environ.get("QF_PROJECT_ID", os.environ.get("PROJECT_ID", ""))
@@ -51,6 +53,7 @@ def parse_args(argv: list[str]) -> dict[str, str]:
     return {"explicit_run_id": explicit_run_id, "explicit_project_id": explicit_project_id, "option": option}
 
 
+# 5003 中文：执行 choose 主流程，确认方向并生成方向合同。
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "choose")

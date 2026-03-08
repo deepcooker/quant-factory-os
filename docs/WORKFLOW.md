@@ -12,7 +12,9 @@
 
 补充定位：
 - 本文件描述的是 foundation repo 当前状态机。
-- 自动化 1.0 的“business project repo 单入口目标形态”见 `docs/AUTOMATION_1_0.md`。
+- 当前主线不是业务项目模板，而是本仓 `tools` 自动化研发团队的状态机与门禁。
+- 研发期主要通过 Codex CLI 调试和接管；长期正式运行应收敛到普通窗口中的 Python orchestrator + Codex app-server。
+- 当前普通窗口入口应优先收敛到 Python 总入口，由它顺序调用各 `tools` 子流程并统一输出日志。
 
 ## 1. 设计原则
 
@@ -59,6 +61,12 @@
 
 ## 2. 状态机总览
 
+推荐单入口：
+- `python3 tools/run_main.py run --steps default`
+- 需要推进讨论链时，可显式指定更多步骤，例如：
+  - `python3 tools/run_main.py run --steps init,learn,ready,orient`
+  - `python3 tools/run_main.py run --steps orient,choose,council,arbiter,slice_task --choose-option <id>`
+
 ```text
 project
   -> init
@@ -83,41 +91,57 @@ project
 
 命令：
 - `python3 tools/init.py`
+- `python3 tools/init.py -log`
 
 目标：
-- 诊断环境和现场
+- 用固定项目配置完成自动化运行前置检查
 
 输入：
-- 当前仓库
+- 当前项目根目录
 - `TASKS/STATE.md`
-- git branch / worktree / remote 状态
+- owner docs
+- Codex / app-server 运行前提
+- git 仓库 / 远端 / 账号 / 工作区状态
 
 输出：
 - 控制台状态打印
+- 自动化是否允许继续的总判定
 
 关键输出锚点：
 - `INIT_PROJECT_ID`
+- `INIT_PROJECT_ROOT`
 - `INIT_RUN_ID`
 - `INIT_TASK_FILE`
+- `INIT_PROJECT_GUIDE_STATUS`
+- `INIT_CODEX_CLI_STATUS`
+- `INIT_APP_SERVER_STATUS`
+- `INIT_GIT_REPO_STATUS`
+- `INIT_GIT_AUTH_STATUS`
 - `INIT_BRANCH`
 - `INIT_DIFF_SUMMARY`
 - `INIT_STATUS`
+- `INIT_REASON_CODES`
 - `INIT_NEXT`
 
 职责：
-- 打印账号、版本、分支、工作区差异
-- 确认当前 `project/run/task`
-- 判断当前是正常、脏工作区、还是需要 resume
+- 读取固定项目常量配置
+- 识别当前项目与项目路径
+- 检查关键 owner docs 是否齐备
+- 检查 Codex / app-server 是否具备运行前提
+- 检查 git 仓库、远端、账号和工作区状态
+- 给出自动化是否允许继续的总判定
 
 非职责：
+- 不分 `-status` / `-main` 多模式
 - 不创建业务 `RUN_ID`
 - 不做项目同频
 - 不生成讨论产物
 - 不授权执行
+- 不替代 app-server 运行时交互
 
 下一跳：
-- 若 `INIT_STATUS=needs_resume`，先处理恢复
-- 否则进入 `learn`
+- 若 `INIT_STATUS=ready`，进入 `learn`
+- 若 `INIT_STATUS=needs_fix` 或 `blocked`，先修复前置条件再继续
 
 ### 3.2 `learn`
 
@@ -147,6 +171,10 @@ project
 - 对 `PROJECT_GUIDE` 全量逐题口述
 - 判断是否偏离主线并给出回拉动作
 - 漂移时回到 `PROJECT_GUIDE` 问题体系重答，而不是继续闲聊
+
+补充定位：
+- 在当前研发期，`learn` 通过 Codex CLI 路径完成模型同频与排障验证。
+- 长期目标不是让人手工守着 CLI，而是把这类程序化智能交互收敛到 app-server 运行时。
 
 固定规则：
 - 真模型交互是硬门禁
@@ -239,8 +267,7 @@ project
 - 当前 state/evidence
 
 输出：
-- `chatlogs/discussion/<RUN_ID>/orient.json`
-- `chatlogs/discussion/<RUN_ID>/orient.md`
+- `reports/<RUN_ID>/orient_choice.json`
 
 职责：
 - 产出多个方向选项
@@ -285,8 +312,7 @@ project
 - `direction_contract.json`
 
 输出：
-- `chatlogs/discussion/<RUN_ID>/council.json`
-- `chatlogs/discussion/<RUN_ID>/council.md`
+- `reports/<RUN_ID>/execution_contract.json`
 
 职责：
 - 产品 / 架构 / 研发 / 测试独立给出意见

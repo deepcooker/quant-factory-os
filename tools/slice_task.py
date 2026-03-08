@@ -8,6 +8,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+try:
+    from tools.common_helpers import dedup_acceptance
+except Exception:  # pragma: no cover
+    from common_helpers import dedup_acceptance  # type: ignore
 from ready import (
     append_conversation_checkpoint,
     append_execution_event,
@@ -18,6 +22,7 @@ from ready import (
 )
 
 
+# 8001 中文：解析 slice_task 的命令行参数。
 def parse_args(argv: list[str]) -> dict[str, str]:
     explicit_run_id = ""
     explicit_project_id = os.environ.get("QF_PROJECT_ID", os.environ.get("PROJECT_ID", ""))
@@ -36,6 +41,7 @@ def parse_args(argv: list[str]) -> dict[str, str]:
     return {"explicit_run_id": explicit_run_id, "explicit_project_id": explicit_project_id}
 
 
+# 8002 中文：加载 execution contract。
 def load_contract(path: Path) -> dict[str, Any]:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -43,6 +49,7 @@ def load_contract(path: Path) -> dict[str, Any]:
         return {}
 
 
+# 8003 中文：根据 contract 自动生成最小任务切片。
 def build_tasks_from_contract(contract: dict[str, Any]) -> list[dict[str, Any]]:
     direction = contract.get("direction") or {}
     title = str(direction.get("selected_title", "")).strip() or "execution contract"
@@ -100,21 +107,7 @@ def build_tasks_from_contract(contract: dict[str, Any]) -> list[dict[str, Any]]:
     return tasks
 
 
-def dedup_acceptance(items: list[str]) -> list[str]:
-    out: list[str] = []
-    seen: set[str] = set()
-    for raw in items:
-        item = " ".join(str(raw).split()).strip()
-        if not item:
-            continue
-        key = item.lower().replace("`", "")
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(item)
-    return out
-
-
+# 8004 中文：执行 slice_task 主流程，把 contract 写入 queue 和 slice_state。
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "slice")

@@ -1,1 +1,0 @@
-{"schema":"qf_smoke.v1","run_id":"run-2026-03-07-ship-retry-success-state-cleanliness","task_file":"TASKS/TASK-ship-retry-success-state-cleanliness.md","status":"pass","drift_review_status":"pass","missing_items":[],"next_command":"tools/ship.sh \"<message>\"","updated_at":"2026-03-07T00:20:36+08:00"}
