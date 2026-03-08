@@ -29,7 +29,11 @@ slice:
 	@$(PY) tools/slice.py --run-id "$(RUN_ID)" --day "$(DAY)" --symbols "$(SYMBOLS)" --start "$(START)" --end "$(END)"
 
 verify:
-	@$(PY) -m pytest -q tests/task_*.py
+	@if ls tests/task_*.py >/dev/null 2>&1; then \
+		$(PY) -m pytest -q tests/task_*.py; \
+	else \
+		echo "VERIFY: no tests/task_*.py files present; skipping pytest"; \
+	fi
 
 # Convenience wrapper around tools/ship.sh
 ship:

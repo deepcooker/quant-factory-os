@@ -2,6 +2,19 @@
 
 ## Queue
 
+- [x] TODO Title: remove templates pivot  Picked: run-2026-03-08-remove-templates-pivot 2026-03-08T11:13:21+0000
+  Goal: 删除 `templates/` 路线、`imports/` 内容、相关 project-repo / adoption 文档，以及当前仓库下全部测试文件，明确这条基建方向不再作为当前自动化 1.0 的继续路径。
+  Scope: `templates/`, `imports/`, `docs/`, `TASKS/`, `reports/`, `tests/`
+  Acceptance:
+  - [x] 仓库内全部 `templates/` 文件已删除
+  - [x] `imports/` 相关内容已删除
+  - [x] `project repo / adoption` 相关文档已删除
+  - [x] 仓库内全部测试文件已删除
+  - [x] owner docs 不再把 `templates/` 或这组 project-repo 文档作为当前路线输出
+  - [x] `TASKS/STATE.md` 已绑定本次 task/run
+  - [x] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+  - [x] `make verify` 已执行并记录结果
+
 - [x] TODO Title: slice-next: P0: 收敛 learn 的日常同频体验 - core delivery  Picked: run-2026-03-06-slice-next-p0-learn-core-delivery 2026-03-06T19:40:11+0800
   Goal: 当前合同直接把 learn 和 PROJECT_GUIDE 同频列为增量重点；结合最新 learn focus，下一步最合理的是继续收敛强同频输出和主线回拉体验：继续围绕当前 active run 收敛 learn 主线、流程边界和日常使用体验。
   Scope: `tools/learn.py`, `docs/PROJECT_GUIDE.md`, `docs/WORKFLOW.md`, `AGENTS.md`
@@ -137,6 +150,15 @@
   - [ ] 新增或刷新关键回归测试
   - [ ] `make verify` 通过
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
+
+- [x] TODO Title: learn final artifact persistence  Picked: run-2026-03-07-learn-final-artifact-persistence 2026-03-07T01:50:00+0000
+  Goal: 修复真实 `learn -low/-daily` 完整输出后 `model.json` / `model.raw.txt` 仍未稳定落盘、导致 `ready` 不认账的问题。
+  Scope: `tools/learn.py`, `tools/codex_transport.py`, `tests/`, `learn/`, `TASKS/`, `reports/`, `docs/`
+  Note: Deferred by owner decision; keep as post-Automation-1.0 optimization.
+
+- [x] TODO Title: business project repo skeleton  Picked: run-2026-03-07-business-project-repo-skeleton 2026-03-07T03:05:00+0000
+  Goal: 定义 business project repo 最小骨架与单入口 `factory.py run` 的 v0 形态，作为自动化 1.0 接项目的下一步。
+  Scope: `docs/AUTOMATION_1_0.md`, `docs/BUSINESS_PROJECT_REPO_V0.md`, `templates/business_project_repo_v0/`, `TASKS/`, `reports/`
 
 - [x] TODO Title: project guide mainline reinforcement  Picked: run-2026-03-07-project-guide-mainline-reinforcement 2026-03-07T01:35:00+0000
   Goal: 在不改变题库骨架的前提下，把 `PROJECT_GUIDE.md` 进一步收紧成 `learn` 的高质量提问主课程，并先生成 `PROJECT_GUIDE_1.0_backup.md`。
