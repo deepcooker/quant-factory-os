@@ -1,3 +1,0 @@
-Goal: Complete session synchronization and readiness gates for the active run so work can proceed under the quant-factory governance workflow.
-
-Next command: `tools/qf init`

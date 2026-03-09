@@ -21,7 +21,7 @@ EXCLUDE_DIR_PATTERNS = [
     "__pycache__",          # 排除所有__pycache__目录
     ".ipynb_checkpoints",   # 排除所有.ipynb_checkpoints目录
     ".git" ,                 # 排除.git目录
-       ".pytest_cache"        # 新增：排除pytest缓存目录
+       ".pytest_cache" ,'test_codex'       # 新增：排除pytest缓存目录
 
 ]
 

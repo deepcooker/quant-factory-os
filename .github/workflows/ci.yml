@@ -13,8 +13,6 @@ jobs:
       - name: Repo skeleton checks
         run: |
           set -e
-          test -f CHARTER.md
           test -d TASKS
           test -d ISSUES
           echo "✅ skeleton ok"
-

@@ -1,251 +1,307 @@
 # PROJECT_GUIDE.md
 
-## 同频入口导航（先看）
-- 启动阅读顺序真相源：`SYNC/READ_ORDER.md`
-- 详细状态机和每步输入输出：`docs/WORKFLOW.md`
-- Codex 参数与命令实践：`docs/CODEX_CLI_OPERATION.md`
-- 策略问答与项目认知：`docs/PROJECT_GUIDE.md`
-- 概念定义：`docs/ENTITIES.md`
+## 一句话北极星
+自动化 -> 自我迭代 -> 涌现智能。
 
-## 问答
+## 使用方式
+- 这是 `learn` 的主课程、问题库、标准答案和主线锚点。
+- 题目本身与整体结构是 owner 精心挑选后的固定课程资产，不应被随意改写、重排或替换。
+- 正常允许变化的是：项目变动后同步更新标准答案，或为保持同频质量做最小必要微调。
+- `learn` 必须先阅读本文件，再按每题的 `必查文件` 与 `查找线索` 去读取证据。
+- 这些题的目的不是“考试打分”，而是用高质量提问反向逼模型去读全量 owner docs、run evidence、session continuity 线索，并把主线固化成可复用的证据。
+- 如果输出偏到具体细节、工具琐事或单一 bug，而没有回到项目目标、门禁、工作流、当前阶段，就说明已经偏离主线。
+- 一旦漂移，不是继续闲聊，而是回到 `PROJECT_GUIDE` 的问题体系里重答，并重新引用证据把模型拉回主线。
 
-### 1. 整个项目是做什么的，背景，目标是什么，我最终要什么，我是用什么开发方式来完成这个项目的？
-- 回答：
-  - 项目定位：`quant-factory-os` 是一个“基建型执行与治理系统”，核心是把 AI 工作流做成可审计、可交接、可迭代的工程系统。
-  - 背景：多窗口/多会话/多 Agent 协作会丢上下文，必须把“会话记忆”转成仓库内证据（`TASKS/` + `reports/` + 文档）。
-  - 目标：形成“同频学习 -> 方向讨论 -> 合同收敛 -> 切片执行 -> 复盘修正”的闭环自动化流程。
-  - 你最终要的结果：新 AI 上岗后可以自我理解项目、对齐主线、按门禁执行，并持续更新文档与证据。
-  - 开发方式：Task 驱动 + Gate 驱动 + Evidence 驱动（先定义任务与边界，再执行最小改动，再用验证和报告闭环）。
-- 证据文件：
-  - `README.md`
-  - `AGENTS.md`
-  - `docs/WORKFLOW.md`
-  - `docs/ENTITIES.md`
+### 建议入口顺序
+- 新 agent 首轮同频，优先按 `Q1 -> Q2 -> Q5 -> Q6 -> Q7 -> Q8 -> Q17` 作答。
+- 这组题的作用分别是：项目定位、当前阶段、宪法、工作流、当前局面、session continuity、最终主线回拉。
+- 这组题答稳之后，再继续 `Q3/Q4/Q9...Q16`，避免一开始就陷进局部实现细节。
 
-### 2. 项目有几个阶段性目标，现在完成到哪个阶段，每个阶段都完成了什么？
-- 回答：
-  - 阶段划分（当前文档定义）：
-    - Stage 0：基座硬化（门禁、流程、证据链）
-    - Stage 1：学习系统（同频、考试、复盘沉淀）
-    - Stage 2：训练系统（新 Agent 上岗标准化）
-    - Stage 3：自我升级（通过证据驱动工具改进）
-    - Stage 4：多智能协作收敛
-    - Stage 5：接入具体业务项目（如财富系统）
-  - 当前阶段：Stage 0/1 交界，重点在“learn 同频可信度”和“流程自动化体验”。
-  - 已完成主成果：`qf` 流程链路、learn 模型同频锚点、ready 门禁、discuss/execute/review 基本闭环。
-- 证据文件：
-  - `docs/WORKFLOW.md`
-  - `TASKS/STATE.md`
-  - `TASKS/QUEUE.md`
-  - `reports/run-2026-03-02-qf-ready/summary.md`
+### Q1. 整个项目是做什么的，背景，目标是什么，我最终要什么，我是用什么开发方式来完成这个项目的？
+#### 为什么问这题
+这题决定 agent 是否理解项目的根目标。如果连项目定位都没对齐，后续所有流程都会变成“会跑命令，但不知道为什么要跑”。
+#### 标准答案
+`quant-factory-os` 是一个基建型执行与治理系统，目标是把 AI 协作从“依赖聊天记忆”改造成“依赖仓库内证据、门禁和工作流”的工程化闭环。它当前不是业务项目仓，而是在把 `tools` 自动化 AI 研发体系本身做稳。背景是多窗口、多会话、多 agent 协作时非常容易丢上下文、偏离主线、重复试错，所以需要把任务、决策、验证、错误和状态都沉淀到仓库里。你最终要的是：新 agent 上岗后能快速同频、知道项目主线、按规则执行、持续更新文档与证据，并最终让这套能力沉淀成普通窗口可执行的 Python 总入口，而 Codex 通过 app-server 在背后提供运行时智能能力。开发方式不是随手改代码，而是 `Task + Gate + Evidence + Verify + Ship` 的方式：先绑定任务和范围，再同频和规划，再执行最小改动，再验证，再更新证据与文档。`PROJECT_GUIDE` 在这里不是说明书，而是反向提问课程：它通过问题体系逼模型去读宪法、工作流、实体、证据和 session 线索，再把主线答出来。
+#### 必查文件
+- AGENTS.md
+- docs/WORKFLOW.md
+- docs/ENTITIES.md
+#### 查找线索
+- 先看 README 的项目定位。
+- 再看 AGENTS 的硬规则和门禁要求。
+- 再看 WORKFLOW 的状态机，确认这不是普通代码仓，而是流程仓。
+- 最后用 ENTITIES 理清 task/run/project/evidence 这些名词。
+#### 主线意义
+- 这题是总开关，回答错了，后面所有题都会偏。
+- 最常见漂移是把项目理解成“一个脚本工具集”或“一个普通自动化仓库”，忽略治理与同频。
 
-### 3. 这个基建项目做完之后，它会作为基座的项目，我们接下来第一个项目将完成什么，你会怎么去落地，我们现在设计的结构是把这个变成一个插件好呢还是独立项目好，项目最难的是读懂和同频我的意图，你读了项目后，你准备用什么样的方式来接？
-- 回答：
-  - 第一优先业务落地：财富系统新建项目引导与集成合同（先 dry-run、后实执行）。
-  - 落地方式：先独立项目（推荐），基座仓负责流程治理，业务仓负责业务代码；通过“集成合同”连接。
-  - 插件化建议：放到后期（基座稳定后再做分发），当前过早插件化会放大耦合和变更风险。
-  - 最难点：不是写代码，是“意图同频 + 主线不跑偏 + 证据可追踪”。
-  - 我的承接方式：每次先跑同频链路并输出主线锚点，再进入讨论与执行，执行后强制写入报告。
-- 证据文件：
-  - `docs/WORKFLOW.md`
-  - `docs/ENTITIES.md`
-  - `AGENTS.md`
-  - `reports/run-2026-03-02-qf-ready/decision.md`
-- 说明：
-  - “独立项目优先、插件后置”属于基于当前流程成熟度的工程推理，依据是现有门禁与证据机制的稳定性要求。
+### Q2. 项目有几个阶段性目标，现在完成到哪个阶段，每个阶段都完成了什么？
+#### 为什么问这题
+这题用来判断 agent 是否知道“我们现在在哪”，避免拿未来形态要求当前实现，或者拿历史方案约束当前方向。
+#### 标准答案
+这个项目是分阶段推进的。当前可以概括为：先做基座硬化和 learn 同频能力，再做讨论与执行闭环，再逐步走向更稳定的自动化研发团队运行层。现在仍处于 foundation 强化阶段，重点不是扩业务，而是让 `init / learn / ready / discuss / execute / review / ship` 这条链路足够稳，尤其是让 `learn` 真的完成项目目标、宪法、工作流、项目现状和 session continuity 的同频。已经有的成果包括：Python-first 的核心命令、真实 Codex model sync、ready 门禁、讨论链路骨架、ship/verify 规则、文档 owner map。当前研发期主要通过 Codex CLI 暴露流程问题、观察日志和接管排障；终态目标则不是长期停留在 CLI，而是让这套基座逐步沉淀成“普通窗口执行的 Python orchestrator + Codex app-server 运行时”。
+#### 必查文件
+- docs/WORKFLOW.md
+- TASKS/STATE.md
+- TASKS/QUEUE.md
+- reports/<RUN_ID>/summary.md
+#### 查找线索
+- 先看 WORKFLOW 的状态机和当前推荐路径。
+- 再看 STATE 当前 run 和 task。
+- 再看 QUEUE 判断还有哪些未完事项。
+- 最后看当前 run summary，确认最近落地了什么。
+#### 主线意义
+- 这题负责时间定位。
+- 最常见漂移是把“最终自动化蓝图”误当作“当前已经实现的能力”。
 
-### 4. 如果完成这个项目，我把gpt网页端当做大脑，codex cli当做手脚，你是怎么让codex cli 和 gpt保持同频的，一样吗，如果不一样，都需要怎么做？
-- 回答：
-  - 不一样：
-    - GPT 网页端：负责策略、评审、反驳、方向选择（大脑层）。
-    - Codex CLI：负责本地执行、改动、验证、证据落盘（执行层）。
-  - 同频操作顺序：
-    - `tools/qf init`
-    - `tools/qf learn MODEL_SYNC=1 PLAN_MODE=strong -log`
-    - `tools/qf ready`
-  - 必读文件清单：
-    - `SYNC/READ_ORDER.md`
-    - `AGENTS.md`
-    - `docs/WORKFLOW.md`
-    - `docs/ENTITIES.md`
-    - `TASKS/STATE.md`
-    - `TASKS/QUEUE.md`
-  - 优化点：继续降低命令摩擦，把“组件命令”与“组合编排”分层，保证体验简单但审计不丢失。
-- 证据文件：
-  - `AGENTS.md`
-  - `docs/WORKFLOW.md`
-  - `docs/CODEX_CLI_OPERATION.md`
+### Q3. 这个基建项目做完之后，它会作为基座的项目，我们接下来第一个项目将完成什么，你会怎么去落地，我们现在设计的结构是把这个变成一个插件好呢还是独立项目好，项目最难的是读懂和同频我的意图，你读了项目后，你准备用什么样的方式来接？
+#### 为什么问这题
+这题是把“基座仓”与“业务仓”分开，防止把所有问题都堆在一个仓里，造成基建和业务互相污染。
+#### 标准答案
+基建项目做完后，它应作为 foundation repo，负责流程、门禁、同频和执行治理。它当前首先要产出的不是业务项目模板，而是一套更稳定的 `tools` 自动化 AI 研发团队运行层。研发期用 Codex CLI 来定义 agent 行为、检验 `PROJECT_GUIDE / ENTITIES / WORKFLOW / AGENTS` 是否足以约束研发流程，并通过日志暴露问题；成熟后，日常运行应主要在普通窗口通过 Python 总入口执行，而与 Codex 的程序化交互统一落在 app-server。原因是：当前最难的不是复用分发，而是正确理解需求、对齐主线、保证流程稳定。如果过早把未稳定流程包装成接口或模板，会放大耦合和返工。更合理的做法是：基座仓继续稳定 learn / ready / discuss / execute / review 机制，把 owner docs 和状态机打磨清楚；我的承接方式应该是先跑同频，再确认当前 run、任务和方向，然后才进入讨论和执行。
+#### 必查文件
+- docs/WORKFLOW.md
+- docs/ENTITIES.md
+- reports/<RUN_ID>/decision.md
+#### 查找线索
+- 看 WORKFLOW，确认基座提供的是流程骨架，不是业务实现。
+- 看 ENTITIES，区分 project/run/task 的层级。
+- 看当前 decision，确认近期对“基座 vs 业务”的判断。
+#### 主线意义
+- 这题防止把基建仓做成“所有事都往里塞”的大杂烩。
+- 常见漂移是太早做插件化，忽视当前流程还没稳定。
 
-### 5. 这个项目当前的宪法是什么样的？
-- 回答：
-  - 当前宪法是 `AGENTS.md`：定义了任务入口、证据义务、允许命令、门禁链路、失败协议、文档更新硬规则。
-  - 是否合理：总体合理，能防止“无任务改代码、无证据交付、跨范围漂移”。
-  - 优化建议：保持规则不降级，只优化可用性（更清晰的输出、更少重复命令、更强自动补齐）。
-- 证据文件：
-  - `AGENTS.md`
+### Q4. 如果完成这个项目，我把 gpt 网页端当做大脑，codex cli 当做手脚，你是怎么让 codex cli 和 gpt 保持同频的，一样吗，如果不一样，都需要怎么做？
+#### 为什么问这题
+这题负责定义脑和手的协作边界，不然模型会把战略、评审、实现、修复混成一层。
+#### 标准答案
+GPT 网页端和 Codex CLI 不一样，但必须同频。网页端更适合做方向讨论、方案反驳、角色博弈和收敛决策；Codex CLI 更适合本地读仓、改代码、跑验证、写证据。它们保持同频的方式不是靠聊天记忆同步，而是靠仓库内的 owner docs、task/run 指针和执行证据同步。Codex CLI 在本地必须先执行 `python3 tools/init.py -> python3 tools/learn.py -> python3 tools/ready.py`，再进入讨论或执行链；日常默认建议用 `python3 tools/learn.py -daily`，它等价于 `-medium`，但不降低强同频门禁。网页端如果要作为大脑，也必须先看 `AGENTS.md`、`docs/PROJECT_GUIDE.md`、`docs/WORKFLOW.md`，再围绕当前 state/run 来讨论，而不是脱离仓库空谈。真正发生漂移时，Codex CLI 不应该“继续聊”，而应该回到 `PROJECT_GUIDE` 的问题体系里按题重答，并把答案重新绑定到证据。
+#### 必查文件
+- AGENTS.md
+- docs/WORKFLOW.md
+- CODEX_CLI_PLAYBOOK.md
+- TASKS/STATE.md
+#### 查找线索
+- 看 AGENTS 的 session gate。
+- 看 WORKFLOW 的 state machine。
+- 看 PLAYBOOK，确认 Codex CLI 的正确使用方式和 plan/read-only/write 区分。
+- 看 STATE，确认当前 run 和 task 指针。
+#### 主线意义
+- 这题直接决定“同频”是不是靠证据完成。
+- 常见漂移是把网页端和 CLI 当成同一个东西，或者指望它们天然共享上下文。
+- 真正的回拉动作不是补充闲聊，而是回到题库和证据重新答题。
 
-### 6. 这个项目当前工作流是什么样的？
-- 回答：
-  - 工作流说明位置：`docs/WORKFLOW.md`。
-  - 主流程：`init -> sync -> learn -> ready -> orient -> choose -> council -> arbiter -> slice -> do -> review -> ship`。
-  - 子流程：
-    - 同频子流程：`init/sync/learn/ready`
-    - 讨论子流程：`orient/choose/council/arbiter/slice`
-    - 执行子流程：`do/review/ship`
-  - 操作指南位置：`AGENTS.md`（硬规则）+ `docs/WORKFLOW.md`（状态机）+ `docs/CODEX_CLI_OPERATION.md`（CLI实践）。
-- 证据文件：
-  - `docs/WORKFLOW.md`
-  - `AGENTS.md`
-  - `docs/CODEX_CLI_OPERATION.md`
+### Q5. 这个项目当前的宪法是什么样的？
+#### 为什么问这题
+这题判断 agent 是否知道谁是硬规则，谁只是说明文档。
+#### 标准答案
+当前项目的宪法是 `AGENTS.md`。它定义了任务入口、同频门禁、允许命令、执行流程、失败协议、文档新鲜度和 PR/ship 纪律。它不是可选参考，而是 agent 的硬契约。`docs/WORKFLOW.md` 负责补状态机和步骤细节，`PROJECT_GUIDE.md` 负责学习与主线锚点，但一切执行边界最终以 `AGENTS.md` 为准。
+#### 必查文件
+- AGENTS.md
+- docs/WORKFLOW.md
+#### 查找线索
+- 看 AGENTS 里 task/run、learn、ship、docs freshness 的硬要求。
+- 再看 WORKFLOW 理解哪些是流程细节，哪些是宪法。
+#### 主线意义
+- 这题负责分清“规则层”和“说明层”。
+- 常见漂移是把任何文档都当宪法，或者只看流程图不看硬门禁。
 
-### 7. 我们现在的项目有没有未完成的任务呢，最新的批次在讨论什么问题，你是怎么查的？
-- 回答：
-  - 查法：
-    - 当前指针看 `TASKS/STATE.md`
-    - 队列状态看 `TASKS/QUEUE.md`
-    - 当前 run 的细节看 `reports/<RUN_ID>/summary.md` 与 `decision.md`
-  - 当前状态（本次会话前）：历史队列大多已完成，核心讨论集中在“learn 同频质量、考试机制、流程自动化和文档一致性”。
-- 证据文件：
-  - `TASKS/STATE.md`
-  - `TASKS/QUEUE.md`
-  - `reports/run-2026-03-02-qf-ready/summary.md`
-  - `reports/run-2026-03-02-qf-ready/decision.md`
+### Q6. 这个项目当前工作流是什么样的？
+#### 为什么问这题
+这题用于确认 agent 是否知道从哪一步开始、什么时候停、什么时候不能直接改代码。
+#### 标准答案
+当前工作流是分层状态机。主线是：`init -> learn -> ready -> orient -> choose -> council -> arbiter -> slice -> do -> review -> ship`。其中 `init/learn/ready` 是上岗和同频层；`orient/choose/council/arbiter/slice` 是讨论和合同收敛层；`do/review/ship` 是实现交付层。复杂需求必须先 `Plan -> Confirm -> Execute`，不能跳过讨论层直接写代码。
+#### 必查文件
+- docs/WORKFLOW.md
+- AGENTS.md
+#### 查找线索
+- 先看 WORKFLOW 的 session lifecycle state machine。
+- 再用 AGENTS 核对哪些步骤是硬门禁，哪些是推荐路径。
+#### 主线意义
+- 这题负责把 agent 拉回流程，而不是细节。
+- 常见漂移是把 `/plan`、`legacy plan`、`do`、`ship` 混在一起理解。
 
-### 8. 你查了最近的session说了什么，你是从哪里查的？
-- 回答：
-  - 查阅路径：`SYNC/SESSION_LATEST.md`、`SYNC/CURRENT_STATE.md`、`reports/<RUN_ID>/conversation.md`、`summary.md`、`decision.md`。
-  - 最近 session 摘要：主线是“强化 learn 同频、明确 codex 与模型交互证据、压缩流程摩擦并保持文档实时更新”。
-  - 如果你认为不对：回到源证据文件逐条核对，以 `conversation.md + decision.md + 已合并PR` 为准。
-  - 是否偏离主线判断：凡是不能提升“同频可信度/执行闭环/证据可审计”的动作都算偏离。
-- 证据文件：
-  - `SYNC/SESSION_LATEST.md`
-  - `SYNC/CURRENT_STATE.md`
-  - `reports/run-2026-03-02-qf-ready/conversation.md`
-  - `reports/run-2026-03-02-qf-ready/decision.md`
+### Q7. 我们现在的项目有没有未完成的任务呢，最新的批次在讨论什么问题，你是怎么查的？
+#### 为什么问这题
+这题要求 agent 具备“看当前局面”的能力，而不是只会泛泛复述项目介绍。
+#### 标准答案
+要看当前有没有未完成任务，首先看 `TASKS/STATE.md` 当前指针，再看 `TASKS/QUEUE.md` 队列，再看当前 `RUN_ID` 下的 `summary.md` 和 `decision.md`。当前项目最近讨论的重点，不是新业务功能，而是自动化流程本身，尤其是 `learn` 是否真的完成同频、`PROJECT_GUIDE` 如何成为学习课程、以及流程能否更简单、更自动化。
+#### 必查文件
+- TASKS/STATE.md
+- TASKS/QUEUE.md
+- reports/<RUN_ID>/summary.md
+- reports/<RUN_ID>/decision.md
+#### 查找线索
+- 先看 STATE 的当前 run/task。
+- 再看 QUEUE 有哪些未勾选项。
+- 最后看当前 run 的 summary/decision 判断最近批次在推进什么。
+#### 主线意义
+- 这题把学习拉回“当前在做什么”。
+- 常见漂移是只会讲历史和蓝图，不知道当前迭代目标。
 
-### 9. 基建项目讨论项目应该用哪个流程？
-- 回答：
-  - 使用“讨论优先”流程：`orient -> choose -> council -> arbiter -> slice`，收敛后才允许 `do`。
-  - 目的：保证多角色独立分析，再统一裁决，避免先写代码后补理由。
-- 证据文件：
-  - `docs/WORKFLOW.md`
-  - `AGENTS.md`
+### Q8. 你查了最近的 session 说了什么，你是从哪里查的？
+#### 为什么问这题
+这题要求 agent 具备 session continuity，不然一换会话就会忘掉当前主线。
+#### 标准答案
+最近 session 的内容应该从仓库证据里查，不应该靠聊天记忆猜。最重要的来源是 `TASKS/STATE.md`、当前 `RUN_ID` 下的 `reports/<RUN_ID>/summary.md` 和 `decision.md`，必要时再看 `conversation.md`。根据当前证据，最近 session 的主线是：继续压缩流程噪音，把 `PROJECT_GUIDE` 做成真正的高质量提问课程，把模型通过口述与锚点拉回项目主线，并把长期形态收敛成“普通窗口执行 `tools`，Codex 通过 app-server 提供运行时智能”。
+#### 必查文件
+- TASKS/STATE.md
+- reports/<RUN_ID>/summary.md
+- reports/<RUN_ID>/decision.md
+#### 查找线索
+- 先看 STATE 决定去哪个 run 读证据。
+- 优先看 summary 和 decision，而不是盲读全量聊天记录。
+- 如果对总结存疑，再回溯 `conversation.md`。
+#### 主线意义
+- 这题是“主线连续性”的核心。
+- 常见漂移是把当前 session 理解成新任务，忽略前面已经反复收敛的方向。
 
-### 10. 基建项目的代码实施流程是什么样的，它需要哪些agent进行协作呢，怎么保证这些角色都是独立思考的，他们每一个角色的定义是什么样子的，怎么保证其独立思考的，我们现在都实现了吗，怎么实现的？
-- 回答：
-  - 实施流程：`do -> verify -> review -> ship`。
-  - 角色协作：
-    - 产品：目标与边界
-    - 架构：技术方案与影响面
-    - 研发：改动实现与回归
-    - 测试：用例与失败路径
-  - 独立思考机制：`council` 先产出多角色独立意见，`arbiter` 再统一合同。
-  - 实现现状：已实现基础版（流程与产物齐备），并行执行能力仍可继续增强。
-- 证据文件：
-  - `docs/WORKFLOW.md`
-  - `tools/qf`
-  - `SYNC/discussion/<RUN_ID>/council.json`
-  - `reports/<RUN_ID>/execution_contract.json`
+### Q9. 基建项目讨论项目应该用哪个流程？
+#### 为什么问这题
+这题负责把“讨论”和“执行”分开，防止先写代码后补理由。
+#### 标准答案
+基建项目讨论需求应该走讨论优先流程：`orient -> choose -> council -> arbiter -> slice`。这个流程的目的，是先生成方向草案，再由用户确认，再做多角色独立评审，再收敛为执行合同，最后切成最小 task。只有这一层完成后，才允许进入 `do`。`legacy plan` 只是提队列建议，不等于 Codex `/plan`，也不等于执行许可。
+#### 必查文件
+- docs/WORKFLOW.md
+- AGENTS.md
+#### 查找线索
+- 在 WORKFLOW 里找 `Direction gate`、`Council gate`、`Arbiter gate`、`Slice gate`。
+- 在 AGENTS 里看 Plan -> Confirm -> Execute 约束。
+#### 主线意义
+- 这题负责守住“讨论先于执行”。
+- 常见漂移是把讨论代理和执行代理混成同一轮输出。
 
-### 11. 项目基建里的task，pr，run，product 的都是什么意思，还有其他的概念吗，他们的生命周期管理是怎么样的？
-- 回答：
-  - `task`：需求合同（范围与验收）
-  - `pr`：交付与审阅单元
-  - `run`：一次执行证据命名空间（`reports/<RUN_ID>/`）
-  - `project`：上层项目维度（`project-0` 为当前基座）
-  - 其他关键概念：`queue`（待办入口）、`gate`（流程门禁）、`evidence`（审计记忆）。
-  - 生命周期：`QUEUE -> TASK -> RUN evidence -> verify -> PR -> merge -> 状态更新`。
-- 证据文件：
-  - `docs/ENTITIES.md`
-  - `docs/WORKFLOW.md`
-  - `AGENTS.md`
+### Q10. 基建项目的代码实施流程是什么样的，它需要哪些 agent 进行协作呢，怎么保证这些角色都是独立思考的，他们每一个角色的定义是什么样子的，怎么保证其独立思考的，我们现在都实现了吗，怎么实现的？
+#### 为什么问这题
+这题用来区分“多角色讨论能力”和“单一实现能力”，避免只靠一个视角拍脑袋出方案。
+#### 标准答案
+代码实施流程是：讨论收敛成合同后，再进入 `do -> verify -> review -> ship`。多角色协作的理想角色包括产品、架构、研发、测试。产品负责目标、边界和优先级；架构负责影响面、模块边界、数据流和约束；研发负责实现路径、回滚和最小改动；测试负责用例、失败路径和回归验证。独立思考不是靠口头要求，而是靠 `council` 先分别产出，再由 `arbiter` 收敛成单一合同。当前基础版已经有 `orient / council / arbiter / slice` 骨架，但还在强化阶段，并没有做到真正高并发独立 agent 团队。
+#### 必查文件
+- docs/WORKFLOW.md
+- AGENTS.md
+#### 查找线索
+- 看 WORKFLOW 中 council/arbiter 的职责定义。
+- 看工具文件名称和输出物，确认当前实现到什么程度。
+#### 主线意义
+- 这题防止把“多角色评审”说成已经完整实现。
+- 常见漂移是把角色分工说得很理想，但忽略当前还只是流程骨架。
 
-### 12. 我们在项目的准备工作做好后，我们一个需求讨论方向，从流程的哪一步开始？
-- 回答：
-  - 从 `orient` 开始；随后 `choose -> council -> arbiter -> slice`。
-  - 最新方向存储：
-    - 草案：`SYNC/discussion/<RUN_ID>/orient.md|json`
-    - 选择结果：`reports/<RUN_ID>/orient_choice.json`
-    - 收敛合同：`reports/<RUN_ID>/execution_contract.json|md`
-  - 需求讨论需要多角色；与代码实施角色相关但职责不同（讨论是决策层，实施是执行层）。
-- 证据文件：
-  - `docs/WORKFLOW.md`
-  - `AGENTS.md`
-  - `SYNC/discussion/`
-  - `reports/<RUN_ID>/`
+### Q11. 项目基建里的 task，pr，run，project 的都是什么意思，还有其他的概念吗，他们的生命周期管理是怎么样的？
+#### 为什么问这题
+这题负责统一名词系统，避免 agent 在 task、run、project 这些层级上混乱。
+#### 标准答案
+`project` 是最高层项目维度，当前基座默认是 `project-0`；`run` 是一次执行或讨论周期对应的证据命名空间，主要落在 `reports/<RUN_ID>/`；`task` 是当前要做的具体合同，落在 `TASKS/TASK-*.md`；`PR` 是交付与审查单元。除此之外，还有 `queue` 作为待办入口，`gate` 作为门禁，`evidence` 作为仓库内记忆。生命周期一般是：`QUEUE -> TASK -> RUN evidence -> verify -> ship/PR -> state update`。
+#### 必查文件
+- docs/ENTITIES.md
+- docs/WORKFLOW.md
+- AGENTS.md
+#### 查找线索
+- 先看 ENTITIES 的名词定义。
+- 再看 WORKFLOW 里的状态流转。
+- 最后用 AGENTS 理解这些概念如何形成硬规则。
+#### 主线意义
+- 这题负责名词统一。
+- 常见漂移是把 run 当需求方向、把 task 当 run、把 project 当 session。
 
-### 13. 我们分支代码的管理是怎么样的，现在满足需求吗？
-- 回答：
-  - 当前规则：`一任务一分支一PR`，PR 标题要含 RUN_ID，正文要含 Why/What/Verify/Evidence。
-  - 结论：规则满足当前基建阶段需求；后续若并行度大幅增加，再补充分支命名与合并策略细则。
-- 证据文件：
-  - `AGENTS.md`
-  - `tools/ship.sh`
+### Q12. 我们在项目的准备工作做好后，我们一个需求讨论方向，从流程的哪一步开始？
+#### 为什么问这题
+这题确认“准备完成后做什么”，避免 learn/ready 做完还直接跳到写代码。
+#### 标准答案
+准备工作完成后，需求讨论方向应从 `orient` 开始，而不是直接 `do`。之后是 `choose -> council -> arbiter -> slice`。讨论阶段的草案和中间产物应该先放在 discussion 或方向合同里，等方向被确认、执行合同生成后，再进入执行阶段。讨论不是实现，讨论的结果必须能转成最小 task。
+#### 必查文件
+- docs/WORKFLOW.md
+- AGENTS.md
+- reports/<RUN_ID>/summary.md
+#### 查找线索
+- 看 WORKFLOW 的 direction gate 到 slice gate。
+- 看当前 run summary 中有没有对方向讨论的近期结论。
+#### 主线意义
+- 这题负责接上岗后的下一步。
+- 常见漂移是把 `ready` 误当“可以直接改代码”。
 
-### 14. 每次做完任务，你必须要做什么事情？
-- 回答：
-  - 必做：
-    - 运行验证（通常 `make verify`）
-    - 更新 `reports/<RUN_ID>/summary.md` 和 `decision.md`
-    - 变更流程/规则时同步更新 owner docs
-    - 再执行 ship
-- 证据文件：
-  - `AGENTS.md`
-  - `docs/WORKFLOW.md`
+### Q13. 我们分支代码的管理是怎么样的，现在满足需求吗？
+#### 为什么问这题
+这题用于校准交付纪律，避免“本地能跑就行”而没有分支/PR 约束。
+#### 标准答案
+当前代码管理规则是“一任务一分支一 PR”，PR 标题必须带 `RUN_ID`，正文需要包含 Why / What / Verify / Evidence paths。这个纪律在当前基建阶段是够用的，重点不是复杂分支模型，而是保证每次改动都能回到 task、run 和验证证据；发货时默认要保持当前 active branch 的连续性，不能为了出 PR 强制切回不匹配的 `main`。后续并行度上来时，再补更细的分支策略即可。
+如果 PR 已创建但不是 cleanly mergeable，`ship` 应该停在可恢复状态并把冲突处理退回，明确给出 base-into-head 的恢复命令，而不是继续盲重试 merge。
+#### 必查文件
+- AGENTS.md
+- docs/WORKFLOW.md
+#### 查找线索
+- 看 AGENTS 的 PR discipline。
+- 看 ship.sh 的行为边界，理解它何时适合、何时不适合补跑。
+#### 主线意义
+- 这题负责交付边界。
+- 常见漂移是只关注本地改动，不关注如何形成干净可审计的交付单元。
 
-### 15. 这个项目是基建项目吗，如果我要的体验是为了用起来很爽，完全自动化，有哪些必要的需要优化的？
-- 回答：
-  - 是基建项目。
-  - 必要优化优先级：
-    - P0：同频质量（learn 真实模型交互 + 口述 + 考试 + 锚点可见）
-    - P1：流程爽感（组合编排入口，减少手动多命令）
-    - P2：文档自动更新（改动后自动提示/自动门禁）
-    - P3：失败恢复（中断后一键恢复主线）
-- 证据文件：
-  - `AGENTS.md`
-  - `docs/WORKFLOW.md`
-  - `tools/qf`
+### Q14. 每次做完任务，你必须要做什么事情？
+#### 为什么问这题
+这题是执行闭环问题，用来确认 agent 知道“写完代码不是结束”。
+#### 标准答案
+每次做完任务，必须做验证、更新证据、同步 owner docs（如果流程/规则/工具行为变了）、跑 `tools/smoke.sh` 确认 ship-ready、再 ship。最少要更新 `reports/<RUN_ID>/summary.md`、`decision.md`、`meta.json`，把 Why / What / Verify / Risk 写清楚。如果流程规则变了，还必须同步 `AGENTS.md`、`docs/WORKFLOW.md`、`docs/PROJECT_GUIDE.md`、`CODEX_CLI_PLAYBOOK.md` 等 owner docs。没有文档更新、验证和 smoke readiness，就不算完成。
+#### 必查文件
+- AGENTS.md
+- docs/WORKFLOW.md
+- reports/<RUN_ID>/summary.md
+- reports/<RUN_ID>/decision.md
+#### 查找线索
+- 看 AGENTS 的 evidence gate 和 docs freshness gate。
+- 看 WORKFLOW 的 ship 前提。
+- 看当前 run 证据文件长什么样。
+#### 主线意义
+- 这题负责把“完成”定义清楚。
+- 常见漂移是把“代码写完”误当“任务完成”。
 
-## 实操技能
+### Q15. 这个项目是基建项目吗，如果我要的体验是为了用起来很爽，完全自动化，有哪些必要的需要优化的？
+#### 为什么问这题
+这题用来防止局部最优。项目是基建，就必须优先优化通用流程，而不是只修某一个具体命令。
+#### 标准答案
+这个项目就是基建项目。你要的“用起来很爽、自动化程度很高”并不等于命令越多越好，而是底层组件稳定、编排层清晰、同频质量足够高。当前阶段的重点仍然是 foundation 强化，但终态是让业务项目主要学习项目本身，而不是反复学习基座本身。必要优化的优先级应是：第一，`learn` 的同频质量必须做真；第二，流程要少噪音、少分叉、少手工；第三，文档更新要硬门禁；第四，失败恢复要清晰；第五，逐步逼近 `AUTOMATION_1_0` 里定义的“单入口接项目”目标形态，再考虑更强的 orchestrator 和多角色并行。
+#### 必查文件
+- docs/WORKFLOW.md
+- AGENTS.md
+- reports/<RUN_ID>/decision.md
+#### 查找线索
+- 看 WORKFLOW 的主路径是否简单清晰。
+- 看 AGENTS 的门禁是否支持自动化而不是阻碍自动化。
+- 看 `AUTOMATION_1_0`，确认“当前优化项”与“终态交付形态”的关系。
+- 看当前 decision 是否已经把重心放在 learn 上。
+#### 主线意义
+- 这题负责产品视角。
+- 常见漂移是为了“爽”去堆功能，而不是收敛结构和减少噪音。
 
-### 16. 这个项目codex 的正确打开方式你会吗，所有的codex 正确的方法你会使用，我们项目中用到了哪些，你能列出来吗？
-- 回答：
-  - 会。
-  - 本项目使用方式：
-    - 讨论模式：`codex --sandbox read-only --ask-for-approval never --search`
-    - 执行模式：`codex --sandbox workspace-write --ask-for-approval on-request --search`
-    - 非交互审计：`codex exec --json ...`
-    - 规划协议：先用 Codex `/plan`，确认后再进入执行链路
-    - 去歧义：`tools/qf plan` 仅生成队列提案，不等于 `/plan`
-  - 当前已确认版本：`codex-cli 0.106.0`
-  - 操作手册：`docs/CODEX_CLI_OPERATION.md`
-  - 相关文件：`AGENTS.md`、`docs/WORKFLOW.md`、`tools/qf`
-  - 样例证据：`reports/run-2026-03-02-qf-ready/codex_exec.check.events.jsonl`
-- 证据文件：
-  - `docs/CODEX_CLI_OPERATION.md`
-  - `reports/run-2026-03-02-qf-ready/codex_exec.check.events.jsonl`
-  - `reports/run-2026-03-02-qf-ready/codex_exec.check.last.txt`
+### Q16. 这个项目 codex 的正确打开方式你会吗，所有的 codex 正确的方法你会使用，我们项目中用到了哪些，你能列出来吗？
+#### 为什么问这题
+这题是技能题，确认 agent 不是只知道项目流程，还知道 Codex CLI 这个执行器该怎么正确使用。
+#### 标准答案
+会。当前项目中，Codex 的正确打开方式至少包括：讨论模式使用 `codex --sandbox read-only --ask-for-approval never --search`；执行模式使用 `codex --sandbox workspace-write --ask-for-approval on-request --search`；`learn` 使用 `codex app-server` 的 `plan` 协作模式完成真实模型同频；非交互审计和补充能力需要参考 `CODEX_CLI_PLAYBOOK.md` 与 `CODEX_CLI_SOURCE_AUDIT.md`。本项目强调的不是背所有子命令，而是分清讨论、执行、plan、review、ship 的边界，并用官方文档和本地实测来校对用法。
+#### 必查文件
+- CODEX_CLI_PLAYBOOK.md
+- CODEX_CLI_SOURCE_AUDIT.md
+- AGENTS.md
+#### 查找线索
+- 看 PLAYBOOK 里的默认流程和 learn 同频模式。
+- 看 SOURCE AUDIT 里的本地源码与官方核对结论。
+- 用 AGENTS 核对这些能力在项目中分别处于哪一层。
+#### 主线意义
+- 这题负责技能上岗。
+- 常见漂移是把 Codex CLI 的所有功能都当项目必须路径，或者反过来只会最基本的 chat 用法。
 
-## 拉回主线
-
-### 17. 根据最新的session，你现在做的东西是否偏离了我们现在最重要的任务，你是否认为我们偏离了主线，为什么，接下来我们应该怎么做？
-- 回答：
-  - 主线：提高“同频可信度 + 自动化执行体验 + 文档证据一致性”。
-  - 偏离判定：任何不能增强这三项的动作都是偏离。
-  - 接下来动作：先保证 `PROJECT_GUIDE` 成为高质量问答真相源，再用该真相源驱动 learn 与考试，最后继续收敛流程自动化。
-- 证据文件：
-  - `SYNC/SESSION_LATEST.md`
-  - `TASKS/STATE.md`
-  - `reports/run-2026-03-02-qf-ready/decision.md`
-
-### 18. `/plan`、`tools/qf plan`、`/compact` 应该怎么用，什么时候用？
-- 回答：
-  - `Codex /plan`：讨论协议命令，用于进入“先规划后执行”的模式；适合复杂需求收敛。
-  - `tools/qf plan`：本地队列提案工具，生成 `TASKS/TODO_PROPOSAL.md`，不构成执行许可。
-  - 推荐顺序：`/plan -> 确认 -> tools/qf discuss/execute/do`。
-  - `/compact`：用于上下文过大时压缩，不要求每个 task 强制执行。
-  - `/compact` 前必须先落仓库证据：`tools/qf snapshot NOTE="decision + next step"`。
-- 证据文件：
-  - `docs/CODEX_CLI_OPERATION.md`
-  - `docs/WORKFLOW.md`
-  - `AGENTS.md`
+### Q17. 根据最新的 session，你现在做的东西是否偏离了我们现在最重要的任务，你是否认为我们偏离了主线，为什么，接下来我们应该怎么做？
+#### 为什么问这题
+这题是最终回拉题。它不问知识点，而是判断 agent 能不能把当前执行重新拉回最重要的方向。
+#### 标准答案
+当前最重要的任务不是扩功能，而是把自动化流程做顺，尤其是把 `learn` 做成真正的同频核心。只要当前动作不能提升 `learn` 的真实性、主线回拉能力、流程自动化体验或文档一致性，就有偏离主线的风险。接下来应该优先做的，是：用 `PROJECT_GUIDE` 作为课程入口，强制 `learn` 用真 Plan 模式完成全量逐题口述和证据引用；当模型漂移时，不继续闲聊，而是回到题库按题重答，重新绑定 `AGENTS / WORKFLOW / ENTITIES / AUTOMATION_1_0 / run evidence / session continuity`；同步更新 owner docs；再跑真实 smoke，确认它在实际模型交互里可用。
+#### 必查文件
+- TASKS/STATE.md
+- reports/<RUN_ID>/summary.md
+- reports/<RUN_ID>/decision.md
+- docs/WORKFLOW.md
+#### 查找线索
+- 看当前 run 的 summary/decision，确认最近连续几轮都在收敛什么。
+- 看 WORKFLOW，确认最关键的瓶颈是不是 learn。
+- 用这题检查自己当前做的事，是否真的在强化主线。
+#### 主线意义
+- 这题就是主线回拉器。
+- 常见漂移是被单个实现细节拖住，忘了这轮迭代真正要交付的是更强的同频流程。

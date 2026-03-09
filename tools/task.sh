@@ -136,7 +136,7 @@ for item in scope_hint:
     if s:
         scope.append(s)
 if not scope:
-    scope = ["tools/qf", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "SYNC/", "TASKS/", "reports/{RUN_ID}/"]
+    scope = ["tools/*.py", "tests/", "docs/WORKFLOW.md", "AGENTS.md", "TASKS/", "reports/{RUN_ID}/"]
 scope_line = ", ".join(f"`{x}`" for x in scope)
 
 print("\t".join([run_id, title, goal, option, scope_line]))
@@ -673,4 +673,7 @@ if git status --porcelain | grep -q "tools/ship.sh"; then
 fi
 
 # 提交和创建 PR
-SHIP_TASK_FILE="$task_file" SHIP_TASK_TITLE="$title" tools/ship.sh "$msg"
+SHIP_BASE_BRANCH="$(git rev-parse --abbrev-ref HEAD)" \
+SHIP_TASK_FILE="$task_file" \
+SHIP_TASK_TITLE="$title" \
+tools/ship.sh "$msg"

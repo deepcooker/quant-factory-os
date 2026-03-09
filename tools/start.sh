@@ -30,12 +30,12 @@ repo_root="$(cd "${script_dir}/.." && pwd)"
 cd "${repo_root}"
 
 if [[ "${START_DRY_RUN:-0}" == "1" ]]; then
-  echo "dry-run: would run tools/qf init"
+  echo "dry-run: would run python3 tools/init.py"
   echo "dry-run: would exec codex"
   exit 0
 fi
 
-if ! bash tools/qf init; then
+if ! python3 tools/init.py; then
   exit 1
 fi
 
