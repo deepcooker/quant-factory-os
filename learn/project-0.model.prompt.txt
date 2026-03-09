@@ -6,8 +6,8 @@ Your entire final reply must be exactly one JSON object and nothing else.
 Any prose before or after the JSON object is a failure.
 
 PROJECT_ID: project-0
-CURRENT_RUN_ID: run-2026-03-07-business-project-repo-skeleton
-CURRENT_TASK_FILE: TASKS/TASK-business-project-repo-skeleton.md
+CURRENT_RUN_ID: run-2026-03-08-tools-orchestrator-entry
+CURRENT_TASK_FILE: TASKS/TASK-tools-orchestrator-entry.md
 
 Owner files:
 - docs/PROJECT_GUIDE.md
@@ -16,11 +16,10 @@ Owner files:
 
 Additional required files to read with tools/view.sh:
 - docs/ENTITIES.md
-- docs/AUTOMATION_1_0.md
 - TASKS/STATE.md
 - TASKS/QUEUE.md
-- reports/run-2026-03-07-business-project-repo-skeleton/summary.md
-- reports/run-2026-03-07-business-project-repo-skeleton/decision.md
+- reports/run-2026-03-08-tools-orchestrator-entry/summary.md
+- reports/run-2026-03-08-tools-orchestrator-entry/decision.md
 - CODEX_CLI_PLAYBOOK.md
 - CODEX_CLI_SOURCE_AUDIT.md
 

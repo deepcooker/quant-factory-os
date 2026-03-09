@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import json
 import sys
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -20,7 +22,17 @@ from ready import (
 )
 
 
-# 7001 中文：解析 arbiter 的命令行参数。
+@dataclass
+class ArbiterContext:
+    run_id: str
+    project_id: str
+    council_file: Path
+    direction_contract: Path
+    out_json: Path
+    out_md: Path
+
+
+# arbiter_tools_01 中文：解析 arbiter 的命令行参数。
 def parse_args(argv: list[str]) -> dict[str, str]:
     explicit_run_id = ""
     explicit_project_id = ""
@@ -45,7 +57,7 @@ def parse_args(argv: list[str]) -> dict[str, str]:
     return {"explicit_run_id": explicit_run_id, "explicit_project_id": explicit_project_id}
 
 
-# 7002 中文：根据 scope 推导本轮非目标。
+# arbiter_tools_02 中文：根据 scope 推导本轮非目标。
 def non_goals_from_scope(scope: list[str]) -> list[str]:
     base = [
         "不扩展到当前 selected direction 之外的其他流程层级",
@@ -59,13 +71,13 @@ def non_goals_from_scope(scope: list[str]) -> list[str]:
     return dedup_lines(base)
 
 
-# 7003 中文：执行 arbiter 主流程，把多角色意见收敛成 execution contract。
-def main(argv: list[str]) -> int:
+# 7001 中文：第一步，解析 arbiter 上下文并检查前置产物。
+def arbiter_step_01_resolve_context(argv: list[str]) -> ArbiterContext:
     args = parse_args(argv)
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "arbiter")
     if not run_id:
         print("ERROR: arbiter requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID).", file=sys.stderr)
-        return 2
+        raise SystemExit(2)
     project_id = resolve_project_id_for_cmd(args["explicit_project_id"], "arbiter")
 
     council_file = Path(f"chatlogs/discussion/{run_id}/council.json")
@@ -74,18 +86,22 @@ def main(argv: list[str]) -> int:
         print("ERROR: council gate not satisfied.", file=sys.stderr)
         print(f"Run: python3 tools/council.py RUN_ID={run_id}", file=sys.stderr)
         print(f"Then: python3 tools/arbiter.py RUN_ID={run_id}", file=sys.stderr)
-        return 1
+        raise SystemExit(1)
     if not direction_contract.is_file():
         print(f"ERROR: missing direction contract: {direction_contract}", file=sys.stderr)
         print(f"Run: python3 tools/choose.py RUN_ID={run_id} OPTION=<id>", file=sys.stderr)
-        return 1
+        raise SystemExit(1)
 
     out_json = Path(f"reports/{run_id}/execution_contract.json")
     out_md = Path(f"reports/{run_id}/execution_contract.md")
     out_json.parent.mkdir(parents=True, exist_ok=True)
+    return ArbiterContext(run_id, project_id, council_file, direction_contract, out_json, out_md)
 
-    direction = read_json(str(direction_contract))
-    council = read_json(str(council_file))
+
+# 7002 中文：第二步，收敛 council 评审并生成 execution contract。
+def arbiter_step_02_build_contract(context: ArbiterContext) -> ArbiterContext:
+    direction = read_json(str(context.direction_contract))
+    council = read_json(str(context.council_file))
 
     scope = normalize_scope(direction.get("scope_hint"))
     if not scope:
@@ -149,8 +165,8 @@ def main(argv: list[str]) -> int:
 
     created_at = datetime.now(timezone.utc).isoformat()
     obj: dict[str, Any] = {
-        "project_id": project_id,
-        "run_id": run_id,
+        "project_id": context.project_id,
+        "run_id": context.run_id,
         "created_at_utc": created_at,
         "direction": {
             "selected_option": selected_option,
@@ -162,7 +178,7 @@ def main(argv: list[str]) -> int:
         "non_goals": non_goals_from_scope(scope),
         "scope": scope,
         "acceptance": dedup_lines(acceptance),
-        "council_source": str(council_file),
+        "council_source": str(context.council_file),
         "arbiter_rule": "converge independent evidence-based reviews into one executable contract",
         "arbiter_summary": {
             "blockers": len(blockers),
@@ -173,15 +189,15 @@ def main(argv: list[str]) -> int:
         "blockers": blockers,
         "warnings": warnings,
         "role_conditions": role_conditions,
-        "next_command": f"python3 tools/slice_task.py RUN_ID={run_id}",
+        "next_command": f"python3 tools/slice_task.py RUN_ID={context.run_id}",
     }
-    out_json.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    context.out_json.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     lines: list[str] = [
         "# Execution Contract",
         "",
-        f"PROJECT_ID: `{project_id}`",
-        f"RUN_ID: `{run_id}`",
+        f"PROJECT_ID: `{context.project_id}`",
+        f"RUN_ID: `{context.run_id}`",
         f"Generated At (UTC): {created_at}",
         f"Direction: {title}",
         f"Arbiter Summary: blockers={len(blockers)} warnings={len(warnings)} conditions={len(role_conditions)}",
@@ -207,32 +223,43 @@ def main(argv: list[str]) -> int:
     lines.extend(["", "## Acceptance"])
     for item in obj["acceptance"]:
         lines.append(f"- {item}")
-    lines.extend(["", "## Next Command", f"- `python3 tools/slice_task.py RUN_ID={run_id}`", ""])
-    out_md.write_text("\n".join(lines), encoding="utf-8")
+    lines.extend(["", "## Next Command", f"- `python3 tools/slice_task.py RUN_ID={context.run_id}`", ""])
+    context.out_md.write_text("\n".join(lines), encoding="utf-8")
 
     print(f"ARBITER_BLOCKERS: {len(blockers)}")
     print(f"ARBITER_WARNINGS: {len(warnings)}")
-    print(f"ARBITER_NEXT_COMMAND: python3 tools/slice_task.py RUN_ID={run_id}")
-    print(f"ARBITER_PROJECT_ID: {project_id}")
+    print(f"ARBITER_NEXT_COMMAND: python3 tools/slice_task.py RUN_ID={context.run_id}")
+    print(f"ARBITER_PROJECT_ID: {context.project_id}")
+    return context
 
+
+# 7003 中文：第三步，记录 arbiter 证据并打印结果。
+def arbiter_step_03_finalize(context: ArbiterContext) -> int:
     task_file = state_field_value("CURRENT_TASK_FILE")
     current_status = state_field_value("CURRENT_STATUS") or "active"
     append_execution_event(
-        run_id,
+        context.run_id,
         "arbiter",
         "arbiter_generated",
         "ok",
-        f"python3 tools/arbiter.py RUN_ID={run_id}",
-        f"council_file={council_file};execution_contract={out_json}",
+        f"python3 tools/arbiter.py RUN_ID={context.run_id}",
+        f"council_file={context.council_file};execution_contract={context.out_json}",
         "",
     )
-    append_conversation_checkpoint(run_id, "arbiter", "execution contract generated; next step slice")
-    update_state_current(run_id, task_file, current_status, project_id)
-    print(f"EXECUTION_CONTRACT_JSON: {out_json}")
-    print(f"EXECUTION_CONTRACT_MD: {out_md}")
-    print(f"ARBITER_PROJECT_ID: {project_id}")
-    print(f"ARBITER_RUN_ID: {run_id}")
+    append_conversation_checkpoint(context.run_id, "arbiter", "execution contract generated; next step slice")
+    update_state_current(context.run_id, task_file, current_status, context.project_id)
+    print(f"EXECUTION_CONTRACT_JSON: {context.out_json}")
+    print(f"EXECUTION_CONTRACT_MD: {context.out_md}")
+    print(f"ARBITER_PROJECT_ID: {context.project_id}")
+    print(f"ARBITER_RUN_ID: {context.run_id}")
     return 0
+
+
+# 7004 中文：执行 arbiter 主流程，main 只负责分发三个业务步骤。
+def main(argv: list[str]) -> int:
+    context = arbiter_step_01_resolve_context(argv)
+    context = arbiter_step_02_build_contract(context)
+    return arbiter_step_03_finalize(context)
 
 
 if __name__ == "__main__":

@@ -73,3 +73,15 @@ RUN_ID: `run-2026-03-08-tools-orchestrator-entry`
 - Replaced the ad-hoc init logger with standard Python logging formatting.
 - Current `init` stdout and `init.log` now use a standard format like:
   - `2026-03-08 23:14:18,701 - INFO - INIT_STATUS: needs_fix`
+- Reset [TOOLS_METHOD_FLOW_MAP.md](/root/quant-factory-os/TOOLS_METHOD_FLOW_MAP.md) to a single-stage document: it now keeps only `init`, with `1001-1005` as the business flow and `init_tools_xx` listed separately as support methods.
+- Refactored the stage scripts to a business-first top-level layout so `main()` now only dispatches stage steps for:
+  - `tools/learn.py` (`2001-2005`)
+  - `tools/ready.py` (`3001-3005`)
+  - `tools/orient.py` (`4001-4003`)
+  - `tools/choose.py` (`5001-5003`)
+  - `tools/council.py` (`6001-6003`)
+  - `tools/arbiter.py` (`7001-7003`)
+  - `tools/slice_task.py` (`8001-8003`)
+- Demoted non-business methods into per-stage `xxx_tools_xx` support methods/comments so code review can start from business flow instead of helper order.
+- Rewrote [TOOLS_METHOD_FLOW_MAP.md](/root/quant-factory-os/TOOLS_METHOD_FLOW_MAP.md) into a business-flow map covering `init -> learn -> ready -> orient -> choose -> council -> arbiter -> slice_task`.
+- `python3 -m py_compile tools/init.py tools/learn.py tools/ready.py tools/orient.py tools/choose.py tools/council.py tools/arbiter.py tools/slice_task.py` -> pass

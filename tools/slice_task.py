@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -22,7 +23,16 @@ from ready import (
 )
 
 
-# 8001 中文：解析 slice_task 的命令行参数。
+@dataclass
+class SliceContext:
+    run_id: str
+    project_id: str
+    execution_contract: Path
+    queue_file: Path
+    out_json: Path
+
+
+# slice_tools_01 中文：解析 slice_task 的命令行参数。
 def parse_args(argv: list[str]) -> dict[str, str]:
     explicit_run_id = ""
     explicit_project_id = os.environ.get("QF_PROJECT_ID", os.environ.get("PROJECT_ID", ""))
@@ -41,7 +51,7 @@ def parse_args(argv: list[str]) -> dict[str, str]:
     return {"explicit_run_id": explicit_run_id, "explicit_project_id": explicit_project_id}
 
 
-# 8002 中文：加载 execution contract。
+# slice_tools_02 中文：加载 execution contract。
 def load_contract(path: Path) -> dict[str, Any]:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -49,7 +59,7 @@ def load_contract(path: Path) -> dict[str, Any]:
         return {}
 
 
-# 8003 中文：根据 contract 自动生成最小任务切片。
+# slice_tools_03 中文：根据 contract 自动生成最小任务切片。
 def build_tasks_from_contract(contract: dict[str, Any]) -> list[dict[str, Any]]:
     direction = contract.get("direction") or {}
     title = str(direction.get("selected_title", "")).strip() or "execution contract"
@@ -107,13 +117,13 @@ def build_tasks_from_contract(contract: dict[str, Any]) -> list[dict[str, Any]]:
     return tasks
 
 
-# 8004 中文：执行 slice_task 主流程，把 contract 写入 queue 和 slice_state。
-def main(argv: list[str]) -> int:
+# 8001 中文：第一步，解析 slice 上下文并检查 execution contract。
+def slice_step_01_resolve_context(argv: list[str]) -> SliceContext:
     args = parse_args(argv)
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "slice")
     if not run_id:
         print("ERROR: slice requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID).", file=sys.stderr)
-        return 2
+        raise SystemExit(2)
     project_id = resolve_project_id_for_cmd(args["explicit_project_id"], "slice")
 
     execution_contract = Path(f"reports/{run_id}/execution_contract.json")
@@ -122,18 +132,19 @@ def main(argv: list[str]) -> int:
         print(f"Run: python3 tools/arbiter.py RUN_ID={run_id}", file=sys.stderr)
         print(f"Then: python3 tools/slice_task.py RUN_ID={run_id}", file=sys.stderr)
         print("Then retry: bash tools/legacy.sh do queue-next", file=sys.stderr)
-        return 1
+        raise SystemExit(1)
+    return SliceContext(run_id, project_id, execution_contract, Path("TASKS/QUEUE.md"), Path(f"reports/{run_id}/slice_state.json"))
 
-    queue_file = Path("TASKS/QUEUE.md")
-    out_json = Path(f"reports/{run_id}/slice_state.json")
 
-    contract = load_contract(execution_contract)
+# 8002 中文：第二步，把 execution contract 切成 queue 任务并写入 slice_state。
+def slice_step_02_build_queue(context: SliceContext) -> tuple[SliceContext, int, int, int]:
+    contract = load_contract(context.execution_contract)
     tasks = contract.get("tasks") or []
     if not isinstance(tasks, list) or not tasks:
         tasks = build_tasks_from_contract(contract)
 
-    if queue_file.exists():
-        text = queue_file.read_text(encoding="utf-8")
+    if context.queue_file.exists():
+        text = context.queue_file.read_text(encoding="utf-8")
     else:
         text = "# QUEUE\n\n## Queue\n\n"
     lines = text.splitlines()
@@ -203,46 +214,57 @@ def main(argv: list[str]) -> int:
         for block in blocks:
             flat.extend(block)
         lines = lines[:insert_at] + flat + lines[insert_at:]
-        queue_file.parent.mkdir(parents=True, exist_ok=True)
-        queue_file.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+        context.queue_file.parent.mkdir(parents=True, exist_ok=True)
+        context.queue_file.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
     state = {
-        "project_id": project_id,
-        "run_id": run_id,
+        "project_id": context.project_id,
+        "run_id": context.run_id,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
-        "source_contract": str(execution_contract),
+        "source_contract": str(context.execution_contract),
         "tasks_total": len(tasks),
         "queue_inserted": inserted,
         "queue_existing": existing,
         "next_command": "bash tools/legacy.sh do queue-next",
     }
-    out_json.parent.mkdir(parents=True, exist_ok=True)
-    out_json.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    context.out_json.parent.mkdir(parents=True, exist_ok=True)
+    context.out_json.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     print(f"SLICE_TASKS_TOTAL: {len(tasks)}")
     print(f"SLICE_QUEUE_INSERTED: {inserted}")
     print(f"SLICE_QUEUE_EXISTING: {existing}")
     print("SLICE_NEXT_COMMAND: bash tools/legacy.sh do queue-next")
-    print(f"SLICE_PROJECT_ID: {project_id}")
+    print(f"SLICE_PROJECT_ID: {context.project_id}")
+    return context, len(tasks), inserted, existing
 
+
+# 8003 中文：第三步，记录 slice 证据并打印结果。
+def slice_step_03_finalize(context: SliceContext, tasks_total: int, inserted: int, existing: int) -> int:
     task_file = state_field_value("CURRENT_TASK_FILE")
     current_status = state_field_value("CURRENT_STATUS") or "active"
     append_execution_event(
-        run_id,
+        context.run_id,
         "slice",
         "slice_generated",
         "ok",
-        f"python3 tools/slice_task.py RUN_ID={run_id}",
-        f"execution_contract={execution_contract};slice_state={out_json}",
+        f"python3 tools/slice_task.py RUN_ID={context.run_id}",
+        f"execution_contract={context.execution_contract};slice_state={context.out_json}",
         "",
     )
-    append_conversation_checkpoint(run_id, "slice", "execution contract sliced into queue tasks; next step do")
-    update_state_current(run_id, task_file, current_status, project_id)
-    print(f"SLICE_STATE_FILE: {out_json}")
-    print(f"SLICE_QUEUE_FILE: {queue_file}")
-    print(f"SLICE_PROJECT_ID: {project_id}")
-    print(f"SLICE_RUN_ID: {run_id}")
+    append_conversation_checkpoint(context.run_id, "slice", "execution contract sliced into queue tasks; next step do")
+    update_state_current(context.run_id, task_file, current_status, context.project_id)
+    print(f"SLICE_STATE_FILE: {context.out_json}")
+    print(f"SLICE_QUEUE_FILE: {context.queue_file}")
+    print(f"SLICE_PROJECT_ID: {context.project_id}")
+    print(f"SLICE_RUN_ID: {context.run_id}")
     return 0
+
+
+# 8004 中文：执行 slice 主流程，main 只负责分发三个业务步骤。
+def main(argv: list[str]) -> int:
+    context = slice_step_01_resolve_context(argv)
+    context, tasks_total, inserted, existing = slice_step_02_build_queue(context)
+    return slice_step_03_finalize(context, tasks_total, inserted, existing)
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from dataclasses import dataclass
 
 from ready import (
     append_conversation_checkpoint,
@@ -18,7 +19,18 @@ from ready import (
 )
 
 
-# 5001 中文：定位当前 run 可用的 orient 结果文件。
+@dataclass
+class ChooseContext:
+    run_id: str
+    project_id: str
+    option: str
+    orient_file: str
+    choice_file: Path
+    contract_json: Path
+    contract_md: Path
+
+
+# choose_tools_01 中文：定位当前 run 可用的 orient 结果文件。
 def resolve_orient_file_for_run(run_id: str) -> str:
     if not run_id:
         return ""
@@ -31,7 +43,7 @@ def resolve_orient_file_for_run(run_id: str) -> str:
     return ""
 
 
-# 5002 中文：解析 choose 的命令行参数。
+# choose_tools_02 中文：解析 choose 的命令行参数。
 def parse_args(argv: list[str]) -> dict[str, str]:
     explicit_run_id = ""
     explicit_project_id = os.environ.get("QF_PROJECT_ID", os.environ.get("PROJECT_ID", ""))
@@ -53,16 +65,15 @@ def parse_args(argv: list[str]) -> dict[str, str]:
     return {"explicit_run_id": explicit_run_id, "explicit_project_id": explicit_project_id, "option": option}
 
 
-# 5003 中文：执行 choose 主流程，确认方向并生成方向合同。
-def main(argv: list[str]) -> int:
+# 5001 中文：第一步，解析 choose 上下文并确认输入文件位置。
+def choose_step_01_resolve_context(argv: list[str]) -> ChooseContext:
     args = parse_args(argv)
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "choose")
     if not run_id:
         print("ERROR: choose requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID).", file=sys.stderr)
-        return 2
+        raise SystemExit(2)
     project_id = resolve_project_id_for_cmd(args["explicit_project_id"], "choose")
     option = args["option"].strip()
-
     orient_file = resolve_orient_file_for_run(run_id)
     choice_file = Path(f"reports/{run_id}/orient_choice.json")
     contract_json = Path(f"reports/{run_id}/direction_contract.json")
@@ -70,20 +81,24 @@ def main(argv: list[str]) -> int:
     if not orient_file or not Path(orient_file).is_file():
         print(f"ERROR: missing orientation file for run: {run_id}", file=sys.stderr)
         print(f"Run: python3 tools/orient.py RUN_ID={run_id}", file=sys.stderr)
-        return 1
+        raise SystemExit(1)
+    return ChooseContext(run_id, project_id, option, orient_file, choice_file, contract_json, contract_md)
 
-    obj = json.loads(Path(orient_file).read_text(encoding="utf-8"))
+
+# 5002 中文：第二步，确认方向并生成 choose/contract 产物。
+def choose_step_02_build_contract(context: ChooseContext) -> ChooseContext:
+    obj = json.loads(Path(context.orient_file).read_text(encoding="utf-8"))
     directions = obj.get("directions", [])
     if not directions:
         print("ERROR: orient report has no direction options.", file=sys.stderr)
-        return 1
+        raise SystemExit(1)
 
     ids: dict[str, dict[str, Any]] = {x.get("id"): x for x in directions if isinstance(x, dict) and x.get("id")}
-    selected = option or str(obj.get("recommended_option", "")).strip()
+    selected = context.option or str(obj.get("recommended_option", "")).strip()
     if selected not in ids:
         known = ", ".join(sorted(ids))
         print(f"ERROR: invalid OPTION={selected!r}. valid: {known}", file=sys.stderr)
-        return 1
+        raise SystemExit(1)
 
     picked = ids[selected]
     scope_hint = picked.get("scope_hint", [])
@@ -118,7 +133,7 @@ def main(argv: list[str]) -> int:
 
     created_at = datetime.now(timezone.utc).isoformat()
     contract = {
-        "project_id": project_id,
+        "project_id": context.project_id,
         "run_id": obj.get("run_id"),
         "created_at_utc": created_at,
         "selected_option": selected,
@@ -147,27 +162,27 @@ def main(argv: list[str]) -> int:
         "next_command": f"python3 tools/council.py RUN_ID={obj.get('run_id') or ''}",
     }
     out = {
-        "project_id": project_id,
+        "project_id": context.project_id,
         "run_id": obj.get("run_id"),
         "created_at_utc": created_at,
         "selected_option": selected,
         "selected_title": picked.get("title", ""),
         "priority": picked.get("priority", ""),
         "reason": picked.get("why", ""),
-        "source_orient_file": orient_file,
+        "source_orient_file": context.orient_file,
         "discussion_confirmed": True,
-        "contract_json": str(contract_json),
-        "contract_md": str(contract_md),
+        "contract_json": str(context.contract_json),
+        "contract_md": str(context.contract_md),
         "next_command": f"python3 tools/council.py RUN_ID={obj.get('run_id')}",
     }
-    choice_file.parent.mkdir(parents=True, exist_ok=True)
-    choice_file.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    contract_json.write_text(json.dumps(contract, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    context.choice_file.parent.mkdir(parents=True, exist_ok=True)
+    context.choice_file.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    context.contract_json.write_text(json.dumps(contract, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     lines: list[str] = [
         "# Direction Contract",
         "",
-        f"PROJECT_ID: `{project_id}`",
+        f"PROJECT_ID: `{context.project_id}`",
         f"RUN_ID: `{out.get('run_id', '')}`",
         f"Generated At (UTC): {created_at}",
         f"Selected Option: `{selected}`",
@@ -196,34 +211,45 @@ def main(argv: list[str]) -> int:
     for gate in contract["delivery_contract"]["quality_gates"]:
         lines.append(f"- gate: {gate}")
     lines.extend(["", "## Next Command", f"- `python3 tools/council.py RUN_ID={obj.get('run_id')}`", ""])
-    contract_md.write_text("\n".join(lines), encoding="utf-8")
+    context.contract_md.write_text("\n".join(lines), encoding="utf-8")
 
     print(f"CHOOSE_OPTION: {selected}")
     print(f"CHOOSE_TITLE: {picked.get('title', '')}")
     print(f"CHOOSE_NEXT_COMMAND: python3 tools/council.py RUN_ID={obj.get('run_id')}")
-    print(f"CHOOSE_CONTRACT_JSON: {contract_json}")
-    print(f"CHOOSE_CONTRACT_MD: {contract_md}")
-    print(f"CHOOSE_PROJECT_ID: {project_id}")
+    print(f"CHOOSE_CONTRACT_JSON: {context.contract_json}")
+    print(f"CHOOSE_CONTRACT_MD: {context.contract_md}")
+    print(f"CHOOSE_PROJECT_ID: {context.project_id}")
+    return context
 
+
+# 5003 中文：第三步，记录 choose 证据并打印结果。
+def choose_step_03_finalize(context: ChooseContext) -> int:
     task_file = state_field_value("CURRENT_TASK_FILE")
     current_status = state_field_value("CURRENT_STATUS") or "active"
     append_execution_event(
-        run_id,
+        context.run_id,
         "orient",
         "orient_chosen",
         "ok",
-        f"python3 tools/choose.py RUN_ID={run_id} OPTION={option}",
-        f"choice_file={choice_file};contract={contract_json}",
+        f"python3 tools/choose.py RUN_ID={context.run_id} OPTION={context.option}",
+        f"choice_file={context.choice_file};contract={context.contract_json}",
         "",
     )
-    append_conversation_checkpoint(run_id, "choose", "direction selected and contract written; next step council")
-    update_state_current(run_id, task_file, current_status, project_id)
-    print(f"CHOOSE_FILE: {choice_file}")
-    print(f"CHOOSE_CONTRACT_JSON: {contract_json}")
-    print(f"CHOOSE_CONTRACT_MD: {contract_md}")
-    print(f"CHOOSE_PROJECT_ID: {project_id}")
-    print(f"CHOOSE_RUN_ID: {run_id}")
+    append_conversation_checkpoint(context.run_id, "choose", "direction selected and contract written; next step council")
+    update_state_current(context.run_id, task_file, current_status, context.project_id)
+    print(f"CHOOSE_FILE: {context.choice_file}")
+    print(f"CHOOSE_CONTRACT_JSON: {context.contract_json}")
+    print(f"CHOOSE_CONTRACT_MD: {context.contract_md}")
+    print(f"CHOOSE_PROJECT_ID: {context.project_id}")
+    print(f"CHOOSE_RUN_ID: {context.run_id}")
     return 0
+
+
+# 5004 中文：执行 choose 主流程，main 只负责分发三个业务步骤。
+def main(argv: list[str]) -> int:
+    context = choose_step_01_resolve_context(argv)
+    context = choose_step_02_build_contract(context)
+    return choose_step_03_finalize(context)
 
 
 if __name__ == "__main__":

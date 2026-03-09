@@ -27,3 +27,6 @@ RUN_ID: `run-2026-03-08-tools-orchestrator-entry`
 ## Risks / Rollback
 - Risk: some steps require explicit extra inputs, so the first orchestrator version must expose those inputs instead of pretending the whole chain is parameter-free.
 - Rollback: remove the new orchestrator entrypoint and keep direct script usage.
+- Remove all non-`init` content from `TOOLS_METHOD_FLOW_MAP.md`; the method-flow map must first explain one real business stage cleanly before expanding to later stages.
+- Standardize every stage around business-first top-level methods and push helper logic below them; correction should start from stage business flow, not helper call order.
+- Keep `main()` as a dispatcher only for `learn/ready/orient/choose/council/arbiter/slice_task`, matching the already accepted `init` pattern.

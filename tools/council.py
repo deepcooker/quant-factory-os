@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import json
 import re
 import sys
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -21,7 +23,17 @@ from ready import (
 )
 
 
-# 6001 中文：解析 council 的命令行参数。
+@dataclass
+class CouncilContext:
+    run_id: str
+    project_id: str
+    choice_file: Path
+    contract_json: Path
+    council_json: Path
+    council_md: Path
+
+
+# council_tools_01 中文：解析 council 的命令行参数。
 def parse_args(argv: list[str]) -> dict[str, str]:
     explicit_run_id = ""
     explicit_project_id = ""
@@ -46,12 +58,12 @@ def parse_args(argv: list[str]) -> dict[str, str]:
     return {"explicit_run_id": explicit_run_id, "explicit_project_id": explicit_project_id}
 
 
-# 6002 中文：把布尔通过结果映射成门禁状态。
+# council_tools_02 中文：把布尔通过结果映射成门禁状态。
 def check_status(passed: bool, failed_level: str) -> str:
     return "pass" if passed else failed_level
 
 
-# 6003 中文：根据检查结果和关注点得出角色结论。
+# council_tools_03 中文：根据检查结果和关注点得出角色结论。
 def role_decision(status_by_id: dict[str, str], refs: list[str], concerns: list[str]) -> str:
     has_block = any(status_by_id.get(x) == "block" for x in refs)
     if has_block:
@@ -61,13 +73,13 @@ def role_decision(status_by_id: dict[str, str], refs: list[str], concerns: list[
     return "accept"
 
 
-# 6004 中文：执行 council 主流程，生成多角色独立评审结果。
-def main(argv: list[str]) -> int:
+# 6001 中文：第一步，解析 council 上下文并检查前置产物。
+def council_step_01_resolve_context(argv: list[str]) -> CouncilContext:
     args = parse_args(argv)
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "council")
     if not run_id:
         print("ERROR: council requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID).", file=sys.stderr)
-        return 2
+        raise SystemExit(2)
     project_id = resolve_project_id_for_cmd(args["explicit_project_id"], "council")
 
     choice_file = Path(f"reports/{run_id}/orient_choice.json")
@@ -77,17 +89,21 @@ def main(argv: list[str]) -> int:
         print(f"Run: python3 tools/orient.py RUN_ID={run_id}", file=sys.stderr)
         print(f"Then: python3 tools/choose.py RUN_ID={run_id} OPTION=<id>", file=sys.stderr)
         print("Then retry: bash tools/legacy.sh do queue-next", file=sys.stderr)
-        return 1
+        raise SystemExit(1)
     if not contract_json.is_file():
         print(f"ERROR: missing direction contract: {contract_json}", file=sys.stderr)
         print(f"Run: python3 tools/choose.py RUN_ID={run_id} OPTION=<id>", file=sys.stderr)
-        return 1
+        raise SystemExit(1)
 
     council_json = Path(f"chatlogs/discussion/{run_id}/council.json")
     council_md = Path(f"chatlogs/discussion/{run_id}/council.md")
     council_json.parent.mkdir(parents=True, exist_ok=True)
+    return CouncilContext(run_id, project_id, choice_file, contract_json, council_json, council_md)
 
-    contract = read_json(str(contract_json))
+
+# 6002 中文：第二步，生成多角色独立评审结果。
+def council_step_02_generate_reviews(context: CouncilContext) -> CouncilContext:
+    contract = read_json(str(context.contract_json))
     title = str(contract.get("selected_title", "")).strip() or "confirmed direction"
     goal = str(contract.get("execution_goal", "")).strip()
     scope = normalize_scope(contract.get("scope_hint"))
@@ -102,8 +118,8 @@ def main(argv: list[str]) -> int:
     if not isinstance(steps, list):
         steps = []
 
-    learn_obj = read_json(f"learn/{project_id}.json")
-    ready_obj = read_json(f"reports/{run_id}/ready.json")
+    learn_obj = read_json(f"learn/{context.project_id}.json")
+    ready_obj = read_json(f"reports/{context.run_id}/ready.json")
     queue_text = read_text("TASKS/QUEUE.md")
     queue_open_items = len(re.findall(r"^- \[ \] ", queue_text, flags=re.M))
 
@@ -260,10 +276,10 @@ def main(argv: list[str]) -> int:
 
     created_at = datetime.now(timezone.utc).isoformat()
     obj: dict[str, Any] = {
-        "project_id": project_id,
-        "run_id": run_id,
+        "project_id": context.project_id,
+        "run_id": context.run_id,
         "created_at_utc": created_at,
-        "source_contract": str(contract_json),
+        "source_contract": str(context.contract_json),
         "direction_title": title,
         "direction_goal": goal,
         "scope_hint": scope,
@@ -277,15 +293,15 @@ def main(argv: list[str]) -> int:
         "roles": roles,
         "disagreements": disagreements,
         "consensus_rule": "independent evidence review first, arbiter convergence second",
-        "next_command": f"python3 tools/arbiter.py RUN_ID={run_id}",
+        "next_command": f"python3 tools/arbiter.py RUN_ID={context.run_id}",
     }
-    council_json.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    context.council_json.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     lines: list[str] = [
         "# Council Review (Discussion)",
         "",
-        f"PROJECT_ID: `{project_id}`",
-        f"RUN_ID: `{run_id}`",
+        f"PROJECT_ID: `{context.project_id}`",
+        f"RUN_ID: `{context.run_id}`",
         f"Generated At (UTC): {created_at}",
         f"Direction: {title}",
         f"Queue Open Items: {queue_open_items}",
@@ -313,32 +329,43 @@ def main(argv: list[str]) -> int:
     else:
         lines.append("- none")
     lines.extend(["", "## Next Command", f"- `python3 tools/arbiter.py RUN_ID={run_id}`", ""])
-    council_md.write_text("\n".join(lines), encoding="utf-8")
+    context.council_md.write_text("\n".join(lines), encoding="utf-8")
 
     print(f"COUNCIL_ROLES: {len(roles)}")
     print(f"COUNCIL_WARNINGS: {warn_count}")
     print(f"COUNCIL_BLOCKERS: {block_count}")
-    print(f"COUNCIL_NEXT_COMMAND: python3 tools/arbiter.py RUN_ID={run_id}")
-    print(f"COUNCIL_PROJECT_ID: {project_id}")
+    print(f"COUNCIL_NEXT_COMMAND: python3 tools/arbiter.py RUN_ID={context.run_id}")
+    print(f"COUNCIL_PROJECT_ID: {context.project_id}")
+    return context
 
+
+# 6003 中文：第三步，记录 council 证据并打印结果。
+def council_step_03_finalize(context: CouncilContext) -> int:
     task_file = state_field_value("CURRENT_TASK_FILE")
     current_status = state_field_value("CURRENT_STATUS") or "active"
     append_execution_event(
-        run_id,
+        context.run_id,
         "council",
         "council_generated",
         "ok",
-        f"python3 tools/council.py RUN_ID={run_id}",
-        f"choice_file={choice_file};council={council_json}",
+        f"python3 tools/council.py RUN_ID={context.run_id}",
+        f"choice_file={context.choice_file};council={context.council_json}",
         "",
     )
-    append_conversation_checkpoint(run_id, "council", "council reviews generated; next step arbiter")
-    update_state_current(run_id, task_file, current_status, project_id)
-    print(f"COUNCIL_FILE_JSON: {council_json}")
-    print(f"COUNCIL_FILE_MD: {council_md}")
-    print(f"COUNCIL_PROJECT_ID: {project_id}")
-    print(f"COUNCIL_RUN_ID: {run_id}")
+    append_conversation_checkpoint(context.run_id, "council", "council reviews generated; next step arbiter")
+    update_state_current(context.run_id, task_file, current_status, context.project_id)
+    print(f"COUNCIL_FILE_JSON: {context.council_json}")
+    print(f"COUNCIL_FILE_MD: {context.council_md}")
+    print(f"COUNCIL_PROJECT_ID: {context.project_id}")
+    print(f"COUNCIL_RUN_ID: {context.run_id}")
     return 0
+
+
+# 6004 中文：执行 council 主流程，main 只负责分发三个业务步骤。
+def main(argv: list[str]) -> int:
+    context = council_step_01_resolve_context(argv)
+    context = council_step_02_generate_reviews(context)
+    return council_step_03_finalize(context)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import re
 import shutil
@@ -96,21 +97,36 @@ class GuideQuestion:
     mainline_lines: list[str]
 
 
+@dataclass
+class LearnContext:
+    cfg: dict[str, Any]
+    project_id: str
+    state: dict[str, str]
+    learn_dir: Path | None = None
+    learn_file: Path | None = None
+    learn_md: Path | None = None
+    model_prompt_file: Path | None = None
+    model_raw_file: Path | None = None
+    model_json_file: Path | None = None
+    model_events_file: Path | None = None
+    model_stderr_file: Path | None = None
 
-# 2001 中文：向标准错误输出 learn 阶段的错误提示。
+
+
+# learn_tools_01 中文：向标准错误输出 learn 阶段的错误提示。
 def eprint(msg: str) -> None:
     print(msg, file=sys.stderr)
 
 
 
-# 2002 中文：规范化 project_id，缺省时回退默认项目。
+# learn_tools_02 中文：规范化 project_id，缺省时回退默认项目。
 def normalize_project_id(value: str | None) -> str:
     v = (value or "").strip()
     return v if v else DEFAULT_PROJECT_ID
 
 
 
-# 2003 中文：从 TASKS/STATE.md 读取指定字段值。
+# learn_tools_03 中文：从 TASKS/STATE.md 读取指定字段值。
 def state_field_value(key: str) -> str:
     if not STATE_FILE.is_file():
         return ""
@@ -126,7 +142,7 @@ def state_field_value(key: str) -> str:
 
 
 
-# 2004 中文：读取当前 project/run/task 的状态快照。
+# learn_tools_04 中文：读取当前 project/run/task 的状态快照。
 def read_state_snapshot() -> dict[str, str]:
     return {
         "current_project_id": normalize_project_id(state_field_value("CURRENT_PROJECT_ID")),
@@ -137,7 +153,7 @@ def read_state_snapshot() -> dict[str, str]:
 
 
 
-# 2005 中文：解析 learn 使用的 project_id，并校验是否与状态一致。
+# learn_tools_05 中文：解析 learn 使用的 project_id，并校验是否与状态一致。
 def resolve_project_id_for_cmd(explicit_project_id: str, context: str) -> str:
     state_project_id = normalize_project_id(state_field_value("CURRENT_PROJECT_ID"))
     explicit = explicit_project_id.strip()
@@ -157,14 +173,14 @@ def resolve_project_id_for_cmd(explicit_project_id: str, context: str) -> str:
 
 
 
-# 2006 中文：判断 learn 是否需要输出 JSON 事件流。
+# learn_tools_06 中文：判断 learn 是否需要输出 JSON 事件流。
 def should_emit_json_stream() -> bool:
     value = os.environ.get("QF_EVENT_STREAM", "0").strip().lower()
     return value in {"1", "json", "jsonl"}
 
 
 
-# 2007 中文：输出 learn 阶段的步骤锚点。
+# learn_tools_07 中文：输出 learn 阶段的步骤锚点。
 def emit_step(index: int, total: int, detail: str) -> None:
     print(f"LEARN_STEP[{index}/{total}]: {detail}")
     if should_emit_json_stream():
@@ -180,7 +196,7 @@ def emit_step(index: int, total: int, detail: str) -> None:
 
 
 
-# 2008 中文：解析 PROJECT_GUIDE 的北极星主线。
+# learn_tools_08 中文：解析 PROJECT_GUIDE 的北极星主线。
 def parse_north_star(lines: list[str]) -> str:
     for idx, raw in enumerate(lines):
         if raw.strip() != "## 一句话北极星":
@@ -196,7 +212,7 @@ def parse_north_star(lines: list[str]) -> str:
 
 
 
-# 2009 中文：解析带有 project/run 占位符的动态路径。
+# learn_tools_09 中文：解析带有 project/run 占位符的动态路径。
 def resolve_dynamic_path(raw_path: str, project_id: str, current_run_id: str) -> str:
     path = str(raw_path or "").strip()
     if not path:
@@ -211,7 +227,7 @@ def resolve_dynamic_path(raw_path: str, project_id: str, current_run_id: str) ->
 
 
 
-# 2010 中文：解析 PROJECT_GUIDE 题库、答案与必查文件结构。
+# learn_tools_10 中文：解析 PROJECT_GUIDE 题库、答案与必查文件结构。
 def parse_project_guide(path: Path, project_id: str, current_run_id: str) -> tuple[str, list[GuideQuestion]]:
     text = read_text(path)
     if not text.strip():
@@ -289,7 +305,7 @@ def parse_project_guide(path: Path, project_id: str, current_run_id: str) -> tup
 
 
 
-# 2011 中文：解析 learn 的命令行参数与运行配置。
+# learn_tools_11 中文：解析 learn 的命令行参数与运行配置。
 def parse_cli(argv: list[str]) -> dict[str, Any]:
     reasoning_profile = LEARN_REASONING_DEFAULT_PROFILE
     model_name = LEARN_MODEL_NAME
@@ -392,7 +408,7 @@ def parse_cli(argv: list[str]) -> dict[str, Any]:
 
 
 
-# 2012 中文：以日志镜像模式重启 learn 自身。
+# learn_tools_12 中文：以日志镜像模式重启 learn 自身。
 def run_logged_self(project_id: str, cfg: dict[str, Any]) -> int:
     log_file = LEARN_LOG_FILE_TEMPLATE.format(project_id=project_id)
     print(f"LEARN_LOG_FILE: {log_file}")
@@ -430,7 +446,7 @@ def run_logged_self(project_id: str, cfg: dict[str, Any]) -> int:
 
 
 
-# 2013 中文：生成基础 learn 产物骨架与证据上下文。
+# learn_tools_13 中文：生成基础 learn 产物骨架与证据上下文。
 def build_base_learn(project_id: str, learn_file: Path, learn_md: Path, state: dict[str, str]) -> None:
     north_star, questions = parse_project_guide(Path("docs/PROJECT_GUIDE.md"), project_id, state["current_run_id"])
     required_files = ordered_unique(OWNER_FILES + [path for q in questions for path in q.must_read_files])
@@ -548,7 +564,7 @@ def build_base_learn(project_id: str, learn_file: Path, learn_md: Path, state: d
 
 
 
-# 2014 中文：打印基础 learn 锚点信息。
+# learn_tools_14 中文：打印基础 learn 锚点信息。
 def print_base_anchors(learn_file: Path) -> None:
     obj = read_json(learn_file)
     stage = obj.get("session_status", {}).get("current_stage", {})
@@ -566,7 +582,7 @@ def print_base_anchors(learn_file: Path) -> None:
 
 
 
-# 2015 中文：生成发给 Codex 的 learn prompt。
+# learn_tools_15 中文：生成发给 Codex 的 learn prompt。
 def generate_prompt(learn_file: Path, prompt_file: Path, project_id: str, plan_mode: str) -> None:
     obj = read_json(learn_file)
     guide_questions = obj.get("guide_questions") or []
@@ -694,7 +710,7 @@ def generate_prompt(learn_file: Path, prompt_file: Path, project_id: str, plan_m
 
 
 
-# 2016 中文：判断模型输出里的路径引用是否匹配要求文件。
+# learn_tools_16 中文：判断模型输出里的路径引用是否匹配要求文件。
 def path_reference_matches(text: str, required_path: str) -> bool:
     value = str(text or "").strip()
     target = str(required_path or "").strip()
@@ -705,7 +721,7 @@ def path_reference_matches(text: str, required_path: str) -> bool:
 
 
 
-# 2017 中文：从原始文本中提取首个合法 learn JSON 数据块。
+# learn_tools_17 中文：从原始文本中提取首个合法 learn JSON 数据块。
 def extract_first_learn_json_dict(raw_text: str) -> dict[str, Any] | None:
     text = str(raw_text or "").strip()
     if not text:
@@ -724,7 +740,7 @@ def extract_first_learn_json_dict(raw_text: str) -> dict[str, Any] | None:
     return None
 
 
-# 2018 中文：从事件流文件中恢复 learn JSON 结果。
+# learn_tools_18 中文：从事件流文件中恢复 learn JSON 结果。
 def extract_learn_json_from_events(model_events_file: Path) -> dict[str, Any] | None:
     parsed = extract_final_answer_json_from_events(model_events_file)
     if not parsed:
@@ -737,7 +753,7 @@ def extract_learn_json_from_events(model_events_file: Path) -> dict[str, Any] | 
 
 
 
-# 2019 中文：解析模型原始输出并提取结构化 learn 结果。
+# learn_tools_19 中文：解析模型原始输出并提取结构化 learn 结果。
 def parse_model_output(model_raw_file: Path, model_json_file: Path, plan_mode: str, learn_file: Path, model_events_file: Path) -> dict[str, Any]:
     raw_text = model_raw_file.read_text(encoding="utf-8", errors="replace") if model_raw_file.is_file() else ""
     obj: dict[str, Any] | None = None
@@ -886,7 +902,7 @@ def parse_model_output(model_raw_file: Path, model_json_file: Path, plan_mode: s
 
 
 
-# 2020 中文：打印模型侧 learn 锚点信息。
+# learn_tools_20 中文：打印模型侧 learn 锚点信息。
 def print_model_anchors(obj: dict[str, Any], plan_mode: str) -> None:
     print("LEARN_MODEL_SYNC_STATUS: pass")
     print(f"LEARN_MODEL_MAINLINE: {' '.join(str(obj.get('mainline', '')).split())}")
@@ -942,7 +958,7 @@ def print_model_anchors(obj: dict[str, Any], plan_mode: str) -> None:
 
 
 
-# 2021 中文：把模型结果回写到 learn 主产物。
+# learn_tools_21 中文：把模型结果回写到 learn 主产物。
 def update_learn_with_model(
     learn_file: Path,
     learn_md: Path,
@@ -1019,7 +1035,7 @@ def update_learn_with_model(
 
 
 
-# 2022 中文：校验 learn 主文件是否满足门禁要求。
+# learn_tools_22 中文：校验 learn 主文件是否满足门禁要求。
 def learn_file_is_valid(learn_file: Path) -> bool:
     try:
         obj = read_json(learn_file)
@@ -1079,7 +1095,7 @@ def learn_file_is_valid(learn_file: Path) -> bool:
 
 
 
-# 2023 中文：检查 learn 文件是否属于当前项目。
+# learn_tools_23 中文：检查 learn 文件是否属于当前项目。
 def learn_file_matches_project(path: Path, project_id: str) -> bool:
     try:
         obj = read_json(path)
@@ -1090,7 +1106,7 @@ def learn_file_matches_project(path: Path, project_id: str) -> bool:
 
 
 
-# 2024 中文：定位当前项目对应的 learn 文件。
+# learn_tools_24 中文：定位当前项目对应的 learn 文件。
 def resolve_learn_file_for_project(project_id: str) -> str:
     learn_file = Path("learn") / f"{project_id}.json"
     if learn_file.is_file() and learn_file_is_valid(learn_file) and learn_file_matches_project(learn_file, project_id):
@@ -1099,56 +1115,79 @@ def resolve_learn_file_for_project(project_id: str) -> str:
 
 
 
-# 2025 中文：执行 learn 主流程，完成同频、提问、模型调用和结果落盘。
-def main(argv: list[str]) -> int:
+# 2001 中文：第一步，锁定 learn 运行配置和当前项目上下文。
+def learn_step_01_resolve_context(argv: list[str]) -> LearnContext:
     cfg = parse_cli(argv)
     project_id = resolve_project_id_for_cmd(cfg["explicit_project_id"], "learn")
-
     if os.environ.get("QF_LEARN_LOG_ACTIVE", "0") != "1":
-        return run_logged_self(project_id, cfg)
-
+        raise SystemExit(run_logged_self(project_id, cfg))
     state = read_state_snapshot()
-    emit_step(1, 4, "resolve project context")
+    emit_step(1, 5, "resolve project context")
     print("LEARN_SCOPE_MODE: project-scoped")
     print(f"LEARN_PROJECT_ID: {project_id}")
     print(f"LEARN_CURRENT_RUN_ID: {state['current_run_id'] or '(none)'}")
     print("LEARN_SYNC_MODE: project-guide-driven-read")
+    return LearnContext(cfg=cfg, project_id=project_id, state=state)
 
-    emit_step(2, 4, "prepare learn artifact paths")
+
+# 2002 中文：第二步，准备 learn 产物路径并清理旧的临时模型文件。
+def learn_step_02_prepare_artifacts(context: LearnContext) -> LearnContext:
+    emit_step(2, 5, "prepare learn artifact paths")
     learn_dir = Path("learn")
     learn_dir.mkdir(parents=True, exist_ok=True)
-    learn_file = learn_dir / f"{project_id}.json"
-    learn_md = learn_dir / f"{project_id}.md"
-    model_prompt_file = learn_dir / f"{project_id}.model.prompt.txt"
-    model_raw_file = learn_dir / f"{project_id}.model.raw.txt"
-    model_json_file = learn_dir / f"{project_id}.model.json"
-    model_events_file = learn_dir / f"{project_id}.model.events.jsonl"
-    model_stderr_file = learn_dir / f"{project_id}.model.stderr.log"
+    context.learn_dir = learn_dir
+    context.learn_file = learn_dir / f"{context.project_id}.json"
+    context.learn_md = learn_dir / f"{context.project_id}.md"
+    context.model_prompt_file = learn_dir / f"{context.project_id}.model.prompt.txt"
+    context.model_raw_file = learn_dir / f"{context.project_id}.model.raw.txt"
+    context.model_json_file = learn_dir / f"{context.project_id}.model.json"
+    context.model_events_file = learn_dir / f"{context.project_id}.model.events.jsonl"
+    context.model_stderr_file = learn_dir / f"{context.project_id}.model.stderr.log"
     for path in (
-        model_prompt_file,
-        model_raw_file,
-        model_json_file,
-        model_events_file,
-        model_stderr_file,
+        context.model_prompt_file,
+        context.model_raw_file,
+        context.model_json_file,
+        context.model_events_file,
+        context.model_stderr_file,
     ):
         try:
             if path.exists():
                 path.unlink()
         except Exception as exc:
             eprint(str(exc))
-            return 1
+            raise SystemExit(1)
+    return context
 
-    emit_step(3, 4, "generate learn report (project guide + constitution + workflow)")
+
+# 2003 中文：第三步，生成 learn 基础课程产物和主线锚点。
+def learn_step_03_build_base_packet(context: LearnContext) -> LearnContext:
+    emit_step(3, 5, "generate learn report (project guide + constitution + workflow)")
+    assert context.learn_file is not None
+    assert context.learn_md is not None
     try:
-        build_base_learn(project_id, learn_file, learn_md, state)
+        build_base_learn(context.project_id, context.learn_file, context.learn_md, context.state)
     except Exception as exc:
         eprint(f"ERROR: build_base_learn failed: {exc}")
-        return 1
-    print_base_anchors(learn_file)
+        raise SystemExit(1)
+    print_base_anchors(context.learn_file)
+    return context
 
+
+# 2004 中文：第四步，执行模型同频并把模型结果回写到 learn 主产物。
+def learn_step_04_run_model_sync(context: LearnContext) -> LearnContext:
     if shutil.which("codex") is None:
         eprint("ERROR: learn requires codex CLI (model sync is mandatory).")
-        return 1
+        raise SystemExit(1)
+
+    emit_step(4, 5, "run model sync and validate learn output")
+    cfg = context.cfg
+    assert context.learn_file is not None
+    assert context.learn_md is not None
+    assert context.model_prompt_file is not None
+    assert context.model_raw_file is not None
+    assert context.model_json_file is not None
+    assert context.model_events_file is not None
+    assert context.model_stderr_file is not None
 
     print(f"LEARN_MODEL_SYNC_MODE: {cfg['model_sync_mode']}")
     print(f"LEARN_MODEL_PLAN_MODE: {cfg['plan_mode']}")
@@ -1165,17 +1204,17 @@ def main(argv: list[str]) -> int:
     print(f"LEARN_MODEL_REASONING_EFFORT_EFFECTIVE: {effective_effort}")
     print(f"LEARN_MODEL_REASONING_EFFORT_REASON: {effort_reason}")
 
-    generate_prompt(learn_file, model_prompt_file, project_id, cfg["plan_mode"])
+    generate_prompt(context.learn_file, context.model_prompt_file, context.project_id, cfg["plan_mode"])
     transport_req = TransportRequest(
         model_name=cfg["model_name"],
         model_reasoning_effort=effective_effort,
         cwd=Path.cwd(),
     )
     transport_artifacts = TransportArtifacts(
-        prompt_file=model_prompt_file,
-        raw_file=model_raw_file,
-        events_file=model_events_file,
-        stderr_file=model_stderr_file,
+        prompt_file=context.model_prompt_file,
+        raw_file=context.model_raw_file,
+        events_file=context.model_events_file,
+        stderr_file=context.model_stderr_file,
     )
     transport_result = run_plan_sync(transport_req, transport_artifacts)
     print(f"LEARN_MODEL_SYNC_RC_{MODEL_TRANSPORT_PRIMARY}: {transport_result.primary_rc}")
@@ -1186,14 +1225,18 @@ def main(argv: list[str]) -> int:
     model_sync_status = "fail"
     model_sync_reason = "unknown"
     try:
-        parsed = parse_model_output(model_raw_file, model_json_file, cfg["plan_mode"], learn_file, model_events_file)
+        parsed = parse_model_output(
+            context.model_raw_file,
+            context.model_json_file,
+            cfg["plan_mode"],
+            context.learn_file,
+            context.model_events_file,
+        )
         print_model_anchors(parsed, cfg["plan_mode"])
         model_sync_pass = True
         model_sync_status = "pass"
         model_sync_reason = "ok"
     except Exception as exc:
-        model_sync_pass = False
-        model_sync_status = "fail"
         if transport_result.final_rc != 0:
             model_sync_reason = f"codex-exit-{transport_result.final_rc}"
         else:
@@ -1202,40 +1245,60 @@ def main(argv: list[str]) -> int:
         print(f"LEARN_MODEL_SYNC_REASON: {model_sync_reason}")
 
     update_learn_with_model(
-        learn_file,
-        learn_md,
+        context.learn_file,
+        context.learn_md,
         cfg["model_sync_mode"],
         cfg["plan_mode"],
         transport_result.effective_transport,
         model_sync_status,
         model_sync_reason,
         model_sync_pass,
-        model_prompt_file,
-        model_raw_file,
-        model_json_file,
-        model_events_file,
-        model_stderr_file,
+        context.model_prompt_file,
+        context.model_raw_file,
+        context.model_json_file,
+        context.model_events_file,
+        context.model_stderr_file,
     )
 
     if not model_sync_pass:
         eprint("ERROR: learn model sync strict mode failed.")
-        eprint(f"Check: {model_stderr_file}")
-        return 1
-    if not learn_file_is_valid(learn_file):
+        eprint(f"Check: {context.model_stderr_file}")
+        raise SystemExit(1)
+    if not learn_file_is_valid(context.learn_file):
         eprint("ERROR: learn output validation failed.")
-        eprint(f"Check: {learn_file}")
-        return 1
+        eprint(f"Check: {context.learn_file}")
+        raise SystemExit(1)
+    return context
 
-    emit_step(4, 4, "print learn artifacts")
-    print(f"LEARN_FILE: {learn_file}")
-    print(f"LEARN_MD: {learn_md}")
-    print(f"LEARN_MODEL_PROMPT_FILE: {model_prompt_file}")
-    print(f"LEARN_MODEL_RAW_FILE: {model_raw_file}")
-    print(f"LEARN_MODEL_JSON_FILE: {model_json_file}")
-    print(f"LEARN_MODEL_EVENTS_FILE: {model_events_file}")
-    print(f"LEARN_MODEL_STDERR_FILE: {model_stderr_file}")
+
+# 2005 中文：第五步，打印 learn 产物位置并给出下一步。
+def learn_step_05_finalize(context: LearnContext) -> int:
+    emit_step(5, 5, "print learn artifacts")
+    assert context.learn_file is not None
+    assert context.learn_md is not None
+    assert context.model_prompt_file is not None
+    assert context.model_raw_file is not None
+    assert context.model_json_file is not None
+    assert context.model_events_file is not None
+    assert context.model_stderr_file is not None
+    print(f"LEARN_FILE: {context.learn_file}")
+    print(f"LEARN_MD: {context.learn_md}")
+    print(f"LEARN_MODEL_PROMPT_FILE: {context.model_prompt_file}")
+    print(f"LEARN_MODEL_RAW_FILE: {context.model_raw_file}")
+    print(f"LEARN_MODEL_JSON_FILE: {context.model_json_file}")
+    print(f"LEARN_MODEL_EVENTS_FILE: {context.model_events_file}")
+    print(f"LEARN_MODEL_STDERR_FILE: {context.model_stderr_file}")
     print("LEARN_NEXT_COMMAND: python3 tools/ready.py")
     return 0
+
+
+# 2006 中文：执行 learn 主流程，main 只负责分发五个业务步骤。
+def main(argv: list[str]) -> int:
+    context = learn_step_01_resolve_context(argv)
+    context = learn_step_02_prepare_artifacts(context)
+    context = learn_step_03_build_base_packet(context)
+    context = learn_step_04_run_model_sync(context)
+    return learn_step_05_finalize(context)
 
 
 if __name__ == "__main__":

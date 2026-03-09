@@ -15,6 +15,17 @@ except Exception:  # pragma: no cover
 
 
 INIT_LOG_FILE = Path("init.log")
+PROJECT_ROOT = Path.cwd()
+print(PROJECT_ROOT)
+PROJECT_ID = "quant-factory-os"
+TOOLS_DIR = PROJECT_ROOT / "tools"
+DOCS_DIR = PROJECT_ROOT / "docs"
+AGENTS_FILE = PROJECT_ROOT / "AGENTS.md"
+PROJECT_GUIDE_FILE = DOCS_DIR / "PROJECT_GUIDE.md"
+GIT_REMOTE_NAME = "origin"
+CODEX_BIN = "codex"
+APP_SERVER_SESSION_ENV_KEYS = ("QF_APP_SERVER_SESSION_ID", "CODEX_APP_SERVER_SESSION_ID", "APP_SERVER_SESSION_ID")
+print(APP_SERVER_SESSION_ENV_KEYS)
 
 
 @dataclass(frozen=True)
@@ -108,20 +119,18 @@ def init_tools_05_run_shell(cmd: str) -> CmdResult:
     return CmdResult(rc=int(cp.returncode), stdout=cp.stdout or "", stderr=cp.stderr or "")
 
 
-# init_tools_06 中文：读取固定项目常量配置。
+# init_tools_06 中文：根据文件顶部常量组装固定项目配置。
 def init_tools_06_load_project_config() -> ProjectConfig:
-    project_root = Path(os.environ.get("QF_PROJECT_ROOT", "")).expanduser() if os.environ.get("QF_PROJECT_ROOT", "").strip() else Path.cwd()
-    docs_dir = project_root / "docs"
     return ProjectConfig(
-        project_id=os.environ.get("QF_PROJECT_ID", "project-0").strip() or "project-0",
-        project_root=project_root,
-        tools_dir=project_root / "tools",
-        docs_dir=docs_dir,
-        agents_file=project_root / "AGENTS.md",
-        project_guide_file=docs_dir / "PROJECT_GUIDE.md",
-        git_remote_name=os.environ.get("QF_GIT_REMOTE", "origin").strip() or "origin",
-        codex_bin=os.environ.get("QF_CODEX_BIN", "codex").strip() or "codex",
-        app_server_session_env_keys=("QF_APP_SERVER_SESSION_ID", "CODEX_APP_SERVER_SESSION_ID", "APP_SERVER_SESSION_ID"),
+        project_id=PROJECT_ID,
+        project_root=PROJECT_ROOT,
+        tools_dir=TOOLS_DIR,
+        docs_dir=DOCS_DIR,
+        agents_file=AGENTS_FILE,
+        project_guide_file=PROJECT_GUIDE_FILE,
+        git_remote_name=GIT_REMOTE_NAME,
+        codex_bin=CODEX_BIN,
+        app_server_session_env_keys=APP_SERVER_SESSION_ENV_KEYS,
     )
 
 

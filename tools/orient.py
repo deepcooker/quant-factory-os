@@ -7,6 +7,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from dataclasses import dataclass
 
 try:
     from tools.common_helpers import read_json, short_text, split_scope
@@ -23,7 +24,17 @@ from ready import (
 )
 
 
-# 4001 中文：解析 orient 的命令行参数。
+@dataclass
+class OrientContext:
+    run_id: str
+    project_id: str
+    task_file: str
+    current_status: str
+    orient_file: str
+    orient_md: str
+
+
+# orient_tools_01 中文：解析 orient 的命令行参数。
 def parse_args(argv: list[str]) -> dict[str, str]:
     explicit_run_id = ""
     explicit_project_id = ""
@@ -43,7 +54,7 @@ def parse_args(argv: list[str]) -> dict[str, str]:
         explicit_project_id = os.environ.get("QF_PROJECT_ID", os.environ.get("PROJECT_ID", ""))
     return {"explicit_run_id": explicit_run_id, "explicit_project_id": explicit_project_id}
 
-# 4002 中文：生成方向草案与 orient 输出物。
+# orient_tools_02 中文：生成方向草案与 orient 输出物。
 def generate_orient_draft(run_id: str, project_id: str, task_file: str, orient_file: str, orient_md: str) -> None:
     ready_obj = read_json(f"reports/{run_id}/ready.json")
     summary_text = read_text(f"reports/{run_id}/summary.md")
@@ -194,47 +205,61 @@ def generate_orient_draft(run_id: str, project_id: str, task_file: str, orient_f
     print(f"ORIENT_PROJECT_ID: {project_id}")
 
 
-# 4003 中文：执行 orient 主流程，产出候选方向。
-def main(argv: list[str]) -> int:
+# 4001 中文：第一步，解析 orient 上下文并确定输出路径。
+def orient_step_01_resolve_context(argv: list[str]) -> OrientContext:
     args = parse_args(argv)
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "orient")
     if not run_id:
         print("ERROR: orient requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID).", file=sys.stderr)
-        return 2
+        raise SystemExit(2)
     project_id = resolve_project_id_for_cmd(args["explicit_project_id"], "orient")
-
     task_file = state_field_value("CURRENT_TASK_FILE")
     current_status = state_field_value("CURRENT_STATUS") or "active"
-
     orient_file = f"chatlogs/discussion/{run_id}/orient.json"
     orient_md = f"chatlogs/discussion/{run_id}/orient.md"
     Path(f"chatlogs/discussion/{run_id}").mkdir(parents=True, exist_ok=True)
+    return OrientContext(run_id, project_id, task_file, current_status, orient_file, orient_md)
+
+
+# 4002 中文：第二步，生成方向草案和 orient 产物。
+def orient_step_02_generate_draft(context: OrientContext) -> OrientContext:
     try:
-        generate_orient_draft(run_id, project_id, task_file, orient_file, orient_md)
+        generate_orient_draft(context.run_id, context.project_id, context.task_file, context.orient_file, context.orient_md)
     except Exception:
         print("ERROR: orient generation failed.", file=sys.stderr)
-        return 1
+        raise SystemExit(1)
+    return context
 
+
+# 4003 中文：第三步，记录 orient 证据并打印结果。
+def orient_step_03_finalize(context: OrientContext) -> int:
     append_execution_event(
-        run_id,
+        context.run_id,
         "orient",
         "orient_generated",
         "ok",
-        f"python3 tools/orient.py RUN_ID={run_id}",
-        f"orient_file={orient_file};orient_md={orient_md}",
+        f"python3 tools/orient.py RUN_ID={context.run_id}",
+        f"orient_file={context.orient_file};orient_md={context.orient_md}",
         "",
     )
     append_conversation_checkpoint(
-        run_id,
+        context.run_id,
         "orient",
         "orientation draft updated in chatlogs/discussion; recommended option ready for choose",
     )
-    update_state_current(run_id, task_file, current_status, project_id)
-    print(f"ORIENT_FILE: {orient_file}")
-    print(f"ORIENT_MD: {orient_md}")
-    print(f"ORIENT_PROJECT_ID: {project_id}")
-    print(f"ORIENT_RUN_ID: {run_id}")
+    update_state_current(context.run_id, context.task_file, context.current_status, context.project_id)
+    print(f"ORIENT_FILE: {context.orient_file}")
+    print(f"ORIENT_MD: {context.orient_md}")
+    print(f"ORIENT_PROJECT_ID: {context.project_id}")
+    print(f"ORIENT_RUN_ID: {context.run_id}")
     return 0
+
+
+# 4004 中文：执行 orient 主流程，main 只负责分发三个业务步骤。
+def main(argv: list[str]) -> int:
+    context = orient_step_01_resolve_context(argv)
+    context = orient_step_02_generate_draft(context)
+    return orient_step_03_finalize(context)
 
 
 if __name__ == "__main__":
