@@ -1,0 +1,40 @@
+{
+  "schema": "qf_ready.v2",
+  "project_id": "project-0",
+  "run_id": "run-2026-03-08-tools-orchestrator-entry",
+  "task_file": "TASKS/TASK-tools-orchestrator-entry.md",
+  "created_at_utc": "2026-03-09T09:10:10.683811+00:00",
+  "constitution_read": true,
+  "workflow_read": true,
+  "learn_gate": {
+    "required": true,
+    "learn_report_file": "learn/project-0.json",
+    "passed": true,
+    "learn_passed": true
+  },
+  "sync_gate": {
+    "required": false,
+    "sync_report_file": "",
+    "passed": true,
+    "sync_passed": true
+  },
+  "restatement_passed": true,
+  "restatement": {
+    "goal": "新增一个 Python 总入口，顺序编排 `tools` 研发流程调用，并提供统一 logging，让普通窗口可以通过单入口执行流程、输出逐行日志，便于 Codex 后续根据日志定位和修复问题。",
+    "scope": "tools/, Makefile, docs/WORKFLOW.md, TASKS/, reports/",
+    "acceptance": "新增 Python 总入口脚本; 总入口能顺序调用现有 tools 流程; 总入口对每个流程有开始/结束/失败日志; 子流程 stdout/stderr 每一行都被统一日志记录; 关键方法带简洁注释; TASKS/STATE.md 绑定到本次 task/run; Evidence updated: reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md; 至少完成一次可执行验证",
+    "steps": [],
+    "stop_condition": "finish and wait for next instruction; if blocked, record stop reason in decision.md"
+  },
+  "prior_run_resolution": {
+    "required": false,
+    "decision": "continue"
+  },
+  "contract": {
+    "goal": "新增一个 Python 总入口，顺序编排 `tools` 研发流程调用，并提供统一 logging，让普通窗口可以通过单入口执行流程、输出逐行日志，便于 Codex 后续根据日志定位和修复问题。",
+    "scope": "tools/, Makefile, docs/WORKFLOW.md, TASKS/, reports/",
+    "acceptance": "新增 Python 总入口脚本; 总入口能顺序调用现有 tools 流程; 总入口对每个流程有开始/结束/失败日志; 子流程 stdout/stderr 每一行都被统一日志记录; 关键方法带简洁注释; TASKS/STATE.md 绑定到本次 task/run; Evidence updated: reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md; 至少完成一次可执行验证",
+    "stop_condition": "finish and wait for next instruction; if blocked, record stop reason in decision.md"
+  },
+  "next_command": "python3 tools/orient.py"
+}
