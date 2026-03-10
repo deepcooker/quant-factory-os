@@ -177,22 +177,6 @@ def merge_pr_and_wait(pr_url: str, repo_path: Path, err_desc: str) -> dict[str, 
     if auto_merge_proc.returncode != 0:
         return command_err(ERR_GH_COMMAND_FAILED, err_desc, auto_merge_proc)
 
-    state_result = get_pr_state(pr_url, repo_path)
-    if state_result["err_code"] != 0:
-        return state_result
-    merge_state = str(state_result["data"].get("merge_state_status", "")).strip()
-    if merge_state not in {"CLEAN", "UNKNOWN"}:
-        return err(
-            ERR_GH_COMMAND_FAILED,
-            "PR当前不可合并",
-            {
-                "pr_url": pr_url,
-                "state": state_result["data"].get("state", ""),
-                "merge_state_status": merge_state,
-                "auto_merge_enabled": state_result["data"].get("auto_merge_enabled", False),
-            },
-        )
-
     wait_result = wait_for_pr_merged(pr_url, repo_path)
     if wait_result["err_code"] != 0:
         return wait_result
