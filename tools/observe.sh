@@ -10,6 +10,9 @@ fi
 repo_root="${AWARENESS_REPO_ROOT:-.}"
 reports_dir="${AWARENESS_REPORTS_DIR:-${repo_root}/reports}"
 state_file="${AWARENESS_STATE_FILE:-${repo_root}/TASKS/STATE.md}"
+config_get() {
+  python3 "${repo_root}/tools/project_config.py" --get "$1"
+}
 queue_file="${AWARENESS_QUEUE_FILE:-${repo_root}/TASKS/QUEUE.md}"
 mistakes_dir="${AWARENESS_MISTAKES_DIR:-${repo_root}/MISTAKES}"
 out_dir="${AWARENESS_OUT_DIR:-${reports_dir}/${run_id}}"
@@ -92,7 +95,7 @@ if [[ -d "$reports_dir" ]]; then
     | sort -nr > "$tmp_process_mistakes"
 fi
 
-# Current risk from STATE.
+# Current risk from runtime_state mirror.
 if [[ -f "$state_file" ]]; then
   awk '
     BEGIN { in_risk = 0; emitted = 0 }
@@ -160,7 +163,7 @@ fi
   if [[ -s "$tmp_risks" ]]; then
     cat "$tmp_risks"
   else
-    echo "- 未在 TASKS/STATE.md 中检出风险段落"
+    echo "- 未在 runtime_state 镜像（TASKS/STATE.md）中检出风险段落"
   fi
   echo
   echo "## 下一枪建议"

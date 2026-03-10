@@ -20,6 +20,16 @@ if [[ -z "$MSG" ]]; then
   exit 1
 fi
 
+cfg_get() {
+  python3 tools/project_config.py --get "$1"
+}
+
+GIT_REMOTE_NAME="$(cfg_get git.remote_name)"
+GIT_REPO_PATH="$(cfg_get git.repo_path)"
+GIT_AUTH_CHECK_COMMAND="$(cfg_get git.auth_check_command)"
+
+cd "$GIT_REPO_PATH"
+
 extract_pr_section() {
   local body="$1"
   local header="$2"
@@ -198,7 +208,7 @@ fail_pr_merge_blocked() {
   local base_ref="${pr_base_branch:-${base_branch:-}}"
   local head_ref="${branch:-}"
   local err="merge_state=${merge_state}; ${detail}"
-  ship_recovery_cmd="gh pr checkout ${pr_url##*/} && git fetch origin ${base_ref} && git merge origin/${base_ref}"
+  ship_recovery_cmd="gh pr checkout ${pr_url##*/} && git fetch ${GIT_REMOTE_NAME} ${base_ref} && git merge ${GIT_REMOTE_NAME}/${base_ref}"
   write_ship_state "pr_merge_blocked" "$err"
   append_mistake_event "pr_merge_blocked" "$err" "guard"
   echo "❌ pr_merge blocked: ${detail}" >&2
@@ -216,8 +226,8 @@ fail_pr_merge_blocked() {
   echo "   建议恢复步骤：" >&2
   echo "   1) gh pr checkout ${pr_url##*/}" >&2
   if [[ -n "$base_ref" ]]; then
-    echo "   2) git fetch origin ${base_ref}" >&2
-    echo "   3) git merge origin/${base_ref}" >&2
+    echo "   2) git fetch ${GIT_REMOTE_NAME} ${base_ref}" >&2
+    echo "   3) git merge ${GIT_REMOTE_NAME}/${base_ref}" >&2
   fi
   echo "   4) 解决冲突后重新 push，再重试 ship/resume" >&2
   print_resume_cmd >&2
@@ -270,7 +280,7 @@ run_with_retry_capture() {
 
 cleanup_empty_branch() {
   local candidate_branch="$1"
-  local base_ref="${2:-origin/main}"
+  local base_ref="${2:-$GIT_REMOTE_NAME/main}"
   local branch_sha base_sha
 
   [[ -n "$candidate_branch" ]] || return 0
@@ -664,12 +674,12 @@ if [[ "${SHIP_RUN_ID_PARSE_ONLY:-0}" == "1" ]]; then
 fi
 
 if [[ -n "${GH_TOKEN:-}" ]]; then
-  if ! gh auth status -h github.com >/dev/null 2>&1; then
+  if ! bash -lc "$GIT_AUTH_CHECK_COMMAND" >/dev/null 2>&1; then
     echo "$GH_TOKEN" | gh auth login -h github.com --with-token >/dev/null
   fi
 fi
 
-gh auth status -h github.com >/dev/null
+bash -lc "$GIT_AUTH_CHECK_COMMAND" >/dev/null
 git rev-parse --is-inside-work-tree >/dev/null
 
 orig_branch="$(git rev-parse --abbrev-ref HEAD)"
@@ -688,9 +698,9 @@ slug="$(echo "$MSG" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | s
 branch="chore/${slug:-update}-${ts}"
 
 if [[ "$base_branch" == "main" ]]; then
-  git fetch origin
-  git checkout main >/dev/null 2>&1 || git checkout -b main origin/main
-  git pull --rebase origin main
+  git fetch "$GIT_REMOTE_NAME"
+  git checkout main >/dev/null 2>&1 || git checkout -b main "${GIT_REMOTE_NAME}/main"
+  git pull --rebase "$GIT_REMOTE_NAME" main
 fi
 git checkout -b "$branch" "$base_branch"
 
@@ -833,7 +843,7 @@ fi
 
 git commit -m "$MSG"
 ship_allow_success_state_writes="0"
-if ! run_with_retry_capture "push" git push -u origin "$branch"; then
+if ! run_with_retry_capture "push" git push -u "$GIT_REMOTE_NAME" "$branch"; then
   fail_with_resume "push" "${RETRY_LAST_ERROR:-git push failed}"
 fi
 
@@ -973,8 +983,8 @@ if ! run_with_retry_capture "sync_checkout_base" git checkout "$base_branch"; th
   fail_with_resume "sync_checkout_base" "${RETRY_LAST_ERROR:-git checkout base branch failed}"
 fi
 if [[ "$base_branch" == "main" ]]; then
-  if ! run_with_retry_capture "sync_pull_base" git pull --rebase origin main; then
-    fail_with_resume "sync_pull_base" "${RETRY_LAST_ERROR:-git pull --rebase origin main failed}"
+  if ! run_with_retry_capture "sync_pull_base" git pull --rebase "$GIT_REMOTE_NAME" main; then
+    fail_with_resume "sync_pull_base" "${RETRY_LAST_ERROR:-git pull --rebase ${GIT_REMOTE_NAME} main failed}"
   fi
 fi
 base_sha="$(git rev-parse --short HEAD)"

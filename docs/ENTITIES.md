@@ -27,7 +27,8 @@
 - 不允许把 session 等同于 run。
 
 ### 1.3 单一真相源
-- 当前活动指针真相源：`TASKS/STATE.md`
+- 当前活动指针真相源：`tools/project_config.json -> runtime_state`
+- `TASKS/STATE.md` 是 `runtime_state` 的镜像/兼容输出，不是并列真相源
 - 当前 task 合同真相源：`TASKS/TASK-*.md`
 - 当前 run 证据真相源：`reports/<RUN_ID>/`
 - 项目长期认知真相源：`docs/PROJECT_GUIDE.md`
@@ -51,8 +52,10 @@
 - 容纳多个 `run`
 
 ### 2.3 真相源
-- `TASKS/STATE.md -> CURRENT_PROJECT_ID`
-- 缺省值：`project-0`
+- `tools/project_config.json -> project_id`
+- 当前状态指针：`tools/project_config.json -> runtime_state.current_project_id`
+- 镜像输出：`TASKS/STATE.md -> CURRENT_PROJECT_ID`
+- 缺省值：`quant-factory-os`
 
 ### 2.4 生命周期
 - 创建时机：项目建立时
@@ -84,7 +87,8 @@
 - 承载本轮 summary / decision / review / ship 证据
 
 ### 3.3 真相源
-- `TASKS/STATE.md -> CURRENT_RUN_ID`
+- `tools/project_config.json -> runtime_state.current_run_id`
+- 镜像输出：`TASKS/STATE.md -> CURRENT_RUN_ID`
 - run 证据目录：`reports/<RUN_ID>/`
 
 ### 3.4 生命周期

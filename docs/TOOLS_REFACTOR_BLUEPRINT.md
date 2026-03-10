@@ -64,7 +64,7 @@
 
 不负责什么：
 - 不负责任何阶段推进
-- 不负责 `TASKS/STATE.md` 真相读写
+- 不负责 `tools/project_config.json -> runtime_state` 真相读写
 - 不负责 `reports/<RUN_ID>/` 产物定位
 - 不负责日志 schema
 - 不负责 app-server 协议
@@ -170,7 +170,7 @@
 
 禁止依赖：
 - 禁止依赖 `entry layer`
-- 禁止直接写 `TASKS/STATE.md`
+- 禁止直接写 `tools/project_config.json -> runtime_state`
 - 禁止直接写 `reports/*.md`
 
 硬约束：
@@ -182,7 +182,7 @@
 状态与产物真相层。只负责 `TASKS/`、`reports/`、`learn/` 等真相源的访问和定位。
 
 职责：
-- 读取和更新 `TASKS/STATE.md`
+- 读取和更新 `tools/project_config.json -> runtime_state`，并镜像到 `TASKS/STATE.md`
 - 读取和写入 `TASKS/TASK-*.md`
 - 读取和写入 `reports/<RUN_ID>/...`
 - 读取和写入 `learn/<project_id>.*`
@@ -283,7 +283,7 @@
 
 | 当前方法/能力 | 现所在文件 | 说明 | 第一轮是否迁移 |
 | --- | --- | --- | --- |
-| `state_field_value` | `init.py` / `learn.py` / `ready.py` / `run_main.py` | 读取 `TASKS/STATE.md` | 必须 |
+| `state_field_value` | `init.py` / `learn.py` / `ready.py` / `run_main.py` | 读取 `tools/project_config.json -> runtime_state`（镜像到 `TASKS/STATE.md`） | 必须 |
 | `resolve_state_current_run_id` / `resolve_state_current_project_id` | `init.py` / `ready.py` | 当前 active 指针解析 | 必须 |
 | `read_state_snapshot` | `learn.py` | 当前状态快照 | 必须 |
 | `resolve_project_id_for_cmd` / `resolve_run_id_for_cmd` | `learn.py` / `ready.py` 及被其他文件引用 | 运行上下文解析 | 必须 |
@@ -637,7 +637,7 @@
 ### 4.2 它绝对不允许负责什么
 
 - 不允许自己维护公共 helper
-- 不允许自己读写 `TASKS/STATE.md`
+- 不允许自己直接读写 `tools/project_config.json -> runtime_state`
 - 不允许自己定位 `reports/learn` 产物
 - 不允许自己拼阶段规则
 - 不允许自己实现日志器

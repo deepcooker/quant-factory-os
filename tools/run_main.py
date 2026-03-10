@@ -9,8 +9,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TextIO
 
+try:
+    from tools.project_config import load_project_config, load_runtime_state
+except Exception:  # pragma: no cover
+    from project_config import load_project_config, load_runtime_state  # type: ignore
 
-STATE_FILE = Path("TASKS/STATE.md")
+
+PROJECT_CONFIG = load_project_config()
 DEFAULT_STEPS = ["init", "learn", "ready"]
 ALL_STEPS = ["init", "learn", "ready", "orient", "choose", "council", "arbiter", "slice_task"]
 
@@ -58,29 +63,18 @@ class Logger:
         self._emit("ERROR", message)
 
 
-# 9006 中文：从 TASKS/STATE.md 读取字段值。
-def state_field_value(key: str) -> str:
-    if not STATE_FILE.is_file():
-        return ""
-    prefix = f"{key}:"
-    for raw in STATE_FILE.read_text(encoding="utf-8", errors="replace").splitlines():
-        if raw.startswith(prefix):
-            return raw.split(":", 1)[1].strip()
-    return ""
-
-
 # 9007 中文：解析总入口使用的 run_id。
 def resolve_run_id(explicit: str) -> str:
     if explicit.strip():
         return explicit.strip()
-    return state_field_value("CURRENT_RUN_ID") or f"run-{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H%M%SZ')}"
+    return load_runtime_state().current_run_id or f"run-{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H%M%SZ')}"
 
 
 # 9008 中文：解析总入口使用的 project_id。
 def resolve_project_id(explicit: str) -> str:
     if explicit.strip():
         return explicit.strip()
-    return state_field_value("CURRENT_PROJECT_ID") or "project-0"
+    return load_runtime_state().current_project_id or PROJECT_CONFIG.project_id
 
 
 # 9009 中文：解析总入口要执行的步骤列表。

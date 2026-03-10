@@ -1,7 +1,7 @@
 # TASK: tools orchestrator entry
 
 RUN_ID: run-2026-03-08-tools-orchestrator-entry
-PROJECT_ID: project-0
+PROJECT_ID: quant-factory-os
 STATUS: active
 
 ## Goal

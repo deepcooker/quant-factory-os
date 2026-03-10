@@ -55,8 +55,13 @@ except Exception:  # pragma: no cover
         runtime_reasoning_effort,
     )
 
-STATE_FILE = Path(os.environ.get("QF_STATE_FILE", "TASKS/STATE.md"))
-DEFAULT_PROJECT_ID = os.environ.get("QF_DEFAULT_PROJECT_ID", "project-0")
+try:
+    from tools.project_config import load_project_config, load_runtime_state
+except Exception:  # pragma: no cover
+    from project_config import load_project_config, load_runtime_state  # type: ignore
+
+PROJECT_CONFIG = load_project_config()
+DEFAULT_PROJECT_ID = PROJECT_CONFIG.project_id
 LEARN_LOG_FILE_TEMPLATE = "learn/{project_id}.stdout.log"
 LEARN_MODEL_NAME = "gpt-5.4"
 LEARN_REASONING_DEFAULT_PROFILE = "xhigh"
@@ -126,36 +131,20 @@ def normalize_project_id(value: str | None) -> str:
 
 
 
-# learn_tools_03 中文：从 TASKS/STATE.md 读取指定字段值。
-def state_field_value(key: str) -> str:
-    if not STATE_FILE.is_file():
-        return ""
-    pat = re.compile(rf"^\s*{re.escape(key)}:\s*(.*?)\s*$")
-    try:
-        for line in STATE_FILE.read_text(encoding="utf-8", errors="replace").splitlines():
-            match = pat.match(line)
-            if match:
-                return match.group(1)
-    except Exception:
-        return ""
-    return ""
-
-
-
-# learn_tools_04 中文：读取当前 project/run/task 的状态快照。
+# learn_tools_03 中文：读取统一配置里的当前 project/run/task 状态快照。
 def read_state_snapshot() -> dict[str, str]:
+    state = load_runtime_state()
     return {
-        "current_project_id": normalize_project_id(state_field_value("CURRENT_PROJECT_ID")),
-        "current_run_id": state_field_value("CURRENT_RUN_ID").strip(),
-        "current_task_file": state_field_value("CURRENT_TASK_FILE").strip(),
-        "current_status": state_field_value("CURRENT_STATUS").strip(),
+        "current_project_id": normalize_project_id(state.current_project_id or DEFAULT_PROJECT_ID),
+        "current_run_id": state.current_run_id.strip(),
+        "current_task_file": state.current_task_file.strip(),
+        "current_status": state.current_status.strip(),
     }
 
 
-
-# learn_tools_05 中文：解析 learn 使用的 project_id，并校验是否与状态一致。
+# learn_tools_04 中文：解析 learn 使用的 project_id，并校验是否与状态一致。
 def resolve_project_id_for_cmd(explicit_project_id: str, context: str) -> str:
-    state_project_id = normalize_project_id(state_field_value("CURRENT_PROJECT_ID"))
+    state_project_id = normalize_project_id(load_runtime_state().current_project_id or DEFAULT_PROJECT_ID)
     explicit = explicit_project_id.strip()
     if explicit:
         resolved = normalize_project_id(explicit)
@@ -163,8 +152,8 @@ def resolve_project_id_for_cmd(explicit_project_id: str, context: str) -> str:
         if state_project_id and resolved != state_project_id and not allow_mismatch:
             eprint(f"ERROR: {context} project-id mismatch.")
             eprint(f"  explicit: {resolved}")
-            eprint(f"  CURRENT_PROJECT_ID (TASKS/STATE.md): {state_project_id}")
-            eprint("  Fix: update TASKS/STATE.md or pass QF_ALLOW_PROJECT_ID_MISMATCH=1 for one-time override.")
+            eprint(f"  runtime_state.current_project_id: {state_project_id}")
+            eprint("  Fix: update tools/project_config.json runtime_state or pass QF_ALLOW_PROJECT_ID_MISMATCH=1 for one-time override.")
             raise SystemExit(1)
         return resolved
     if state_project_id:
@@ -173,14 +162,14 @@ def resolve_project_id_for_cmd(explicit_project_id: str, context: str) -> str:
 
 
 
-# learn_tools_06 中文：判断 learn 是否需要输出 JSON 事件流。
+# learn_tools_05 中文：判断 learn 是否需要输出 JSON 事件流。
 def should_emit_json_stream() -> bool:
     value = os.environ.get("QF_EVENT_STREAM", "0").strip().lower()
     return value in {"1", "json", "jsonl"}
 
 
 
-# learn_tools_07 中文：输出 learn 阶段的步骤锚点。
+# learn_tools_06 中文：输出 learn 阶段的步骤锚点。
 def emit_step(index: int, total: int, detail: str) -> None:
     print(f"LEARN_STEP[{index}/{total}]: {detail}")
     if should_emit_json_stream():
@@ -196,7 +185,7 @@ def emit_step(index: int, total: int, detail: str) -> None:
 
 
 
-# learn_tools_08 中文：解析 PROJECT_GUIDE 的北极星主线。
+# learn_tools_07 中文：解析 PROJECT_GUIDE 的北极星主线。
 def parse_north_star(lines: list[str]) -> str:
     for idx, raw in enumerate(lines):
         if raw.strip() != "## 一句话北极星":
@@ -212,7 +201,7 @@ def parse_north_star(lines: list[str]) -> str:
 
 
 
-# learn_tools_09 中文：解析带有 project/run 占位符的动态路径。
+# learn_tools_08 中文：解析带有 project/run 占位符的动态路径。
 def resolve_dynamic_path(raw_path: str, project_id: str, current_run_id: str) -> str:
     path = str(raw_path or "").strip()
     if not path:
@@ -227,7 +216,7 @@ def resolve_dynamic_path(raw_path: str, project_id: str, current_run_id: str) ->
 
 
 
-# learn_tools_10 中文：解析 PROJECT_GUIDE 题库、答案与必查文件结构。
+# learn_tools_09 中文：解析 PROJECT_GUIDE 题库、答案与必查文件结构。
 def parse_project_guide(path: Path, project_id: str, current_run_id: str) -> tuple[str, list[GuideQuestion]]:
     text = read_text(path)
     if not text.strip():
@@ -305,7 +294,7 @@ def parse_project_guide(path: Path, project_id: str, current_run_id: str) -> tup
 
 
 
-# learn_tools_11 中文：解析 learn 的命令行参数与运行配置。
+# learn_tools_10 中文：解析 learn 的命令行参数与运行配置。
 def parse_cli(argv: list[str]) -> dict[str, Any]:
     reasoning_profile = LEARN_REASONING_DEFAULT_PROFILE
     model_name = LEARN_MODEL_NAME
@@ -319,7 +308,7 @@ def parse_cli(argv: list[str]) -> dict[str, Any]:
             continue
         low = token.lower()
         if token.startswith("project_id=") or low.startswith("project_id="):
-            eprint("ERROR: PROJECT_ID is no longer accepted by learn; use TASKS/STATE.md CURRENT_PROJECT_ID or default project-0.")
+            eprint("ERROR: PROJECT_ID is no longer accepted by learn; use tools/project_config.json runtime_state.current_project_id or default quant-factory-os.")
             raise SystemExit(2)
         elif token.startswith("ttl_days=") or low.startswith("ttl_days="):
             eprint("ERROR: TTL_DAYS has been removed from learn.")
@@ -408,7 +397,7 @@ def parse_cli(argv: list[str]) -> dict[str, Any]:
 
 
 
-# learn_tools_12 中文：以日志镜像模式重启 learn 自身。
+# learn_tools_11 中文：以日志镜像模式重启 learn 自身。
 def run_logged_self(project_id: str, cfg: dict[str, Any]) -> int:
     log_file = LEARN_LOG_FILE_TEMPLATE.format(project_id=project_id)
     print(f"LEARN_LOG_FILE: {log_file}")
@@ -446,7 +435,7 @@ def run_logged_self(project_id: str, cfg: dict[str, Any]) -> int:
 
 
 
-# learn_tools_13 中文：生成基础 learn 产物骨架与证据上下文。
+# learn_tools_12 中文：生成基础 learn 产物骨架与证据上下文。
 def build_base_learn(project_id: str, learn_file: Path, learn_md: Path, state: dict[str, str]) -> None:
     north_star, questions = parse_project_guide(Path("docs/PROJECT_GUIDE.md"), project_id, state["current_run_id"])
     required_files = ordered_unique(OWNER_FILES + [path for q in questions for path in q.must_read_files])
