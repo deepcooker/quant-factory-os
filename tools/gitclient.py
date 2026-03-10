@@ -141,25 +141,35 @@ def wait_for_pr_merged(pr_url: str, repo_path: Path) -> dict[str, Any]:
 
 # gitclient 中文：执行 PR 合并闭环；支持 auto merge，但必须确认最终已经真正 MERGED。
 def merge_pr_and_wait(pr_url: str, repo_path: Path, err_desc: str) -> dict[str, Any]:
-    direct_merge_proc = run_cmd(["gh", "pr", "merge", pr_url, "--squash", "--delete-branch"], repo_path)
-    if direct_merge_proc.returncode == 0:
-        wait_result = wait_for_pr_merged(pr_url, repo_path)
-        if wait_result["err_code"] != 0:
-            return wait_result
-        wait_result["data"]["merge_mode"] = "direct"
-        return wait_result
-
-    if not should_queue_auto_merge(direct_merge_proc):
-        return command_err(ERR_GH_COMMAND_FAILED, err_desc, direct_merge_proc)
-
     auto_merge_proc = run_cmd(["gh", "pr", "merge", pr_url, "--auto", "--squash", "--delete-branch"], repo_path)
     if auto_merge_proc.returncode != 0:
         return command_err(ERR_GH_COMMAND_FAILED, err_desc, auto_merge_proc)
 
+    state_result = get_pr_state(pr_url, repo_path)
+    if state_result["err_code"] != 0:
+        return state_result
+    state = str(state_result["data"].get("state", "")).strip()
+    merge_state = str(state_result["data"].get("merge_state_status", "")).strip()
+    if state != "MERGED":
+        if merge_state not in {"CLEAN", "UNKNOWN"}:
+            return err(
+                ERR_GH_COMMAND_FAILED,
+                "PR当前不可合并",
+                {
+                    "pr_url": pr_url,
+                    "state": state,
+                    "merge_state_status": merge_state,
+                    "auto_merge_enabled": state_result["data"].get("auto_merge_enabled", False),
+                },
+            )
+        direct_merge_proc = run_cmd(["gh", "pr", "merge", pr_url, "--squash", "--delete-branch"], repo_path)
+        if direct_merge_proc.returncode != 0:
+            return command_err(ERR_GH_COMMAND_FAILED, err_desc, direct_merge_proc)
+
     wait_result = wait_for_pr_merged(pr_url, repo_path)
     if wait_result["err_code"] != 0:
         return wait_result
-    wait_result["data"]["merge_mode"] = "auto"
+    wait_result["data"]["merge_mode"] = "direct" if state == "MERGED" else "auto"
     return wait_result
 
 
