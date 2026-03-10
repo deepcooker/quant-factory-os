@@ -526,7 +526,7 @@ def init_main(force_new: bool = False) -> None:
 def fork_current_main() -> None:
     log_runtime_state()
     try:
-        baseline_thread_id = require_session_thread_id("learn_session_baseline", "python3 tools/appserverclient.py -learnbaseline")
+        baseline_thread_id = require_session_thread_id("learn_session_baseline", "python3 tools/appserverclient.py --learnbaseline")
     except ValueError as exc:
         raise AppServerError(str(exc))
     client = CodexAppClient()
@@ -671,7 +671,7 @@ def demo() -> None:
 
 if __name__ == "__main__":
     logger = build_logger()
-    if len(sys.argv) > 1 and sys.argv[1] == "-learnbaseline":
+    if len(sys.argv) > 1 and sys.argv[1] in {"--learnbaseline", "--learnbassline"}:
         result = run_learnbaseline(force_new=(len(sys.argv) > 2 and sys.argv[2] == "-new"))
         print(json.dumps(result, ensure_ascii=False))
         if int(result.get("err_code", 1)) != 0:
