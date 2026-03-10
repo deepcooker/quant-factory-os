@@ -1,0 +1,21 @@
+{
+  "required": {
+    "project_id": "your-project-id",
+    "project_root": "/abs/path/to/your-project"
+  },
+  "git": {
+    "remote_url": "https://github.com/your-org/your-project.git",
+    "github_login": "your-github-login"
+  },
+  "runtime_state": {
+    "current_project_id": "your-project-id",
+    "current_run_id": "",
+    "current_task_file": "",
+    "current_status": "",
+    "current_updated_at": ""
+  },
+  "session_registry": {
+    "learn_session_baseline": {},
+    "fork_current_session": {}
+  }
+}
