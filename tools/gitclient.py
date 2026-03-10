@@ -31,6 +31,7 @@ ERR_GH_COMMAND_FAILED = ERR_RUNTIME_BASE + 5
 ERR_INVALID_INPUT = ERR_CONFIG_BASE + 1
 PR_MERGE_WAIT_TIMEOUT_SEC = 180
 PR_MERGE_WAIT_INTERVAL_SEC = 3
+PR_AUTO_MERGE_GRACE_SEC = 20
 
 
 class GitClientError(RuntimeError):
@@ -119,13 +120,33 @@ def get_pr_state(pr_url: str, repo_path: Path) -> dict[str, Any]:
 def wait_for_pr_merged(pr_url: str, repo_path: Path) -> dict[str, Any]:
     deadline = time.time() + PR_MERGE_WAIT_TIMEOUT_SEC
     last_data: dict[str, Any] = {}
+    blocked_since = 0.0
     while time.time() < deadline:
         state_result = get_pr_state(pr_url, repo_path)
         if state_result["err_code"] != 0:
             return state_result
         last_data = state_result["data"]
-        if last_data.get("state") == "MERGED" and last_data.get("merged_at"):
+        state = str(last_data.get("state", "")).strip().upper()
+        merge_state = str(last_data.get("merge_state_status", "")).strip().upper()
+        if state == "MERGED" and last_data.get("merged_at"):
             return ok(last_data)
+        if merge_state in {"DIRTY", "BLOCKED"}:
+            now = time.time()
+            if blocked_since <= 0:
+                blocked_since = now
+            if now - blocked_since >= PR_AUTO_MERGE_GRACE_SEC:
+                return err(
+                    ERR_GH_COMMAND_FAILED,
+                    "PR当前不可合并",
+                    {
+                        "pr_url": pr_url,
+                        "state": last_data.get("state", ""),
+                        "merge_state_status": last_data.get("merge_state_status", ""),
+                        "auto_merge_enabled": last_data.get("auto_merge_enabled", False),
+                    },
+                )
+        else:
+            blocked_since = 0.0
         time.sleep(PR_MERGE_WAIT_INTERVAL_SEC)
     return err(
         ERR_GH_COMMAND_FAILED,
