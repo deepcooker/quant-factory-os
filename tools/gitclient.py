@@ -158,7 +158,13 @@ def run_commit_and_merge(message: str, base_branch: str = "main") -> dict[str, A
     if worktree["err_code"] != 0:
         return worktree
     if not worktree["data"]["dirty"]:
-        return err(ERR_GIT_NO_CHANGES, "当前工作区没有可提交改动")
+        return ok(
+            {
+                "project_id": ctx["project_id"],
+                "status": "no_changes",
+                "message": "当前工作区没有可提交改动",
+            }
+        )
 
     orig_branch_proc = run_cmd(["git", "branch", "--show-current"], repo_path)
     if orig_branch_proc.returncode != 0:
@@ -179,7 +185,13 @@ def run_commit_and_merge(message: str, base_branch: str = "main") -> dict[str, A
         return command_err(ERR_GIT_COMMAND_FAILED, "检查暂存文件失败", staged_proc)
     staged_files = [line for line in staged_proc.stdout.splitlines() if line.strip()]
     if not staged_files:
-        return err(ERR_GIT_NO_CHANGES, "git add 后没有可提交文件")
+        return ok(
+            {
+                "project_id": ctx["project_id"],
+                "status": "no_changes",
+                "message": "git add 后没有可提交文件",
+            }
+        )
 
     commit_proc = run_cmd(["git", "commit", "-m", message], repo_path)
     if commit_proc.returncode != 0:
