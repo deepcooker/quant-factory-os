@@ -148,7 +148,7 @@ def wait_for_pr_merged(pr_url: str, repo_path: Path) -> dict[str, Any]:
         merge_state = str(last_data.get("merge_state_status", "")).strip().upper()
         if state == "MERGED" and last_data.get("merged_at"):
             return ok(last_data)
-        if merge_state in {"DIRTY", "BLOCKED"}:
+        if merge_state == "DIRTY":
             now = time.time()
             if blocked_since <= 0:
                 blocked_since = now
