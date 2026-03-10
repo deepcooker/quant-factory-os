@@ -87,6 +87,12 @@ def command_err(err_code: int, err_desc: str, proc: subprocess.CompletedProcess[
     )
 
 
+# gitclient 中文：判断 gh pr merge 失败是否属于“需要改成 auto merge”的分支策略场景。
+def should_queue_auto_merge(proc: subprocess.CompletedProcess[str]) -> bool:
+    stderr = (proc.stderr or "").lower()
+    return "not mergeable" in stderr and "--auto" in stderr
+
+
 # gitclient 中文：检查当前 git/gh 基本运行前提是否满足。
 def precheck_git() -> dict[str, Any]:
     ctx = load_git_context()
@@ -193,9 +199,28 @@ def run_commit_and_merge(message: str, base_branch: str = "main") -> dict[str, A
         return command_err(ERR_GH_COMMAND_FAILED, "创建PR失败", pr_create_proc)
     pr_url = pr_create_proc.stdout.strip().splitlines()[-1].strip() if pr_create_proc.stdout.strip() else ""
 
+    merge_mode = "direct"
     pr_merge_proc = run_cmd(["gh", "pr", "merge", pr_url, "--squash", "--delete-branch"], repo_path)
     if pr_merge_proc.returncode != 0:
-        return command_err(ERR_GH_COMMAND_FAILED, "合并PR失败", pr_merge_proc)
+        if should_queue_auto_merge(pr_merge_proc):
+            merge_mode = "auto"
+            pr_merge_proc = run_cmd(["gh", "pr", "merge", pr_url, "--auto", "--squash", "--delete-branch"], repo_path)
+        if pr_merge_proc.returncode != 0:
+            return command_err(ERR_GH_COMMAND_FAILED, "合并PR失败", pr_merge_proc)
+
+    if merge_mode == "auto":
+        return ok(
+            {
+                "project_id": ctx["project_id"],
+                "orig_branch": orig_branch,
+                "work_branch": branch_name,
+                "base_branch": base_branch,
+                "staged_files": staged_files,
+                "pr_url": pr_url,
+                "merge_mode": "auto_queued",
+                "sync_main_skipped": True,
+            }
+        )
 
     fetch_proc = run_cmd(["git", "fetch", remote_name], repo_path)
     if fetch_proc.returncode != 0:
@@ -217,6 +242,7 @@ def run_commit_and_merge(message: str, base_branch: str = "main") -> dict[str, A
             "base_branch": base_branch,
             "staged_files": staged_files,
             "pr_url": pr_url,
+            "merge_mode": "direct",
         }
     )
 
@@ -284,9 +310,27 @@ def run_rollback_commit(commit_sha: str, base_branch: str = "main") -> dict[str,
         return command_err(ERR_GH_COMMAND_FAILED, "创建回滚PR失败", pr_create_proc)
     pr_url = pr_create_proc.stdout.strip().splitlines()[-1].strip() if pr_create_proc.stdout.strip() else ""
 
+    merge_mode = "direct"
     pr_merge_proc = run_cmd(["gh", "pr", "merge", pr_url, "--squash", "--delete-branch"], repo_path)
     if pr_merge_proc.returncode != 0:
-        return command_err(ERR_GH_COMMAND_FAILED, "合并回滚PR失败", pr_merge_proc)
+        if should_queue_auto_merge(pr_merge_proc):
+            merge_mode = "auto"
+            pr_merge_proc = run_cmd(["gh", "pr", "merge", pr_url, "--auto", "--squash", "--delete-branch"], repo_path)
+        if pr_merge_proc.returncode != 0:
+            return command_err(ERR_GH_COMMAND_FAILED, "合并回滚PR失败", pr_merge_proc)
+
+    if merge_mode == "auto":
+        return ok(
+            {
+                "project_id": ctx["project_id"],
+                "rollback_commit": commit_sha,
+                "work_branch": branch_name,
+                "base_branch": base_branch,
+                "pr_url": pr_url,
+                "merge_mode": "auto_queued",
+                "sync_main_skipped": True,
+            }
+        )
 
     sync_main_proc = run_cmd(["git", "checkout", base_branch], repo_path)
     if sync_main_proc.returncode != 0:
@@ -303,6 +347,7 @@ def run_rollback_commit(commit_sha: str, base_branch: str = "main") -> dict[str,
             "work_branch": branch_name,
             "base_branch": base_branch,
             "pr_url": pr_url,
+            "merge_mode": "direct",
         }
     )
 
