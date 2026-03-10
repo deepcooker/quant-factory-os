@@ -10,35 +10,35 @@ from pathlib import Path
 
 try:
     from tools.common_helpers import first_line
+    from tools.project_config import (
+        ProjectConfig,
+        RuntimeState,
+        describe_codex_account_config,
+        describe_git_account_config,
+        describe_project_config,
+        describe_runtime_state,
+        get_app_server_session_id,
+        load_project_config,
+        load_runtime_state,
+    )
 except Exception:  # pragma: no cover
     from common_helpers import first_line  # type: ignore
+    from project_config import (  # type: ignore
+        ProjectConfig,
+        RuntimeState,
+        describe_codex_account_config,
+        describe_git_account_config,
+        describe_project_config,
+        describe_runtime_state,
+        get_app_server_session_id,
+        load_project_config,
+        load_runtime_state,
+    )
 
 
 INIT_LOG_FILE = Path("init.log")
-PROJECT_ROOT = Path.cwd()
-print(PROJECT_ROOT)
-PROJECT_ID = "quant-factory-os"
-TOOLS_DIR = PROJECT_ROOT / "tools"
-DOCS_DIR = PROJECT_ROOT / "docs"
-AGENTS_FILE = PROJECT_ROOT / "AGENTS.md"
-PROJECT_GUIDE_FILE = DOCS_DIR / "PROJECT_GUIDE.md"
-GIT_REMOTE_NAME = "origin"
-CODEX_BIN = "codex"
-APP_SERVER_SESSION_ENV_KEYS = ("QF_APP_SERVER_SESSION_ID", "CODEX_APP_SERVER_SESSION_ID", "APP_SERVER_SESSION_ID")
-print(APP_SERVER_SESSION_ENV_KEYS)
-
-
-@dataclass(frozen=True)
-class ProjectConfig:
-    project_id: str
-    project_root: Path
-    tools_dir: Path
-    docs_dir: Path
-    agents_file: Path
-    project_guide_file: Path
-    git_remote_name: str
-    codex_bin: str
-    app_server_session_env_keys: tuple[str, ...]
+LOGGER_NAME = "qf.init"
+logger = logging.getLogger(LOGGER_NAME)
 
 
 @dataclass
@@ -56,6 +56,7 @@ class InitArgs:
 @dataclass
 class InitContext:
     cfg: ProjectConfig
+    runtime_state: RuntimeState
     run_id: str
     task_file: str
     task_status: str
@@ -82,7 +83,6 @@ def init_tools_01_parse_args(argv: list[str]) -> InitArgs:
 
 # init_tools_02 中文：按标准 logging 格式初始化 init 日志器。
 def init_tools_02_build_logger(log_enabled: bool) -> logging.Logger:
-    logger = logging.getLogger("qf.init")
     logger.setLevel(logging.INFO)
     logger.handlers.clear()
     logger.propagate = False
@@ -108,51 +108,25 @@ def init_tools_03_close_logger(logger: logging.Logger) -> None:
 
 
 # init_tools_04 中文：执行直接命令并返回结构化结果。
-def init_tools_04_run_cmd(args: list[str]) -> CmdResult:
-    cp = subprocess.run(args, capture_output=True, text=True, check=False)
+def init_tools_04_run_cmd(args: list[str], cwd: Path | None = None) -> CmdResult:
+    cp = subprocess.run(args, capture_output=True, text=True, check=False, cwd=str(cwd) if cwd else None)
     return CmdResult(rc=int(cp.returncode), stdout=cp.stdout or "", stderr=cp.stderr or "")
 
 
 # init_tools_05 中文：通过 shell 执行命令字符串并返回结构化结果。
-def init_tools_05_run_shell(cmd: str) -> CmdResult:
-    cp = subprocess.run(["bash", "-lc", cmd], capture_output=True, text=True, check=False)
+def init_tools_05_run_shell(cmd: str, cwd: Path | None = None) -> CmdResult:
+    cp = subprocess.run(["bash", "-lc", cmd], capture_output=True, text=True, check=False, cwd=str(cwd) if cwd else None)
     return CmdResult(rc=int(cp.returncode), stdout=cp.stdout or "", stderr=cp.stderr or "")
 
 
-# init_tools_06 中文：根据文件顶部常量组装固定项目配置。
+# init_tools_06 中文：从统一 project_config 入口读取固定项目配置。
 def init_tools_06_load_project_config() -> ProjectConfig:
-    return ProjectConfig(
-        project_id=PROJECT_ID,
-        project_root=PROJECT_ROOT,
-        tools_dir=TOOLS_DIR,
-        docs_dir=DOCS_DIR,
-        agents_file=AGENTS_FILE,
-        project_guide_file=PROJECT_GUIDE_FILE,
-        git_remote_name=GIT_REMOTE_NAME,
-        codex_bin=CODEX_BIN,
-        app_server_session_env_keys=APP_SERVER_SESSION_ENV_KEYS,
-    )
+    return load_project_config()
 
 
-# init_tools_07 中文：从 TASKS/STATE.md 读取当前 run/task/status。
-def init_tools_07_read_current_state(project_root: Path) -> tuple[str, str, str, str]:
-    state_file = project_root / "TASKS/STATE.md"
-    run_id = ""
-    task_file = ""
-    task_status = "active"
-    project_id = ""
-    if not state_file.is_file():
-        return run_id, task_file, task_status, project_id
-    for raw in state_file.read_text(encoding="utf-8", errors="replace").splitlines():
-        if raw.startswith("CURRENT_RUN_ID:"):
-            run_id = raw.split(":", 1)[1].strip()
-        elif raw.startswith("CURRENT_TASK_FILE:"):
-            task_file = raw.split(":", 1)[1].strip()
-        elif raw.startswith("CURRENT_STATUS:"):
-            task_status = raw.split(":", 1)[1].strip() or "active"
-        elif raw.startswith("CURRENT_PROJECT_ID:"):
-            project_id = raw.split(":", 1)[1].strip()
-    return run_id, task_file, task_status, project_id
+# init_tools_07 中文：从统一 project_config 入口读取当前 runtime_state。
+def init_tools_07_read_current_state() -> RuntimeState:
+    return load_runtime_state()
 
 
 # init_tools_08 中文：统一输出单条 init 日志。
@@ -202,25 +176,37 @@ def init_tools_10_finalize_status(context: InitContext, reasons: list[str]) -> t
 def init_step_01_load_context(logger: logging.Logger) -> InitContext:
     init_tools_09_log_step(logger, 1, 5, "获取项目配置信息与当前上下文", "从固定项目常量配置和当前 state 中确定本轮自动化上下文。")
     cfg = init_tools_06_load_project_config()
-    run_id, task_file, task_status, state_project_id = init_tools_07_read_current_state(cfg.project_root)
-    if state_project_id:
-        cfg = ProjectConfig(
-            project_id=state_project_id,
-            project_root=cfg.project_root,
-            tools_dir=cfg.tools_dir,
-            docs_dir=cfg.docs_dir,
-            agents_file=cfg.agents_file,
-            project_guide_file=cfg.project_guide_file,
-            git_remote_name=cfg.git_remote_name,
-            codex_bin=cfg.codex_bin,
-            app_server_session_env_keys=cfg.app_server_session_env_keys,
-        )
+    runtime_state = init_tools_07_read_current_state()
+    run_id = runtime_state.current_run_id
+    task_file = runtime_state.current_task_file
+    task_status = runtime_state.current_status or "active"
+    state_project_id = runtime_state.current_project_id
     init_tools_08_log(logger, f"INIT_PROJECT_ID: {cfg.project_id}")
+    if state_project_id:
+        project_id_status = "match" if state_project_id == cfg.project_id else "mismatch"
+        init_tools_08_log(logger, f"INIT_STATE_PROJECT_ID: {state_project_id}")
+        init_tools_08_log(logger, f"INIT_PROJECT_ID_STATUS: {project_id_status}")
     init_tools_08_log(logger, f"INIT_PROJECT_ROOT: {cfg.project_root}")
     init_tools_08_log(logger, f"INIT_TASK_FILE: {task_file or '(none)'}")
     init_tools_08_log(logger, f"INIT_TASK_STATUS: {task_status}")
     init_tools_08_log(logger, f"INIT_RUN_ID: {run_id or '(none)'}")
-    return InitContext(cfg=cfg, run_id=run_id, task_file=task_file, task_status=task_status)
+    init_tools_08_log(logger, "INIT_PROJECT_CONFIG_START")
+    for line in describe_project_config(cfg):
+        init_tools_08_log(logger, line)
+    init_tools_08_log(logger, "INIT_PROJECT_CONFIG_END")
+    init_tools_08_log(logger, "INIT_RUNTIME_STATE_CONFIG_START")
+    for line in describe_runtime_state(runtime_state):
+        init_tools_08_log(logger, line)
+    init_tools_08_log(logger, "INIT_RUNTIME_STATE_CONFIG_END")
+    init_tools_08_log(logger, "INIT_GIT_ACCOUNT_CONFIG_START")
+    for line in describe_git_account_config(cfg):
+        init_tools_08_log(logger, line)
+    init_tools_08_log(logger, "INIT_GIT_ACCOUNT_CONFIG_END")
+    init_tools_08_log(logger, "INIT_CODEX_ACCOUNT_CONFIG_START")
+    for line in describe_codex_account_config(cfg):
+        init_tools_08_log(logger, line)
+    init_tools_08_log(logger, "INIT_CODEX_ACCOUNT_CONFIG_END")
+    return InitContext(cfg=cfg, runtime_state=runtime_state, run_id=run_id, task_file=task_file, task_status=task_status)
 
 
 # 1002 中文：第二步，检查项目路径和关键 owner docs。
@@ -267,16 +253,16 @@ def init_step_03_check_codex_runtime(context: InitContext, logger: logging.Logge
         if app_server_status != "ok":
             reasons.append("APP_SERVER_UNAVAILABLE")
 
-    session_id = ""
-    for key in context.cfg.app_server_session_env_keys:
-        value = os.environ.get(key, "").strip()
-        if value:
-            session_id = value
-            break
+    session_id = get_app_server_session_id(context.cfg)
+
+    codex_auth_status = "unknown"
+    if codex_available and context.cfg.codex_login_status_command.strip():
+        auth_probe = init_tools_05_run_shell(context.cfg.codex_login_status_command)
+        codex_auth_status = "ready" if auth_probe.rc == 0 else "not_ready"
 
     status["CODEX_CLI_STATUS"] = "ok" if codex_available else "missing"
     status["CODEX_VERSION"] = codex_version
-    status["CODEX_AUTH_STATUS"] = "configured" if os.environ.get("OPENAI_API_KEY", "").strip() else "unknown"
+    status["CODEX_AUTH_STATUS"] = codex_auth_status
     status["APP_SERVER_STATUS"] = app_server_status
     status["APP_SERVER_SESSION_STATUS"] = "present" if session_id else "missing"
     status["APP_SERVER_SESSION_ID"] = session_id or "(none)"
@@ -296,16 +282,16 @@ def init_step_04_check_git_runtime(context: InitContext, logger: logging.Logger)
     status: dict[str, str] = {}
     diff_preview: list[str] = []
 
-    git_available = init_tools_05_run_shell("command -v git >/dev/null 2>&1").rc == 0
+    git_available = init_tools_05_run_shell("command -v git >/dev/null 2>&1", cwd=context.cfg.git_repo_path).rc == 0
     if not git_available:
         reasons.append("GIT_NOT_INSTALLED")
         status["GIT_STATUS"] = "missing"
         return InitStepResult(reasons=reasons, status=status)
 
     status["GIT_STATUS"] = "ok"
-    status["GIT_VERSION"] = first_line(init_tools_04_run_cmd(["git", "--version"]).stdout, "(missing)")
+    status["GIT_VERSION"] = first_line(init_tools_04_run_cmd(["git", "--version"], cwd=context.cfg.git_repo_path).stdout, "(missing)")
 
-    repo_check = init_tools_04_run_cmd(["git", "rev-parse", "--show-toplevel"])
+    repo_check = init_tools_04_run_cmd(["git", "rev-parse", "--show-toplevel"], cwd=context.cfg.git_repo_path)
     repo_ok = repo_check.rc == 0
     status["GIT_REPO_STATUS"] = "ok" if repo_ok else "not_repo"
     if not repo_ok:
@@ -315,20 +301,19 @@ def init_step_04_check_git_runtime(context: InitContext, logger: logging.Logger)
         init_tools_08_log(logger, f"INIT_GIT_REPO_STATUS: {status['GIT_REPO_STATUS']}")
         return InitStepResult(reasons=reasons, status=status)
 
-    branch = first_line(init_tools_04_run_cmd(["git", "rev-parse", "--abbrev-ref", "HEAD"]).stdout, "unknown")
-    remote = first_line(init_tools_04_run_cmd(["git", "remote", "get-url", context.cfg.git_remote_name]).stdout, "(missing)")
+    branch = first_line(init_tools_04_run_cmd(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=context.cfg.git_repo_path).stdout, "unknown")
+    remote = first_line(init_tools_04_run_cmd(["git", "remote", "get-url", context.cfg.git_remote_name], cwd=context.cfg.git_repo_path).stdout, "(missing)")
     remote_ok = remote != "(missing)"
-    gh_installed = init_tools_05_run_shell("command -v gh >/dev/null 2>&1").rc == 0
-    gh_auth_status = "missing"
-    if gh_installed:
-        gh_auth_status = "logged_in" if init_tools_04_run_cmd(["gh", "auth", "status", "-h", "github.com"]).rc == 0 else "not_logged_in"
+    gh_auth_status = "unknown"
+    if context.cfg.git_auth_check_command.strip():
+        gh_auth_status = "logged_in" if init_tools_05_run_shell(context.cfg.git_auth_check_command, cwd=context.cfg.git_repo_path).rc == 0 else "not_logged_in"
 
     connectivity_status = "skipped"
     if remote_ok:
-        probe = init_tools_05_run_shell(f"GIT_TERMINAL_PROMPT=0 git ls-remote --exit-code {context.cfg.git_remote_name} HEAD >/dev/null 2>&1")
+        probe = init_tools_05_run_shell(f"GIT_TERMINAL_PROMPT=0 git ls-remote --exit-code {context.cfg.git_remote_name} HEAD >/dev/null 2>&1", cwd=context.cfg.git_repo_path)
         connectivity_status = "ok" if probe.rc == 0 else "failed"
 
-    git_dir = Path(first_line(init_tools_04_run_cmd(["git", "rev-parse", "--git-dir"]).stdout, ".git"))
+    git_dir = Path(first_line(init_tools_04_run_cmd(["git", "rev-parse", "--git-dir"], cwd=context.cfg.git_repo_path).stdout, ".git"))
     git_operation = "none"
     if (git_dir / "MERGE_HEAD").is_file():
         git_operation = "merge_in_progress"
@@ -339,11 +324,11 @@ def init_step_04_check_git_runtime(context: InitContext, logger: logging.Logger)
     elif (git_dir / "REVERT_HEAD").is_file():
         git_operation = "revert_in_progress"
 
-    worktree_dirty = init_tools_05_run_shell("! git diff --quiet || ! git diff --cached --quiet || [[ -n \"$(git ls-files --others --exclude-standard)\" ]]").rc == 0
-    staged_count = first_line(init_tools_05_run_shell("git diff --cached --name-only | wc -l | tr -d '[:space:]'").stdout, "0")
-    unstaged_count = first_line(init_tools_05_run_shell("git diff --name-only | wc -l | tr -d '[:space:]'").stdout, "0")
-    untracked_count = first_line(init_tools_05_run_shell("git ls-files --others --exclude-standard | wc -l | tr -d '[:space:]'").stdout, "0")
-    diff_preview = [line for line in init_tools_05_run_shell("git status --short | head -n 20").stdout.splitlines() if line.strip()]
+    worktree_dirty = init_tools_05_run_shell("! git diff --quiet || ! git diff --cached --quiet || [[ -n \"$(git ls-files --others --exclude-standard)\" ]]", cwd=context.cfg.git_repo_path).rc == 0
+    staged_count = first_line(init_tools_05_run_shell("git diff --cached --name-only | wc -l | tr -d '[:space:]'", cwd=context.cfg.git_repo_path).stdout, "0")
+    unstaged_count = first_line(init_tools_05_run_shell("git diff --name-only | wc -l | tr -d '[:space:]'", cwd=context.cfg.git_repo_path).stdout, "0")
+    untracked_count = first_line(init_tools_05_run_shell("git ls-files --others --exclude-standard | wc -l | tr -d '[:space:]'", cwd=context.cfg.git_repo_path).stdout, "0")
+    diff_preview = [line for line in init_tools_05_run_shell("git status --short | head -n 20", cwd=context.cfg.git_repo_path).stdout.splitlines() if line.strip()]
 
     if not remote_ok:
         reasons.append("GIT_REMOTE_MISSING")

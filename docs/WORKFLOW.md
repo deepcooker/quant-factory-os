@@ -98,7 +98,8 @@ project
 
 输入：
 - 当前项目根目录
-- `TASKS/STATE.md`
+- `tools/project_config.json -> runtime_state`
+- `TASKS/STATE.md` 镜像输出（兼容观察）
 - owner docs
 - Codex / app-server 运行前提
 - git 仓库 / 远端 / 账号 / 工作区状态
@@ -156,7 +157,7 @@ project
 - `AGENTS.md`
 - `docs/WORKFLOW.md`
 - 由 `PROJECT_GUIDE` 引导出的必查文件
-- 当前 `TASKS/STATE.md`
+- 当前 `tools/project_config.json -> runtime_state`
 - 当前 run evidence（若存在）
 
 输出：
@@ -215,7 +216,7 @@ project
 - 给当前 run/task 出开工许可
 
 输入：
-- `TASKS/STATE.md`
+- `tools/project_config.json -> runtime_state`
 - 当前 task 合同
 - `learn/<project_id>.json`
 - 必要时当前 run evidence
@@ -522,7 +523,7 @@ project
 - 或明确终止
 
 输出：
-- `TASKS/STATE.md` 指针更新
+- `tools/project_config.json -> runtime_state` 更新，并镜像到 `TASKS/STATE.md`
 - `decision.md` 记录 stop reason
 
 ## 8. Readiness Completion

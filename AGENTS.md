@@ -12,7 +12,7 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 ## 1) Entry Rule: Task + Run are mandatory
 - All implementation starts from `TASKS/TASK-*.md`.
 - If user did not give a task, pick next unchecked item in `TASKS/QUEUE.md` and create/select a task first.
-- Never edit code/docs without active `TASK_ID` + `RUN_ID` from `TASKS/STATE.md`.
+- Never edit code/docs without active `TASK_ID` + `RUN_ID` from `tools/project_config.json -> runtime_state` (mirrored to `TASKS/STATE.md`).
 
 ## 2) Core onboarding principle (mainline anchor)
 - Session startup is anchored by:
@@ -32,7 +32,7 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 - Entity dictionary: `docs/ENTITIES.md`
 - Codex CLI operations: `CODEX_CLI_PLAYBOOK.md`
 - Codex CLI source audit: `CODEX_CLI_SOURCE_AUDIT.md`
-- Current active pointers: `TASKS/STATE.md`
+- Current active pointers: `tools/project_config.json -> runtime_state` (mirrored to `TASKS/STATE.md`)
 - Queue intent: `TASKS/QUEUE.md`
 - Run evidence: `reports/<RUN_ID>/`
 
@@ -192,7 +192,7 @@ If process/rule/tool behavior changes in a run, update in the same run:
 - `CODEX_CLI_PLAYBOOK.md` (if CLI usage/flags changed)
 - `CODEX_CLI_SOURCE_AUDIT.md` (if CLI behavior/evidence baseline changed)
 - `docs/PROJECT_GUIDE.md` (if learning/Q&A anchor changed)
-- `TASKS/STATE.md` (if active pointers changed)
+- `tools/project_config.json` (if active pointers changed; `TASKS/STATE.md` is mirrored output)
 - `reports/<RUN_ID>/summary.md` and `reports/<RUN_ID>/decision.md`
 
 No doc update, no ship.

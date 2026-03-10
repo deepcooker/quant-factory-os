@@ -9,6 +9,10 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
+cfg_get() {
+  python3 "${repo_root}/tools/project_config.py" --get "$1" 2>/dev/null || true
+}
+
 if [[ ! -d "TASKS" ]]; then
   echo "❌ 找不到 TASKS/ 目录（请先创建或同步）"
   exit 1
@@ -92,10 +96,7 @@ task_plan_generate() {
     printf '%s\t%s\t%s\t%s\n' "$title" "$goal" "$scope" "$acceptance" >> "$suggestions_tmp"
   }
 
-  state_run_id=""
-  if [[ -f "$state_file" ]]; then
-    state_run_id="$(awk -F':' '/^[[:space:]]*CURRENT_RUN_ID:[[:space:]]*/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}' "$state_file" || true)"
-  fi
+  state_run_id="$(cfg_get "runtime.current_run_id")"
   contract_file="${TASK_PLAN_CONTRACT_FILE:-}"
   if [[ -z "$contract_file" && -n "$state_run_id" ]]; then
     contract_file="${reports_dir}/${state_run_id}/direction_contract.json"
@@ -169,16 +170,16 @@ PY
       add_suggestion \
         "risk guardrail: recurring risk/rollback from decisions" \
         "Aggregate recurring risk/rollback signals in recent decisions and add one preventive guardrail task." \
-        "\`TASKS/STATE.md\`, \`tests/\`, \`reports/{RUN_ID}/\`" \
+        "\`tools/project_config.json\`, \`tests/\`, \`reports/{RUN_ID}/\`" \
         "[ ] Guardrail task is queue-ready;[ ] make verify"
     fi
   done < "$decision_tmp"
 
   if [[ -f "$state_file" ]] && awk 'BEGIN{IGNORECASE=1; found=0} /risk|todo|next|block|pending/ {found=1} END{exit(found?0:1)}' "$state_file"; then
     add_suggestion \
-      "state cleanup: convert open state risks into queued tasks" \
-      "Extract open risks/todos from ${state_file} and queue the top actionable item." \
-      "\`TASKS/STATE.md\`, \`TASKS/QUEUE.md\`, \`reports/{RUN_ID}/\`" \
+      "state cleanup: convert open runtime risks into queued tasks" \
+      "Extract open risks/todos from runtime_state mirror ${state_file} and queue the top actionable item." \
+      "\`tools/project_config.json\`, \`TASKS/QUEUE.md\`, \`reports/{RUN_ID}/\`" \
       "[ ] One state-driven task queued;[ ] make verify"
   fi
 
@@ -211,10 +212,10 @@ PY
     "\`tests/\`, \`tools/\`" \
     "[ ] New regression test fails-before/passes-after;[ ] make verify"
   add_suggestion \
-    "state snapshot: refresh TASKS/STATE.md with current blockers" \
-    "Refresh current risks/blockers and next-shot ordering in state snapshot." \
-    "\`TASKS/STATE.md\`, \`reports/{RUN_ID}/decision.md\`" \
-    "[ ] State snapshot aligns with latest decisions;[ ] make verify"
+    "state snapshot: refresh runtime_state with current blockers" \
+    "Refresh current risks/blockers and next-shot ordering in runtime_state and its TASKS/STATE.md mirror." \
+    "\`tools/project_config.json\`, \`reports/{RUN_ID}/decision.md\`" \
+    "[ ] runtime_state aligns with latest decisions;[ ] make verify"
   add_suggestion \
     "docs sync: align WORKFLOW with current task/ship behavior" \
     "Update workflow docs to match current task pickup and ship expectations." \
@@ -321,17 +322,7 @@ bootstrap_next_task() {
 
   local block title_line title goal scope_text acceptance_block
   local current_run_id selection block_start_line
-  current_run_id=""
-  if [[ -f "$state_file" ]]; then
-    current_run_id="$(awk -F':' '
-      /^[[:space:]]*CURRENT_RUN_ID:[[:space:]]*/ {
-        value=$2
-        gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
-        print value
-        exit
-      }
-    ' "$state_file" || true)"
-  fi
+  current_run_id="$(cfg_get "runtime.current_run_id")"
 
   selection="$(awk -v target="$current_run_id" '
     function flush_block() {

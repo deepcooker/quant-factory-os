@@ -13,12 +13,17 @@ QF_RETRY_BASE_SEC="${QF_RETRY_BASE_SEC:-1}"
 RETRY_OUTPUT=""
 RETRY_LAST_ERROR=""
 STATE_FILE="${QF_STATE_FILE:-TASKS/STATE.md}"
-DEFAULT_PROJECT_ID="${QF_DEFAULT_PROJECT_ID:-project-0}"
+DEFAULT_PROJECT_ID="${QF_DEFAULT_PROJECT_ID:-quant-factory-os}"
 REQUIRED_READY_FILE=""
 DIRECTION_CHOICE_FILE=""
 COUNCIL_FILE=""
 EXECUTION_CONTRACT_FILE=""
 SLICE_STATE_FILE=""
+
+cfg_get() {
+  local key="${1:-}"
+  python3 tools/project_config.py --get "$key"
+}
 
 usage() {
   cat <<'EOF'
@@ -46,7 +51,7 @@ Usage:
   bash tools/legacy.sh stash-clean [preview|apply] [KEEP=<n>]
 
 Global optional:
-  PROJECT_ID=<project-id>   # defaults to TASKS/STATE.md CURRENT_PROJECT_ID or project-0
+  PROJECT_ID=<project-id>   # defaults to tools/project_config.json runtime_state.current_project_id or quant-factory-os
 EOF
 }
 
@@ -210,6 +215,18 @@ append_conversation_checkpoint() {
 
 state_field_value() {
   local key="$1"
+  local runtime_key=""
+  case "$key" in
+    CURRENT_PROJECT_ID) runtime_key="runtime.current_project_id" ;;
+    CURRENT_RUN_ID) runtime_key="runtime.current_run_id" ;;
+    CURRENT_TASK_FILE) runtime_key="runtime.current_task_file" ;;
+    CURRENT_STATUS) runtime_key="runtime.current_status" ;;
+    CURRENT_UPDATED_AT) runtime_key="runtime.current_updated_at" ;;
+  esac
+  if [[ -n "$runtime_key" ]]; then
+    cfg_get "$runtime_key"
+    return 0
+  fi
   local py_bin=""
   if [[ ! -f "$STATE_FILE" ]]; then
     printf ""
@@ -291,8 +308,8 @@ resolve_project_id_for_cmd() {
     if [[ -n "$state_project_id" && "$resolved" != "$state_project_id" && "${QF_ALLOW_PROJECT_ID_MISMATCH:-0}" != "1" ]]; then
       echo "ERROR: ${context} project-id mismatch." >&2
       echo "  explicit: ${resolved}" >&2
-      echo "  CURRENT_PROJECT_ID (TASKS/STATE.md): ${state_project_id}" >&2
-      echo "  Fix: update TASKS/STATE.md or pass QF_ALLOW_PROJECT_ID_MISMATCH=1 for one-time override." >&2
+      echo "  runtime_state.current_project_id: ${state_project_id}" >&2
+      echo "  Fix: update tools/project_config.json runtime_state or pass QF_ALLOW_PROJECT_ID_MISMATCH=1 for one-time override." >&2
       return 1
     fi
     printf "%s" "$resolved"
@@ -354,8 +371,8 @@ resolve_run_id_for_cmd() {
     if [[ -n "$state_run_id" && "$explicit_run_id" != "$state_run_id" && "${QF_ALLOW_RUN_ID_MISMATCH:-0}" != "1" ]]; then
       echo "ERROR: ${context} run-id mismatch." >&2
       echo "  explicit: ${explicit_run_id}" >&2
-      echo "  CURRENT_RUN_ID (TASKS/STATE.md): ${state_run_id}" >&2
-      echo "  Fix: update TASKS/STATE.md or pass QF_ALLOW_RUN_ID_MISMATCH=1 for one-time override." >&2
+      echo "  runtime_state.current_run_id: ${state_run_id}" >&2
+      echo "  Fix: update tools/project_config.json runtime_state or pass QF_ALLOW_RUN_ID_MISMATCH=1 for one-time override." >&2
       return 1
     fi
     printf "%s" "$explicit_run_id"
@@ -401,49 +418,7 @@ update_state_current() {
     project_id="$(state_field_value "CURRENT_PROJECT_ID")"
   fi
   project_id="$(normalize_project_id "$project_id")"
-
-  "$py_bin" - <<'PY' "$STATE_FILE" "$run_id" "$task_file" "$status" "$project_id"
-import re
-import sys
-from datetime import datetime, timezone
-from pathlib import Path
-
-state_file, run_id, task_file, status, project_id = sys.argv[1:]
-path = Path(state_file)
-if path.exists():
-    lines = path.read_text(encoding="utf-8").splitlines()
-else:
-    lines = ["# STATE", ""]
-
-keys = {"CURRENT_PROJECT_ID", "CURRENT_RUN_ID", "CURRENT_TASK_FILE", "CURRENT_STATUS", "CURRENT_UPDATED_AT"}
-filtered = []
-for line in lines:
-    matched = False
-    for key in keys:
-        if re.match(rf"^\s*{re.escape(key)}\s*:", line):
-            matched = True
-            break
-    if not matched:
-        filtered.append(line)
-
-insert_idx = 0
-if filtered and filtered[0].startswith("#"):
-    insert_idx = 1
-    if len(filtered) > 1 and filtered[1].strip() == "":
-        insert_idx = 2
-
-meta = [
-    f"CURRENT_PROJECT_ID: {project_id}",
-    f"CURRENT_RUN_ID: {run_id}",
-    f"CURRENT_TASK_FILE: {task_file}",
-    f"CURRENT_STATUS: {status}",
-    f"CURRENT_UPDATED_AT: {datetime.now(timezone.utc).replace(microsecond=0).isoformat()}",
-    "",
-]
-out = filtered[:insert_idx] + meta + filtered[insert_idx:]
-path.parent.mkdir(parents=True, exist_ok=True)
-path.write_text("\n".join(out).rstrip() + "\n", encoding="utf-8")
-PY
+  "$py_bin" tools/project_config.py --set-runtime "$project_id" "$run_id" "$task_file" "$status"
 }
 
 run_with_retry_capture() {
@@ -542,7 +517,7 @@ cmd_onboard() {
     echo
     echo "## 工作流入口"
     echo "- docs/WORKFLOW.md"
-    echo "- TASKS/STATE.md"
+    echo "- tools/project_config.json -> runtime_state"
     echo "- TASKS/QUEUE.md"
     echo
     echo "## 强制复述模板入口"
@@ -1069,7 +1044,7 @@ cmd_sync() {
 
   run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "sync")"
   if [[ -z "$run_id" ]]; then
-    echo "ERROR: sync requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    echo "ERROR: sync requires RUN_ID (explicit or tools/project_config.json runtime_state.current_run_id)." >&2
     exit 2
   fi
   project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "sync")"
@@ -1235,7 +1210,7 @@ def learn_marker_matches_project(path: Path, expected_project_id: str) -> bool:
         return False
     if not data.get("learn_passed"):
         return False
-    pid = str(data.get("project_id") or "").strip() or "project-0"
+    pid = str(data.get("project_id") or "").strip() or "quant-factory-os"
     return pid == expected_project_id
 
 learn_new_path = Path(f"learn/{state_project_id}.json")
@@ -2541,7 +2516,7 @@ cmd_ready() {
 
   run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "ready")"
   if [[ -z "$run_id" ]]; then
-    echo "ERROR: ready requires RUN_ID (from explicit arg/env or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    echo "ERROR: ready requires RUN_ID (from explicit arg/env or tools/project_config.json runtime_state.current_run_id)." >&2
     echo "Usage: python3 tools/ready.py [RUN_ID=<run-id>] [DECISION=resume-close|abandon-new]" >&2
     exit 2
   fi
@@ -2956,7 +2931,7 @@ cmd_orient() {
 
   run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "orient")"
   if [[ -z "$run_id" ]]; then
-    echo "ERROR: orient requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    echo "ERROR: orient requires RUN_ID (explicit or tools/project_config.json runtime_state.current_run_id)." >&2
     exit 2
   fi
   project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "orient")"
@@ -3035,7 +3010,7 @@ cmd_choose() {
 
   run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "choose")"
   if [[ -z "$run_id" ]]; then
-    echo "ERROR: choose requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    echo "ERROR: choose requires RUN_ID (explicit or tools/project_config.json runtime_state.current_run_id)." >&2
     exit 2
   fi
   project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "choose")"
@@ -3281,7 +3256,7 @@ cmd_council() {
 
   run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "council")"
   if [[ -z "$run_id" ]]; then
-    echo "ERROR: council requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    echo "ERROR: council requires RUN_ID (explicit or tools/project_config.json runtime_state.current_run_id)." >&2
     exit 2
   fi
   project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "council")"
@@ -3655,7 +3630,7 @@ cmd_arbiter() {
 
   run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "arbiter")"
   if [[ -z "$run_id" ]]; then
-    echo "ERROR: arbiter requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    echo "ERROR: arbiter requires RUN_ID (explicit or tools/project_config.json runtime_state.current_run_id)." >&2
     exit 2
   fi
   project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "arbiter")"
@@ -3947,7 +3922,7 @@ cmd_slice() {
 
   run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "slice")"
   if [[ -z "$run_id" ]]; then
-    echo "ERROR: slice requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    echo "ERROR: slice requires RUN_ID (explicit or tools/project_config.json runtime_state.current_run_id)." >&2
     exit 2
   fi
   project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "slice")"
@@ -4166,7 +4141,7 @@ cmd_execute() {
 
   run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "execute")"
   if [[ -z "$run_id" ]]; then
-    echo "ERROR: execute requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    echo "ERROR: execute requires RUN_ID (explicit or tools/project_config.json runtime_state.current_run_id)." >&2
     exit 2
   fi
   project_id="$(resolve_project_id_for_cmd "$explicit_project_id" "execute")"
@@ -4369,7 +4344,7 @@ cmd_review() {
 
   run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "review")"
   if [[ -z "$run_id" ]]; then
-    echo "ERROR: review requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    echo "ERROR: review requires RUN_ID (explicit or tools/project_config.json runtime_state.current_run_id)." >&2
     exit 2
   fi
 
@@ -4712,7 +4687,7 @@ cmd_snapshot() {
 
   run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "snapshot")"
   if [[ -z "$run_id" ]]; then
-    echo "ERROR: snapshot requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    echo "ERROR: snapshot requires RUN_ID (explicit or tools/project_config.json runtime_state.current_run_id)." >&2
     exit 2
   fi
 
@@ -4771,7 +4746,7 @@ cmd_handoff() {
 
   run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "handoff")"
   if [[ -z "$run_id" ]]; then
-    echo "ERROR: handoff requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    echo "ERROR: handoff requires RUN_ID (explicit or tools/project_config.json runtime_state.current_run_id)." >&2
     exit 2
   fi
 
@@ -5938,9 +5913,9 @@ text = f"""## 问答 1：项目使命、背景、目标、最终结果、开发�
 - 证据文件路径：`docs/WORKFLOW.md`、`docs/PROJECT_GUIDE.md`、`AGENTS.md`
 
 ## 问答 7：未完成任务与最新讨论批次是什么，如何查询
-- 回答：通过 `TASKS/STATE.md` 看当前 run/task，通过 `TASKS/QUEUE.md` 看未完成项，通过 `reports/<RUN_ID>/` 与 `chatlogs/discussion/<RUN_ID>/` 看最新批次讨论。
+- 回答：通过 `tools/project_config.json -> runtime_state` 看当前 run/task，通过 `TASKS/QUEUE.md` 看未完成项，通过 `reports/<RUN_ID>/` 与 `chatlogs/discussion/<RUN_ID>/` 看最新批次讨论；`TASKS/STATE.md` 只是镜像输出。
 - 操作指南路径：`docs/WORKFLOW.md#Codex-session-startup-checklist`
-- 证据文件路径：`TASKS/STATE.md`、`TASKS/QUEUE.md`、`reports/{run_id}/conversation.md`
+- 证据文件路径：`tools/project_config.json`、`TASKS/QUEUE.md`、`reports/{run_id}/conversation.md`
 
 ## 问答 8：最近 session 说了什么，从哪里查，如何追溯源文件，是否偏离主线
 - 回答：先看 summary/decision/conversation，再回看具体产物文件与脚本。当前主线是强化 learn 同频和自动化编排，不应偏离到无关细节。
@@ -5962,7 +5937,7 @@ text = f"""## 问答 1：项目使命、背景、目标、最终结果、开发�
 ## 问答 11：task / pr / run / project 等概念与生命周期管理
 - 回答：task 是合同，run 是证据命名空间，pr 是交付单元，project 是上层项目命名空间；生命周期由 STATE/QUEUE 与 reports 协同推进。
 - 流程入口与操作指南：`docs/ENTITIES.md`、`docs/WORKFLOW.md`
-- 证据文件路径：`docs/ENTITIES.md`、`TASKS/STATE.md`
+- 证据文件路径：`docs/ENTITIES.md`、`tools/project_config.json`
 
 ## 问答 12：准备工作完成后，需求方向讨论从哪一步开始，如何保存与多角色协作
 - 回答：从 orient 开始；方向保存于 `chatlogs/discussion/<RUN_ID>/orient.*` 与 `reports/<RUN_ID>/orient_choice.json`；多角色通过 council/arbiter 收敛。
@@ -5996,7 +5971,7 @@ text = f"""## 问答 1：项目使命、背景、目标、最终结果、开发�
 - 判断：不偏离，当前最重要任务就是强化 learn 同频与考试标准化。
 - 原因：这是所有后续自动化与多角色博弈质量的前置条件。
 - 下一步唯一命令：`python3 tools/learn.py`
-- 证据文件路径：`TASKS/STATE.md`、`reports/{run_id}/conversation.md`
+- 证据文件路径：`tools/project_config.json`、`reports/{run_id}/conversation.md`
 """
 
 path = Path(answer_file)
@@ -6046,7 +6021,7 @@ cmd_exam() {
 
   run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "exam")"
   if [[ -z "$run_id" ]]; then
-    echo "ERROR: exam requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    echo "ERROR: exam requires RUN_ID (explicit or tools/project_config.json runtime_state.current_run_id)." >&2
     exit 2
   fi
 
@@ -6135,7 +6110,7 @@ cmd_exam_auto() {
 
   run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "exam-auto")"
   if [[ -z "$run_id" ]]; then
-    echo "ERROR: exam-auto requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)." >&2
+    echo "ERROR: exam-auto requires RUN_ID (explicit or tools/project_config.json runtime_state.current_run_id)." >&2
     exit 2
   fi
 
@@ -6259,7 +6234,7 @@ cmd_resume() {
   fi
   run_id="$(resolve_run_id_for_cmd "$explicit_run_id" "resume")"
   if [[ -z "$run_id" ]]; then
-    echo "ERROR: resume requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID)."
+    echo "ERROR: resume requires RUN_ID (explicit or tools/project_config.json runtime_state.current_run_id)."
     usage
     exit 2
   fi

@@ -13,12 +13,15 @@ try:
     from tools.common_helpers import dedup_acceptance
 except Exception:  # pragma: no cover
     from common_helpers import dedup_acceptance  # type: ignore
+try:
+    from tools.project_config import load_runtime_state
+except Exception:  # pragma: no cover
+    from project_config import load_runtime_state  # type: ignore
 from ready import (
     append_conversation_checkpoint,
     append_execution_event,
     resolve_project_id_for_cmd,
     resolve_run_id_for_cmd,
-    state_field_value,
     update_state_current,
 )
 
@@ -122,7 +125,7 @@ def slice_step_01_resolve_context(argv: list[str]) -> SliceContext:
     args = parse_args(argv)
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "slice")
     if not run_id:
-        print("ERROR: slice requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID).", file=sys.stderr)
+        print("ERROR: slice requires RUN_ID (explicit or tools/project_config.json runtime_state.current_run_id).", file=sys.stderr)
         raise SystemExit(2)
     project_id = resolve_project_id_for_cmd(args["explicit_project_id"], "slice")
 
@@ -240,8 +243,9 @@ def slice_step_02_build_queue(context: SliceContext) -> tuple[SliceContext, int,
 
 # 8003 中文：第三步，记录 slice 证据并打印结果。
 def slice_step_03_finalize(context: SliceContext, tasks_total: int, inserted: int, existing: int) -> int:
-    task_file = state_field_value("CURRENT_TASK_FILE")
-    current_status = state_field_value("CURRENT_STATUS") or "active"
+    runtime_state = load_runtime_state()
+    task_file = runtime_state.current_task_file
+    current_status = runtime_state.current_status or "active"
     append_execution_event(
         context.run_id,
         "slice",

@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+cfg_get() {
+  python3 tools/project_config.py --get "$1"
+}
+
+repo_path="$(cfg_get git.repo_path)"
+remote_name="$(cfg_get git.remote_name)"
+remote_url_https="$(cfg_get git.remote_url_https)"
+remote_url_ssh="$(cfg_get git.remote_url_ssh)"
+git_auth_check_command="$(cfg_get git.auth_check_command)"
+
+cd "$repo_path"
+
 echo "== doctor: repo =="
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "❌ 不在 git 仓库内"; exit 1; }
 echo "✅ git repo: $(basename "$(git rev-parse --show-toplevel)")"
@@ -8,18 +20,20 @@ echo "branch: $(git branch --show-current)"
 
 echo
 echo "== doctor: remote =="
-remote_url="$(git remote get-url origin 2>/dev/null || true)"
+remote_url="$(git remote get-url "$remote_name" 2>/dev/null || true)"
 if [[ -z "$remote_url" ]]; then
-  echo "❌ 没有 origin remote"
+  echo "❌ 没有 ${remote_name} remote"
 else
-  echo "origin: $remote_url"
+  echo "${remote_name}: $remote_url"
 fi
+echo "配置 HTTPS: ${remote_url_https:-'(未配置)'}"
+echo "配置 SSH: ${remote_url_ssh:-'(未配置)'}"
 
 echo
 echo "== doctor: gh =="
 if command -v gh >/dev/null 2>&1; then
   echo "✅ gh: $(gh --version | head -n1)"
-  if gh auth status -h github.com >/dev/null 2>&1; then
+  if bash -lc "$git_auth_check_command" >/dev/null 2>&1; then
     echo "✅ gh 已登录 github.com"
   else
     echo "❌ gh 未登录"

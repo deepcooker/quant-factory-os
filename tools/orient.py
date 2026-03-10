@@ -13,13 +13,16 @@ try:
     from tools.common_helpers import read_json, short_text, split_scope
 except Exception:  # pragma: no cover
     from common_helpers import read_json, short_text, split_scope  # type: ignore
+try:
+    from tools.project_config import load_runtime_state
+except Exception:  # pragma: no cover
+    from project_config import load_runtime_state  # type: ignore
 from ready import (
     append_conversation_checkpoint,
     append_execution_event,
     read_text,
     resolve_project_id_for_cmd,
     resolve_run_id_for_cmd,
-    state_field_value,
     update_state_current,
 )
 
@@ -59,7 +62,15 @@ def generate_orient_draft(run_id: str, project_id: str, task_file: str, orient_f
     ready_obj = read_json(f"reports/{run_id}/ready.json")
     summary_text = read_text(f"reports/{run_id}/summary.md")
     decision_text = read_text(f"reports/{run_id}/decision.md")
-    state_text = read_text("TASKS/STATE.md")
+    runtime_state = load_runtime_state()
+    state_text = "\n".join(
+        [
+            f"CURRENT_PROJECT_ID: {runtime_state.current_project_id}",
+            f"CURRENT_RUN_ID: {runtime_state.current_run_id}",
+            f"CURRENT_TASK_FILE: {runtime_state.current_task_file}",
+            f"CURRENT_STATUS: {runtime_state.current_status}",
+        ]
+    )
     queue_text = read_text("TASKS/QUEUE.md")
     learn_obj = read_json(f"learn/{project_id}.json")
 
@@ -161,7 +172,7 @@ def generate_orient_draft(run_id: str, project_id: str, task_file: str, orient_f
         "open_queue_items": open_items,
         "inputs": [
             "reports/<RUN_ID>/ready.json",
-            "TASKS/STATE.md",
+            "tools/project_config.json -> runtime_state",
             "TASKS/QUEUE.md",
             "reports/<RUN_ID>/summary.md",
             "reports/<RUN_ID>/decision.md",
@@ -210,11 +221,12 @@ def orient_step_01_resolve_context(argv: list[str]) -> OrientContext:
     args = parse_args(argv)
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "orient")
     if not run_id:
-        print("ERROR: orient requires RUN_ID (explicit or TASKS/STATE.md CURRENT_RUN_ID).", file=sys.stderr)
+        print("ERROR: orient requires RUN_ID (explicit or tools/project_config.json runtime_state.current_run_id).", file=sys.stderr)
         raise SystemExit(2)
     project_id = resolve_project_id_for_cmd(args["explicit_project_id"], "orient")
-    task_file = state_field_value("CURRENT_TASK_FILE")
-    current_status = state_field_value("CURRENT_STATUS") or "active"
+    runtime_state = load_runtime_state()
+    task_file = runtime_state.current_task_file
+    current_status = runtime_state.current_status or "active"
     orient_file = f"chatlogs/discussion/{run_id}/orient.json"
     orient_md = f"chatlogs/discussion/{run_id}/orient.md"
     Path(f"chatlogs/discussion/{run_id}").mkdir(parents=True, exist_ok=True)

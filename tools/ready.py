@@ -17,9 +17,14 @@ try:
 except Exception:  # pragma: no cover
     from common_helpers import file_sha, parse_bool_flag, read_json, read_text  # type: ignore
 
+try:
+    from tools.project_config import load_project_config, load_runtime_state, update_runtime_state
+except Exception:  # pragma: no cover
+    from project_config import load_project_config, load_runtime_state, update_runtime_state  # type: ignore
 
-STATE_FILE = Path(os.environ.get("QF_STATE_FILE", "TASKS/STATE.md"))
-DEFAULT_PROJECT_ID = os.environ.get("QF_DEFAULT_PROJECT_ID", "project-0")
+
+PROJECT_CONFIG = load_project_config()
+DEFAULT_PROJECT_ID = PROJECT_CONFIG.project_id
 
 
 @dataclass
@@ -95,21 +100,6 @@ def run_shell(cmd: str) -> subprocess.CompletedProcess[str]:
     return run_cmd(["bash", "-lc", cmd])
 
 
-# ready_tools_07 中文：从 TASKS/STATE.md 读取指定字段值。
-def state_field_value(key: str) -> str:
-    if not STATE_FILE.is_file():
-        return ""
-    pat = re.compile(rf"^\s*{re.escape(key)}:\s*(.*?)\s*$")
-    try:
-        for line in STATE_FILE.read_text(encoding="utf-8", errors="replace").splitlines():
-            m = pat.match(line)
-            if m:
-                return m.group(1)
-    except Exception:
-        return ""
-    return ""
-
-
 # ready_tools_08 中文：规范化 project_id。
 def normalize_project_id(value: str | None) -> str:
     v = (value or "").strip()
@@ -118,12 +108,12 @@ def normalize_project_id(value: str | None) -> str:
 
 # ready_tools_09 中文：读取当前 active project_id。
 def resolve_state_current_project_id() -> str:
-    return normalize_project_id(state_field_value("CURRENT_PROJECT_ID"))
+    return normalize_project_id(load_runtime_state().current_project_id or DEFAULT_PROJECT_ID)
 
 
 # ready_tools_10 中文：读取当前 active run_id。
 def resolve_state_current_run_id() -> str:
-    return state_field_value("CURRENT_RUN_ID").strip()
+    return load_runtime_state().current_run_id.strip()
 
 
 # ready_tools_11 中文：在没有显式 run_id 时回退到最近的报告目录。
@@ -155,8 +145,8 @@ def resolve_run_id_for_cmd(explicit_run_id: str, context: str) -> str:
         if state_run_id and explicit_run_id != state_run_id and os.environ.get("QF_ALLOW_RUN_ID_MISMATCH", "0") != "1":
             eprint(f"ERROR: {context} run-id mismatch.")
             eprint(f"  explicit: {explicit_run_id}")
-            eprint(f"  CURRENT_RUN_ID (TASKS/STATE.md): {state_run_id}")
-            eprint("  Fix: update TASKS/STATE.md or pass QF_ALLOW_RUN_ID_MISMATCH=1 for one-time override.")
+            eprint(f"  runtime_state.current_run_id: {state_run_id}")
+            eprint("  Fix: update tools/project_config.json runtime_state or pass QF_ALLOW_RUN_ID_MISMATCH=1 for one-time override.")
             raise SystemExit(1)
         return explicit_run_id
     if state_run_id:
@@ -177,8 +167,8 @@ def resolve_project_id_for_cmd(explicit_project_id: str, context: str) -> str:
         if state_project_id and resolved != state_project_id and os.environ.get("QF_ALLOW_PROJECT_ID_MISMATCH", "0") != "1":
             eprint(f"ERROR: {context} project-id mismatch.")
             eprint(f"  explicit: {resolved}")
-            eprint(f"  CURRENT_PROJECT_ID (TASKS/STATE.md): {state_project_id}")
-            eprint("  Fix: update TASKS/STATE.md or pass QF_ALLOW_PROJECT_ID_MISMATCH=1 for one-time override.")
+            eprint(f"  runtime_state.current_project_id: {state_project_id}")
+            eprint("  Fix: update tools/project_config.json runtime_state or pass QF_ALLOW_PROJECT_ID_MISMATCH=1 for one-time override.")
             raise SystemExit(1)
         return resolved
     if state_project_id:
@@ -392,41 +382,12 @@ def resolve_ready_field(env_key: str, prompt: str, default_value: str) -> str:
     raise SystemExit(1)
 
 
-# ready_tools_24 中文：更新 TASKS/STATE.md 的当前指针。
+# ready_tools_24 中文：更新 tools/project_config.json 的 runtime_state，并镜像到 TASKS/STATE.md。
 def update_state_current(run_id: str, task_file: str, status: str, project_id: str) -> None:
     if os.environ.get("QF_STATE_UPDATE_DISABLE", "0") == "1":
         return
-    project_id = normalize_project_id(project_id or state_field_value("CURRENT_PROJECT_ID"))
-    path = STATE_FILE
-    if path.exists():
-        lines = path.read_text(encoding="utf-8").splitlines()
-    else:
-        lines = ["# STATE", ""]
-
-    keys = {"CURRENT_PROJECT_ID", "CURRENT_RUN_ID", "CURRENT_TASK_FILE", "CURRENT_STATUS", "CURRENT_UPDATED_AT"}
-    filtered: list[str] = []
-    for line in lines:
-        if any(re.match(rf"^\s*{re.escape(key)}\s*:", line) for key in keys):
-            continue
-        filtered.append(line)
-
-    insert_idx = 0
-    if filtered and filtered[0].startswith("#"):
-        insert_idx = 1
-        if len(filtered) > 1 and filtered[1].strip() == "":
-            insert_idx = 2
-
-    meta = [
-        f"CURRENT_PROJECT_ID: {project_id}",
-        f"CURRENT_RUN_ID: {run_id}",
-        f"CURRENT_TASK_FILE: {task_file}",
-        f"CURRENT_STATUS: {status}",
-        f"CURRENT_UPDATED_AT: {datetime.now(timezone.utc).replace(microsecond=0).isoformat()}",
-        "",
-    ]
-    out = filtered[:insert_idx] + meta + filtered[insert_idx:]
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(out).rstrip() + "\n", encoding="utf-8")
+    project_id = normalize_project_id(project_id or load_runtime_state().current_project_id or DEFAULT_PROJECT_ID)
+    update_runtime_state(project_id, run_id, task_file, status)
 
 
 # ready_tools_25 中文：判断当前工作区是否脏。
@@ -513,7 +474,7 @@ def ready_step_01_resolve_context(argv: list[str]) -> ReadyContext:
     args = parse_args(argv)
     run_id = resolve_run_id_for_cmd(args["explicit_run_id"], "ready")
     if not run_id:
-        eprint("ERROR: ready requires RUN_ID (from explicit arg/env or TASKS/STATE.md CURRENT_RUN_ID).")
+        eprint("ERROR: ready requires RUN_ID (from explicit arg/env or tools/project_config.json runtime_state.current_run_id).")
         eprint("Usage: python3 tools/ready.py [RUN_ID=<run-id>] [DECISION=resume-close|abandon-new]")
         raise SystemExit(2)
     project_id = resolve_project_id_for_cmd(args["explicit_project_id"], "ready")
@@ -562,8 +523,9 @@ def ready_step_02_enforce_inputs(context: ReadyContext) -> ReadyContext:
 # 3003 中文：第三步，处理未收口 run 的继续决策并生成默认合同草稿。
 def ready_step_03_resolve_decision(context: ReadyContext) -> ReadyContext:
     emit_step(3, 5, "resolve run decision and derive defaults")
-    context.task_file = state_field_value("CURRENT_TASK_FILE")
-    context.state_status = state_field_value("CURRENT_STATUS") or "active"
+    runtime_state = load_runtime_state()
+    context.task_file = runtime_state.current_task_file
+    context.state_status = runtime_state.current_status or "active"
     has_run_context = any(
         (
             Path(f"reports/{context.run_id}/ready.json").is_file(),
@@ -681,7 +643,7 @@ def ready_step_05_finalize(context: ReadyContext) -> int:
         "",
     )
     append_conversation_checkpoint(context.run_id, "ready", "ready gate passed; next step orient")
-    update_state_current(context.run_id, state_field_value("CURRENT_TASK_FILE"), "active", context.project_id)
+    update_state_current(context.run_id, load_runtime_state().current_task_file, "active", context.project_id)
     print(f"READY_PROJECT_ID: {context.project_id}")
     print(f"READY_RUN_ID: {context.run_id}")
     if context.task_file:

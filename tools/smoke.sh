@@ -16,7 +16,6 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   exit 0
 fi
 
-state_file="${QF_STATE_FILE:-TASKS/STATE.md}"
 run_id="${RUN_ID:-}"
 task_file="${TASK_FILE:-}"
 
@@ -38,27 +37,21 @@ for arg in "$@"; do
   esac
 done
 
-read_state_value() {
+read_runtime_value() {
   local key="$1"
-  local value=""
-  if [[ ! -f "$state_file" ]]; then
-    return 1
-  fi
-  value="$(grep -E "^${key}:" "$state_file" | head -n 1 | cut -d':' -f2- | sed 's/^ //')"
-  [[ -n "$value" ]] || return 1
-  printf "%s" "$value"
+  python3 tools/project_config.py --get "runtime.${key}" 2>/dev/null || true
 }
 
 if [[ -z "$run_id" ]]; then
-  run_id="$(read_state_value "CURRENT_RUN_ID" || true)"
+  run_id="$(read_runtime_value "current_run_id")"
 fi
 if [[ -z "$task_file" ]]; then
-  task_file="$(read_state_value "CURRENT_TASK_FILE" || true)"
+  task_file="$(read_runtime_value "current_task_file")"
 fi
 
 if [[ -z "$run_id" || -z "$task_file" ]]; then
   echo "ERROR: missing run/task context" >&2
-  echo "STATE_FILE: $state_file" >&2
+  echo "RUNTIME_STATE_SOURCE: tools/project_config.json -> runtime_state" >&2
   usage >&2
   exit 1
 fi

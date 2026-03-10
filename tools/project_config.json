@@ -1,0 +1,75 @@
+{
+  "project_id": "quant-factory-os",
+  "project_root": "/root/quant-factory-os",
+  "tools_dir": "tools",
+  "docs_dir": "docs",
+  "agents_file": "AGENTS.md",
+  "project_guide_file": "docs/PROJECT_GUIDE.md",
+  "git_account": {
+    "repo_path": ".",
+    "remote_name": "origin",
+    "remote_url_https": "https://github.com/deepcooker/quant-factory-os",
+    "remote_url_ssh": "git@github.com:deepcooker/quant-factory-os.git",
+    "github_login": "deepcooker",
+    "git_user_name": "",
+    "git_user_email": "",
+    "auth_check_command": "gh auth status"
+  },
+  "codex_bin": "codex",
+  "codex_account": {
+    "auth_mode": "chatgpt",
+    "account_label": "",
+    "codex_home": "~/.codex",
+    "login_status_command": "codex login status"
+  },
+  "app_server_subcommand": "app-server",
+  "app_server_session_env_keys": [
+    "QF_APP_SERVER_SESSION_ID",
+    "CODEX_APP_SERVER_SESSION_ID",
+    "APP_SERVER_SESSION_ID"
+  ],
+  "codex_client_name": "test-app",
+  "codex_client_version": "0.1.0",
+  "codex_capabilities": {
+    "experimentalApi": true
+  },
+  "default_model": "gpt-5.4",
+  "default_mode": "default",
+  "default_effort": "low",
+  "default_timeout_sec": 60,
+  "plan_timeout_sec": 1200,
+  "default_thread_name": "test-thread",
+  "default_thread_search_limit": 10,
+  "default_turn_text": "一条狗",
+  "learn_init_thread_name": "learn-init-thread",
+  "learn_init_effort": "low",
+  "learn_init_turn_text": "learn:接下来我们开始学习同频项目，同频的目的是让你能更好的理解项目，我们需要了解项目背景目标、宪法和工作流、需要学习哪些技能、项目到了哪个阶段、正在做哪些项目。我们以 PROJECT_GUIDE.md 为开始，以学习课程 + 问题库 + 主线锚点，通过用高质量提问引导你看项目，把主线固化成可复用的权重和证据；遇到漂移时，回到 PROJECT_GUIDE.md 的问题体系里答题，把它拉回主线。接下来我会同步给你文件和拼接提示词。",
+  "runtime_state": {
+    "current_project_id": "quant-factory-os",
+    "current_run_id": "run-2026-03-08-tools-orchestrator-entry",
+    "current_task_file": "TASKS/TASK-tools-orchestrator-entry.md",
+    "current_status": "active",
+    "current_updated_at": "2026-03-10T07:02:33+00:00"
+  },
+  "session_registry": {
+    "learn_session_baseline": {
+      "thread_id": "019cd296-bd3c-72c3-be6f-e835cd50aba6",
+      "thread_path": "/root/.codex/sessions/2026/03/09/rollout-2026-03-09T20-33-40-019cd296-bd3c-72c3-be6f-e835cd50aba6.jsonl",
+      "status": "ready",
+      "updated_at": "2026-03-09T12:34:11.235693+00:00",
+      "source": "init_main",
+      "model": "gpt-5.4",
+      "effort": "low"
+    },
+    "fork_current_session": {
+      "thread_id": "019cd29a-d235-7180-8918-12b0bfb7e569",
+      "thread_path": "/root/.codex/sessions/2026/03/09/rollout-2026-03-09T20-38-07-019cd29a-d235-7180-8918-12b0bfb7e569.jsonl",
+      "status": "ready",
+      "updated_at": "2026-03-09T12:38:07.767867+00:00",
+      "source": "fork_current_main",
+      "forked_from_thread_id": "019cd296-bd3c-72c3-be6f-e835cd50aba6",
+      "model": "gpt-5.4",
+      "effort": "low"
+    }
+  }
+}
