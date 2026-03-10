@@ -6,6 +6,7 @@ import json
 import logging
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,8 @@ ERR_GIT_NO_CHANGES = ERR_RUNTIME_BASE + 3
 ERR_GIT_COMMAND_FAILED = ERR_RUNTIME_BASE + 4
 ERR_GH_COMMAND_FAILED = ERR_RUNTIME_BASE + 5
 ERR_INVALID_INPUT = ERR_CONFIG_BASE + 1
+PR_WAIT_TIMEOUT_SEC = 120
+PR_WAIT_INTERVAL_SEC = 3
 
 
 class GitClientError(RuntimeError):
@@ -90,7 +93,76 @@ def command_err(err_code: int, err_desc: str, proc: subprocess.CompletedProcess[
 # gitclient 中文：判断 gh pr merge 失败是否属于“需要改成 auto merge”的分支策略场景。
 def should_queue_auto_merge(proc: subprocess.CompletedProcess[str]) -> bool:
     stderr = (proc.stderr or "").lower()
-    return "not mergeable" in stderr and "--auto" in stderr
+    return ("not mergeable" in stderr and "--auto" in stderr) or "add the `--auto` flag" in stderr
+
+
+# gitclient 中文：读取 PR 当前状态，供 auto merge 后轮询判断。
+def get_pr_state(pr_url: str, cwd: Path) -> dict[str, Any]:
+    view_proc = run_cmd(
+        ["gh", "pr", "view", pr_url, "--json", "state,mergedAt,mergeStateStatus,autoMergeRequest"],
+        cwd,
+    )
+    if view_proc.returncode != 0:
+        return command_err(ERR_GH_COMMAND_FAILED, "读取PR状态失败", view_proc)
+    try:
+        payload = json.loads(view_proc.stdout)
+    except json.JSONDecodeError:
+        return err(ERR_GH_COMMAND_FAILED, "解析PR状态失败", {"stdout": view_proc.stdout.strip()})
+    return ok(payload)
+
+
+# gitclient 中文：等待 PR 真正 merged；DIRTY/BLOCKED 直接失败，避免无限等待。
+def wait_for_pr_merged(pr_url: str, cwd: Path, timeout_sec: int = PR_WAIT_TIMEOUT_SEC) -> dict[str, Any]:
+    deadline = time.time() + timeout_sec
+    last_state: dict[str, Any] = {}
+    while time.time() < deadline:
+        state_result = get_pr_state(pr_url, cwd)
+        if state_result["err_code"] != 0:
+            return state_result
+        last_state = dict(state_result.get("data", {}))
+        state = str(last_state.get("state", "")).strip().upper()
+        merge_state = str(last_state.get("mergeStateStatus", "")).strip().upper()
+        if state == "MERGED" and last_state.get("mergedAt"):
+            return ok(last_state)
+        if merge_state in {"DIRTY", "BLOCKED"}:
+            return err(
+                ERR_GH_COMMAND_FAILED,
+                "PR当前不可合并",
+                {
+                    "pr_url": pr_url,
+                    "state": last_state.get("state"),
+                    "merge_state_status": last_state.get("mergeStateStatus"),
+                    "auto_merge_enabled": bool(last_state.get("autoMergeRequest")),
+                },
+            )
+        time.sleep(PR_WAIT_INTERVAL_SEC)
+    return err(
+        ERR_GH_COMMAND_FAILED,
+        "等待PR合并超时",
+        {
+            "pr_url": pr_url,
+            "state": last_state.get("state"),
+            "merge_state_status": last_state.get("mergeStateStatus"),
+            "auto_merge_enabled": bool(last_state.get("autoMergeRequest")),
+        },
+    )
+
+
+# gitclient 中文：同步本地 main，保证本地和远端主线一致。
+def sync_local_main(repo_path: Path, remote_name: str, base_branch: str) -> dict[str, Any]:
+    fetch_proc = run_cmd(["git", "fetch", remote_name], repo_path)
+    if fetch_proc.returncode != 0:
+        return command_err(ERR_GIT_COMMAND_FAILED, "拉取远端信息失败", fetch_proc)
+
+    sync_main_proc = run_cmd(["git", "checkout", base_branch], repo_path)
+    if sync_main_proc.returncode != 0:
+        return command_err(ERR_GIT_COMMAND_FAILED, f"切回{base_branch}失败", sync_main_proc)
+
+    sync_pull_proc = run_cmd(["git", "pull", "--rebase", remote_name, base_branch], repo_path)
+    if sync_pull_proc.returncode != 0:
+        return command_err(ERR_GIT_COMMAND_FAILED, f"同步最新{base_branch}失败", sync_pull_proc)
+
+    return ok({"base_branch": base_branch})
 
 
 # gitclient 中文：检查当前 git/gh 基本运行前提是否满足。
@@ -209,6 +281,13 @@ def run_commit_and_merge(message: str, base_branch: str = "main") -> dict[str, A
             return command_err(ERR_GH_COMMAND_FAILED, "合并PR失败", pr_merge_proc)
 
     if merge_mode == "auto":
+        merged_result = wait_for_pr_merged(pr_url, repo_path)
+        if merged_result["err_code"] != 0:
+            return merged_result
+        merged_at = dict(merged_result.get("data", {})).get("mergedAt")
+        sync_result = sync_local_main(repo_path, remote_name, base_branch)
+        if sync_result["err_code"] != 0:
+            return sync_result
         return ok(
             {
                 "project_id": ctx["project_id"],
@@ -217,22 +296,14 @@ def run_commit_and_merge(message: str, base_branch: str = "main") -> dict[str, A
                 "base_branch": base_branch,
                 "staged_files": staged_files,
                 "pr_url": pr_url,
-                "merge_mode": "auto_queued",
-                "sync_main_skipped": True,
+                "merge_mode": "auto",
+                "merged_at": merged_at,
             }
         )
 
-    fetch_proc = run_cmd(["git", "fetch", remote_name], repo_path)
-    if fetch_proc.returncode != 0:
-        return command_err(ERR_GIT_COMMAND_FAILED, "拉取远端信息失败", fetch_proc)
-
-    sync_main_proc = run_cmd(["git", "checkout", base_branch], repo_path)
-    if sync_main_proc.returncode != 0:
-        return command_err(ERR_GIT_COMMAND_FAILED, f"切回{base_branch}失败", sync_main_proc)
-
-    sync_pull_proc = run_cmd(["git", "pull", "--rebase", remote_name, base_branch], repo_path)
-    if sync_pull_proc.returncode != 0:
-        return command_err(ERR_GIT_COMMAND_FAILED, f"同步最新{base_branch}失败", sync_pull_proc)
+    sync_result = sync_local_main(repo_path, remote_name, base_branch)
+    if sync_result["err_code"] != 0:
+        return sync_result
 
     return ok(
         {
@@ -243,6 +314,7 @@ def run_commit_and_merge(message: str, base_branch: str = "main") -> dict[str, A
             "staged_files": staged_files,
             "pr_url": pr_url,
             "merge_mode": "direct",
+            "merged_at": None,
         }
     )
 
@@ -320,6 +392,13 @@ def run_rollback_commit(commit_sha: str, base_branch: str = "main") -> dict[str,
             return command_err(ERR_GH_COMMAND_FAILED, "合并回滚PR失败", pr_merge_proc)
 
     if merge_mode == "auto":
+        merged_result = wait_for_pr_merged(pr_url, repo_path)
+        if merged_result["err_code"] != 0:
+            return merged_result
+        merged_at = dict(merged_result.get("data", {})).get("mergedAt")
+        sync_result = sync_local_main(repo_path, remote_name, base_branch)
+        if sync_result["err_code"] != 0:
+            return sync_result
         return ok(
             {
                 "project_id": ctx["project_id"],
@@ -327,18 +406,14 @@ def run_rollback_commit(commit_sha: str, base_branch: str = "main") -> dict[str,
                 "work_branch": branch_name,
                 "base_branch": base_branch,
                 "pr_url": pr_url,
-                "merge_mode": "auto_queued",
-                "sync_main_skipped": True,
+                "merge_mode": "auto",
+                "merged_at": merged_at,
             }
         )
 
-    sync_main_proc = run_cmd(["git", "checkout", base_branch], repo_path)
-    if sync_main_proc.returncode != 0:
-        return command_err(ERR_GIT_COMMAND_FAILED, f"切回{base_branch}失败", sync_main_proc)
-
-    sync_pull_proc = run_cmd(["git", "pull", "--rebase", remote_name, base_branch], repo_path)
-    if sync_pull_proc.returncode != 0:
-        return command_err(ERR_GIT_COMMAND_FAILED, f"同步最新{base_branch}失败", sync_pull_proc)
+    sync_result = sync_local_main(repo_path, remote_name, base_branch)
+    if sync_result["err_code"] != 0:
+        return sync_result
 
     return ok(
         {
@@ -348,6 +423,7 @@ def run_rollback_commit(commit_sha: str, base_branch: str = "main") -> dict[str,
             "base_branch": base_branch,
             "pr_url": pr_url,
             "merge_mode": "direct",
+            "merged_at": None,
         }
     )
 
