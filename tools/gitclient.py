@@ -90,7 +90,7 @@ def command_err(err_code: int, err_desc: str, proc: subprocess.CompletedProcess[
 # gitclient 中文：判断 gh pr merge 失败是否属于“需要改成 auto merge”的分支策略场景。
 def should_queue_auto_merge(proc: subprocess.CompletedProcess[str]) -> bool:
     stderr = (proc.stderr or "").lower()
-    return "not mergeable" in stderr and "--auto" in stderr
+    return ("not mergeable" in stderr and "--auto" in stderr) or "add the `--auto` flag" in stderr
 
 
 # gitclient 中文：检查当前 git/gh 基本运行前提是否满足。
