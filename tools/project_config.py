@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -21,6 +22,14 @@ TOOLS_DIR_NAME = "tools"
 DOCS_DIR_NAME = "docs"
 AGENTS_FILE_NAME = "AGENTS.md"
 PROJECT_GUIDE_FILE_NAME = "docs/PROJECT_GUIDE.md"
+LEARN_BASELINE_PROMPT_FILE_NAME = "tools/learnbaseline_prompt.md"
+OWNER_FILES = [
+    "docs/PROJECT_GUIDE.md",
+    "AGENTS.md",
+    "docs/WORKFLOW.md",
+]
+GUIDE_QUESTION_RE = re.compile(r"^###\s+Q(?P<num>\d+)\.\s*(?P<title>.+?)\s*$", re.M)
+GUIDE_SECTION_RE = re.compile(r"^####\s+(?P<title>.+?)\s*$", re.M)
 
 GIT_REMOTE_NAME = "origin"
 GIT_USER_NAME = ""
@@ -52,12 +61,6 @@ DEFAULT_THREAD_SEARCH_LIMIT = 10
 DEFAULT_TURN_TEXT = "你好"
 LEARN_INIT_THREAD_NAME = "learn-init-thread"
 LEARN_INIT_EFFORT = "low"
-LEARN_INIT_TURN_TEXT = (
-    "learn:接下来我们开始学习同频项目，同频的目的是让你能更好的理解项目，我们需要了解项目背景目标、宪法和工作流、"
-    "需要学习哪些技能、项目到了哪个阶段、正在做哪些项目。我们以 PROJECT_GUIDE.md 为开始，以学习课程 + 问题库 + 主线锚点，"
-    "通过用高质量提问引导你看项目，把主线固化成可复用的权重和证据；遇到漂移时，回到 PROJECT_GUIDE.md 的问题体系里答题，"
-    "把它拉回主线。接下来我会同步给你文件和拼接提示词。"
-)
 
 
 # project_config 中文：统一把“中文说明 + 字段名 + 值”格式化成单行日志输出。
@@ -72,6 +75,184 @@ def resolve_config_path(raw_path: str, base_root: Path) -> Path:
     if candidate.is_absolute():
         return candidate.resolve()
     return (base_root / candidate).resolve()
+
+
+# project_config 中文：按顺序去重列表，保持第一次出现的顺序。
+def ordered_unique(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for item in items:
+        value = str(item).strip()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
+
+
+# project_config 中文：把 guide 里的占位符路径解析为当前项目/运行态的真实路径。
+def resolve_dynamic_path(raw_path: str, project_id: str, current_run_id: str) -> str:
+    path = str(raw_path or "").strip()
+    if not path:
+        return ""
+    if ("<RUN_ID>" in path or "<CURRENT_RUN_ID>" in path) and not current_run_id:
+        return ""
+    path = path.replace("<PROJECT_ID>", project_id)
+    path = path.replace("<CURRENT_PROJECT_ID>", project_id)
+    path = path.replace("<RUN_ID>", current_run_id)
+    path = path.replace("<CURRENT_RUN_ID>", current_run_id)
+    return path
+
+
+# project_config 中文：把 markdown 列表/段落块收成干净的文本行列表。
+def normalize_list_block(lines: list[str]) -> list[str]:
+    result: list[str] = []
+    for raw in lines:
+        value = str(raw).strip()
+        if not value:
+            continue
+        if value.startswith("- "):
+            value = value[2:].strip()
+        result.append(value)
+    return result
+
+
+# project_config 中文：读取 baseline 学习提示词固定前言；提示词文件是可维护资产，不继续写死在 Python 长字符串里。
+def load_learnbaseline_prompt_preamble() -> str:
+    prompt_file = resolve_config_path(LEARN_BASELINE_PROMPT_FILE_NAME, REPO_ROOT)
+    return prompt_file.read_text(encoding="utf-8").strip()
+
+
+# project_config 中文：从 PROJECT_GUIDE 解析学习问题清单与必查文件，供 baseline 学习 prompt 动态补全。
+def parse_project_guide_prompt_inputs(project_root: Path, project_id: str, current_run_id: str) -> tuple[list[dict[str, str]], list[str]]:
+    guide_path = resolve_config_path(PROJECT_GUIDE_FILE_NAME, project_root)
+    text = guide_path.read_text(encoding="utf-8")
+    matches = list(GUIDE_QUESTION_RE.finditer(text))
+    questions: list[dict[str, str]] = []
+    required_files: list[str] = []
+    for idx, match in enumerate(matches):
+        start = match.start()
+        end = matches[idx + 1].start() if idx + 1 < len(matches) else len(text)
+        block = text[start:end].splitlines()
+        qid = f"Q{match.group('num')}"
+        title = match.group("title").strip()
+        sections: dict[str, list[str]] = {}
+        current_section = ""
+        for raw in block[1:]:
+            sec_match = GUIDE_SECTION_RE.match(raw.strip())
+            if sec_match:
+                current_section = sec_match.group("title").strip()
+                sections[current_section] = []
+                continue
+            if current_section:
+                sections[current_section].append(raw)
+        must_read_files = ordered_unique(
+            [
+                resolved
+                for resolved in (
+                    resolve_dynamic_path(item, project_id, current_run_id)
+                    for item in normalize_list_block(sections.get("必查文件", []))
+                )
+                if resolved
+            ]
+        )
+        questions.append({"question_id": qid, "title": title})
+        required_files.extend(must_read_files)
+    return questions, ordered_unique(OWNER_FILES + required_files)
+
+
+# project_config 中文：构建 baseline 学习要求的 JSON 输出 schema 文本。
+def build_learn_output_schema_lines() -> list[str]:
+    return [
+        "{",
+        '  "mainline": "<string>",',
+        '  "current_stage": "<string>",',
+        '  "next_step": "<string>",',
+        '  "files_read": ["<path1>", "<path2>"],',
+        '  "plan_protocol": {',
+        '    "goal": "<string>",',
+        '    "non_goal": "<string>",',
+        '    "evidence": ["<path>#<section>: <concrete fact>"],',
+        '    "alternatives": ["<alt1>", "<alt2>"],',
+        '    "rebuttal": "<string>",',
+        '    "decision_stop_condition": "<string>"',
+        "  },",
+        '  "oral_restate": {',
+        '    "project_understanding": "<string>",',
+        '    "constitution_workflow": "<string>",',
+        '    "evidence_chain": "<string>",',
+        '    "session_continuity": "<string>",',
+        '    "current_focus": "<string>",',
+        '    "next_action": "<string>"',
+        "  },",
+        '  "guide_oral": [',
+        '    {',
+        '      "question_id": "Q1",',
+        '      "question": "<question title>",',
+        '      "answer": "<1-2 sentence oral answer>",',
+        '      "standard_alignment": "aligned|partial|drifted",',
+        '      "evidence": ["<path>#<section>: <concrete fact>"],',
+        '      "drift_note": "<short difference or none>",',
+        '      "return_to_mainline": "<how this question returns to mainline>"',
+        '    }',
+        '  ],',
+        '  "anchor_realign": {',
+        '    "question_id": "<Q1..Qn from PROJECT_GUIDE>",',
+        '    "status": "on_track|drifted",',
+        '    "drift_detail": "<what drift happened or none>",',
+        '    "return_to_mainline": "<how to return to mainline now>"',
+        '  }',
+        "}",
+    ]
+
+
+# project_config 中文：把固定提示词文件和动态学习上下文拼成 baseline 学习 prompt。
+def build_learnbaseline_prompt_text(project_root: Path, project_id: str, runtime_state: dict[str, Any]) -> str:
+    preamble = load_learnbaseline_prompt_preamble()
+    current_run_id = str(runtime_state.get("current_run_id", "")).strip()
+    current_task_file = str(runtime_state.get("current_task_file", "")).strip()
+    guide_questions, required_files = parse_project_guide_prompt_inputs(project_root, project_id, current_run_id)
+    extra_files = [path for path in required_files if path not in OWNER_FILES]
+    lines = [
+        preamble,
+        "",
+        "以下是本轮学习同频的动态上下文，请按这些上下文执行基线学习：",
+        f"PROJECT_ID: {project_id}",
+        f"CURRENT_RUN_ID: {current_run_id or '(none)'}",
+        f"CURRENT_TASK_FILE: {current_task_file or '(none)'}",
+        "",
+        "Owner files:",
+    ]
+    for path in OWNER_FILES:
+        lines.append(f"- {path}")
+    lines.extend(
+        [
+            "",
+            "Additional required files to read with tools/view.sh:",
+        ]
+    )
+    for path in extra_files:
+        lines.append(f"- {path}")
+    lines.extend(["", "PROJECT_GUIDE question ids to answer in order:"])
+    for item in guide_questions:
+        lines.append(f"- {item['question_id']}: {item['title']}")
+    lines.extend(
+        [
+            "",
+            "Output requirements:",
+            "- Read owner files first in this order: docs/PROJECT_GUIDE.md -> AGENTS.md -> docs/WORKFLOW.md.",
+            "- Then read the additional required files listed above.",
+            "- Use tools/view.sh for all file reads. If a file is long, read only the relevant chunk(s).",
+            "- Use PROJECT_GUIDE as the source of truth for question order and must-read mapping.",
+            "- Then answer every PROJECT_GUIDE question in order (Q1..Qn).",
+            "- Do not skip any question.",
+            "- Keep every answer concise but complete: target 1-2 sentences per question.",
+            "- Reply with JSON only. Any prose before or after the JSON object is a failure.",
+            "- JSON must follow this schema exactly:",
+        ]
+    )
+    lines.extend(build_learn_output_schema_lines())
+    return "\n".join(lines).strip()
 
 
 @dataclass(frozen=True)
@@ -162,6 +343,7 @@ def load_unified_config() -> dict[str, Any]:
         "docs_dir": str(resolve_config_path(DOCS_DIR_NAME, project_root)),
         "agents_file": str(resolve_config_path(AGENTS_FILE_NAME, project_root)),
         "project_guide_file": str(resolve_config_path(PROJECT_GUIDE_FILE_NAME, project_root)),
+        "learnbaseline_prompt_file": str(resolve_config_path(LEARN_BASELINE_PROMPT_FILE_NAME, REPO_ROOT)),
         "git": {
             "repo_path": str(project_root),
             "remote_name": GIT_REMOTE_NAME,
@@ -175,7 +357,7 @@ def load_unified_config() -> dict[str, Any]:
             "bin": CODEX_BIN,
             "auth_mode": CODEX_AUTH_MODE,
             "account_label": CODEX_ACCOUNT_LABEL,
-            "home": CODEX_HOME,
+            "home": str(Path(CODEX_HOME).expanduser()),
             "login_status_command": CODEX_LOGIN_STATUS_COMMAND,
             "app_server_subcommand": APP_SERVER_SUBCOMMAND,
             "app_server_session_env_keys": list(APP_SERVER_SESSION_ENV_KEYS),
@@ -194,7 +376,7 @@ def load_unified_config() -> dict[str, Any]:
             "default_turn_text": DEFAULT_TURN_TEXT,
             "learn_init_thread_name": LEARN_INIT_THREAD_NAME,
             "learn_init_effort": LEARN_INIT_EFFORT,
-            "learn_init_turn_text": LEARN_INIT_TURN_TEXT,
+            "learn_init_turn_text": build_learnbaseline_prompt_text(project_root, project_id, runtime_state),
         },
         "runtime_state": runtime_state,
         "session_registry": session_registry,

@@ -459,7 +459,7 @@ def init_step_05_finalize(
         )
     return err(
         ERR_RUNTIME_BASE + 1,
-        f"init blocked: {reason_codes}",
+        f"init {status}: {reason_codes}",
         {
             "status": status,
             "reason_codes": reason_codes,
@@ -490,6 +490,12 @@ def init_tools_10_finalize_status(context: InitContext, reasons: list[str]) -> t
     elif any(code in blocking_codes for code in reasons):
         next_step = "fix init blockers before learn"
         status = "blocked"
+    elif reasons == ["WORKTREE_DIRTY"]:
+        next_step = (
+            "工作区有未提交改动；可运行 tools/gitclient.py --commit 提交当前改动，"
+            "或运行 tools/gitclient.py --rollback-last / --rollback-commit <sha> 回滚后重跑 tools/init.py"
+        )
+        status = "needs_fix"
     else:
         next_step = "fix init warnings then rerun python3 tools/init.py"
         status = "needs_fix"

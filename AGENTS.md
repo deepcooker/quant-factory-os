@@ -30,6 +30,8 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 - Project cognition / Q&A anchor: `docs/PROJECT_GUIDE.md`
 - Execution state machine: `docs/WORKFLOW.md`
 - Entity dictionary: `docs/ENTITIES.md`
+- Experimental flow map: `TOOLS_METHOD_FLOW_MAP.md`
+- Experimental file index: `docs/FILE_INDEX.md`
 - Codex CLI operations: `CODEX_CLI_PLAYBOOK.md`
 - Codex CLI source audit: `CODEX_CLI_SOURCE_AUDIT.md`
 - Current active pointers: `tools/project_config.json -> runtime_state` (mirrored to `TASKS/STATE.md`)
