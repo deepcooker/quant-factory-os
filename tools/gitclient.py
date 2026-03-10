@@ -66,6 +66,19 @@ def load_git_context() -> dict[str, Any]:
     }
 
 
+# gitclient 中文：解析提交说明；优先用 --commit，其次 runtime_state.current_task_file，最后回退到“手动提交+时间戳”。
+def resolve_commit_message(raw_message: str | None) -> str:
+    if raw_message is not None and str(raw_message).strip():
+        return str(raw_message).strip()
+    unified = load_unified_config()
+    runtime_state = dict(unified.get("runtime_state", {}))
+    current_task_file = str(runtime_state.get("current_task_file", "")).strip()
+    if current_task_file:
+        return current_task_file
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    return f"手动提交{ts}"
+
+
 # gitclient 中文：执行 git 或 gh 命令，并返回原始执行结果。
 def run_cmd(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     logger.info("GITCLIENT_CMD: %s", " ".join(args))
@@ -234,9 +247,7 @@ def build_branch_name(prefix: str = "auto") -> str:
 
 # gitclient 中文：在工作区提交当前改动，推送分支，创建并合并 PR，最后同步 main。
 def run_commit_and_merge(message: str, base_branch: str = "main") -> dict[str, Any]:
-    message = message.strip()
-    if not message:
-        return err(ERR_INVALID_INPUT, "提交信息不能为空")
+    message = resolve_commit_message(message)
 
     precheck = precheck_git()
     if precheck["err_code"] != 0:
@@ -411,7 +422,7 @@ def run_rollback_commit(commit_sha: str, base_branch: str = "main") -> dict[str,
 # gitclient 中文：解析命令行参数，提供提交和回滚两类最小入口。
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="quant-factory-os git client")
-    parser.add_argument("--commit", help="提交并合并到主分支")
+    parser.add_argument("--commit", nargs="?", const="", help="提交并合并到主分支")
     parser.add_argument("--rollback-last", action="store_true", help="回滚 main 最近一次提交")
     parser.add_argument("--rollback-commit", help="回滚指定 commit")
     parser.add_argument("--base-branch", default="main", help="目标基础分支，默认 main")
@@ -422,7 +433,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     build_logger()
     args = parse_args(argv)
-    if args.commit:
+    if args.commit is not None:
         result = run_commit_and_merge(args.commit, base_branch=args.base_branch)
     elif args.rollback_last:
         result = run_rollback_last(base_branch=args.base_branch)
