@@ -17,6 +17,54 @@ LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 LOGGER_NAME = "qf.project_config"
 logger = logging.getLogger(LOGGER_NAME)
 
+TOOLS_DIR_NAME = "tools"
+DOCS_DIR_NAME = "docs"
+AGENTS_FILE_NAME = "AGENTS.md"
+PROJECT_GUIDE_FILE_NAME = "docs/PROJECT_GUIDE.md"
+
+GIT_REMOTE_NAME = "origin"
+GIT_USER_NAME = ""
+GIT_USER_EMAIL = ""
+GIT_AUTH_CHECK_COMMAND = "gh auth status"
+
+CODEX_BIN = "codex"
+CODEX_AUTH_MODE = "chatgpt"
+CODEX_ACCOUNT_LABEL = ""
+CODEX_HOME = "~/.codex"
+CODEX_LOGIN_STATUS_COMMAND = "codex login status"
+APP_SERVER_SUBCOMMAND = "app-server"
+APP_SERVER_SESSION_ENV_KEYS = (
+    "CODEX_SESSION_ID",
+    "OPENAI_SESSION_ID",
+    "APP_SERVER_SESSION_ID",
+)
+CODEX_CLIENT_NAME = "test-app"
+CODEX_CLIENT_VERSION = "0.1.0"
+CODEX_CAPABILITIES = {"experimentalApi": True}
+
+DEFAULT_MODEL = "gpt-5.4"
+DEFAULT_MODE = "default"
+DEFAULT_EFFORT = "low"
+DEFAULT_TIMEOUT_SEC = 60
+PLAN_TIMEOUT_SEC = 1200
+DEFAULT_THREAD_NAME = "test-thread"
+DEFAULT_THREAD_SEARCH_LIMIT = 10
+DEFAULT_TURN_TEXT = "你好"
+LEARN_INIT_THREAD_NAME = "learn-init-thread"
+LEARN_INIT_EFFORT = "low"
+LEARN_INIT_TURN_TEXT = (
+    "learn:接下来我们开始学习同频项目，同频的目的是让你能更好的理解项目，我们需要了解项目背景目标、宪法和工作流、"
+    "需要学习哪些技能、项目到了哪个阶段、正在做哪些项目。我们以 PROJECT_GUIDE.md 为开始，以学习课程 + 问题库 + 主线锚点，"
+    "通过用高质量提问引导你看项目，把主线固化成可复用的权重和证据；遇到漂移时，回到 PROJECT_GUIDE.md 的问题体系里答题，"
+    "把它拉回主线。接下来我会同步给你文件和拼接提示词。"
+)
+
+
+# project_config 中文：统一把“中文说明 + 字段名 + 值”格式化成单行日志输出。
+def format_field(label_cn: str, field_name: str, value: Any) -> str:
+    text = str(value).strip() if value is not None else ""
+    return f"{label_cn}-{field_name}: {text or '(未配置)'}"
+
 
 # project_config 中文：把配置里的路径字段统一解析为绝对路径；已是绝对路径就直接使用，相对路径则相对给定根路径解析。
 def resolve_config_path(raw_path: str, base_root: Path) -> Path:
@@ -36,8 +84,7 @@ class ProjectConfig:
     project_guide_file: Path
     git_repo_path: Path
     git_remote_name: str
-    git_remote_url_https: str
-    git_remote_url_ssh: str
+    git_remote_url: str
     github_login: str
     git_user_name: str
     git_user_email: str
@@ -79,59 +126,129 @@ def load_project_config_json() -> dict[str, Any]:
     return json.loads(PROJECT_CONFIG_FILE.read_text(encoding="utf-8"))
 
 
+# project_config 中文：校验原始 project_config.json 的必填字段是否真的填写。
+def validate_required_json_fields(raw: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    required = dict(raw.get("required", {}) or {})
+    if not str(required.get("project_id", "")).strip():
+        errors.append("必填字段为空-required.project_id")
+    if not str(required.get("project_root", "")).strip():
+        errors.append("必填字段为空-required.project_root")
+    return errors
+
+
 # project_config 中文：把更新后的项目配置 JSON 回写到磁盘。
 def save_project_config_json(config: dict[str, Any]) -> None:
     PROJECT_CONFIG_FILE.write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+# project_config 中文：把最小 JSON、系统常量、运行时状态和会话注册表拼成统一的大配置视图。
+def load_unified_config() -> dict[str, Any]:
+    raw = load_project_config_json()
+    required = dict(raw.get("required", {}) or {})
+    git = dict(raw.get("git", {}) or {})
+    project_id = str(required.get("project_id", raw.get("project_id", ""))).strip()
+    project_root = resolve_config_path(str(required.get("project_root", raw.get("project_root", ""))), REPO_ROOT)
+    runtime_state = dict(raw.get("runtime_state", {}) or {})
+    session_registry = dict(raw.get("session_registry", {}) or {})
+    return {
+        "required": {
+            "project_id": project_id,
+            "project_root": str(project_root),
+        },
+        "project_id": project_id,
+        "project_root": str(project_root),
+        "tools_dir": str(resolve_config_path(TOOLS_DIR_NAME, project_root)),
+        "docs_dir": str(resolve_config_path(DOCS_DIR_NAME, project_root)),
+        "agents_file": str(resolve_config_path(AGENTS_FILE_NAME, project_root)),
+        "project_guide_file": str(resolve_config_path(PROJECT_GUIDE_FILE_NAME, project_root)),
+        "git": {
+            "repo_path": str(project_root),
+            "remote_name": GIT_REMOTE_NAME,
+            "remote_url": str(git.get("remote_url", "")).strip(),
+            "github_login": str(git.get("github_login", "")).strip(),
+            "git_user_name": GIT_USER_NAME,
+            "git_user_email": GIT_USER_EMAIL,
+            "auth_check_command": GIT_AUTH_CHECK_COMMAND,
+        },
+        "codex": {
+            "bin": CODEX_BIN,
+            "auth_mode": CODEX_AUTH_MODE,
+            "account_label": CODEX_ACCOUNT_LABEL,
+            "home": CODEX_HOME,
+            "login_status_command": CODEX_LOGIN_STATUS_COMMAND,
+            "app_server_subcommand": APP_SERVER_SUBCOMMAND,
+            "app_server_session_env_keys": list(APP_SERVER_SESSION_ENV_KEYS),
+            "client_name": CODEX_CLIENT_NAME,
+            "client_version": CODEX_CLIENT_VERSION,
+            "capabilities": dict(CODEX_CAPABILITIES),
+        },
+        "runtime_defaults": {
+            "default_model": DEFAULT_MODEL,
+            "default_mode": DEFAULT_MODE,
+            "default_effort": DEFAULT_EFFORT,
+            "default_timeout_sec": DEFAULT_TIMEOUT_SEC,
+            "plan_timeout_sec": PLAN_TIMEOUT_SEC,
+            "default_thread_name": DEFAULT_THREAD_NAME,
+            "default_thread_search_limit": DEFAULT_THREAD_SEARCH_LIMIT,
+            "default_turn_text": DEFAULT_TURN_TEXT,
+            "learn_init_thread_name": LEARN_INIT_THREAD_NAME,
+            "learn_init_effort": LEARN_INIT_EFFORT,
+            "learn_init_turn_text": LEARN_INIT_TURN_TEXT,
+        },
+        "runtime_state": runtime_state,
+        "session_registry": session_registry,
+    }
+
+
 # project_config 中文：把 JSON 配置转换成代码里可直接使用的结构化对象。
 def load_project_config() -> ProjectConfig:
-    raw = load_project_config_json()
-    git_account = dict(raw.get("git_account", {}) or {})
-    codex_account = dict(raw.get("codex_account", {}) or {})
-    project_root = resolve_config_path(str(raw["project_root"]), REPO_ROOT)
+    unified = load_unified_config()
+    project_root = Path(str(unified["project_root"]))
+    git = dict(unified["git"])
+    codex = dict(unified["codex"])
+    runtime_defaults = dict(unified["runtime_defaults"])
     return ProjectConfig(
-        project_id=str(raw["project_id"]),
+        project_id=str(unified["project_id"]),
         project_root=project_root,
-        tools_dir=resolve_config_path(str(raw["tools_dir"]), project_root),
-        docs_dir=resolve_config_path(str(raw["docs_dir"]), project_root),
-        agents_file=resolve_config_path(str(raw["agents_file"]), project_root),
-        project_guide_file=resolve_config_path(str(raw["project_guide_file"]), project_root),
-        git_repo_path=resolve_config_path(str(git_account.get("repo_path", ".")), project_root),
-        git_remote_name=str(git_account.get("remote_name", "")),
-        git_remote_url_https=str(git_account.get("remote_url_https", "")),
-        git_remote_url_ssh=str(git_account.get("remote_url_ssh", "")),
-        github_login=str(git_account.get("github_login", "")),
-        git_user_name=str(git_account.get("git_user_name", "")),
-        git_user_email=str(git_account.get("git_user_email", "")),
-        git_auth_check_command=str(git_account.get("auth_check_command", "")),
-        codex_bin=str(raw["codex_bin"]),
-        codex_auth_mode=str(codex_account.get("auth_mode", "")),
-        codex_account_label=str(codex_account.get("account_label", "")),
-        codex_home=str(codex_account.get("codex_home", "")),
-        codex_login_status_command=str(codex_account.get("login_status_command", "")),
-        app_server_subcommand=str(raw["app_server_subcommand"]),
-        app_server_session_env_keys=tuple(str(x) for x in raw["app_server_session_env_keys"]),
-        codex_client_name=str(raw["codex_client_name"]),
-        codex_client_version=str(raw["codex_client_version"]),
-        codex_capabilities=dict(raw["codex_capabilities"]),
-        default_model=str(raw["default_model"]),
-        default_mode=str(raw["default_mode"]),
-        default_effort=str(raw["default_effort"]),
-        default_timeout_sec=int(raw["default_timeout_sec"]),
-        plan_timeout_sec=int(raw["plan_timeout_sec"]),
-        default_thread_name=str(raw["default_thread_name"]),
-        default_thread_search_limit=int(raw["default_thread_search_limit"]),
-        default_turn_text=str(raw["default_turn_text"]),
-        learn_init_thread_name=str(raw["learn_init_thread_name"]),
-        learn_init_effort=str(raw["learn_init_effort"]),
-        learn_init_turn_text=str(raw["learn_init_turn_text"]),
+        tools_dir=Path(str(unified["tools_dir"])),
+        docs_dir=Path(str(unified["docs_dir"])),
+        agents_file=Path(str(unified["agents_file"])),
+        project_guide_file=Path(str(unified["project_guide_file"])),
+        git_repo_path=Path(str(git["repo_path"])),
+        git_remote_name=str(git["remote_name"]),
+        git_remote_url=str(git["remote_url"]),
+        github_login=str(git["github_login"]),
+        git_user_name=str(git["git_user_name"]),
+        git_user_email=str(git["git_user_email"]),
+        git_auth_check_command=str(git["auth_check_command"]),
+        codex_bin=str(codex["bin"]),
+        codex_auth_mode=str(codex["auth_mode"]),
+        codex_account_label=str(codex["account_label"]),
+        codex_home=str(codex["home"]),
+        codex_login_status_command=str(codex["login_status_command"]),
+        app_server_subcommand=str(codex["app_server_subcommand"]),
+        app_server_session_env_keys=tuple(str(x) for x in codex["app_server_session_env_keys"]),
+        codex_client_name=str(codex["client_name"]),
+        codex_client_version=str(codex["client_version"]),
+        codex_capabilities=dict(codex["capabilities"]),
+        default_model=str(runtime_defaults["default_model"]),
+        default_mode=str(runtime_defaults["default_mode"]),
+        default_effort=str(runtime_defaults["default_effort"]),
+        default_timeout_sec=int(runtime_defaults["default_timeout_sec"]),
+        plan_timeout_sec=int(runtime_defaults["plan_timeout_sec"]),
+        default_thread_name=str(runtime_defaults["default_thread_name"]),
+        default_thread_search_limit=int(runtime_defaults["default_thread_search_limit"]),
+        default_turn_text=str(runtime_defaults["default_turn_text"]),
+        learn_init_thread_name=str(runtime_defaults["learn_init_thread_name"]),
+        learn_init_effort=str(runtime_defaults["learn_init_effort"]),
+        learn_init_turn_text=str(runtime_defaults["learn_init_turn_text"]),
     )
 
 
 # project_config 中文：把 JSON 里的 runtime_state 转成结构化运行状态对象。
 def load_runtime_state() -> RuntimeState:
-    raw = load_project_config_json().get("runtime_state", {}) or {}
+    raw = load_unified_config().get("runtime_state", {}) or {}
     return RuntimeState(
         current_project_id=str(raw.get("current_project_id", "")).strip(),
         current_run_id=str(raw.get("current_run_id", "")).strip(),
@@ -144,81 +261,119 @@ def load_runtime_state() -> RuntimeState:
 # project_config 中文：统一打印关键项目配置，便于后续各入口做中文参数确认。
 def describe_project_config(cfg: ProjectConfig) -> list[str]:
     return [
-        f"PROJECT_ID: {cfg.project_id}",
-        f"PROJECT_ROOT: {cfg.project_root}",
-        f"CODEX_BIN: {cfg.codex_bin}",
-        f"DEFAULT_MODEL: {cfg.default_model}",
-        f"DEFAULT_MODE: {cfg.default_mode}",
-        f"DEFAULT_EFFORT: {cfg.default_effort}",
-        f"PLAN_TIMEOUT_SEC: {cfg.plan_timeout_sec}",
+        format_field("当前项目ID", "project_id", cfg.project_id),
+        format_field("项目根目录", "project_root", cfg.project_root),
+        format_field("tools目录", "tools_dir", cfg.tools_dir),
+        format_field("docs目录", "docs_dir", cfg.docs_dir),
+        format_field("宪法文件路径", "agents_file", cfg.agents_file),
+        format_field("PROJECT_GUIDE路径", "project_guide_file", cfg.project_guide_file),
+        format_field("Codex可执行命令", "codex_bin", cfg.codex_bin),
+        format_field("app-server子命令", "app_server_subcommand", cfg.app_server_subcommand),
+        format_field(
+            "app-server会话环境变量候选",
+            "app_server_session_env_keys",
+            ", ".join(cfg.app_server_session_env_keys),
+        ),
+        format_field("Codex客户端名称", "codex_client_name", cfg.codex_client_name),
+        format_field("Codex客户端版本", "codex_client_version", cfg.codex_client_version),
+        format_field("默认模型", "default_model", cfg.default_model),
+        format_field("默认模式", "default_mode", cfg.default_mode),
+        format_field("默认推理强度", "default_effort", cfg.default_effort),
+        format_field("默认超时时间(秒)", "default_timeout_sec", cfg.default_timeout_sec),
+        format_field("Plan模式超时时间(秒)", "plan_timeout_sec", cfg.plan_timeout_sec),
+        format_field("默认线程名", "default_thread_name", cfg.default_thread_name),
+        format_field("默认线程搜索数量", "default_thread_search_limit", cfg.default_thread_search_limit),
+        format_field("默认普通对话输入", "default_turn_text", cfg.default_turn_text),
+        format_field("学习基线线程名", "learn_init_thread_name", cfg.learn_init_thread_name),
+        format_field("学习基线推理强度", "learn_init_effort", cfg.learn_init_effort),
+        format_field("学习基线固定提示词", "learn_init_turn_text", cfg.learn_init_turn_text),
     ]
 
 
 # project_config 中文：统一打印当前运行状态，后续其他脚本应优先从这里读取。
 def describe_runtime_state(state: RuntimeState) -> list[str]:
     return [
-        f"CURRENT_PROJECT_ID: {state.current_project_id or '(未配置)'}",
-        f"CURRENT_RUN_ID: {state.current_run_id or '(未配置)'}",
-        f"CURRENT_TASK_FILE: {state.current_task_file or '(未配置)'}",
-        f"CURRENT_STATUS: {state.current_status or '(未配置)'}",
-        f"CURRENT_UPDATED_AT: {state.current_updated_at or '(未配置)'}",
+        format_field("当前项目ID", "current_project_id", state.current_project_id),
+        format_field("当前运行ID", "current_run_id", state.current_run_id),
+        format_field("当前任务文件", "current_task_file", state.current_task_file),
+        format_field("当前状态", "current_status", state.current_status),
+        format_field("当前状态更新时间", "current_updated_at", state.current_updated_at),
     ]
 
 
 # project_config 中文：统一打印 Git 账户与校验命令相关配置。
 def describe_git_account_config(cfg: ProjectConfig) -> list[str]:
     return [
-        f"GIT_REPO_PATH: {cfg.git_repo_path}",
-        f"GIT_REMOTE_NAME: {cfg.git_remote_name}",
-        f"GIT_REMOTE_URL_HTTPS: {cfg.git_remote_url_https or '(未配置)'}",
-        f"GIT_REMOTE_URL_SSH: {cfg.git_remote_url_ssh or '(未配置)'}",
-        f"GITHUB_LOGIN: {cfg.github_login or '(未配置)'}",
-        f"GIT_USER_NAME: {cfg.git_user_name or '(未配置)'}",
-        f"GIT_USER_EMAIL: {cfg.git_user_email or '(未配置)'}",
-        f"GIT_AUTH_CHECK_COMMAND: {cfg.git_auth_check_command or '(未配置)'}",
+        format_field("Git仓库路径", "git_account.repo_path", cfg.git_repo_path),
+        format_field("Git远端名称", "git_account.remote_name", cfg.git_remote_name),
+        format_field("Git远端地址", "git_account.remote_url", cfg.git_remote_url),
+        format_field("GitHub登录名", "git_account.github_login", cfg.github_login),
+        format_field("Git用户名", "git_account.git_user_name", cfg.git_user_name),
+        format_field("Git邮箱", "git_account.git_user_email", cfg.git_user_email),
+        format_field("Git认证检查命令", "git_account.auth_check_command", cfg.git_auth_check_command),
     ]
 
 
 # project_config 中文：统一打印 Codex 账户与运行时相关配置。
 def describe_codex_account_config(cfg: ProjectConfig) -> list[str]:
     return [
-        f"CODEX_BIN: {cfg.codex_bin}",
-        f"CODEX_AUTH_MODE: {cfg.codex_auth_mode or '(未配置)'}",
-        f"CODEX_ACCOUNT_LABEL: {cfg.codex_account_label or '(未配置)'}",
-        f"CODEX_HOME: {cfg.codex_home or '(未配置)'}",
-        f"CODEX_LOGIN_STATUS_COMMAND: {cfg.codex_login_status_command or '(未配置)'}",
+        format_field("Codex可执行命令", "codex_bin", cfg.codex_bin),
+        format_field("Codex认证模式", "codex_account.auth_mode", cfg.codex_auth_mode),
+        format_field("Codex账户标识", "codex_account.account_label", cfg.codex_account_label),
+        format_field("Codex HOME目录", "codex_account.codex_home", cfg.codex_home),
+        format_field("Codex登录状态检查命令", "codex_account.login_status_command", cfg.codex_login_status_command),
     ]
+
+
+# project_config 中文：把会话注册表转换成逐字段中文说明，便于 if main 单独查看。
+def describe_session_registry(registry: dict[str, Any]) -> list[str]:
+    lines: list[str] = []
+    if not registry:
+        return ["会话注册表为空"]
+    for slot, raw in registry.items():
+        item = dict(raw or {})
+        lines.append(format_field("会话槽位", "session_registry.slot", slot))
+        lines.append(format_field("  线程ID", f"{slot}.thread_id", item.get("thread_id", "")))
+        lines.append(format_field("  线程文件路径", f"{slot}.thread_path", item.get("thread_path", "")))
+        lines.append(format_field("  会话状态", f"{slot}.status", item.get("status", "")))
+        lines.append(format_field("  更新时间", f"{slot}.updated_at", item.get("updated_at", "")))
+        lines.append(format_field("  来源", f"{slot}.source", item.get("source", "")))
+        lines.append(format_field("  模型", f"{slot}.model", item.get("model", "")))
+        lines.append(format_field("  推理强度", f"{slot}.effort", item.get("effort", "")))
+        if "forked_from_thread_id" in item:
+            lines.append(format_field("  Fork来源线程ID", f"{slot}.forked_from_thread_id", item.get("forked_from_thread_id", "")))
+    return lines
 
 
 # project_config 中文：校验关键项目配置非空和路径存在性。
 def validate_project_config(cfg: ProjectConfig) -> list[str]:
     errors: list[str] = []
     if not cfg.project_id.strip():
-        errors.append("project_id is empty")
+        errors.append("必填字段为空-required.project_id")
     if not cfg.project_root.exists():
-        errors.append(f"project_root missing: {cfg.project_root}")
+        errors.append(f"项目根目录不存在-required.project_root: {cfg.project_root}")
     if not cfg.tools_dir.exists():
-        errors.append(f"tools_dir missing: {cfg.tools_dir}")
+        errors.append(f"tools目录不存在-tools_dir: {cfg.tools_dir}")
     if not cfg.docs_dir.exists():
-        errors.append(f"docs_dir missing: {cfg.docs_dir}")
+        errors.append(f"docs目录不存在-docs_dir: {cfg.docs_dir}")
     if not cfg.agents_file.is_file():
-        errors.append(f"agents_file missing: {cfg.agents_file}")
+        errors.append(f"宪法文件不存在-agents_file: {cfg.agents_file}")
     if not cfg.project_guide_file.is_file():
-        errors.append(f"project_guide_file missing: {cfg.project_guide_file}")
+        errors.append(f"PROJECT_GUIDE不存在-project_guide_file: {cfg.project_guide_file}")
     if not cfg.codex_bin.strip():
-        errors.append("codex_bin is empty")
+        errors.append("Codex命令为空-codex_bin")
     if not cfg.git_repo_path.exists():
-        errors.append(f"git_account.repo_path missing: {cfg.git_repo_path}")
+        errors.append(f"Git仓库路径不存在-git.repo_path: {cfg.git_repo_path}")
     if not cfg.git_remote_name.strip():
-        errors.append("git_account.remote_name is empty")
-    if not cfg.git_remote_url_https.strip() and not cfg.git_remote_url_ssh.strip():
-        errors.append("git_account.remote_url_https/remote_url_ssh are both empty")
+        errors.append("Git远端名称为空-git.remote_name")
+    if not cfg.git_remote_url.strip():
+        errors.append("Git远端地址为空-git.remote_url")
     if not cfg.git_auth_check_command.strip():
-        errors.append("git_account.auth_check_command is empty")
+        errors.append("Git认证检查命令为空-git.auth_check_command")
     if not cfg.codex_login_status_command.strip():
-        errors.append("codex_account.login_status_command is empty")
+        errors.append("Codex登录检查命令为空-codex.login_status_command")
     if not cfg.codex_auth_mode.strip():
-        errors.append("codex_account.auth_mode is empty")
+        errors.append("Codex认证模式为空-codex.auth_mode")
     return errors
 
 
@@ -226,27 +381,26 @@ def validate_project_config(cfg: ProjectConfig) -> list[str]:
 def validate_runtime_state(cfg: ProjectConfig, state: RuntimeState) -> list[str]:
     errors: list[str] = []
     if not state.current_project_id:
-        errors.append("runtime_state.current_project_id is empty")
+        errors.append("运行时项目ID为空-runtime_state.current_project_id")
     elif state.current_project_id != cfg.project_id:
         errors.append(
-            "runtime_state.current_project_id mismatch: "
+            "运行时项目ID不一致-runtime_state.current_project_id: "
             f"{state.current_project_id} != {cfg.project_id}"
         )
     if not state.current_run_id:
-        errors.append("runtime_state.current_run_id is empty")
+        errors.append("运行时运行ID为空-runtime_state.current_run_id")
     if not state.current_task_file:
-        errors.append("runtime_state.current_task_file is empty")
+        errors.append("运行时任务文件为空-runtime_state.current_task_file")
     if not state.current_status:
-        errors.append("runtime_state.current_status is empty")
+        errors.append("运行时状态为空-runtime_state.current_status")
     if not state.current_updated_at:
-        errors.append("runtime_state.current_updated_at is empty")
+        errors.append("运行时更新时间为空-runtime_state.current_updated_at")
     return errors
 
 
 # project_config 中文：从配置 registry 读取指定 session 槽位。
 def get_session_registry(slot: str) -> dict[str, Any]:
-    config = load_project_config_json()
-    registry = config.get("session_registry", {})
+    registry = load_unified_config().get("session_registry", {})
     return dict(registry.get(slot, {}) or {})
 
 
@@ -264,7 +418,7 @@ def get_session_thread_path(slot: str) -> str:
 def require_session_thread_id(slot: str, next_command: str) -> str:
     thread_id = get_session_thread_id(slot)
     if not thread_id:
-        raise ValueError(f"{slot}.thread_id is empty; run {next_command} first")
+        raise ValueError(f"会话槽位为空-{slot}.thread_id，请先执行: {next_command}")
     return thread_id
 
 
@@ -281,28 +435,15 @@ def get_app_server_session_id(cfg: ProjectConfig) -> str:
 
 # project_config 中文：按点号路径读取常用配置字段，供 shell 脚本统一取值。
 def get_config_value(key: str) -> str:
-    cfg = load_project_config()
-    state = load_runtime_state()
-    mapping = {
-        "project_id": cfg.project_id,
-        "project_root": str(cfg.project_root),
-        "runtime.current_project_id": state.current_project_id,
-        "runtime.current_run_id": state.current_run_id,
-        "runtime.current_task_file": state.current_task_file,
-        "runtime.current_status": state.current_status,
-        "runtime.current_updated_at": state.current_updated_at,
-        "git.repo_path": str(cfg.git_repo_path),
-        "git.remote_name": cfg.git_remote_name,
-        "git.remote_url_https": cfg.git_remote_url_https,
-        "git.remote_url_ssh": cfg.git_remote_url_ssh,
-        "git.github_login": cfg.github_login,
-        "git.auth_check_command": cfg.git_auth_check_command,
-        "codex.bin": cfg.codex_bin,
-        "codex.home": cfg.codex_home,
-        "codex.auth_mode": cfg.codex_auth_mode,
-        "codex.login_status_command": cfg.codex_login_status_command,
-    }
-    return str(mapping.get(key, ""))
+    current: Any = load_unified_config()
+    for part in key.split("."):
+        if isinstance(current, dict) and part in current:
+            current = current[part]
+            continue
+        return ""
+    if isinstance(current, (dict, list)):
+        return json.dumps(current, ensure_ascii=False)
+    return str(current)
 
 
 # project_config 中文：把 learn baseline 或当前 fork session 的 thread 信息写入配置 registry。
@@ -372,7 +513,7 @@ def update_runtime_state(current_project_id: str, current_run_id: str, current_t
 # project_config 中文：CLI 方式写入 runtime_state，供 shell 脚本统一更新状态。
 def set_runtime_state_from_cli(argv: list[str]) -> int:
     if len(argv) != 4:
-        print("ERROR: --set-runtime requires 4 values: <project_id> <run_id> <task_file> <status>", file=sys.stderr)
+        print("错误: --set-runtime 需要 4 个值: <project_id> <run_id> <task_file> <status>", file=sys.stderr)
         return 2
     update_runtime_state(argv[0], argv[1], argv[2], argv[3])
     return 0
@@ -415,9 +556,10 @@ def main() -> int:
     if errors:
         for item in errors:
             logger.info("项目配置校验错误: %s", item)
-    logger.info("TASKS_STATE_MIRROR_FILE: %s", TASK_STATE_FILE)
+    logger.info("TASKS/STATE镜像文件路径: %s", TASK_STATE_FILE)
     logger.info("项目会话注册表开始")
-    logger.info(json.dumps(load_project_config_json().get("session_registry", {}), ensure_ascii=False, indent=2))
+    for line in describe_session_registry(load_project_config_json().get("session_registry", {})):
+        logger.info(line)
     logger.info("项目会话注册表结束")
     return 0 if not errors else 1
 

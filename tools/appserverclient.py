@@ -23,11 +23,12 @@ try:
         get_session_registry,
         get_session_thread_id,
         get_session_thread_path,
-        load_project_config,
+        load_unified_config,
         load_runtime_state,
         require_session_thread_id,
         update_session_registry,
     )
+    from tools.result_schema import ERR_CONFIG_BASE, ERR_SESSION_BASE, err, ok
 except Exception:  # pragma: no cover
     from project_config import (  # type: ignore
         REPO_ROOT,
@@ -36,35 +37,38 @@ except Exception:  # pragma: no cover
         get_session_registry,
         get_session_thread_id,
         get_session_thread_path,
-        load_project_config,
+        load_unified_config,
         load_runtime_state,
         require_session_thread_id,
         update_session_registry,
     )
+    from result_schema import ERR_CONFIG_BASE, ERR_SESSION_BASE, err, ok  # type: ignore
 
 
-PROJECT_CONFIG = load_project_config()
+UNIFIED_CONFIG = load_unified_config()
+CODEX_CONFIG = dict(UNIFIED_CONFIG["codex"])
+RUNTIME_DEFAULTS = dict(UNIFIED_CONFIG["runtime_defaults"])
 
-CODEX_BIN = PROJECT_CONFIG.codex_bin
-CODEX_APP_SERVER_SUBCOMMAND = PROJECT_CONFIG.app_server_subcommand
-CODEX_CLIENT_NAME = PROJECT_CONFIG.codex_client_name
-CODEX_CLIENT_VERSION = PROJECT_CONFIG.codex_client_version
-CODEX_CAPABILITIES = dict(PROJECT_CONFIG.codex_capabilities)
+CODEX_BIN = str(CODEX_CONFIG["bin"])
+CODEX_APP_SERVER_SUBCOMMAND = str(CODEX_CONFIG["app_server_subcommand"])
+CODEX_CLIENT_NAME = str(CODEX_CONFIG["client_name"])
+CODEX_CLIENT_VERSION = str(CODEX_CONFIG["client_version"])
+CODEX_CAPABILITIES = dict(CODEX_CONFIG["capabilities"])
 
-DEFAULT_PROJECT_ROOT = PROJECT_CONFIG.project_root
-DEFAULT_CODEX_HOME = PROJECT_CONFIG.codex_home or None
-DEFAULT_MODEL = PROJECT_CONFIG.default_model
-DEFAULT_MODE = PROJECT_CONFIG.default_mode
-DEFAULT_EFFORT = PROJECT_CONFIG.default_effort
-DEFAULT_TIMEOUT_SEC = PROJECT_CONFIG.default_timeout_sec
-PLAN_TIMEOUT_SEC = PROJECT_CONFIG.plan_timeout_sec
+DEFAULT_PROJECT_ROOT = Path(str(UNIFIED_CONFIG["project_root"]))
+DEFAULT_CODEX_HOME = str(CODEX_CONFIG["home"]).strip() or None
+DEFAULT_MODEL = str(RUNTIME_DEFAULTS["default_model"])
+DEFAULT_MODE = str(RUNTIME_DEFAULTS["default_mode"])
+DEFAULT_EFFORT = str(RUNTIME_DEFAULTS["default_effort"])
+DEFAULT_TIMEOUT_SEC = int(RUNTIME_DEFAULTS["default_timeout_sec"])
+PLAN_TIMEOUT_SEC = int(RUNTIME_DEFAULTS["plan_timeout_sec"])
 
-DEFAULT_THREAD_NAME = PROJECT_CONFIG.default_thread_name
-DEFAULT_THREAD_SEARCH_LIMIT = PROJECT_CONFIG.default_thread_search_limit
-DEFAULT_TURN_TEXT = PROJECT_CONFIG.default_turn_text
-LEARN_INIT_THREAD_NAME = PROJECT_CONFIG.learn_init_thread_name
-LEARN_INIT_EFFORT = PROJECT_CONFIG.learn_init_effort
-LEARN_INIT_TURN_TEXT = PROJECT_CONFIG.learn_init_turn_text
+DEFAULT_THREAD_NAME = str(RUNTIME_DEFAULTS["default_thread_name"])
+DEFAULT_THREAD_SEARCH_LIMIT = int(RUNTIME_DEFAULTS["default_thread_search_limit"])
+DEFAULT_TURN_TEXT = str(RUNTIME_DEFAULTS["default_turn_text"])
+LEARN_INIT_THREAD_NAME = str(RUNTIME_DEFAULTS["learn_init_thread_name"])
+LEARN_INIT_EFFORT = str(RUNTIME_DEFAULTS["learn_init_effort"])
+LEARN_INIT_TURN_TEXT = str(RUNTIME_DEFAULTS["learn_init_turn_text"])
 
 DEFAULT_EVENTS_FILE = REPO_ROOT / "test_app.events.jsonl"
 DEFAULT_STDERR_FILE = REPO_ROOT / "test_app.stderr.log"
@@ -597,6 +601,34 @@ def current_turn_main(text: str | None = None) -> None:
     print(f"current_thread_path={current_thread_path}")
 
 
+def run_learnbaseline(force_new: bool = False) -> dict[str, Any]:
+    try:
+        init_main(force_new=force_new)
+        return ok({"action": "learnbaseline", "force_new": force_new})
+    except AppServerError as exc:
+        return err(ERR_CONFIG_BASE + 10, str(exc), {"action": "learnbaseline", "force_new": force_new})
+
+
+def run_fork_current() -> dict[str, Any]:
+    try:
+        fork_current_main()
+        return ok({"action": "fork_current"})
+    except AppServerError as exc:
+        return err(ERR_SESSION_BASE + 10, str(exc), {"action": "fork_current"})
+
+
+def run_current_turn(text: str | None = None) -> dict[str, Any]:
+    try:
+        current_turn_main(text)
+        return ok({"action": "current_turn", "text": (text or DEFAULT_TURN_TEXT).strip()})
+    except AppServerError as exc:
+        return err(
+            ERR_SESSION_BASE + 20,
+            str(exc),
+            {"action": "current_turn", "text": (text or DEFAULT_TURN_TEXT).strip()},
+        )
+
+
 #codex 中文：演示一个完整调用链：connect -> start_thread -> set_name -> start_turn -> list -> read -> fork -> compact -> close。
 def demo() -> None:
     client = CodexAppClient()
@@ -639,15 +671,27 @@ def demo() -> None:
 
 if __name__ == "__main__":
     logger = build_logger()
-    try:
-        if len(sys.argv) > 1 and sys.argv[1] == "-learnbaseline":
-            init_main(force_new=(len(sys.argv) > 2 and sys.argv[2] == "-new"))
-        elif len(sys.argv) > 1 and sys.argv[1] == "--fork-current":
-            fork_current_main()
-        elif len(sys.argv) > 1 and sys.argv[1] == "--current-turn":
-            current_turn_main(" ".join(sys.argv[2:]) if len(sys.argv) > 2 else None)
-        else:
+    if len(sys.argv) > 1 and sys.argv[1] == "-learnbaseline":
+        result = run_learnbaseline(force_new=(len(sys.argv) > 2 and sys.argv[2] == "-new"))
+        print(json.dumps(result, ensure_ascii=False))
+        if int(result.get("err_code", 1)) != 0:
+            logger.error("APP_CLIENT_FAILED: %s", result.get("err_desc", "unknown error"))
+            sys.exit(1)
+    elif len(sys.argv) > 1 and sys.argv[1] == "--fork-current":
+        result = run_fork_current()
+        print(json.dumps(result, ensure_ascii=False))
+        if int(result.get("err_code", 1)) != 0:
+            logger.error("APP_CLIENT_FAILED: %s", result.get("err_desc", "unknown error"))
+            sys.exit(1)
+    elif len(sys.argv) > 1 and sys.argv[1] == "--current-turn":
+        result = run_current_turn(" ".join(sys.argv[2:]) if len(sys.argv) > 2 else None)
+        print(json.dumps(result, ensure_ascii=False))
+        if int(result.get("err_code", 1)) != 0:
+            logger.error("APP_CLIENT_FAILED: %s", result.get("err_desc", "unknown error"))
+            sys.exit(1)
+    else:
+        try:
             demo()
-    except AppServerError as exc:
-        logger.error("APP_CLIENT_FAILED: %s", exc)
-        sys.exit(1)
+        except AppServerError as exc:
+            logger.error("APP_CLIENT_FAILED: %s", exc)
+            sys.exit(1)
