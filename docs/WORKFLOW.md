@@ -1,6 +1,6 @@
 # WORKFLOW
 
-本文件定义本仓的状态机。
+本文件定义本仓当前的主流程状态机。
 
 它回答的是：
 - 当前流程分几层
@@ -11,44 +11,41 @@
 对象定义以 `docs/ENTITIES.md` 为准，硬规则以 `AGENTS.md` 为准。
 
 补充定位：
-- 本文件描述的是 foundation repo 当前状态机。
-- 当前主线不是业务项目模板，而是本仓 `tools` 自动化研发团队的状态机与门禁。
+- 本文件描述的是 foundation repo 当前主流程。
+- 当前主线不是业务项目模板，而是本仓 `tools` 自动化研发系统本身。
+- `init` 只属于开工前准备层，不属于主业务流程。
+- 真正自动化主线以项目为中心，由 `appserverclient` 驱动学习基线、run 级方向推进、fork 多角色 session、去噪回灌 baseline，并由 `gitclient` 完成交付收尾。
 - 研发期主要通过 Codex CLI 调试和接管；长期正式运行应收敛到普通窗口中的 Python orchestrator + Codex app-server。
-- 当前普通窗口入口应优先收敛到 Python 总入口，由它顺序调用各 `tools` 子流程并统一输出日志。
 
 ## 1. 设计原则
 
 ### 1.1 流程分层
-流程固定分为五层：
+当前固定分为三层：
 
-1. 上岗层
+1. 准备层
    - `init`
-   - `learn`
-   - `ready`
-2. 讨论层
-   - `orient`
-   - `choose`
-   - `council`
-   - `arbiter`
-3. 拆解层
-   - `slice`
-   - `queue`
-   - `task`
-4. 执行层
-   - `do`
-   - `verify`
-   - `review`
-5. 交付层
-   - `ship`
-   - `run close`
-   - `state update`
+2. 主流程层
+   - `appserverclient`
+   - `--learnbaseline`
+   - `--fork-current`
+   - `--current-turn`
+   - `--summarize-current`
+   - `--refresh-baseline`
+3. 收尾层
+   - `gitclient`
+   - `--commit`
+   - `--rollback-last`
+   - `--rollback-commit`
+
+旧的 `learn -> ready -> orient -> choose -> council -> arbiter -> slice -> do -> review -> ship`
+链路现在视为研发期过渡流程和兼容材料，不再作为当前正式主线；对应旧 Python 与 shell 入口都已归档到 `tools/backup/`，不再占据正式 `tools/` 入口位。
 
 ### 1.2 边界原则
-- `init` 不学习，不讨论，不执行。
-- `learn` 不决定方向，不授权执行。
-- `ready` 只做 Go/No-Go 门禁。
-- discussion 先于 execution。
-- `queue` 在 discussion 之后，不在 discussion 之前。
+- `init` 只做环境准备、项目骨架补齐、Git/Codex 前置检查。
+- `appserverclient` 承担项目级学习基线、run 级 session 推进、多 fork session 管理。
+- `gitclient` 只承担提交、PR、合并、回滚、同步 main。
+- baseline 只保留干净主认知，不直接承载日常噪音。
+- 日常需求、讨论、验证应在 fork session 中推进，再将去噪结果回灌 baseline。
 
 ### 1.3 对象原则
 - `project_id`：长期上下文
@@ -61,31 +58,23 @@
 
 ## 2. 状态机总览
 
-推荐单入口：
-- `python3 tools/run_main.py run --steps default`
-- 需要推进讨论链时，可显式指定更多步骤，例如：
-  - `python3 tools/run_main.py run --steps init,learn,ready,orient`
-  - `python3 tools/run_main.py run --steps orient,choose,council,arbiter,slice_task --choose-option <id>`
+当前主线：
 
 ```text
 project
-  -> init
-  -> learn
-  -> ready
-  -> orient
-  -> choose
-  -> council
-  -> arbiter
-  -> slice
-  -> queue/task
-  -> do
-  -> verify
-  -> review
-  -> ship
-  -> run close
+  -> init (准备层，非主流程)
+  -> appserverclient --learnbaseline
+  -> 确定当前 run 的需求方向
+  -> appserverclient --fork-current
+  -> fork 多角色 session / 拆最小 task
+  -> appserverclient --current-turn
+  -> appserverclient --summarize-current
+  -> appserverclient --refresh-baseline
+  -> gitclient --commit / --rollback-*
+  -> 回到 run 级同频继续推进
 ```
 
-## 3. S0 上岗层
+## 3. 准备层
 
 ### 3.1 `init`
 
@@ -94,12 +83,12 @@ project
 - `python3 tools/init.py -log`
 
 目标：
-- 用固定项目配置完成自动化运行前置检查
+- 用统一项目配置完成自动化开工前检查与项目骨架补齐
 
 输入：
 - 当前项目根目录
 - `tools/project_config.json -> runtime_state`
-- `TASKS/STATE.md` 镜像输出（兼容观察）
+- `tools/project_config.json -> task_registry`
 - owner docs
 - Codex / app-server 运行前提
 - git 仓库 / 远端 / 账号 / 工作区状态
@@ -113,6 +102,7 @@ project
 - `INIT_PROJECT_ROOT`
 - `INIT_RUN_ID`
 - `INIT_TASK_FILE`
+- `INIT_TASK_JSON_FILE`
 - `INIT_PROJECT_GUIDE_STATUS`
 - `INIT_CODEX_CLI_STATUS`
 - `INIT_APP_SERVER_STATUS`
@@ -141,438 +131,235 @@ project
 - 不替代 app-server 运行时交互
 
 下一跳：
-- 若 `INIT_STATUS=ready`，进入 `learn`
-- 若 `INIT_STATUS=needs_fix` 或 `blocked`，先修复前置条件再继续
+- `init` 通过后，才进入主流程层
+- `init` 不属于 run 主流程本体
 
-### 3.2 `learn`
+## 4. 主流程层
+
+### 4.1 `appserverclient --learnbaseline`
 
 命令：
-- `python3 tools/learn.py`
+- `python3 tools/appserverclient.py --learnbaseline`
+- `python3 tools/appserverclient.py --learnbaseline -new`
 
 目标：
-- 完成项目同频和主线回拉
+- 建立或重建项目级 baseline 学习 session
 
 输入：
 - `docs/PROJECT_GUIDE.md`
 - `AGENTS.md`
 - `docs/WORKFLOW.md`
-- 由 `PROJECT_GUIDE` 引导出的必查文件
-- 当前 `tools/project_config.json -> runtime_state`
-- 当前 run evidence（若存在）
+- `docs/FILE_INDEX.md`
+- `TOOLS_METHOD_FLOW_MAP.md`
+- `tools/project_config.json`
+- 动态 prompt 组装结果
 
 输出：
-- `learn/<project_id>.json`
-- `learn/<project_id>.md`
-- `learn/<project_id>.stdout.log`
-- `learn/<project_id>.model.*`
+- `session_registry.learn_session_baseline`
+- baseline thread/session
 
 职责：
-- 通过真实 Codex Plan 模式读取课程与证据
-- 输出主线、当前阶段、下一步
-- 对 `PROJECT_GUIDE` 全量逐题口述
-- 判断是否偏离主线并给出回拉动作
-- 漂移时回到 `PROJECT_GUIDE` 问题体系重答，而不是继续闲聊
+- 以项目为中心完成一次重型 `plan` 同频
+- 把主线、课程、问题、材料锚定进 baseline session
+- baseline 已存在时直接复用；`-new` 时重建
 
-补充定位：
-- 在当前研发期，`learn` 通过 Codex CLI 路径完成模型同频与排障验证。
-- 长期目标不是让人手工守着 CLI，而是把这类程序化智能交互收敛到 app-server 运行时。
+### 4.2 确定需求方向（run 级）
 
-固定规则：
-- 真模型交互是硬门禁
-- transport 固定为 `app-server`
-- 必须是真 Plan 模式
-- `PROJECT_GUIDE` 是课程驱动器
-- 不再使用考试分数
+目标：
+- 由人给出当前 run 的方向意图
+- 系统负责围绕这个方向推进 session 与 task
 
-关键输出锚点：
-- `LEARN_MAINLINE`
-- `LEARN_CURRENT_STAGE`
-- `LEARN_NEXT_STEP`
-- `LEARN_REQUIRED_FILES_READ_LIST`
-- `LEARN_MODEL_MAINLINE`
-- `LEARN_MODEL_CURRENT_STAGE`
-- `LEARN_MODEL_NEXT_STEP`
-- `LEARN_MODEL_FILES_READ_LIST`
-- `LEARN_MODEL_ORAL_Q_COUNT`
-- `LEARN_MODEL_ORAL_QID1..N`
-- `LEARN_MODEL_ORAL_Q1..N`
-- `LEARN_MODEL_ORAL_A1..N`
-- `LEARN_MODEL_ANCHOR_*`
+说明：
+- 这个点是人工注入意图，不完全自动生成
+- 人给方向，系统负责收敛、拆解、执行、验证
+- 当前 task/queue 机器真相源优先使用 `TASKS/*.json`；`*.md` 只保留人类阅读兼容层
 
-非职责：
-- 不决定需求方向
-- 不生成 execution contract
-- 不直接进入执行
+### 4.3 `appserverclient --fork-current`
 
-下一跳：
+命令：
+- `python3 tools/appserverclient.py --fork-current`
+
+目标：
+- 从 baseline 派生当前工作 session
+
+输出：
+- `session_registry.fork_current_session`
+
+职责：
+- `resume` baseline
+- `fork` 出当前工作副本
+- 保证 baseline 不直接承载日常工作噪音
+
+### 4.4 多角色 fork / 最小 task 拆解
+
+目标：
+- 从 baseline 或 current session 再分叉多角色 session
+- 把需求方向拆成最小 task 单元逐个完成
+
+说明：
+- 这是当前正式主线的发展方向
+- 角色 session 应互不干扰
+- 每个角色 session 结束后要先做去噪总结，再考虑回灌 baseline
+- 当前正式 task 入口是 `python3 tools/taskclient.py --next`，用于从 `TASKS/QUEUE.json` 选择并绑定下一个 active task
+- 当前也可用 `python3 tools/taskclient.py --create ...` 生成新的 JSON-first task，并按需追加到 `TASKS/QUEUE.json` 或直接激活
+- `tools/task.sh` 已退出正式层，只保留历史版本于 `tools/backup/task.sh`
+
+### 4.5 `appserverclient --current-turn`
+
+命令：
+- `python3 tools/appserverclient.py --current-turn "..." `
+
+目标：
+- 在当前工作 session 上继续推进 run 级交互
+
+职责：
+- `resume` current session
+- 用普通 `default` 模式持续交互
+- 不把日常 session 永久锁死在 `plan`
+
+### 4.6 baseline 回灌
+
+目标：
+- 将 fork session 中去噪后的有效结论同步回 baseline
+
+说明：
+- 不是把所有工作噪音直接写回 baseline
+- 只回灌已去噪的主线更新、结论、证据和下一步
+
+### 4.7 `appserverclient --summarize-current`
+
+命令：
+- `python3 tools/appserverclient.py --summarize-current`
+
+目标：
+- 对当前 fork session 做一次去噪总结
+
+输出：
+- `session_registry.current_summary`
+
+职责：
+- `resume` current session
+- 以最小 prompt 生成 run 级去噪摘要
+- 读取最新 thread 内容并抽取最后一条 agent 结论
+- 把 summary 文本和来源 thread 指针写回 `tools/project_config.json`
+
+### 4.8 `appserverclient --refresh-baseline`
+
+命令：
+- `python3 tools/appserverclient.py --refresh-baseline`
+
+目标：
+- 只使用 `session_registry.current_summary` 中的有效增量更新 baseline
+
+输入：
+- `session_registry.learn_session_baseline`
+- `session_registry.current_summary`
+
+职责：
+- `resume` baseline session
+- 用 current summary 发起一次最小 baseline refresh
+- 不重建 baseline，不回灌聊天噪音
+- 把 baseline refresh 文本回写到 `session_registry.current_summary`
+
+## 5. 收尾层
+
+### 5.1 `gitclient --commit`
+
+命令：
+- `tools/gitclient.py --commit`
+- `tools/gitclient.py --commit "说明"`
+
+目标：
+- 完成提交、PR、合并、main 同步
+
+职责：
+- 从当前工作面建分支
+- commit / push / PR
+- 处理直接 merge 和 `--auto` merge
+- 等待真正 `MERGED`
+- 自动同步本地 `main`
+
+### 5.2 `gitclient --rollback-last`
+
+目标：
+- 回滚主线最近一次提交
+
+### 5.3 `gitclient --rollback-commit`
+
+目标：
+- 回滚指定提交
+
+## 6. 历史兼容链路
+
+以下链路保留为研发期过渡材料或兼容实现，不再作为当前正式主线：
+- `learn`
 - `ready`
-
-### 3.3 `ready`
-
-命令：
-- `python3 tools/ready.py`
-
-目标：
-- 给当前 run/task 出开工许可
-
-输入：
-- `tools/project_config.json -> runtime_state`
-- 当前 task 合同
-- `learn/<project_id>.json`
-- 必要时当前 run evidence
-
-输出：
-- `reports/<RUN_ID>/ready.json`
-
-职责：
-- 校验 `learn` 是否通过
-- 校验当前 `project/run/task` 是否明确
-- 固定本次工作的最小合同：
-  - `goal`
-  - `scope`
-  - `acceptance`
-  - `stop_condition`
-- 处理 unresolved run decision
-
-非职责：
-- 不再解释项目知识
-- 不再承担学习任务
-- 不生成方向草稿
-- 不自动推进到讨论或执行
-
-关键输出锚点：
-- `READY_PROJECT_ID`
-- `READY_RUN_ID`
-- `READY_TASK_FILE`
-- `READY_DECISION`
-- `READY_FILE`
-- `READY_NEXT_COMMAND`
-
-下一跳：
 - `orient`
-
-## 4. S1 讨论层
-
-### 4.1 `orient`
-
-命令：
-- `python3 tools/orient.py`
-
-目标：
-- 生成候选方向
-
-输入：
-- 当前 `project/run`
-- owner docs
-- `ready.json`
-- 当前 state/evidence
-
-输出：
-- `reports/<RUN_ID>/orient_choice.json`
-
-职责：
-- 产出多个方向选项
-- 每个方向说明 why / risk / priority / scope_hint
-
-下一跳：
 - `choose`
-
-### 4.2 `choose`
-
-命令：
-- `python3 tools/choose.py OPTION=<id>`
-
-目标：
-- 明确选择一个方向
-
-输入：
-- `orient.json`
-
-输出：
-- `reports/<RUN_ID>/orient_choice.json`
-- `reports/<RUN_ID>/direction_contract.json`
-- `reports/<RUN_ID>/direction_contract.md`
-
-职责：
-- 固定已选择方向
-- 给后续 council 一个明确输入
-
-下一跳：
 - `council`
-
-### 4.3 `council`
-
-命令：
-- `python3 tools/council.py`
-
-目标：
-- 让多角色独立评审
-
-输入：
-- `orient_choice.json`
-- `direction_contract.json`
-
-输出：
-- `reports/<RUN_ID>/execution_contract.json`
-
-职责：
-- 产品 / 架构 / 研发 / 测试独立给出意见
-- 暴露 blocker / warn / disagreement
-
-下一跳：
 - `arbiter`
-
-### 4.4 `arbiter`
-
-命令：
-- `python3 tools/arbiter.py`
-
-目标：
-- 把讨论收敛成执行合同
-
-输入：
-- `council.json`
-- `direction_contract.json`
-
-输出：
-- `reports/<RUN_ID>/execution_contract.json`
-- `reports/<RUN_ID>/execution_contract.md`
-
-职责：
-- 汇总独立视角
-- 固定目标、非目标、scope、约束、风险
-
-下一跳：
 - `slice`
-
-## 5. S2 拆解层
-
-### 5.1 `slice`
-
-命令：
-- `python3 tools/slice_task.py`
-
-目标：
-- 把 execution contract 拆成 task 切片
-
-输入：
-- `execution_contract.json`
-
-输出：
-- `reports/<RUN_ID>/slice_state.json`
-- `TASKS/QUEUE.md` slice blocks
-
-职责：
-- 生成最小 task 切片
-- 维持 queue 幂等写入
-
-下一跳：
-- queue / task selection
-
-### 5.2 `queue`
-
-目标：
-- 承接待执行切片，不定义需求本身
-
-真相源：
-- `TASKS/QUEUE.md`
-
-规则：
-- queue item 必须来自某个 run 的 slice
-- queue item 被领取后，应实体化成 `TASKS/TASK-*.md`
-
-下一跳：
 - `do`
-
-## 6. S3 执行层
-
-### 6.1 `do`
-
-命令：
-- `bash tools/legacy.sh do queue-next`
-
-目标：
-- 领取并执行下一个 task
-
-输入：
-- `ready.json`
-- `orient_choice.json`
-- `council.json`
-- `execution_contract.json`
-- `slice_state.json`
-- queue 中的待执行项
-
-输出：
-- 代码变更
-- verify 结果
-- run evidence 更新
-
-职责：
-- 领取 queue item
-- 实现最小 diff
-- 保持执行轨迹
-
-门禁：
-- 缺任一前置 gate 时必须失败
-
-下一跳：
 - `verify`
-
-### 6.2 `verify`
-
-目标：
-- 确认实现满足合同
-
-输入：
-- 当前 diff
-- task acceptance
-
-输出：
-- 本地验证结果
-- summary/decision 更新
-
-规则：
-- 本地验证优先
-- 未通过不得进入 ship
-
-### 6.3 `review`
-
-命令：
-- `bash tools/legacy.sh review`
-
-目标：
-- 检查 drift、风险和文档一致性
-
-输入：
-- run evidence
-- verify 结果
-
-输出：
-- `reports/<RUN_ID>/drift_review.json`
-- `reports/<RUN_ID>/drift_review.md`
-
-规则：
-- strict blocker 未清空，不得 ship
-
-下一跳：
-- `smoke`
-
-### 6.4 `smoke`
-
-目标：
-- 做 ship 前的 release-prep 检查
-
-输入：
-- 当前 task 合同
-- verify 结果
-- review 结果
-- 当前 run evidence
-- owner docs 更新状态
-
-输出：
-- ship-ready 结论
-- 缺失材料清单（如有）
-
-规则：
-- smoke 不负责远端交付；它只判断是否具备 ship 条件
-- 至少确认以下内容已经齐备：
-  - verify 已通过
-  - strict review blocker 已清空
-  - `reports/<RUN_ID>/summary.md`
-  - `reports/<RUN_ID>/decision.md`
-  - `reports/<RUN_ID>/meta.json`
-  - 若流程/规则/工具行为变化，对应 owner docs 已同步
-- 缺材料、合同不清、验证未过时，必须退回 task owner / 项目负责人
-
-下一跳：
+- `review`
+- archived shell entrypoints in `tools/backup/`
 - `ship`
-
-## 7. S4 交付层
-
-### 7.1 `ship`
-
-命令：
-- `tools/ship.sh`
-
-目标：
-- 完成交付与同步
-
-输入：
-- 已验证 diff
-- 当前 task 合同
-- 当前 run evidence
-
-输出：
-- commit / push / PR / merge
-- `ship_state.json`（如适用）
-
-规则：
-- one task -> one branch -> one PR
-- ship 前必须更新证据和 owner docs
-- ship 负责 git / branch / commit / push / PR / merge / sync
-- `ship_state.json` 属于 ship 自动回写的交付状态文件；业务材料不在 ship 阶段补写
-- 成功路径下，`ship` 不应在 local commit 之后继续重写已跟踪的 `ship_state.json`，避免为记录成功状态再次弄脏工作区并阻塞后续 PR merge / post-ship sync；失败与恢复状态仍需落 `ship_state.json`
-
-### 7.2 `run close`
-
-目标：
-- 关闭 run 或进入下一个 task
 
 条件：
 - 当前 run 下 task 全部完成
 - 或明确终止
 
 输出：
-- `tools/project_config.json -> runtime_state` 更新，并镜像到 `TASKS/STATE.md`
+- `tools/project_config.json -> runtime_state` 更新
 - `decision.md` 记录 stop reason
 
-## 8. Readiness Completion
+## 8. 正式主线
 
-进入执行前，至少必须有：
+当前正式主线已经收敛成三层：
+
+1. 准备层
 - `python3 tools/init.py`
-- `python3 tools/learn.py`
-- `python3 tools/ready.py`
-- `python3 tools/orient.py`
-- `python3 tools/choose.py`
-- `python3 tools/council.py`
-- `python3 tools/arbiter.py`
-- `python3 tools/slice_task.py`
 
-执行入口：
-- `bash tools/legacy.sh do queue-next`
+2. 主流程层
+- `python3 tools/appserverclient.py --learnbaseline`
+- 明确 run 级需求方向
+- `python3 tools/appserverclient.py --fork-current`
+- 在 current session 或多角色 fork session 中拆最小 task 并逐个推进
+- 阶段结束后把去噪结论回灌 baseline
+
+3. 收尾层
+- `python3 tools/gitclient.py --commit`
+- `python3 tools/gitclient.py --rollback-last`
+- `python3 tools/gitclient.py --rollback-commit <sha>`
+
+说明：
+- `init` 是准备层，不属于主业务流程。
+- baseline 学习使用 `plan`；日常 session 推进使用 `default`。
+- `gitclient` 负责提交、PR、auto merge、回滚和本地同步 `main`。
 
 ## 9. 默认日常流程
 
 推荐日常顺序：
 
 1. `python3 tools/init.py`
-2. `python3 tools/learn.py -daily`
-3. `python3 tools/ready.py`
-4. `python3 tools/orient.py`
-5. `python3 tools/choose.py OPTION=<id>`
-6. `python3 tools/council.py`
-7. `python3 tools/arbiter.py`
-8. `python3 tools/slice_task.py`
-9. `bash tools/legacy.sh do queue-next`
-10. `bash tools/legacy.sh review RUN_ID=<run-id> STRICT=1 AUTO_FIX=1`
-11. `tools/smoke.sh`
-12. `tools/ship.sh`
+2. `python3 tools/appserverclient.py --learnbaseline`
+3. 人工注入当前 run 的需求方向
+4. `python3 tools/appserverclient.py --fork-current`
+5. 用 `python3 tools/appserverclient.py --current-turn "..."` 推进当前 session
+6. 必要时 fork 多角色 session 做最小 task 处理
+7. 去噪后把有效结论回灌 baseline
+8. `python3 tools/gitclient.py --commit`
 
 说明：
-- `-daily` 是日常同频入口，等价于 `-medium`，用于减少档位选择负担；不改变 `learn` 的强同频、app-server 和 oral restatement 硬门禁。
-- `tools/smoke.sh` 是 ship 前的 readiness/checklist 层，不直接执行远端 PR/merge。
-- `tools/task.sh` / `tools/ship.sh` 默认保持当前 active branch 作为发货基线；只有显式以 `main` 为基线时，`ship.sh` 才会执行 `fetch/pull origin main`。
-- 当 `gh pr merge` 前发现 PR 不是 cleanly mergeable 时，`ship.sh` 会以 `pr_merge_blocked` 退出并打印 base-into-head 恢复命令，而不是继续盲重试。
-
-说明：
-- `-daily` 是日常同频入口，等价于 `-medium`，用于减少档位选择负担；不改变 `learn` 的强同频、app-server 和 oral restatement 硬门禁。
-- `tools/task.sh` / `tools/ship.sh` 默认保持当前 active branch 作为发货基线；只有显式以 `main` 为基线时，`ship.sh` 才会执行 `fetch/pull origin main`。
+- baseline 只负责项目级主认知，不直接承载日常噪音讨论。
+- 旧的 `learn / ready / orient / choose / council / arbiter / slice_task / run_main / ship.sh` 仍可作为 `tools/backup/` 下的参考资产，但不再是默认正式主线。
+- `runtime_state` 允许“当前已有 run，但 task 尚未切出”的中间状态。
 
 ## 10. Pause / Resume
 
 当 run 中断时：
-- 优先用 `bash tools/legacy.sh resume RUN_ID=<run-id>`
-- 必要时先用 `bash tools/legacy.sh handoff RUN_ID=<run-id>` 生成接班摘要
+- 优先依赖 `tools/project_config.json -> runtime_state`、`session_registry` 和 run evidence 恢复上下文
+- `legacy.sh` 只保留历史版本于 `tools/backup/legacy.sh`，不再是正式恢复入口
 
 停止原因统一记录到：
 - `reports/<RUN_ID>/decision.md`

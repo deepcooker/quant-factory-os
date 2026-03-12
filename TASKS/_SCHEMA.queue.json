@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "project_id": "project-id",
+  "updated_at": "2026-03-11T00:00:00+00:00",
+  "items": [
+    {
+      "queue_id": "queue-example",
+      "title": "queue title",
+      "run_id": "run-YYYY-MM-DD-example",
+      "task_id": "task-example",
+      "task_json_file": "TASKS/TASK-example.json",
+      "task_md_file": "TASKS/TASK-example.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "Queue goal.",
+      "scope": [
+        "tools/"
+      ],
+      "acceptance": [
+        {
+          "id": "check-1",
+          "text": "Acceptance criterion.",
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Machine-readable queue source."
+  ]
+}

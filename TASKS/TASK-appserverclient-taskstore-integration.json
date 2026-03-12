@@ -1,0 +1,60 @@
+{
+  "task_id": "task-appserverclient-taskstore-integration",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "done",
+  "priority": "P1",
+  "title": "appserverclient taskstore integration",
+  "goal": "让 tools/appserverclient.py 显式读取 active task JSON，并把当前 task 上下文打印进运行时日志，确保 runtime/session 主线与 taskstore 对齐。",
+  "scope": [
+    "tools/appserverclient.py",
+    "tools/taskstore.py",
+    "tools/project_config.json",
+    "docs/FILE_INDEX.md",
+    "reports/run-2026-03-11-vnext-release-baseline/"
+  ],
+  "non_goals": [
+    "不改 app-server 协议调用顺序。",
+    "不重写 learn/fork/current-turn 主流程。",
+    "不实现 queue 驱动的自动 task 切换。"
+  ],
+  "acceptance": [
+    {
+      "id": "appserverclient_reads_taskstore",
+      "text": "appserverclient 可读取 active task JSON",
+      "status": "done"
+    },
+    {
+      "id": "runtime_logs_task_context",
+      "text": "运行时日志包含 active task JSON 的关键信息",
+      "status": "done"
+    },
+    {
+      "id": "py_compile",
+      "text": "python3 -m py_compile tools/appserverclient.py tools/taskstore.py tools/project_config.py",
+      "status": "done"
+    },
+    {
+      "id": "project_config_ok",
+      "text": "python3 tools/project_config.py",
+      "status": "done"
+    },
+    {
+      "id": "evidence_updated",
+      "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+      "status": "done"
+    }
+  ],
+  "inputs": [
+    "tools/appserverclient.py",
+    "tools/taskstore.py",
+    "tools/project_config.json",
+    "TASKS/TASK-gitclient-taskstore-integration.json"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-appserverclient-taskstore-integration.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "updated_at": "2026-03-11T17:35:00+00:00"
+}

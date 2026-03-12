@@ -1,0 +1,41 @@
+{
+  "task_id": "task-ux-sample-task",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "active",
+  "priority": "P1",
+  "title": "ux sample task",
+  "goal": "验证 create-task 体验优化。",
+  "scope": [
+    "tools/",
+    "docs/"
+  ],
+  "non_goals": [
+    "不改 schema",
+    "不改 ship"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "docs updated",
+      "status": "pending"
+    },
+    {
+      "id": "check-2",
+      "text": "task json created",
+      "status": "pending"
+    }
+  ],
+  "inputs": [
+    "AGENTS.md",
+    "docs/WORKFLOW.md"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-ux-sample-task.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "updated_at": "2026-03-11T10:20:17+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

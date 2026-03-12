@@ -1,0 +1,50 @@
+{
+  "task_id": "task-appserverclient-summarize-refresh-baseline-loop",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "appserverclient summarize refresh baseline loop",
+  "goal": "补齐 appserverclient 的 summarize-current 和 refresh-baseline 最小闭环。",
+  "scope": [
+    "tools/appserverclient.py",
+    "tools/project_config.py",
+    "tools/project_config.json",
+    "tools/summarize_current_prompt.md",
+    "tools/refresh_baseline_prompt.md",
+    "docs/WORKFLOW.md",
+    "docs/FILE_INDEX.md"
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "appserverclient supports --summarize-current",
+      "status": "done"
+    },
+    {
+      "id": "check-2",
+      "text": "appserverclient supports --refresh-baseline",
+      "status": "done"
+    },
+    {
+      "id": "check-3",
+      "text": "project config writes current summary pointers",
+      "status": "done"
+    },
+    {
+      "id": "check-4",
+      "text": "docs updated for mainline",
+      "status": "done"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-appserverclient-summarize-refresh-baseline-loop.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "updated_at": "2026-03-12T09:03:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

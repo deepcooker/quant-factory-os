@@ -10,9 +10,10 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 - Codex CLI is the development/debug/takeover interface; the long-term runtime target is Python orchestrator + Codex app-server.
 
 ## 1) Entry Rule: Task + Run are mandatory
-- All implementation starts from `TASKS/TASK-*.md`.
-- If user did not give a task, pick next unchecked item in `TASKS/QUEUE.md` and create/select a task first.
-- Never edit code/docs without active `TASK_ID` + `RUN_ID` from `tools/project_config.json -> runtime_state` (mirrored to `TASKS/STATE.md`).
+- All implementation starts from `TASKS/TASK-*.json`.
+- If user did not give a task, pick next open item in `TASKS/QUEUE.json` and create/select a task first.
+- `TASKS/TASK-*.md` and `TASKS/QUEUE.md` are legacy human-readable views during transition, not machine truth.
+- Never edit code/docs without active `RUN_ID` in `tools/project_config.json -> runtime_state`; when current work has been sliced, bind the active `TASK_ID` and `TASK JSON file` there too.
 
 ## 2) Core onboarding principle (mainline anchor)
 - Session startup is anchored by:
@@ -32,97 +33,79 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 - Entity dictionary: `docs/ENTITIES.md`
 - Experimental flow map: `TOOLS_METHOD_FLOW_MAP.md`
 - Experimental file index: `docs/FILE_INDEX.md`
-- Codex CLI operations: `CODEX_CLI_PLAYBOOK.md`
-- Codex CLI source audit: `CODEX_CLI_SOURCE_AUDIT.md`
-- Current active pointers: `tools/project_config.json -> runtime_state` (mirrored to `TASKS/STATE.md`)
-- Queue intent: `TASKS/QUEUE.md`
+- Current active pointers: `tools/project_config.json -> runtime_state`
+- Queue intent: `TASKS/QUEUE.json`
 - Run evidence: `reports/<RUN_ID>/`
 
 ## 4) Mandatory session gate (once per session)
 Before any implementation:
 1. `python3 tools/init.py`
-2. `python3 tools/learn.py`
-3. `python3 tools/ready.py`
+2. `python3 tools/appserverclient.py --learnbaseline`
+3. `python3 tools/appserverclient.py --fork-current`
 
 Runtime note:
-- Python-first commands: `init/learn/ready/orient/choose/council/arbiter/slice_task`.
-- Remaining commands are compatibility-routed via `bash tools/legacy.sh <subcommand>`.
+- `init` is preflight only. It is environment preparation / project skeleton / runtime checks, not the main business workflow.
+- The current formal mainline is:
+  - `python3 tools/appserverclient.py --learnbaseline`
+  - determine run-level demand direction
+  - role/session forks on top of baseline
+  - minimal task execution inside forked sessions
+  - `python3 tools/appserverclient.py --summarize-current`
+  - `python3 tools/appserverclient.py --refresh-baseline`
+  - `python3 tools/gitclient.py --commit` or rollback
+- Historical Python-first commands such as `learn/ready/orient/choose/council/arbiter/slice_task` are archived compatibility assets, not the primary mainline contract.
+- Legacy shell entrypoints are archived under `tools/backup/` and no longer belong to the formal tool surface.
 
 `init` detailed step definitions, mode semantics (`-status` / `-main`), and output fields are owned by `docs/WORKFLOW.md` (`S0 Environment`). `AGENTS.md` keeps only gate-level contract.
 
 Required visible progress:
 - `INIT_STEP[<i>/<n>]`
-- `LEARN_STEP[<i>/<n>]`
-- `READY_STEP[<i>/<n>]`
+- `APP_RUNTIME_STATE_START`
+- `APP_RUNTIME_STATE_END`
 
-`learn` pass criteria (minimum):
-- Runtime implementation is Python-first (`tools/learn.py`).
-- `learn` is the project onboarding core:
+`appserverclient` baseline/session pass criteria (minimum):
+- Runtime implementation is Python-first (`tools/appserverclient.py`).
+- `--learnbaseline` is the current project onboarding core:
   - owner files are `docs/PROJECT_GUIDE.md` + `AGENTS.md` + `docs/WORKFLOW.md`
-  - `PROJECT_GUIDE.md` drives what else must be read through each question's `必查文件`
-- Must print:
-  - `LEARN_MAINLINE`
-  - `LEARN_CURRENT_STAGE`
-  - `LEARN_NEXT_STEP`
-  - `LEARN_REQUIRED_FILES_READ_LIST`
-- Model sync is mandatory (no downgrade path):
-  - mode is fixed internally: `MODEL_SYNC=1`
-  - plan protocol is fixed internally: `PLAN_MODE=strong`
-  - transport is fixed internally: `app-server` true plan mode only (no fallback, no external override)
+  - `PROJECT_GUIDE.md` still drives what else must be read through each question's `必查文件`
+- Baseline learning is mandatory:
+  - session lifecycle is fixed internally: baseline -> fork-current -> current-turn -> summarize-current -> refresh-baseline
+  - transport is fixed internally: `app-server`
+  - baseline learning mode is fixed internally: `plan`
   - default model constant: `gpt-5.4`
-  - one-shot override is allowed: `model=<slug>` or `-model <slug>`
-  - reasoning profile: `-minimal|-low|-medium|-high|-xhigh` (default `-xhigh`)
-  - daily ergonomics alias: `-daily` maps to `-medium` for the standard day-to-day gate path
-  - runtime compatibility: `-minimal` auto-upgrades to `low` (with explicit stdout anchor reason)
-  - `-log` is implicit; learn always mirrors stdout to `learn/{project_id}.stdout.log`
-  - learn does not set model timeout; wait for model completion
-  - practice evidence must show `tools/view.sh` coverage for every required file
-  - `plan_protocol.evidence` must cover every owner file
-  - full-question oral restatement is mandatory; no exam shortcut
-- Must also print model anchors:
-  - `LEARN_MODEL_MAINLINE`
-  - `LEARN_MODEL_CURRENT_STAGE`
-  - `LEARN_MODEL_NEXT_STEP`
-  - `LEARN_MODEL_FILES_READ_LIST`
-  - `LEARN_MODEL_ORAL_Q_COUNT`
-  - `LEARN_MODEL_ORAL_QID1..N` / `LEARN_MODEL_ORAL_Q1..N` / `LEARN_MODEL_ORAL_A1..N`
-  - plan/oral packet anchors defined in `docs/WORKFLOW.md`
+  - baseline prompt is built from `tools/learnbaseline_prompt.md` plus dynamic project context
+  - baseline creation must write `session_registry.learn_session_baseline`
+  - current fork creation must write `session_registry.fork_current_session`
+- Daily work should not keep using `plan`:
+  - `--current-turn` is the normal default-mode session continuation path
+- Denoise / refresh must write back through runtime truth:
+  - `--summarize-current` must write `session_registry.current_summary`
+  - `--refresh-baseline` must consume `session_registry.current_summary` instead of rebuilding baseline from scratch
+- practice evidence must show `tools/view.sh` coverage for every required file listed by the dynamic baseline prompt
 
 No coding until this gate is complete.
 
 ## 5) Working mode: Plan -> Confirm -> Execute
 - Complex work must follow `Plan -> Confirm -> Execute`.
 - Codex interactive `/plan` is planning protocol, not execution.
-- `bash tools/legacy.sh plan` only drafts queue proposals; it does not open execute gate.
+- Historical `legacy.sh` behavior is reference-only under `tools/backup/legacy.sh`; it does not open execute gate.
 - `/compact` is milestone-based, not a `learn` hard gate. Use after long exchanges or before switching milestones.
 
 ## 6) Workflow skeleton
-1. Read task acceptance criteria.
-2. `make evidence RUN_ID=<RUN_ID>`
-3. Implement smallest safe diff.
-4. `make verify` until green.
-5. Update run evidence.
-6. Run smoke / release-prep checks.
-7. Ship.
+1. Run `python3 tools/init.py` as preflight / environment preparation.
+2. Run `python3 tools/appserverclient.py --learnbaseline` to ensure project baseline learning exists.
+3. Determine the run-level demand direction (human-injected intent).
+4. Run `python3 tools/appserverclient.py --fork-current` to create the working session from baseline.
+5. Split work into minimal role/task units inside forked sessions and advance with `--current-turn`.
+6. Run `python3 tools/appserverclient.py --summarize-current` to denoise the current session.
+7. Run `python3 tools/appserverclient.py --refresh-baseline` to feed the denoised summary back into baseline.
+8. Finish with `python3 tools/gitclient.py --commit` or rollback commands.
 
 Current boundary:
-- `smoke` is the ship-readiness layer; it checks materials, verify/review status, and owner-doc freshness.
-- `smoke` does not perform remote git / PR / merge actions.
-- `ship` is the formal git / PR / merge / sync step.
-
-Discussion-first recommended lane:
-- `bash tools/legacy.sh discuss TARGET=prepare`
-- `python3 tools/choose.py OPTION=<id>`
-- `python3 tools/council.py`
-- `python3 tools/arbiter.py`
-- `python3 tools/slice_task.py`
-- `bash tools/legacy.sh do queue-next` (or `bash tools/legacy.sh execute TARGET=do`)
-
-Execution gate artifacts required before `do`:
-- `reports/<RUN_ID>/ready.json`
-- `reports/<RUN_ID>/orient_choice.json`
-- `reports/<RUN_ID>/execution_contract.json`
-- `reports/<RUN_ID>/slice_state.json`
+- `init` is not the mainline; it is preparation only.
+- `appserverclient` is the formal runtime/session mainline.
+- `gitclient` is the formal git / PR / merge / rollback / sync layer.
+- Historical `learn/ready/orient/choose/council/arbiter/slice_task` flow remains only as compatibility material while the new mainline hardens.
 
 ## 7) Evidence is memory (hard gate)
 Each run must update:
@@ -143,20 +126,19 @@ Optional failure memory:
 ## 8) Allowed commands (default)
 Use only these unless task explicitly authorizes more:
 - `python3 tools/init.py`
-- `python3 tools/learn.py`
-- `python3 tools/ready.py`
-- `python3 tools/orient.py`
-- `python3 tools/choose.py`
-- `python3 tools/council.py`
-- `python3 tools/arbiter.py`
-- `python3 tools/slice_task.py`
-- `python3 tools/run_main.py`
-- `bash tools/legacy.sh ...`
+- `python3 tools/appserverclient.py --learnbaseline`
+- `python3 tools/appserverclient.py --fork-current`
+- `python3 tools/appserverclient.py --current-turn`
+- `python3 tools/appserverclient.py --summarize-current`
+- `python3 tools/appserverclient.py --refresh-baseline`
+- `python3 tools/gitclient.py --commit`
+- `python3 tools/gitclient.py --rollback-last`
+- `python3 tools/gitclient.py --rollback-commit <sha>`
+- `python3 tools/taskclient.py --next`
+- `python3 tools/taskclient.py --create ...`
 - `tools/doctor.sh`
 - `tools/enter.sh`
 - `tools/smoke.sh`
-- `tools/task.sh`
-- `tools/ship.sh`
 - `tools/view.sh`
 - `make evidence RUN_ID=...`
 - `make verify`
@@ -191,10 +173,11 @@ If blocked or verify fails:
 If process/rule/tool behavior changes in a run, update in the same run:
 - `AGENTS.md`
 - `docs/WORKFLOW.md`
-- `CODEX_CLI_PLAYBOOK.md` (if CLI usage/flags changed)
-- `CODEX_CLI_SOURCE_AUDIT.md` (if CLI behavior/evidence baseline changed)
 - `docs/PROJECT_GUIDE.md` (if learning/Q&A anchor changed)
-- `tools/project_config.json` (if active pointers changed; `TASKS/STATE.md` is mirrored output)
+- `docs/FILE_INDEX.md` (if key file responsibilities or reading order changed)
+- `TOOLS_METHOD_FLOW_MAP.md` (if formal mainline methods or call paths changed)
+- `tools/project_config.json` (if active pointers changed)
+- `TASKS/QUEUE.json` / `TASKS/TASK-*.json` (if task or queue truth changed)
 - `reports/<RUN_ID>/summary.md` and `reports/<RUN_ID>/decision.md`
 
 No doc update, no ship.

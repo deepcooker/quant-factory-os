@@ -1,0 +1,35 @@
+{
+  "task_id": "task-archive-legacy-tool-entrypoints",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "archive legacy tool entrypoints",
+  "goal": "把已经退出主流程的旧 Python 和 shell 入口归档到 tools/backup，只保留当前正式主流程入口。",
+  "scope": [
+    "tools/",
+    "docs/"
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "listed legacy entrypoints moved to tools/backup",
+      "status": "done"
+    },
+    {
+      "id": "check-2",
+      "text": "owner docs reflect Python mainline whitelist",
+      "status": "done"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-archive-legacy-tool-entrypoints.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "updated_at": "2026-03-12T06:06:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

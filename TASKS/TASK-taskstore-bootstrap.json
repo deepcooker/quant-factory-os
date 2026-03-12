@@ -1,0 +1,65 @@
+{
+  "task_id": "task-taskstore-bootstrap",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "done",
+  "priority": "P1",
+  "title": "taskstore bootstrap",
+  "goal": "新增一个最小 tools/taskstore.py，统一读写 TASKS/QUEUE.json 与 TASKS/TASK-*.json，并先让 evidence.py 依赖这层读取运行态 task。",
+  "scope": [
+    "tools/taskstore.py",
+    "tools/evidence.py",
+    "tools/project_config.json",
+    "docs/FILE_INDEX.md",
+    "reports/run-2026-03-11-vnext-release-baseline/"
+  ],
+  "non_goals": [
+    "不重写全部 task/queue 调用方。",
+    "不实现完整 task picker。",
+    "不删除现有 md 兼容视图。"
+  ],
+  "acceptance": [
+    {
+      "id": "taskstore_added",
+      "text": "新增 tools/taskstore.py",
+      "status": "done"
+    },
+    {
+      "id": "taskstore_reads_active_and_queue",
+      "text": "taskstore 可读取 active task、指定 task 和 queue",
+      "status": "done"
+    },
+    {
+      "id": "evidence_uses_taskstore",
+      "text": "tools/evidence.py 通过 taskstore 解析当前 run 的 task_id",
+      "status": "done"
+    },
+    {
+      "id": "taskstore_cli",
+      "text": "python3 tools/taskstore.py --active-task",
+      "status": "done"
+    },
+    {
+      "id": "py_compile",
+      "text": "python3 -m py_compile tools/taskstore.py tools/evidence.py tools/project_config.py",
+      "status": "done"
+    },
+    {
+      "id": "evidence_updated",
+      "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+      "status": "done"
+    }
+  ],
+  "inputs": [
+    "tools/project_config.json",
+    "TASKS/QUEUE.json",
+    "TASKS/TASK-task-queue-json-bootstrap.json",
+    "TASKS/TASK-compat-shell-archive.json"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-taskstore-bootstrap.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "updated_at": "2026-03-11T17:20:00+00:00"
+}

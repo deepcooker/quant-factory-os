@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "project_id": "quant-factory-os",
+  "updated_at": "2026-03-11T10:24:12+00:00",
+  "items": [
+    {
+      "queue_id": "queue-vnext-release-baseline",
+      "title": "vnext release baseline",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-taskclient-pick-next",
+      "task_json_file": "TASKS/TASK-taskclient-pick-next.json",
+      "task_md_file": "TASKS/TASK-taskclient-pick-next.md",
+      "status": "active",
+      "picked_at": "2026-03-11T09:43:54+00:00",
+      "goal": "进入开发设计阶段的新版本基线，保持流程最小可用并可继续迭代。",
+      "scope": [
+        "TASKS/",
+        "reports/",
+        "tools/",
+        "docs/",
+        "tests/"
+      ],
+      "acceptance": [
+        {
+          "id": "tools_chain_usable",
+          "text": "tools/*.py 命令链可用",
+          "status": "pending"
+        },
+        {
+          "id": "noise_cleaned",
+          "text": "task/report 历史噪音已清理",
+          "status": "in_progress"
+        },
+        {
+          "id": "pr_opened",
+          "text": "提交 PR",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-bootstrap-sample-task",
+      "title": "bootstrap sample task",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-bootstrap-sample-task",
+      "task_json_file": "TASKS/TASK-bootstrap-sample-task.json",
+      "task_md_file": "TASKS/TASK-bootstrap-sample-task.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "验证 JSON-first task bootstrap 可用。",
+      "scope": [
+        "tools/"
+      ],
+      "acceptance": [
+        {
+          "id": "verify",
+          "text": "Command(s) pass: make verify",
+          "status": "pending"
+        },
+        {
+          "id": "evidence",
+          "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-schema-sample-task",
+      "title": "schema sample task",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-schema-sample-task",
+      "task_json_file": "TASKS/TASK-schema-sample-task.json",
+      "task_md_file": "TASKS/TASK-schema-sample-task.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "验证 schema 收紧。",
+      "scope": [
+        "docs/"
+      ],
+      "acceptance": [
+        {
+          "id": "check-1",
+          "text": "owner docs updated",
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "QUEUE.json is the machine-oriented queue source for active/open work.",
+    "QUEUE.md remains a legacy human-readable backlog during transition and has not been fully backfilled."
+  ]
+}

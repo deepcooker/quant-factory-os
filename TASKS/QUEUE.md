@@ -119,7 +119,7 @@
   - [ ] `make verify` 通过
   - [ ] Evidence updated: `reports/{RUN_ID}/summary.md` and `reports/{RUN_ID}/decision.md`
 
-- [ ] TODO Title: vnext release baseline
+- [ ] TODO Title: vnext release baseline  Picked: run-2026-03-11-vnext-release-baseline 2026-03-11T16:40:00+0000
   Goal: 进入开发设计阶段的新版本基线，保持流程最小可用并可继续迭代。
   Scope: `TASKS/`, `reports/`, `tools/`, `docs/`, `tests/`
   Acceptance:

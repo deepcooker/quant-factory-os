@@ -2,8 +2,8 @@
   "schema": "qf_learn.v3",
   "project_id": "quant-factory-os",
   "scope": "project-session",
-  "created_at_utc": "2026-03-10T19:50:28.175682+00:00",
-  "learn_passed": false,
+  "created_at_utc": "2026-03-10T22:03:38.052763+00:00",
+  "learn_passed": true,
   "owner_files": [
     "docs/PROJECT_GUIDE.md",
     "AGENTS.md",
@@ -18,11 +18,12 @@
     "TASKS/QUEUE.md",
     "reports/run-2026-03-08-tools-orchestrator-entry/summary.md",
     "reports/run-2026-03-08-tools-orchestrator-entry/decision.md",
-    "CODEX_CLI_PLAYBOOK.md",
+    "docs/FILE_INDEX.md",
+    "TOOLS_METHOD_FLOW_MAP.md",
     "tools/appserverclient.py",
     "tools/gitclient.py"
   ],
-  "context_digest": "53b15f42c108501a1820b8736cd989d7adb6ef30fb8cd1e869bf671de9253b69",
+  "context_digest": "8e09f92c3acbc29a0a1c54f5f7f8c0b1041b2a1d880f94b5b6f31bf9760d36e5",
   "project_understanding": {
     "summary": "quant-factory-os is the governance/execution base for quant engineering.",
     "goal": "自动化 -> 自我迭代 -> 涌现智能。"
@@ -86,7 +87,10 @@
       "must_read_files": [
         "AGENTS.md",
         "docs/WORKFLOW.md",
-        "CODEX_CLI_PLAYBOOK.md",
+        "docs/FILE_INDEX.md",
+        "TOOLS_METHOD_FLOW_MAP.md",
+        "tools/appserverclient.py",
+        "tools/gitclient.py",
         "tools/project_config.json"
       ],
       "why": "这题负责定义脑和手的协作边界，不然模型会把战略、评审、实现、修复混成一层。",
@@ -280,12 +284,10 @@
   ],
   "sync": {
     "mode": "project-guide-driven-read",
-    "passed": false,
-    "required_total": 11,
-    "required_read": 10,
-    "missing_required_files": [
-      "CODEX_CLI_PLAYBOOK.md"
-    ]
+    "passed": true,
+    "required_total": 12,
+    "required_read": 12,
+    "missing_required_files": []
   },
   "next_command": "python3 tools/ready.py",
   "model_sync": {
@@ -301,9 +303,9 @@
     "events_file": "learn/quant-factory-os.model.events.jsonl",
     "stderr_file": "learn/quant-factory-os.model.stderr.log",
     "result": {
-      "mainline": "把 quant-factory-os 收敛成一个以仓库证据、门禁和状态机驱动的 AI 研发基座，当前主线是继续硬化 tools 自动化体系本身，而不是扩展业务功能。",
-      "current_stage": "项目仍处于 foundation 强化阶段；runtime_state 仍指向 run-2026-03-08-tools-orchestrator-entry，而队列里仍有未完成的 `vnext release baseline`，说明当前重点仍是把单入口、learn 同频和流程边界做稳。",
-      "next_step": "先用当前 onboarding 结果校准 active run/task 是否仍应停留在 orchestrator-entry；若目标已转到 `vnext release baseline`，应先重绑指针与合同，再从 `ready -> orient` 进入讨论链，而不是直接执行。",
+      "mainline": "init 仅作准备层 -> appserverclient --learnbaseline -> 明确 run 级需求方向 -> --fork-current / 多角色 session -> --current-turn 推进并去噪回灌 baseline -> gitclient --commit 或 --rollback-* 收尾",
+      "current_stage": "当前处于 foundation hardening：TASKS/STATE 与 runtime_state 都指向 run-2026-03-08-tools-orchestrator-entry，但 owner docs 已把正式主线收敛到 baseline/session/git 三层，而该 active run 证据仍停留在较旧的 tools/run_main.py 过渡批次。",
+      "next_step": "下一步应以 owner docs 为准重新绑定任务方向：停止把 run_main 当主线，改为围绕 appserverclient 的 baseline/fork/current-turn 与 gitclient 的交付闭环继续规划。",
       "files_read": [
         "docs/PROJECT_GUIDE.md",
         "AGENTS.md",
@@ -313,273 +315,277 @@
         "TASKS/QUEUE.md",
         "reports/run-2026-03-08-tools-orchestrator-entry/summary.md",
         "reports/run-2026-03-08-tools-orchestrator-entry/decision.md",
-        "chatlogs/CODEX_CLI_PLAYBOOK.md",
+        "docs/FILE_INDEX.md",
+        "TOOLS_METHOD_FLOW_MAP.md",
         "tools/appserverclient.py",
-        "tools/gitclient.py"
+        "tools/gitclient.py",
+        "TASKS/STATE.md"
       ],
       "plan_protocol": {
-        "goal": "完成一次严格的、证据驱动的 onboarding sync，把项目主线、当前阶段、工作流、会话连续性和当前重点收敛成可直接交给后续执行阶段使用的口述包。",
-        "non_goal": "不实现代码、不改状态、不补跑任何写入型 gate，也不靠聊天记忆做摘要捷径。",
+        "goal": "在不写入仓库的前提下，按 PROJECT_GUIDE 的固定题库和必查文件完成一次严格 onboarding sync，并把当前 run 与正式主线之间的偏差显式标出来。",
+        "non_goal": "不执行实现、不改文档、不延续 run_main 旧链路作为本次 pass 的默认正式入口。",
         "evidence": [
-          "docs/PROJECT_GUIDE.md#Q1 标准答案: 项目目标是把 AI 协作从依赖聊天记忆改造成依赖仓库证据、门禁和工作流的工程化闭环。",
-          "AGENTS.md#4) Mandatory session gate (once per session): 上岗硬门禁固定为 init -> learn -> ready，且 learn 必须输出 oral restatement 与 owner-file evidence。",
-          "docs/WORKFLOW.md#1.1 流程分层: 当前状态机固定分为上岗、讨论、拆解、执行、交付五层。",
-          "tools/project_config.json#runtime_state: current_run_id 是 run-2026-03-08-tools-orchestrator-entry，current_task_file 是 TASKS/TASK-tools-orchestrator-entry.md。",
-          "reports/run-2026-03-08-tools-orchestrator-entry/summary.md#What changed: 当前 run 已落地 Python 总入口 tools/run_main.py、统一 logging 与 workflow/doc 更新。"
+          "docs/PROJECT_GUIDE.md#使用方式: GUIDE 是 learn 主课程，要求先读本文件，再按每题必查文件取证，漂移时回到题库重答。",
+          "AGENTS.md#4) Mandatory session gate (once per session): 无实现前必须先过 init -> --learnbaseline -> --fork-current，并要求 practice evidence 覆盖 tools/view.sh 读取。",
+          "docs/WORKFLOW.md#8. 正式主线: 当前正式主线固定为准备层 init、主流程层 appserverclient、收尾层 gitclient。"
         ],
         "alternatives": [
-          "只读当前 run summary/decision 后输出简短总结。",
-          "按 PROJECT_GUIDE 的 Q1-Q17 顺序，结合 must-read 文件逐题口述并回到主线。"
+          "按 owner docs 解释主线：run_main 是兼容资产，下一轮应围绕 appserverclient + gitclient。",
+          "按 active run 解释主线：继续把 run_main 和旧的 init/learn/ready/... 链当正式入口。",
+          "双轨并行：同时维护 run_main 主入口和 baseline/session/git 主入口。"
         ],
-        "rebuttal": "第一种做法违背了 GUIDE 规定的课程式同频与 must-read 映射，无法证明 owner docs、实体定义和 session continuity 已真正读透。",
-        "decision_stop_condition": "当 owner files 和全部指定补充文件都已通过 tools/view.sh 读取，且 Q1-Q17 每题都能用其 must-read 文件证据完成 1-2 句回答时立即停止探索并输出 JSON。"
+        "rebuttal": "后两项都被当前宪法与工作流否定，因为 AGENTS 和 WORKFLOW 已明确把旧长链降级为兼容材料，并把 appserverclient 与 gitclient 定义成正式主线。",
+        "decision_stop_condition": "当 Q1-Q17 全部按顺序回答完毕、每题都落到其必查文件证据、且当前 drift 已被明确回拉到 owner-doc mainline 时，本次计划型 onboarding pass 结束。"
       },
       "oral_restate": {
-        "project_understanding": "这是一个 quant-engineering OS 基座仓，当前目标不是交付业务，而是把 tools 自动化研发团队的学习、讨论、执行和交付闭环做成可审计、可恢复、可接管的工程系统。",
-        "constitution_workflow": "硬规则以 AGENTS.md 为宪法，WORKFLOW.md 负责状态机，PROJECT_GUIDE.md 负责学习主线回拉；复杂工作必须先 Plan -> Confirm -> Execute。",
-        "evidence_chain": "当前真相源是 tools/project_config.json 的 runtime_state、TASKS/QUEUE.md 的待办入口、reports/run-2026-03-08-tools-orchestrator-entry 的 summary/decision，以及 owner docs 对流程与对象的定义。",
-        "session_continuity": "最近 session 不应靠记忆复述；当前指针仍在 orchestrator-entry run，而该 run 的证据显示最近聚焦的是 Python 单入口、统一日志、init 业务化和后续 refactor 顺序。",
-        "current_focus": "最重要的任务仍是降低流程噪音并把 learn 基线、当前工作 session、Git 收尾这三层稳定下来；run_main 只是这条主线上的一个入口层改进。",
-        "next_action": "先确认 active run/task 是否继续使用 orchestrator-entry，或是否需要切换到未完成的 vnext release baseline；确认后再按 ready/orient/council 链路收敛新合同。"
+        "project_understanding": "quant-factory-os 不是业务仓，而是把 AI 协作沉到仓库证据、门禁、状态机和 Git 闭环里的 foundation repo。",
+        "constitution_workflow": "宪法是 AGENTS，学习锚点是 PROJECT_GUIDE，状态机是 WORKFLOW；正式工作流是 init 预检、appserverclient 主流程、gitclient 收尾。",
+        "evidence_chain": "PROJECT_GUIDE 定义题库和必查文件，ENTITIES 定义名词边界，runtime_state/TASKS/STATE 指当前指针，run summary/decision 给出最近 session continuity。",
+        "session_continuity": "TASKS/STATE 与 runtime_state 都指向 run-2026-03-08-tools-orchestrator-entry；其 summary/decision 说明最近 session 主要在做 run_main 单入口与日志，而不是当前 owner-doc 主线。",
+        "current_focus": "当前最该做的是把 baseline/session/git 主线做稳，并把旧 orchestrator 明确视为兼容资产而非正式主入口。",
+        "next_action": "以这次同步结果为锚，下一轮只规划能增强 appserverclient 或 gitclient 主线的任务，并先修正 active run 叙事和主线的一致性。"
       },
       "guide_oral": [
         {
           "question_id": "Q1",
           "question": "整个项目是做什么的，背景，目标是什么，我最终要什么，我是用什么开发方式来完成这个项目的？",
-          "answer": "这个仓库是一个 AI 研发治理基座，目标是把协作从依赖聊天记忆改造成依赖仓库证据、门禁和工作流的闭环，并把长期运行形态收敛成 Python orchestrator + Codex app-server。完成方式不是随手改代码，而是围绕 task/run 指针按 Gate + Evidence + Verify + Ship 的工程流程推进。",
+          "answer": "quant-factory-os 是一个把 AI 协作从聊天记忆改成仓库证据、门禁和工作流闭环的 foundation repo，当前目标是先把 tools 自动化研发系统本身做稳。最终要的是新 agent 能基于 owner docs、state 和 evidence 快速同频并按 Task + Gate + Evidence + Verify + Ship 的方式推进，而长期运行时目标是 Python orchestrator + Codex app-server。",
           "standard_alignment": "aligned",
           "evidence": [
-            "AGENTS.md#0) Scope: 仓库当前目标是 harden `tools` automation R&D system，自身不是业务仓，长期运行形态是 Python orchestrator + Codex app-server。",
-            "docs/WORKFLOW.md#补充定位: foundation repo 当前主线不是业务模板，而是本仓 tools 自动化研发团队的状态机与门禁。",
-            "docs/ENTITIES.md#1.3 单一真相源: 项目长期认知、硬规则、流程状态机和当前指针分别有固定真相源，说明开发方式是证据驱动而非聊天驱动。"
+            "AGENTS.md#0) Scope: 仓库当前目标是把 tools 自动化研发系统本身做稳，长期运行时目标是 Python orchestrator + Codex app-server。",
+            "docs/WORKFLOW.md#1.2 边界原则: init 只做准备，appserverclient 负责项目级学习基线和 session 推进，gitclient 负责提交、PR、合并、回滚和同步。",
+            "docs/ENTITIES.md#1.4 运行时边界: tools 是执行层，Codex CLI 是研发期接管界面，长期应由 Python orchestrator 通过 app-server 驱动智能交互。"
           ],
           "drift_note": "none",
-          "return_to_mainline": "先把项目定位回到基座治理系统，再讨论任何具体工具或脚本细节。"
+          "return_to_mainline": "后续所有判断都必须围绕 foundation hardening，而不是围绕某个单独脚本。"
         },
         {
           "question_id": "Q2",
           "question": "项目有几个阶段性目标，现在完成到哪个阶段，每个阶段都完成了什么？",
-          "answer": "项目按上岗、讨论、拆解、执行、交付这条主状态机逐步硬化，当前仍在 foundation 强化期，核心是把 init/learn/ready 和单入口编排做稳。当前 run 已落地 Python 总入口、统一日志和 init/文档整理，但队列里仍留有未完成的 `vnext release baseline`。",
-          "standard_alignment": "aligned",
+          "answer": "项目当前仍处于 foundation hardening：正式结构已经收敛到 init 准备层、appserverclient 主流程层、gitclient 收尾层，并且 runtime_state 已记录 baseline/current session 指针。与此同时，active run 证据仍主要停留在 tools/run_main.py 单入口与旧链路封装，而队列里还有未勾选的 vnext release baseline，说明阶段收敛尚未完成。",
+          "standard_alignment": "partial",
           "evidence": [
-            "docs/WORKFLOW.md#1.1 流程分层: 状态机固定分为上岗层、讨论层、拆解层、执行层、交付层五层。",
-            "tools/project_config.json#runtime_state: 当前 active 指针仍是 run-2026-03-08-tools-orchestrator-entry 与 TASKS/TASK-tools-orchestrator-entry.md。",
-            "TASKS/QUEUE.md#Queue: `tools orchestrator entry` 已完成，但 `vnext release baseline` 仍未勾选完成。",
-            "reports/run-2026-03-08-tools-orchestrator-entry/summary.md#What changed: 当前 run 已完成 tools/run_main.py、统一 orchestration logging 和 owner docs 更新。"
+            "docs/WORKFLOW.md#8. 正式主线: 当前正式主线已收敛成准备层 init、主流程层 appserverclient、收尾层 gitclient 三层。",
+            "tools/project_config.json#runtime_state: current_run_id 是 run-2026-03-08-tools-orchestrator-entry，current_task_file 是 TASKS/TASK-tools-orchestrator-entry.md，状态为 active。",
+            "TASKS/QUEUE.md#Queue: 队列里仍有一个未勾选的 vnext release baseline 条目，说明阶段性收敛未完成。",
+            "reports/run-2026-03-08-tools-orchestrator-entry/summary.md#What changed: 当前 active run 主要落地的是 tools/run_main.py 单入口、统一 logging 和旧链路封装。"
           ],
-          "drift_note": "none",
-          "return_to_mainline": "把“已经完成的入口层改造”和“尚未完成的基线强化”分开看，不把终态误当现状。"
+          "drift_note": "当前 active run 仍围绕 run_main 旧链路。",
+          "return_to_mainline": "把 orchestrator-entry 视为过渡证据，下一阶段只围绕 baseline/session/git 三层继续收敛。"
         },
         {
           "question_id": "Q3",
           "question": "这个项目完成后会形成什么基座能力，接下来第一个落地项目会是什么，你准备怎么承接和落地？",
-          "answer": "项目完成后会形成一个负责同频、讨论、执行门禁和交付治理的 foundation repo，而不是业务代码本身；近期承接方式仍应先把这套 tools 运行层和 evidence discipline 做稳。当前 decision 也明确先冻结重构顺序和入口边界，而不是提前把未稳定流程包装成更大业务面。",
+          "answer": "项目完成后会形成一套以 project/run/task/evidence 为核心的 AI 协作基座，负责同频、门禁、session 推进和 Git 交付闭环。当前最先落地的仍是本仓自己的 tools 运行层，而不是外部业务模板，所以承接方式应先稳住 foundation runtime，再让后续项目消费它。",
           "standard_alignment": "aligned",
           "evidence": [
-            "docs/WORKFLOW.md#补充定位: 长期正式运行应收敛到普通窗口中的 Python orchestrator + Codex app-server。",
-            "docs/ENTITIES.md#1.4 运行时边界: tools 是执行层，Codex CLI 是研发期调试/接管界面，长期由 Python orchestrator 通过 app-server 驱动智能交互。",
-            "reports/run-2026-03-08-tools-orchestrator-entry/decision.md#Chosen: 先加单入口和 blueprint，并把后续重构顺序固定为 common helpers -> artifact/state -> logging -> workflow -> entry -> runtime。"
+            "docs/WORKFLOW.md#2. 状态机总览: 主线生命周期是 project -> init -> learnbaseline -> run 方向 -> fork session -> current-turn -> 回灌 baseline -> git 收尾。",
+            "docs/ENTITIES.md#1.4 运行时边界: 长期正式运行应由 Python orchestrator 通过 Codex app-server 驱动智能交互，CLI 只是研发期接口。",
+            "reports/run-2026-03-08-tools-orchestrator-entry/decision.md#Chosen: 当前 run 先增加单入口并冻结重构蓝图，再做大改写，说明落地方向仍是基座运行层而不是业务仓。"
           ],
           "drift_note": "none",
-          "return_to_mainline": "继续把 foundation repo 的 learn、workflow 和交付边界做稳，再谈后续业务落地。"
+          "return_to_mainline": "先把 foundation runtime 做稳，再讨论下游承接。"
         },
         {
           "question_id": "Q4",
           "question": "如果把不同 AI 界面或运行时分别作为决策端和执行端，它们应如何保持同频，各自承担什么职责？",
-          "answer": "决策端和执行端必须靠仓库内的 owner docs、runtime_state 和 run evidence 同频，而不是靠窗口记忆同步。网页或 `/plan` 强模式更适合做方向与反驳，Codex CLI/app-server 适合读仓、执行、记录证据，且 learn 必须固定走 app-server 的 true plan mode。",
+          "answer": "决策端更适合做方向讨论、反驳和收敛，执行端更适合做 baseline 学习、session fork、代码/验证和证据回写；它们保持同频的方式不是聊天记忆，而是 owner docs、runtime_state/session_registry 和 run evidence。当前栈里，appserverclient 负责 baseline/fork/current-turn，gitclient 负责 commit/rollback 闭环。",
           "standard_alignment": "aligned",
           "evidence": [
-            "AGENTS.md#4) Mandatory session gate (once per session): Codex 本地必须先跑 init -> learn -> ready，learn 的 model sync、PLAN_MODE=strong 和 owner-file evidence 都是硬门禁。",
-            "docs/WORKFLOW.md#3.2 `learn`: learn 的职责是通过真实 Codex Plan 模式读取课程与证据，并在漂移时回到 PROJECT_GUIDE 重答。",
-            "chatlogs/CODEX_CLI_PLAYBOOK.md#1.2 learn 同频模式（`/plan` 强模式 + 可审计）: learn 固定使用 `app-server` true plan mode，必须产出 strong plan JSON 包和 tools/view.sh 覆盖证据。",
-            "tools/project_config.json#runtime_state: 当前 project/run/task 指针由 runtime_state 统一提供，是不同端口保持同频的活动真相源。"
+            "AGENTS.md#2) Core onboarding principle (mainline anchor): session 漂移时必须回到 PROJECT_GUIDE 问题体系并重新绑定证据。",
+            "docs/WORKFLOW.md#1.2 边界原则: appserverclient 承担项目级学习基线和 session 推进，gitclient 只承担提交、PR、合并、回滚、同步 main。",
+            "docs/FILE_INDEX.md#3. Prepare / Runtime / Git: FILE_INDEX 将 init、appserverclient、gitclient 分别定位为准备层、runtime 层和 Git 收尾层。",
+            "TOOLS_METHOD_FLOW_MAP.md#1. 当前正式主线: flow map 把正式主线固定成 init、appserverclient、gitclient 三层。",
+            "tools/appserverclient.py#init_main: baseline 学习用 mode=plan 创建 thread、启动 turn，并写回 learn_session_baseline。",
+            "tools/gitclient.py#run_commit_and_merge: gitclient 从当前工作面建分支、提交、建 PR、等待合并并同步 main。",
+            "tools/project_config.json#session_registry: learn_session_baseline 和 fork_current_session 都已记录 thread_id、thread_path 和 status。"
           ],
           "drift_note": "none",
-          "return_to_mainline": "任何端口切换都先回到 owner docs、runtime_state 和 run evidence 对齐，而不是继续闲聊。"
+          "return_to_mainline": "同频时先看 docs + state + evidence，再决定由哪个端承担下一步。"
         },
         {
           "question_id": "Q5",
           "question": "这个项目当前的宪法是什么样的？",
-          "answer": "当前项目的宪法是 AGENTS.md，它定义了 task/run 入口、session gate、允许命令、证据门禁、文档新鲜度和 PR discipline。WORKFLOW.md 只是状态机细化，不替代硬规则层。",
+          "answer": "当前宪法就是 AGENTS.md，它固定了任务入口、session gate、允许命令、evidence 规则、文档新鲜度和 PR 纪律。WORKFLOW 负责解释状态机和阶段边界，但硬规则最终仍以 AGENTS 为准。",
           "standard_alignment": "aligned",
           "evidence": [
-            "AGENTS.md#3) Single source map: Hard rules 明确指向 AGENTS.md，自身是硬契约。",
-            "docs/WORKFLOW.md#开头说明: 本文件只定义状态机，对象定义以 ENTITIES.md 为准，硬规则以 AGENTS.md 为准。"
+            "AGENTS.md#3) Single source map: Hard rules 指向 AGENTS.md，WORKFLOW 负责状态机，PROJECT_GUIDE 负责学习锚点。",
+            "docs/WORKFLOW.md#1.2 边界原则: WORKFLOW 只定义 init、appserverclient、gitclient 的流程边界，不承担硬规则层。"
           ],
           "drift_note": "none",
-          "return_to_mainline": "先以 AGENTS.md 确认边界，再用 WORKFLOW.md 看具体步骤。"
+          "return_to_mainline": "出现冲突时始终先回 AGENTS，再用 WORKFLOW 补细节。"
         },
         {
           "question_id": "Q6",
           "question": "这个项目当前工作流是什么样的？",
-          "answer": "当前工作流是分层状态机：init -> learn -> ready -> orient -> choose -> council -> arbiter -> slice -> do -> verify -> review -> ship -> run close。复杂工作必须先 Plan -> Confirm -> Execute，不能跳过讨论层直接进入执行。",
+          "answer": "当前工作流已经收敛为三层：init 做环境准备，appserverclient 做 baseline/session 主流程，gitclient 做提交与回滚收尾。复杂工作仍要遵守 Plan -> Confirm -> Execute，但正式主线已经不再是历史长链。",
           "standard_alignment": "aligned",
           "evidence": [
-            "docs/WORKFLOW.md#2. 状态机总览: 推荐单入口和完整状态流明确给出了从 init 到 ship 的主链。",
-            "AGENTS.md#5) Working mode: 复杂工作必须遵循 Plan -> Confirm -> Execute，`legacy plan` 不是执行许可。"
+            "docs/WORKFLOW.md#8. 正式主线: 正式主线是 init、appserverclient、gitclient 三层，并说明 baseline 用 plan、日常 session 用 default。",
+            "AGENTS.md#6) Workflow skeleton: 工作流明确为 init、learnbaseline、需求方向、fork-current、current-turn、回灌 baseline、gitclient 收尾。"
           ],
           "drift_note": "none",
-          "return_to_mainline": "把当前动作放回状态机，先判断自己处于哪一层，再决定下一步。"
+          "return_to_mainline": "把所有后续动作压回这三层，不再把旧链路当默认主流程。"
         },
         {
           "question_id": "Q7",
           "question": "我们现在的项目有没有未完成的任务呢，最新的批次在讨论什么问题，你是怎么查的？",
-          "answer": "有未完成任务，队列里 `vnext release baseline` 仍未勾选完成；而当前 active 指针仍停在 orchestrator-entry run。最新批次从当前 run summary/decision 看，讨论重点是单入口编排、统一日志、init 业务化和后续重构顺序，而不是新业务功能。",
-          "standard_alignment": "aligned",
+          "answer": "有，TASKS/QUEUE.md 里仍有未勾选的 vnext release baseline，而当前 active 指针仍绑定 run-2026-03-08-tools-orchestrator-entry。我的查法是按指南链路读取 tools/project_config.json、TASKS/QUEUE.md、当前 run 的 summary.md 和 decision.md；这些证据显示最新批次主要在讨论 tools/run_main.py 单入口、统一日志和重构顺序。",
+          "standard_alignment": "partial",
           "evidence": [
-            "tools/project_config.json#runtime_state: 当前 active run 是 run-2026-03-08-tools-orchestrator-entry，状态为 active。",
-            "TASKS/QUEUE.md#Queue: `vnext release baseline` 条目仍未完成，说明项目还有未完成任务。",
-            "reports/run-2026-03-08-tools-orchestrator-entry/summary.md#What changed: 最新 run 落地了 tools/run_main.py、统一 logging 和 init/workflow 文档收敛。",
-            "reports/run-2026-03-08-tools-orchestrator-entry/decision.md#Chosen: 当前批次明确选择了单入口包装和 blueprint 先行，而非大规模重写。"
+            "tools/project_config.json#runtime_state: 当前 active 指针绑定 run-2026-03-08-tools-orchestrator-entry 和 TASKS/TASK-tools-orchestrator-entry.md。",
+            "TASKS/QUEUE.md#Queue: 已完成的 tools orchestrator entry 在队列顶部，但 vnext release baseline 仍未勾选。",
+            "reports/run-2026-03-08-tools-orchestrator-entry/summary.md#Notes: 当前 run 的重点是 tools/run_main.py 单入口、全链日志和旧链路封装。",
+            "reports/run-2026-03-08-tools-orchestrator-entry/decision.md#Chosen: 决策记录强调先用 subprocess 包装既有步骤并冻结重构蓝图。"
           ],
-          "drift_note": "none",
-          "return_to_mainline": "先用 runtime_state、queue 和当前 run evidence 判断“现在在做什么”，再决定是否进入讨论或重绑任务。"
+          "drift_note": "当前批次证据仍停在 run_main 过渡方案。",
+          "return_to_mainline": "把未完成队列与当前 drift 合并起来，下一轮只选能增强 appserverclient 或 gitclient 的任务。"
         },
         {
           "question_id": "Q8",
           "question": "你查了最近的 session 说了什么，你是从哪里查的？",
-          "answer": "最近 session 的内容是从 runtime_state 和当前 run 的 summary/decision 查出来的，不是靠聊天记忆。它说明最近连续收敛的是 Python 单入口、统一日志、init 业务化，以及先冻结重构顺序再推进下一层。",
-          "standard_alignment": "aligned",
+          "answer": "最近 session 的连续性来自仓库证据而不是聊天记忆：runtime_state 指明去读哪个 run，而该 run 的 summary 和 decision 告诉我最近在做单个 Python 入口、全量日志和大改写前的蓝图冻结。它也同时暴露出一个事实：当前 active run 叙事仍落后于现在 owner docs 的 baseline/session/git 主线。",
+          "standard_alignment": "partial",
           "evidence": [
-            "tools/project_config.json#runtime_state: 当前 run 指针直接告诉我应该读取哪个 reports 目录。",
-            "reports/run-2026-03-08-tools-orchestrator-entry/summary.md#Notes: 当前 run 聚焦在一个可执行 Python 入口、日志统一和 tools 重构蓝图。",
-            "reports/run-2026-03-08-tools-orchestrator-entry/decision.md#Why: 该 run 的核心动机是让普通窗口能通过一个 Python 入口驱动 tools pipeline 并保留完整日志可见性。"
+            "tools/project_config.json#runtime_state: runtime_state 指明最近 continuity 应读取 run-2026-03-08-tools-orchestrator-entry。",
+            "reports/run-2026-03-08-tools-orchestrator-entry/summary.md#Commands / Outputs: run 证据记录了 dry-run all、真实执行 init 步骤和 py_compile/make verify 结果。",
+            "reports/run-2026-03-08-tools-orchestrator-entry/decision.md#Why: 本轮 run 的核心意图是提供单个 Python 入口并保留完整日志可见性。"
           ],
-          "drift_note": "none",
-          "return_to_mainline": "会话连续性先看当前指针和当前 run 证据，再决定是否需要更多回溯。"
+          "drift_note": "recent run 证据与当前正式主线不完全同步。",
+          "return_to_mainline": "继续用 summary/decision 做 continuity，但结论必须再对齐到最新 owner docs。"
         },
         {
           "question_id": "Q9",
           "question": "项目需求讨论应该使用什么流程？",
-          "answer": "需求讨论应走 orient -> choose -> council -> arbiter -> slice 这条讨论优先流程，先收敛方向和执行合同，再切成最小 task。讨论层不等于执行许可，`legacy plan` 也不等于 `/plan` 或 `do`。",
+          "answer": "需求讨论现在应挂在 baseline/session 体系上：先建立或复用项目级 baseline，再明确 run 方向，再 fork 角色或当前工作 session 做分析、评审和拆解，最后收敛成最小 task。Plan -> Confirm -> Execute 仍是硬约束，所以讨论必须先于执行。",
           "standard_alignment": "aligned",
           "evidence": [
-            "docs/WORKFLOW.md#4. S1 讨论层 与 #5. S2 拆解层: 方向、选择、多角色评审、仲裁收敛和切片顺序被明确定义。",
-            "AGENTS.md#6) Workflow skeleton: 推荐的 discussion-first lane 要先经过 choose/council/arbiter/slice_task，之后才进入 do。"
+            "docs/WORKFLOW.md#4.4 多角色 fork / 最小 task 拆解: 正式主线的发展方向是从 baseline 或 current session 分叉多角色 session，并把需求方向拆成最小 task。",
+            "AGENTS.md#5) Working mode: Plan -> Confirm -> Execute: 复杂工作必须先计划和确认，不能直接执行。"
           ],
           "drift_note": "none",
-          "return_to_mainline": "一旦需求还未形成 execution contract，就回到讨论链，而不是进入实现。"
+          "return_to_mainline": "任何需求都先进入 baseline/session 讨论层，再落成 task。"
         },
         {
           "question_id": "Q10",
           "question": "项目实施流程是什么，需要哪些角色协作，如何保证角色独立思考，目前实现到了什么程度？",
-          "answer": "实施流程是在 discussion 收敛后进入 do -> verify -> review -> smoke -> ship，多角色独立思考由 council 先分别给出产品、架构、研发、测试意见，再由 arbiter 收敛成单一合同。当前这套能力已有流程骨架，但 WORKFLOW 仍把它描述为 foundation repo 的状态机，而不是成熟的高并发 agent 团队。",
+          "answer": "实施流程应从项目 baseline 出发，围绕当前 run fork 多个角色 session 各自推进最小 task，再把去噪结论收回 baseline 后进入执行和交付。理想角色仍是产品、架构、研发、测试，而当前已稳定的能力是 baseline、fork-current 和 current-turn，多角色去噪回灌这条线仍在继续强化。",
           "standard_alignment": "aligned",
           "evidence": [
-            "docs/WORKFLOW.md#4.3 `council` 与 #4.4 `arbiter` 和 #6. S3 执行层: 多角色独立评审和随后执行/验证/交付的流程边界已经定义。",
-            "AGENTS.md#6) Workflow skeleton: 实施链要求先读 task acceptance、make evidence、最小 diff、verify、更新证据、smoke、ship。"
+            "docs/WORKFLOW.md#4.4 多角色 fork / 最小 task 拆解: 角色 session 应互不干扰，每个角色 session 结束后要先做去噪总结，再考虑回灌 baseline。",
+            "AGENTS.md#4) Mandatory session gate (once per session): baseline -> fork-current -> current-turn 是固定生命周期，说明核心 session 机制已落地但多角色深化仍在加强。"
           ],
           "drift_note": "none",
-          "return_to_mainline": "把角色协作理解为先独立评审后统一合同，而不是单轮拍脑袋实现。"
+          "return_to_mainline": "把角色独立性建立在 session 隔离上，而不是建立在一次聊天里混合多个视角。"
         },
         {
           "question_id": "Q11",
           "question": "项目中的核心对象、关键状态和交付单元分别是什么，它们的生命周期是怎样的？",
-          "answer": "核心对象是 project、run、task、discussion artifacts、queue 和 evidence；run 是一轮周期容器，task 是最小可执行切片，PR 是交付单元。它们的生命周期遵循 project 常驻、run 承载一轮讨论到交付、task 从 slice/queue 实体化后执行并回写 run evidence 的顺序。",
+          "answer": "核心对象是 project、run、task、discussion artifacts、queue、evidence 和 PR，关键状态由 runtime_state 与 session_registry 指针维护。它们的生命周期是 project baseline -> run direction -> discussion artifacts -> task execution -> run evidence/PR -> baseline refresh，而且仓库明确禁止把 session、run 和 queue 混成同一层。",
           "standard_alignment": "aligned",
           "evidence": [
-            "docs/ENTITIES.md#1.1 分层原则 与 #2-#6: 明确了 project/run/task/discussion artifacts/queue/evidence 的边界和生命周期。",
-            "docs/WORKFLOW.md#1.3 对象原则 与 #7.2 `run close`: 状态机把 project、run、task 和 state update 的关系串成闭环。",
-            "AGENTS.md#7) Evidence is memory (hard gate): 每个 run 都必须回写 meta.json、summary.md、decision.md 作为仓库记忆。"
+            "docs/ENTITIES.md#1.1 分层原则: project/run/task/discussion artifacts/queue 的边界被明确拆开。",
+            "docs/WORKFLOW.md#2. 状态机总览: 生命周期顺序是 project -> init -> learnbaseline -> 需求方向 -> fork session -> current-turn -> 回灌 baseline -> git 收尾。",
+            "AGENTS.md#7) Evidence is memory (hard gate): 每个 run 至少要沉淀 meta.json、summary.md、decision.md 作为交付记忆。"
           ],
           "drift_note": "none",
-          "return_to_mainline": "先统一名词，再判断当前动作属于 run、task 还是交付层。"
+          "return_to_mainline": "判断任何动作前先问清它属于 project、run、task 还是 evidence/PR。"
         },
         {
           "question_id": "Q12",
           "question": "我们在项目的准备工作做好后，我们一个需求讨论方向，从流程的哪一步开始？",
-          "answer": "准备工作做好后，需求讨论应从 orient 开始，而不是直接 do。当前 run summary 也表明最近的重点仍在入口和流程收敛，因此下一步应继续走 choose/council/arbiter/slice，而不是跳进实现。",
-          "standard_alignment": "aligned",
+          "answer": "准备工作完成后，下一步不是直接写代码，也不是先回到旧的 orient，而是进入 appserverclient：先确认或建立 learnbaseline，再明确 run 方向，再 fork 当前工作 session。当前 active run 的 summary 仍描述了 run_main 的 init,learn,ready 安全链，所以这正是本次 onboarding 需要回拉的地方。",
+          "standard_alignment": "partial",
           "evidence": [
-            "docs/WORKFLOW.md#3.3 `ready` 与 #4.1 `orient`: ready 的下一跳就是 orient，orient 的目标是生成候选方向。",
-            "AGENTS.md#6) Workflow skeleton: discussion-first recommended lane 把 orient/choose/council/arbiter/slice_task 列成执行前置链。",
-            "reports/run-2026-03-08-tools-orchestrator-entry/summary.md#Notes: 当前 run 仍强调默认安全链是 `init,learn,ready`，更广链路要显式选择后续步骤。"
+            "docs/WORKFLOW.md#9. 默认日常流程: 准备后推荐顺序是 learnbaseline、人工注入 run 方向、fork-current、current-turn。",
+            "AGENTS.md#6) Workflow skeleton: 开工后先 learnbaseline 再定 run 方向，而不是直接写代码。",
+            "reports/run-2026-03-08-tools-orchestrator-entry/summary.md#Notes: 当前 active run 仍把 run_main 的默认安全链描述为 init,learn,ready，显示旧链路痕迹。"
           ],
-          "drift_note": "none",
-          "return_to_mainline": "ready 只给开工许可，真正的需求讨论入口仍是 orient。"
+          "drift_note": "当前 active run 仍留有旧链路入口叙事。",
+          "return_to_mainline": "从准备层出来后，直接回到 baseline/session 主线。"
         },
         {
           "question_id": "Q13",
           "question": "项目的分支与交付管理规则是什么，当前是否满足需求？",
-          "answer": "当前规则是一任务一分支一 PR，PR 标题必须带 RUN_ID，正文必须含 Why/What/Verify/Evidence paths；ship 负责 git/branch/PR/merge/sync。规则本身已经满足当前 foundation 阶段的交付需求，但是否真正可发货仍取决于 verify、review、smoke 和证据是否齐备。",
-          "standard_alignment": "aligned",
+          "answer": "规则已经明确为 one task -> one branch -> one PR，且 PR 必须带 RUN_ID 和 Why/What/Verify/Evidence，交付与回滚都应该通过正式 Git 层完成。现状是规则清楚，但当前 active run 证据仍主要体现旧 orchestrator 过渡批次，尚未把 gitclient 闭环证明成默认日常路径。",
+          "standard_alignment": "partial",
           "evidence": [
-            "AGENTS.md#13) PR discipline: 一任务一分支一 PR，PR 标题必须带 RUN_ID，正文必须包含 Why / What / Verify / Evidence paths。",
-            "docs/WORKFLOW.md#7.1 `ship` 与 #9. 默认日常流程: ship 负责交付闭环，且发货前还要经过 review 与 smoke 的 readiness 检查。"
+            "AGENTS.md#13) PR discipline: 规则是 one task -> one branch -> one PR，标题必须包含 RUN_ID，正文必须写 Why/What/Verify/Evidence paths。",
+            "docs/WORKFLOW.md#5.1 gitclient --commit: gitclient 负责建分支、commit、push、创建 PR、合并并同步本地 main。"
           ],
-          "drift_note": "none",
-          "return_to_mainline": "把“分支纪律已定义”和“当前 run 已具备 ship 条件”严格区分。"
+          "drift_note": "当前 active run 还没把 gitclient 闭环作为已证实默认路径。",
+          "return_to_mainline": "后续交付必须用 gitclient 把规则变成可复核证据。"
         },
         {
           "question_id": "Q14",
           "question": "每次做完任务，你必须要做什么事情？",
-          "answer": "每次做完任务必须先 verify、更新 reports 下的 summary/decision/meta，并在流程或规则变化时同步 owner docs，然后过 smoke 再 ship。当前 run 的 summary/decision 已展示这种闭环意识，但它们只是证据的一部分，不等于可以跳过 readiness 检查。",
+          "answer": "每次做完任务后，必须先验证，再更新 run evidence，若流程/规则/工具行为变化还要同步 owner docs，最后再通过 Git 层提交或回滚。代码写完不算完成，完成的最低证据面至少包括 meta.json、summary.md 和 decision.md。",
           "standard_alignment": "aligned",
           "evidence": [
-            "AGENTS.md#7) Evidence is memory (hard gate) 与 #12) Documentation freshness gate: 每个 run 必须更新 meta/summary/decision，流程变化还要同步 owner docs，否则不能 ship。",
-            "docs/WORKFLOW.md#6.4 `smoke`: ship 前至少确认 verify、review、summary、decision、meta 和 owner docs 更新已齐备。",
-            "reports/run-2026-03-08-tools-orchestrator-entry/summary.md#Commands / Outputs: 当前 run 已记录 evidence、dry-run、真实 init、py_compile 和 make verify 的结果。",
-            "reports/run-2026-03-08-tools-orchestrator-entry/decision.md#Chosen: 当前 run 在交付前先冻结 blueprint 和顺序，体现了决策证据必须回写。"
+            "AGENTS.md#7) Evidence is memory (hard gate): 每个 run 必须更新 meta.json、summary.md、decision.md。",
+            "docs/WORKFLOW.md#11. Documentation Freshness Gate: 流程、规则、工具行为变化时必须在同一 run 更新 owner docs 和 evidence。",
+            "reports/run-2026-03-08-tools-orchestrator-entry/summary.md#Summary: 当前 run 已写入 summary 并记录命令、结果和变更。",
+            "reports/run-2026-03-08-tools-orchestrator-entry/decision.md#Decision: 当前 run 已写入 decision，记录 why、options、chosen 和 risks。"
           ],
           "drift_note": "none",
-          "return_to_mainline": "把“代码完成”定义为“验证、证据、文档、smoke 都完成”。"
+          "return_to_mainline": "把 verify + evidence + docs freshness 当成定义完成的硬条件。"
         },
         {
           "question_id": "Q15",
           "question": "如果目标体验是高质量、低噪音、强自动化，当前最需要优先优化什么？",
-          "answer": "当前最需要优先优化的是 learn 的真实性、流程主链的减噪和失败恢复的清晰度，而不是继续堆更多命令表面。WORKFLOW 和 AGENTS 都把 learn、smoke、文档新鲜度和强门禁放在主线上，而当前 decision 也继续把入口、日志和重构顺序当成底层能力优先项。",
-          "standard_alignment": "aligned",
+          "answer": "当前最该优先收稳的是主线底层：appserverclient 的 baseline/fork/current-turn 和 gitclient 的提交/回滚闭环，而不是继续堆更多过渡命令。当前 decision 仍把 run_main orchestrator 和重构顺序放在中心，所以它暴露的是 live drift，而不是新的 owner-doc 优先级。",
+          "standard_alignment": "partial",
           "evidence": [
-            "docs/WORKFLOW.md#3.2 `learn` 与 #9. 默认日常流程: learn 是完成主线回拉的核心，上岗后推荐先走 `learn -daily` 再进入后续链路。",
-            "AGENTS.md#4) Mandatory session gate (once per session) 与 #12) Documentation freshness gate: 强同频、全量 oral restatement 和文档同步被作为自动化的硬门禁。",
-            "reports/run-2026-03-08-tools-orchestrator-entry/decision.md#Chosen: 当前优先选择的是单入口包装、统一日志和有约束的重构顺序，而不是立即重写所有工具。"
+            "docs/WORKFLOW.md#1.1 流程分层: 当前固定三层是 init、appserverclient、gitclient，说明应优先稳住分层而非继续堆命令。",
+            "AGENTS.md#6) Workflow skeleton: 正式主线已转向 baseline/session 执行和 git 收尾，而旧链路仅保留兼容性质。",
+            "reports/run-2026-03-08-tools-orchestrator-entry/decision.md#Chosen: 当前 run 仍把 run_main 单入口和重构顺序冻结为近期中心决策。"
           ],
-          "drift_note": "none",
-          "return_to_mainline": "优先稳住 learn、流程边界和恢复路径，再考虑更多功能扩展。"
+          "drift_note": "current decision 仍围绕 run_main 过渡方案。",
+          "return_to_mainline": "下一轮只优化 baseline/session/git 三条底层能力。"
         },
         {
           "question_id": "Q16",
           "question": "这个项目中 AI/工具系统的正确打开方式是什么，当前用到了哪些能力，你能列出来吗？",
-          "answer": "正确打开方式是分清三层：AGENTS/WORKFLOW 定义的上岗与执行主链，appserverclient 负责 app-server 计划式学习与当前工作 session，gitclient 负责提交、回滚、PR 合并与同步。当前已经用到的能力包括 `--learnbaseline`、`--fork-current`、`--current-turn` 这类会话能力，以及 `--commit`、`--rollback-last`、`--rollback-commit` 这类 Git 收尾能力。",
+          "answer": "正确打开方式已经收敛成三层：init 做准备，appserverclient 做 baseline/session runtime，gitclient 做提交与回滚收尾；baseline 用 plan，日常 current turn 用 default。当前已经明确用到的能力包括 --learnbaseline、--fork-current、--current-turn、--commit、--rollback-last 和 --rollback-commit。",
           "standard_alignment": "aligned",
           "evidence": [
-            "AGENTS.md#8) Allowed commands (default): 当前项目把 init/learn/ready/orient/choose/council/arbiter/slice_task/run_main、legacy shell、smoke、ship 等命令明确纳入允许主链。",
-            "docs/WORKFLOW.md#9. 默认日常流程: 默认日常入口是 init -> learn -daily -> ready -> orient -> choose -> council -> arbiter -> slice_task -> do -> review -> smoke -> ship。",
-            "tools/appserverclient.py#__main__ 与 run_learnbaseline/run_fork_current/run_current_turn: appserverclient 提供 learn baseline、fork 当前 session 和当前 turn 三类 app-server 会话入口。",
-            "tools/gitclient.py#parse_args 与 main: gitclient 提供 `--commit`、`--rollback-last`、`--rollback-commit` 三类最小 Git 交付入口，并统一打印结果 JSON。"
+            "AGENTS.md#4) Mandatory session gate (once per session): baseline 学习固定用 plan，日常 current-turn 是正常默认 continuation path。",
+            "docs/WORKFLOW.md#1.1 流程分层: AI/工具系统正确入口被固定成 init、appserverclient、gitclient 三层。",
+            "tools/appserverclient.py#run_learnbaseline/run_fork_current/run_current_turn: appserverclient 暴露 --learnbaseline、--fork-current、--current-turn 三个主入口。",
+            "tools/gitclient.py#parse_args: gitclient 暴露 --commit、--rollback-last、--rollback-commit 三类最小入口。"
           ],
           "drift_note": "none",
-          "return_to_mainline": "把工具能力按学习、执行、收尾三层使用，不把所有 CLI 功能混成一个入口。"
+          "return_to_mainline": "以后只按三层入口分配问题，不再按旧脚本名单理解系统。"
         },
         {
           "question_id": "Q17",
           "question": "根据最新的 session，你现在做的东西是否偏离了我们现在最重要的任务，你是否认为我们偏离了主线，为什么，接下来我们应该怎么做？",
-          "answer": "这次严格 onboarding sync 没有偏离主线，因为它正是在用 PROJECT_GUIDE、runtime_state 和当前 run evidence 做主线回拉；真正的风险不是这次同步，而是 runtime_state 仍停在 orchestrator-entry 时队列已出现新的未完成基线任务。接下来应先确认 active run/task 是否要切到 `vnext release baseline`，确认后再按 ready/orient/council 链路形成新合同，避免直接进入实现。",
-          "standard_alignment": "aligned",
+          "answer": "有偏离风险，因为 runtime_state 仍指向一个以 tools/run_main.py、旧步骤链和 blueprint 冻结为中心的 run，而当前 WORKFLOW 已明确把正式主线改成 baseline 学习、forked session 执行、baseline 回灌和 gitclient 收尾。接下来应把该 run 视为过渡证据，重新把下一轮任务和讨论绑定到 appserverclient + gitclient 主线强化上。",
+          "standard_alignment": "drifted",
           "evidence": [
-            "tools/project_config.json#runtime_state: 当前 active 指针仍是 run-2026-03-08-tools-orchestrator-entry，说明新一轮执行前必须先确认是否需要重绑。",
-            "reports/run-2026-03-08-tools-orchestrator-entry/summary.md#Notes: 当前 run 主要完成了入口和流程收敛相关工作，而不是 learn 全链路终态。",
-            "reports/run-2026-03-08-tools-orchestrator-entry/decision.md#Chosen: 当前策略强调先冻结 blueprint 和入口边界，说明主线仍是底层流程硬化。",
-            "docs/WORKFLOW.md#3.2 `learn` 与 #9. 默认日常流程: 漂移时应回到 PROJECT_GUIDE 和 owner docs，同频后再按默认日常顺序推进。"
+            "tools/project_config.json#runtime_state: 当前 active run 仍是 run-2026-03-08-tools-orchestrator-entry。",
+            "reports/run-2026-03-08-tools-orchestrator-entry/summary.md#What changed: 该 run 聚焦 tools/run_main.py、旧步骤链和统一 logging。",
+            "reports/run-2026-03-08-tools-orchestrator-entry/decision.md#Chosen: 该 run 明确选择先包装现有脚本和旧流程，再冻结蓝图。",
+            "docs/WORKFLOW.md#8. 正式主线: 当前 owner docs 已把正式主线改写为 appserverclient baseline/fork/current-turn 加 gitclient 收尾。"
           ],
-          "drift_note": "none",
-          "return_to_mainline": "先校准 active pointer 与队列意图，再进入 ready/orient，而不是把当前同步结果直接当执行许可。"
+          "drift_note": "active run focus 明显落后于当前正式主线。",
+          "return_to_mainline": "以 owner docs 为真相源，把 run_main 定位为兼容资产，并只规划能强化 baseline/session/git 的下一任务。"
         }
       ],
       "anchor_realign": {
         "question_id": "Q17",
-        "status": "on_track",
-        "drift_detail": "本次动作没有流程漂移，但 active run 指针与未完成队列项之间存在待确认的执行焦点差异。",
-        "return_to_mainline": "保持 evidence-first；在任何写操作前先确认 runtime_state 是否应从 orchestrator-entry 切到 `vnext release baseline`，然后再从 ready/orient 开始。"
+        "status": "drifted",
+        "drift_detail": "当前 active run 证据仍围绕 run_main 旧链路，而现行 owner docs 已将正式主线切到 appserverclient + gitclient。",
+        "return_to_mainline": "立即把 onboarding、后续任务选择和实施计划重新锚到 baseline/session/git 三层，并把 tools/run_main.py 仅当作历史兼容参考。"
       },
       "practice": {
-        "command_execution_count": 56,
+        "command_execution_count": 50,
         "command_samples": [
           "/bin/bash -lc tools/view.sh docs/PROJECT_GUIDE.md",
           "/bin/bash -lc 'tools/view.sh docs/PROJECT_GUIDE.md'",
-          "/bin/bash -lc tools/view.sh docs/PROJECT_GUIDE.md 180 340",
-          "/bin/bash -lc 'tools/view.sh docs/PROJECT_GUIDE.md 180 340'",
-          "/bin/bash -lc tools/view.sh docs/PROJECT_GUIDE.md --from 170 --to 320"
+          "/bin/bash -lc tools/view.sh docs/PROJECT_GUIDE.md 200 420",
+          "/bin/bash -lc 'tools/view.sh docs/PROJECT_GUIDE.md 200 420'",
+          "/bin/bash -lc tools/view.sh docs/PROJECT_GUIDE.md --from 180 --to 360"
         ]
       }
     }

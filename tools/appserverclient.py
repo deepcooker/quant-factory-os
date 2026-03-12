@@ -27,8 +27,10 @@ try:
         load_runtime_state,
         require_session_thread_id,
         update_session_registry,
+        update_current_summary,
     )
     from tools.result_schema import ERR_CONFIG_BASE, ERR_SESSION_BASE, err, ok
+    from tools.taskclient import load_active_task
 except Exception:  # pragma: no cover
     from project_config import (  # type: ignore
         REPO_ROOT,
@@ -41,8 +43,10 @@ except Exception:  # pragma: no cover
         load_runtime_state,
         require_session_thread_id,
         update_session_registry,
+        update_current_summary,
     )
     from result_schema import ERR_CONFIG_BASE, ERR_SESSION_BASE, err, ok  # type: ignore
+    from taskclient import load_active_task  # type: ignore
 
 
 UNIFIED_CONFIG = load_unified_config()
@@ -85,12 +89,27 @@ class AppServerError(RuntimeError):
 
 
 #codex 中文：统一打印当前运行状态，保证 appserverclient 入口与 project_config 的状态口径一致。
+def log_active_task() -> None:
+    try:
+        task = load_active_task()
+    except Exception as exc:
+        logger.info("APP_ACTIVE_TASK_UNAVAILABLE: %s", exc)
+        return
+    logger.info("APP_ACTIVE_TASK_START")
+    logger.info("active_task.task_id=%s", str(task.get("task_id", "")).strip() or "(none)")
+    logger.info("active_task.title=%s", str(task.get("title", "")).strip() or "(none)")
+    logger.info("active_task.status=%s", str(task.get("status", "")).strip() or "(none)")
+    logger.info("active_task.run_id=%s", str(task.get("run_id", "")).strip() or "(none)")
+    logger.info("APP_ACTIVE_TASK_END")
+
+
 def log_runtime_state() -> None:
     runtime_state = load_runtime_state()
     logger.info("APP_RUNTIME_STATE_START")
     for line in describe_runtime_state(runtime_state):
         logger.info(line)
     logger.info("APP_RUNTIME_STATE_END")
+    log_active_task()
 
 
 #codex 中文：检查当前 thread 是否已有未收口的 inProgress turn，避免在同一工作副本上叠加新 turn。
@@ -102,6 +121,103 @@ def detect_inprogress_turn_ids(thread_payload: dict[str, Any]) -> list[str]:
             if turn_id:
                 turn_ids.append(turn_id)
     return turn_ids
+
+
+def load_prompt_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8").strip()
+
+
+def compact_text(value: str) -> str:
+    return "\n".join(line.rstrip() for line in str(value).replace("\r\n", "\n").replace("\r", "\n").splitlines()).strip()
+
+
+def collect_text_fragments(value: Any) -> list[str]:
+    fragments: list[str] = []
+    if isinstance(value, str):
+        text = compact_text(value)
+        if text:
+            fragments.append(text)
+        return fragments
+    if isinstance(value, dict):
+        direct_text = value.get("text")
+        if isinstance(direct_text, str):
+            text = compact_text(direct_text)
+            if text:
+                fragments.append(text)
+        for key in ("content", "items"):
+            nested = value.get(key)
+            if isinstance(nested, list):
+                for item in nested:
+                    fragments.extend(collect_text_fragments(item))
+        return fragments
+    if isinstance(value, list):
+        for item in value:
+            fragments.extend(collect_text_fragments(item))
+    return fragments
+
+
+def extract_last_agent_message(thread_payload: dict[str, Any]) -> str:
+    turns = list(thread_payload.get("turns") or [])
+    for turn in reversed(turns):
+        for item in reversed(list((turn or {}).get("items") or [])):
+            item_type = str((item or {}).get("type", "")).strip().lower()
+            if item_type not in {"agentmessage", "agent_message", "assistantmessage", "assistant_message"}:
+                continue
+            for candidate in (
+                compact_text(str((item or {}).get("text", "")).strip()),
+                "\n".join(collect_text_fragments((item or {}).get("content"))).strip(),
+            ):
+                text = compact_text(candidate)
+                if text:
+                    return text
+    return ""
+
+
+def build_summarize_current_text() -> str:
+    runtime_state = load_runtime_state()
+    active_task: dict[str, Any] = {}
+    try:
+        active_task = load_active_task()
+    except Exception:
+        active_task = {}
+    prompt = load_prompt_text(REPO_ROOT / "tools" / "summarize_current_prompt.md")
+    lines = [prompt, "", "当前运行态："]
+    lines.append(f"- current_project_id: {str(runtime_state.current_project_id).strip() or '(none)'}")
+    lines.append(f"- current_run_id: {str(runtime_state.current_run_id).strip() or '(none)'}")
+    lines.append(f"- current_task_id: {str(runtime_state.current_task_id).strip() or '(none)'}")
+    lines.append(f"- current_task_json_file: {str(runtime_state.current_task_json_file).strip() or '(none)'}")
+    title = str(active_task.get("title", "")).strip()
+    if title:
+        lines.append(f"- active_task_title: {title}")
+    lines.extend(
+        [
+            "",
+            "输出要求：",
+            "- 只输出可直接回灌 baseline 的中文摘要正文。",
+            "- 结构固定为三段：主线更新 / 新的约束与风险 / 下一步。",
+            "- 不要输出 JSON、标题外话或聊天复述。",
+        ]
+    )
+    return "\n".join(lines).strip()
+
+
+def build_refresh_baseline_text(current_summary: dict[str, Any]) -> str:
+    prompt = load_prompt_text(REPO_ROOT / "tools" / "refresh_baseline_prompt.md")
+    summary_text = compact_text(str(current_summary.get("summary_text", "")).strip())
+    if not summary_text:
+        raise AppServerError("current summary is empty; run --summarize-current first")
+    lines = [
+        prompt,
+        "",
+        "current_summary:",
+        summary_text,
+        "",
+        "输出要求：",
+        "- 只输出 baseline 应吸收的增量更新正文。",
+        "- 覆盖主线理解、当前阶段、下一步，不复述聊天噪音。",
+        "- 不要输出 JSON 或额外解释。",
+    ]
+    return "\n".join(lines).strip()
 
 
 class JsonRpcAppServer:
@@ -601,6 +717,117 @@ def current_turn_main(text: str | None = None) -> None:
     print(f"current_thread_path={current_thread_path}")
 
 
+def summarize_current_main() -> None:
+    log_runtime_state()
+    current = get_session_registry("fork_current_session")
+    try:
+        current_thread_id = require_session_thread_id("fork_current_session", "python3 tools/appserverclient.py --fork-current")
+    except ValueError as exc:
+        raise AppServerError(str(exc))
+    current_thread_path = get_session_thread_path("fork_current_session")
+    client = CodexAppClient()
+    init_response = client.connect()
+    print(f"initialize_summarize_current RESPONSE_JSON={json.dumps(init_response, ensure_ascii=False)}")
+    resume_response = client.resume_thread(current_thread_id)
+    print(f"resume_summarize_current RESPONSE_JSON={json.dumps(resume_response, ensure_ascii=False)}")
+    turn_text = build_summarize_current_text()
+    turn_response = client.start_turn(turn_text)
+    print(f"turn_summarize_current RESPONSE_JSON={json.dumps(turn_response, ensure_ascii=False)}")
+    turn_id = ((turn_response.get("result") or {}).get("turn") or {}).get("id", "")
+    completion_event: dict[str, Any] | None = None
+    if turn_id:
+        completion_event = client.wait_for_turn_completion(str(turn_id))
+        print(f"summarize_current_completion EVENT_JSON={json.dumps(completion_event, ensure_ascii=False)}")
+    if current_thread_path:
+        client.wait_for_rollout_ready(current_thread_path)
+    read_response = client.read_thread(current_thread_id, include_turns=True)
+    print(f"read_summarize_current RESPONSE_JSON={json.dumps(read_response, ensure_ascii=False)}")
+    thread_payload = ((read_response.get("result") or {}).get("thread") or {})
+    summary_text = extract_last_agent_message(thread_payload)
+    if not summary_text:
+        raise AppServerError("failed to extract summary text from current thread")
+    update_session_registry(
+        "fork_current_session",
+        current_thread_id,
+        current_thread_path,
+        "ready",
+        "summarize_current_main",
+        client.model,
+        client.effort,
+        forked_from_thread_id=str(current.get("forked_from_thread_id", "")).strip(),
+    )
+    update_current_summary(
+        current_thread_id,
+        current_thread_path,
+        "ready",
+        "summarize_current_main",
+        client.model,
+        client.effort,
+        summary_text,
+        summary_turn_id=str(turn_id).strip(),
+    )
+    client.close()
+    print("current_summary_text_start")
+    print(summary_text)
+    print("current_summary_text_end")
+
+
+def refresh_baseline_main() -> None:
+    log_runtime_state()
+    current_summary = dict(get_session_registry("current_summary"))
+    try:
+        baseline_thread_id = require_session_thread_id("learn_session_baseline", "python3 tools/appserverclient.py --learnbaseline")
+    except ValueError as exc:
+        raise AppServerError(str(exc))
+    baseline_thread_path = get_session_thread_path("learn_session_baseline")
+    client = CodexAppClient(mode="plan", effort=LEARN_INIT_EFFORT, timeout_sec=PLAN_TIMEOUT_SEC)
+    init_response = client.connect()
+    print(f"initialize_refresh_baseline RESPONSE_JSON={json.dumps(init_response, ensure_ascii=False)}")
+    resume_response = client.resume_thread(baseline_thread_id)
+    print(f"resume_refresh_baseline RESPONSE_JSON={json.dumps(resume_response, ensure_ascii=False)}")
+    turn_text = build_refresh_baseline_text(current_summary)
+    turn_response = client.start_turn(turn_text)
+    print(f"turn_refresh_baseline RESPONSE_JSON={json.dumps(turn_response, ensure_ascii=False)}")
+    turn_id = ((turn_response.get("result") or {}).get("turn") or {}).get("id", "")
+    completion_event: dict[str, Any] | None = None
+    if turn_id:
+        completion_event = client.wait_for_turn_completion(str(turn_id))
+        print(f"refresh_baseline_completion EVENT_JSON={json.dumps(completion_event, ensure_ascii=False)}")
+    if baseline_thread_path:
+        client.wait_for_rollout_ready(baseline_thread_path, timeout_sec=PLAN_TIMEOUT_SEC)
+    read_response = client.read_thread(baseline_thread_id, include_turns=True)
+    print(f"read_refresh_baseline RESPONSE_JSON={json.dumps(read_response, ensure_ascii=False)}")
+    thread_payload = ((read_response.get("result") or {}).get("thread") or {})
+    refresh_text = extract_last_agent_message(thread_payload)
+    if not refresh_text:
+        raise AppServerError("failed to extract baseline refresh text from baseline thread")
+    update_session_registry(
+        "learn_session_baseline",
+        baseline_thread_id,
+        baseline_thread_path,
+        "ready",
+        "refresh_baseline_main",
+        client.model,
+        client.effort,
+    )
+    update_current_summary(
+        str(current_summary.get("thread_id", "")).strip(),
+        str(current_summary.get("thread_path", "")).strip(),
+        "refreshed",
+        "refresh_baseline_main",
+        str(current_summary.get("model", "")).strip() or client.model,
+        str(current_summary.get("effort", "")).strip() or client.effort,
+        compact_text(str(current_summary.get("summary_text", "")).strip()),
+        summary_turn_id=str(current_summary.get("summary_turn_id", "")).strip(),
+        baseline_refresh_text=refresh_text,
+        baseline_refresh_turn_id=str(turn_id).strip(),
+    )
+    client.close()
+    print("baseline_refresh_text_start")
+    print(refresh_text)
+    print("baseline_refresh_text_end")
+
+
 def run_learnbaseline(force_new: bool = False) -> dict[str, Any]:
     try:
         init_main(force_new=force_new)
@@ -627,6 +854,22 @@ def run_current_turn(text: str | None = None) -> dict[str, Any]:
             str(exc),
             {"action": "current_turn", "text": (text or DEFAULT_TURN_TEXT).strip()},
         )
+
+
+def run_summarize_current() -> dict[str, Any]:
+    try:
+        summarize_current_main()
+        return ok({"action": "summarize_current"})
+    except AppServerError as exc:
+        return err(ERR_SESSION_BASE + 30, str(exc), {"action": "summarize_current"})
+
+
+def run_refresh_baseline() -> dict[str, Any]:
+    try:
+        refresh_baseline_main()
+        return ok({"action": "refresh_baseline"})
+    except AppServerError as exc:
+        return err(ERR_SESSION_BASE + 40, str(exc), {"action": "refresh_baseline"})
 
 
 #codex 中文：演示一个完整调用链：connect -> start_thread -> set_name -> start_turn -> list -> read -> fork -> compact -> close。
@@ -685,6 +928,18 @@ if __name__ == "__main__":
             sys.exit(1)
     elif len(sys.argv) > 1 and sys.argv[1] == "--current-turn":
         result = run_current_turn(" ".join(sys.argv[2:]) if len(sys.argv) > 2 else None)
+        print(json.dumps(result, ensure_ascii=False))
+        if int(result.get("err_code", 1)) != 0:
+            logger.error("APP_CLIENT_FAILED: %s", result.get("err_desc", "unknown error"))
+            sys.exit(1)
+    elif len(sys.argv) > 1 and sys.argv[1] == "--summarize-current":
+        result = run_summarize_current()
+        print(json.dumps(result, ensure_ascii=False))
+        if int(result.get("err_code", 1)) != 0:
+            logger.error("APP_CLIENT_FAILED: %s", result.get("err_desc", "unknown error"))
+            sys.exit(1)
+    elif len(sys.argv) > 1 and sys.argv[1] == "--refresh-baseline":
+        result = run_refresh_baseline()
         print(json.dumps(result, ensure_ascii=False))
         if int(result.get("err_code", 1)) != 0:
             logger.error("APP_CLIENT_FAILED: %s", result.get("err_desc", "unknown error"))

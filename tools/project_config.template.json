@@ -10,12 +10,21 @@
   "runtime_state": {
     "current_project_id": "your-project-id",
     "current_run_id": "",
+    "current_task_id": "",
     "current_task_file": "",
+    "current_task_json_file": "",
     "current_status": "",
     "current_updated_at": ""
   },
+  "task_registry": {
+    "active_task_json_file": "",
+    "queue_json_file": "TASKS/QUEUE.json",
+    "task_md_is_legacy_view": true,
+    "queue_md_is_legacy_view": true
+  },
   "session_registry": {
     "learn_session_baseline": {},
-    "fork_current_session": {}
+    "fork_current_session": {},
+    "current_summary": {}
   }
 }

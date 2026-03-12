@@ -1,0 +1,78 @@
+{
+  "task_id": "task-task-queue-json-bootstrap",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "done",
+  "priority": "P1",
+  "title": "task queue json bootstrap",
+  "goal": "为当前 run 建立最小可执行的 task.json / queue.json 机器真相源，并把运行时指针切到 JSON；同时只归档一个明确无人引用的旧 Python 入口。",
+  "scope": [
+    "TASKS/QUEUE.json",
+    "TASKS/TASK-*.json",
+    "tools/project_config.json",
+    "tools/project_config.py",
+    "tools/project_config.template.json",
+    "tools/init.py",
+    "docs/",
+    "tools/backup/",
+    "reports/run-2026-03-11-vnext-release-baseline/"
+  ],
+  "non_goals": [
+    "不全量回填历史 task/queue 到 JSON。",
+    "不重写 task picker 或 queue writer。",
+    "不删除所有遗留 TASKS/*.md。"
+  ],
+  "acceptance": [
+    {
+      "id": "queue_json_exists",
+      "text": "当前 run 下存在可用的 TASKS/QUEUE.json 和 TASKS/TASK-*.json",
+      "status": "done"
+    },
+    {
+      "id": "runtime_state_task_json",
+      "text": "runtime_state 支持 current_task_json_file",
+      "status": "done"
+    },
+    {
+      "id": "docs_switched",
+      "text": "owner docs 明确 json 是 task/queue 机器真相源，md 只是迁移期可读视图",
+      "status": "done"
+    },
+    {
+      "id": "run_a9_archived",
+      "text": "tools/run_a9.py 已归档到 tools/backup/",
+      "status": "done"
+    },
+    {
+      "id": "project_config_ok",
+      "text": "python3 tools/project_config.py",
+      "status": "done"
+    },
+    {
+      "id": "py_compile",
+      "text": "python3 -m py_compile tools/project_config.py tools/init.py tools/appserverclient.py tools/gitclient.py tools/evidence.py",
+      "status": "done"
+    },
+    {
+      "id": "evidence_updated",
+      "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+      "status": "done"
+    }
+  ],
+  "inputs": [
+    "AGENTS.md",
+    "docs/PROJECT_GUIDE.md",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/FILE_INDEX.md",
+    "tools/project_config.json",
+    "TASKS/TASK-compat-shell-archive.md",
+    "TASKS/TASK-vnext-release-baseline.md"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-task-queue-json-bootstrap.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "updated_at": "2026-03-11T17:10:00+00:00"
+}

@@ -13,7 +13,6 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PROJECT_CONFIG_FILE = REPO_ROOT / "tools" / "project_config.json"
-TASK_STATE_FILE = REPO_ROOT / "TASKS" / "STATE.md"
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 LOGGER_NAME = "qf.project_config"
 logger = logging.getLogger(LOGGER_NAME)
@@ -210,6 +209,7 @@ def build_learn_output_schema_lines() -> list[str]:
 def build_learnbaseline_prompt_text(project_root: Path, project_id: str, runtime_state: dict[str, Any]) -> str:
     preamble = load_learnbaseline_prompt_preamble()
     current_run_id = str(runtime_state.get("current_run_id", "")).strip()
+    current_task_json_file = str(runtime_state.get("current_task_json_file", "")).strip()
     current_task_file = str(runtime_state.get("current_task_file", "")).strip()
     guide_questions, required_files = parse_project_guide_prompt_inputs(project_root, project_id, current_run_id)
     extra_files = [path for path in required_files if path not in OWNER_FILES]
@@ -219,6 +219,7 @@ def build_learnbaseline_prompt_text(project_root: Path, project_id: str, runtime
         "以下是本轮学习同频的动态上下文，请按这些上下文执行基线学习：",
         f"PROJECT_ID: {project_id}",
         f"CURRENT_RUN_ID: {current_run_id or '(none)'}",
+        f"CURRENT_TASK_JSON_FILE: {current_task_json_file or '(none)'}",
         f"CURRENT_TASK_FILE: {current_task_file or '(none)'}",
         "",
         "Owner files:",
@@ -297,7 +298,9 @@ class ProjectConfig:
 class RuntimeState:
     current_project_id: str
     current_run_id: str
+    current_task_id: str
     current_task_file: str
+    current_task_json_file: str
     current_status: str
     current_updated_at: str
 
@@ -434,7 +437,9 @@ def load_runtime_state() -> RuntimeState:
     return RuntimeState(
         current_project_id=str(raw.get("current_project_id", "")).strip(),
         current_run_id=str(raw.get("current_run_id", "")).strip(),
+        current_task_id=str(raw.get("current_task_id", "")).strip(),
         current_task_file=str(raw.get("current_task_file", "")).strip(),
+        current_task_json_file=str(raw.get("current_task_json_file", "")).strip(),
         current_status=str(raw.get("current_status", "")).strip(),
         current_updated_at=str(raw.get("current_updated_at", "")).strip(),
     )
@@ -477,6 +482,8 @@ def describe_runtime_state(state: RuntimeState) -> list[str]:
     return [
         format_field("当前项目ID", "current_project_id", state.current_project_id),
         format_field("当前运行ID", "current_run_id", state.current_run_id),
+        format_field("当前任务ID", "current_task_id", state.current_task_id),
+        format_field("当前任务JSON文件", "current_task_json_file", state.current_task_json_file),
         format_field("当前任务文件", "current_task_file", state.current_task_file),
         format_field("当前状态", "current_status", state.current_status),
         format_field("当前状态更新时间", "current_updated_at", state.current_updated_at),
@@ -571,8 +578,8 @@ def validate_runtime_state(cfg: ProjectConfig, state: RuntimeState) -> list[str]
         )
     if not state.current_run_id:
         errors.append("运行时运行ID为空-runtime_state.current_run_id")
-    if not state.current_task_file:
-        errors.append("运行时任务文件为空-runtime_state.current_task_file")
+    if state.current_task_id and not state.current_task_json_file:
+        errors.append("运行时任务JSON文件为空-runtime_state.current_task_json_file")
     if not state.current_status:
         errors.append("运行时状态为空-runtime_state.current_status")
     if not state.current_updated_at:
@@ -647,6 +654,42 @@ def update_session_registry(slot: str, thread_id: str, thread_path: str, status:
     save_project_config_json(config)
 
 
+# project_config 中文：写回 current_summary 去噪摘要，供 baseline refresh 作为唯一输入来源。
+def update_current_summary(
+    thread_id: str,
+    thread_path: str,
+    status: str,
+    source: str,
+    model: str,
+    effort: str,
+    summary_text: str,
+    summary_turn_id: str = "",
+    baseline_refresh_text: str = "",
+    baseline_refresh_turn_id: str = "",
+) -> None:
+    config = load_project_config_json()
+    registry = config.setdefault("session_registry", {})
+    record = registry.setdefault("current_summary", {})
+    record["thread_id"] = thread_id
+    record["thread_path"] = thread_path
+    record["status"] = status
+    record["updated_at"] = datetime.now(timezone.utc).isoformat()
+    record["source"] = source
+    record["model"] = model
+    record["effort"] = effort
+    record["summary_text"] = summary_text
+    record["summary_turn_id"] = summary_turn_id
+    if baseline_refresh_text:
+        record["baseline_refresh_text"] = baseline_refresh_text
+    elif "baseline_refresh_text" not in record:
+        record["baseline_refresh_text"] = ""
+    if baseline_refresh_turn_id:
+        record["baseline_refresh_turn_id"] = baseline_refresh_turn_id
+    elif "baseline_refresh_turn_id" not in record:
+        record["baseline_refresh_turn_id"] = ""
+    save_project_config_json(config)
+
+
 # project_config 中文：清空指定 session 槽位，供重新建立 baseline 或 current session 时显式重置。
 def clear_session_registry(slot: str) -> None:
     config = load_project_config_json()
@@ -664,40 +707,38 @@ def clear_session_registry(slot: str) -> None:
     save_project_config_json(config)
 
 
-# project_config 中文：把 runtime_state 同步镜像到 TASKS/STATE.md，兼容现有文档与旧脚本读取。
-def mirror_runtime_state_to_task_state(runtime_state: RuntimeState) -> None:
-    lines = [
-        "# STATE",
-        "",
-        f"CURRENT_PROJECT_ID: {runtime_state.current_project_id}",
-        f"CURRENT_RUN_ID: {runtime_state.current_run_id}",
-        f"CURRENT_TASK_FILE: {runtime_state.current_task_file}",
-        f"CURRENT_STATUS: {runtime_state.current_status}",
-        f"CURRENT_UPDATED_AT: {runtime_state.current_updated_at}",
-    ]
-    TASK_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    TASK_STATE_FILE.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
-
-
 # project_config 中文：把当前运行状态统一写回配置，后续可替代分散 state 读取。
-def update_runtime_state(current_project_id: str, current_run_id: str, current_task_file: str, current_status: str) -> None:
+def update_runtime_state(
+    current_project_id: str,
+    current_run_id: str,
+    current_task_file: str,
+    current_status: str,
+    current_task_id: str = "",
+    current_task_json_file: str = "",
+) -> None:
     config = load_project_config_json()
     runtime_state = config.setdefault("runtime_state", {})
     runtime_state["current_project_id"] = current_project_id
     runtime_state["current_run_id"] = current_run_id
+    runtime_state["current_task_id"] = current_task_id
     runtime_state["current_task_file"] = current_task_file
+    runtime_state["current_task_json_file"] = current_task_json_file
     runtime_state["current_status"] = current_status
     runtime_state["current_updated_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     save_project_config_json(config)
-    mirror_runtime_state_to_task_state(load_runtime_state())
 
 
 # project_config 中文：CLI 方式写入 runtime_state，供 shell 脚本统一更新状态。
 def set_runtime_state_from_cli(argv: list[str]) -> int:
-    if len(argv) != 4:
-        print("错误: --set-runtime 需要 4 个值: <project_id> <run_id> <task_file> <status>", file=sys.stderr)
+    if len(argv) not in {4, 5, 6}:
+        print(
+            "错误: --set-runtime 需要 4 到 6 个值: <project_id> <run_id> <task_file> <status> [task_id] [task_json_file]",
+            file=sys.stderr,
+        )
         return 2
-    update_runtime_state(argv[0], argv[1], argv[2], argv[3])
+    task_id = argv[4] if len(argv) >= 5 else ""
+    task_json_file = argv[5] if len(argv) == 6 else ""
+    update_runtime_state(argv[0], argv[1], argv[2], argv[3], task_id, task_json_file)
     return 0
 
 
@@ -738,7 +779,6 @@ def main() -> int:
     if errors:
         for item in errors:
             logger.info("项目配置校验错误: %s", item)
-    logger.info("TASKS/STATE镜像文件路径: %s", TASK_STATE_FILE)
     logger.info("项目会话注册表开始")
     for line in describe_session_registry(load_project_config_json().get("session_registry", {})):
         logger.info(line)

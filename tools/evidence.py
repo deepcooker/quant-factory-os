@@ -10,6 +10,13 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+try:
+    from tools.project_config import load_runtime_state
+    from tools.taskclient import find_task_id_for_run
+except ImportError:
+    from project_config import load_runtime_state  # type: ignore
+    from taskclient import find_task_id_for_run  # type: ignore
+
 
 def _git(cmd: list[str], cwd: Path) -> str | None:
     try:
@@ -19,21 +26,9 @@ def _git(cmd: list[str], cwd: Path) -> str | None:
         return None
 
 
-def _state_task_for_run(repo: Path, run_id: str) -> str | None:
-    state = repo / "TASKS" / "STATE.md"
-    if not state.exists():
-        return None
-    current_run = None
-    current_task = None
-    for raw in state.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if line.startswith("CURRENT_RUN_ID:"):
-            current_run = line.split(":", 1)[1].strip()
-        elif line.startswith("CURRENT_TASK_FILE:"):
-            current_task = line.split(":", 1)[1].strip()
-    if current_run == run_id and current_task:
-        return current_task
-    return None
+def _runtime_task_for_run(run_id: str) -> str | None:
+    task_id = find_task_id_for_run(run_id)
+    return task_id or None
 
 
 def main() -> int:
@@ -47,7 +42,7 @@ def main() -> int:
 
     meta = {
         "run_id": args.run_id,
-        "task_id": os.getenv("TASK_ID") or _state_task_for_run(repo, args.run_id) or "",
+        "task_id": os.getenv("TASK_ID") or _runtime_task_for_run(args.run_id) or "",
         "stop_reason": os.getenv("STOP_REASON") or "",
         "commands_run": [],
         "artifacts": [],
