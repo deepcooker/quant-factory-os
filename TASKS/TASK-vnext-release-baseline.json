@@ -1,0 +1,72 @@
+{
+  "task_id": "task-vnext-release-baseline",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "done",
+  "priority": "P1",
+  "title": "vnext release baseline",
+  "goal": "扶正 run 为当前正式对象，移除 TASKS/STATE.md 这类过渡镜像，并让 tools/project_config.json -> runtime_state 成为唯一运行时真相源。",
+  "scope": [
+    "tools/project_config.py",
+    "tools/project_config.json",
+    "tools/project_config.template.json",
+    "tools/gitclient.py",
+    "tools/evidence.py",
+    "docs/",
+    "AGENTS.md",
+    "TASKS/",
+    "reports/run-2026-03-11-vnext-release-baseline/"
+  ],
+  "non_goals": [
+    "不重写 legacy.sh 全链路。",
+    "不在本任务里完整重做新的 task 体系。",
+    "不扩 appserverclient 新命令。"
+  ],
+  "acceptance": [
+    {
+      "id": "runtime_state_single_source",
+      "text": "runtime_state 成为唯一运行时真相源，不再镜像到 TASKS/STATE.md",
+      "status": "done"
+    },
+    {
+      "id": "runtime_state_supports_task_id",
+      "text": "runtime_state 支持 current_task_id，并允许“有 run、无 task”状态",
+      "status": "done"
+    },
+    {
+      "id": "docs_aligned",
+      "text": "formal mainline 文档口径与新真相源一致",
+      "status": "done"
+    },
+    {
+      "id": "py_compile",
+      "text": "python3 -m py_compile tools/project_config.py tools/gitclient.py tools/evidence.py tools/appserverclient.py",
+      "status": "done"
+    },
+    {
+      "id": "make_verify",
+      "text": "make verify",
+      "status": "done"
+    },
+    {
+      "id": "evidence_updated",
+      "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+      "status": "done"
+    }
+  ],
+  "inputs": [
+    "docs/PROJECT_GUIDE.md",
+    "AGENTS.md",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/FILE_INDEX.md",
+    "tools/project_config.json",
+    "TASKS/QUEUE.md"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-vnext-release-baseline.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "updated_at": "2026-03-11T16:40:00+00:00"
+}

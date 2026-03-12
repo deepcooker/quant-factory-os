@@ -1,0 +1,67 @@
+{
+  "task_id": "task-taskclient-pick-next",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "done",
+  "priority": "P1",
+  "title": "taskclient pick next",
+  "goal": "新增一个 Python-first 的 task picker，先替代旧 task.sh 中“从 queue 选择下一个 task 并绑定 runtime_state”的核心职责。",
+  "scope": [
+    "tools/taskclient.py",
+    "tools/taskstore.py",
+    "tools/project_config.json",
+    "AGENTS.md",
+    "docs/FILE_INDEX.md",
+    "docs/WORKFLOW.md",
+    "reports/run-2026-03-11-vnext-release-baseline/"
+  ],
+  "non_goals": [
+    "不重写旧 task.sh 的 task 模板生成逻辑。",
+    "不接 ship / PR / merge 流程。",
+    "不全量迁移历史 QUEUE.md 内容。"
+  ],
+  "acceptance": [
+    {
+      "id": "taskclient_added",
+      "text": "新增 python3 tools/taskclient.py --pick-next",
+      "status": "done"
+    },
+    {
+      "id": "picker_binds_runtime",
+      "text": "picker 读取 TASKS/QUEUE.json 并绑定 active task 到 runtime_state",
+      "status": "done"
+    },
+    {
+      "id": "picker_updates_queue",
+      "text": "picker 会把 queue item 状态写回 JSON",
+      "status": "done"
+    },
+    {
+      "id": "taskclient_command",
+      "text": "python3 tools/taskclient.py --pick-next",
+      "status": "done"
+    },
+    {
+      "id": "py_compile",
+      "text": "python3 -m py_compile tools/taskclient.py tools/taskstore.py tools/project_config.py",
+      "status": "done"
+    },
+    {
+      "id": "evidence_updated",
+      "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+      "status": "done"
+    }
+  ],
+  "inputs": [
+    "tools/taskstore.py",
+    "tools/project_config.py",
+    "TASKS/QUEUE.json",
+    "TASKS/TASK-appserverclient-taskstore-integration.json"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-taskclient-pick-next.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "updated_at": "2026-03-11T17:45:00+00:00"
+}

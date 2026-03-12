@@ -204,7 +204,9 @@ def init_step_01_load_context(logger: logging.Logger) -> InitContext:
     runtime_state = RuntimeState(
         current_project_id="",
         current_run_id="",
+        current_task_id="",
         current_task_file="",
+        current_task_json_file="",
         current_status="",
         current_updated_at="",
     )

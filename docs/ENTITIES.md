@@ -28,8 +28,7 @@
 
 ### 1.3 单一真相源
 - 当前活动指针真相源：`tools/project_config.json -> runtime_state`
-- `TASKS/STATE.md` 是 `runtime_state` 的镜像/兼容输出，不是并列真相源
-- 当前 task 合同真相源：`TASKS/TASK-*.md`
+- 当前 task 合同真相源：`TASKS/TASK-*.json`
 - 当前 run 证据真相源：`reports/<RUN_ID>/`
 - 项目长期认知真相源：`docs/PROJECT_GUIDE.md`
 - 硬规则真相源：`AGENTS.md`
@@ -54,7 +53,6 @@
 ### 2.3 真相源
 - `tools/project_config.json -> project_id`
 - 当前状态指针：`tools/project_config.json -> runtime_state.current_project_id`
-- 镜像输出：`TASKS/STATE.md -> CURRENT_PROJECT_ID`
 - 缺省值：`quant-factory-os`
 
 ### 2.4 生命周期
@@ -88,7 +86,6 @@
 
 ### 3.3 真相源
 - `tools/project_config.json -> runtime_state.current_run_id`
-- 镜像输出：`TASKS/STATE.md -> CURRENT_RUN_ID`
 - run 证据目录：`reports/<RUN_ID>/`
 
 ### 3.4 生命周期
@@ -112,7 +109,8 @@
 - 成为一次实现与 review 的最小单位
 
 ### 4.3 真相源
-- `TASKS/TASK-*.md`
+- `TASKS/TASK-*.json`
+- 当前绑定指针（可为空）：`tools/project_config.json -> runtime_state.current_task_id/current_task_json_file/current_task_file`
 
 ### 4.4 必要字段
 - `RUN_ID`
@@ -190,7 +188,7 @@ discussion artifacts 是 run 内从模糊需求到执行合同的中间对象，
 
 典型文件：
 - `reports/<RUN_ID>/slice_state.json`
-- `TASKS/QUEUE.md` 中由 slice 写入的 block
+- `TASKS/QUEUE.json` 中的 queue items
 
 ## 6. Queue
 
@@ -199,14 +197,14 @@ discussion artifacts 是 run 内从模糊需求到执行合同的中间对象，
 
 ### 6.2 职责
 - 承接 slice 后产生的待办切片
-- 作为 `tools/task.sh --next` 的选择入口
+- 作为后续 Python-first task picker 的选择入口
 
 ### 6.3 真相源
-- `TASKS/QUEUE.md`
+- `TASKS/QUEUE.json`
 
 ### 6.4 关系
 - queue item 来自某个 `run` 的 `slice_plan`
-- queue item 最终会实体化为 `TASKS/TASK-*.md`
+- queue item 最终会实体化为 `TASKS/TASK-*.json`
 
 ### 6.5 设计原则
 - queue 在 discussion 之后

@@ -1,0 +1,35 @@
+{
+  "task_id": "task-example",
+  "run_id": "run-YYYY-MM-DD-example",
+  "project_id": "project-id",
+  "status": "active",
+  "priority": "P1",
+  "title": "short task title",
+  "goal": "One-sentence goal.",
+  "scope": [
+    "tools/example.py",
+    "docs/"
+  ],
+  "non_goals": [
+    "Out-of-scope item."
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "Command or behavior to verify.",
+      "status": "pending"
+    }
+  ],
+  "inputs": [
+    "AGENTS.md",
+    "docs/WORKFLOW.md"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-example.md",
+    "summary_file": "reports/run-YYYY-MM-DD-example/summary.md",
+    "decision_file": "reports/run-YYYY-MM-DD-example/decision.md"
+  },
+  "risks": "Short risk summary.",
+  "rollback_plan": "Short rollback plan.",
+  "updated_at": "2026-03-11T00:00:00+00:00"
+}

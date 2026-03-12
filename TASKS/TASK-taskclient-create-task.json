@@ -1,0 +1,63 @@
+{
+  "task_id": "task-taskclient-create-task",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "done",
+  "priority": "P1",
+  "title": "taskclient create task",
+  "goal": "给 tools/taskclient.py 增加一个最小 JSON-first task bootstrap 入口，用来创建新的 TASKS/TASK-*.json 和兼容 md 视图，并可选追加到 TASKS/QUEUE.json。",
+  "scope": [
+    "tools/taskclient.py",
+    "tools/taskstore.py",
+    "tools/project_config.json",
+    "AGENTS.md",
+    "docs/FILE_INDEX.md",
+    "docs/WORKFLOW.md",
+    "reports/run-2026-03-11-vnext-release-baseline/"
+  ],
+  "non_goals": [
+    "不复刻旧 task.sh 的交互式模板流程。",
+    "不实现复杂的 queue 规划或批量切片。",
+    "不改 ship / PR 链。"
+  ],
+  "acceptance": [
+    {
+      "id": "taskclient_create_added",
+      "text": "tools/taskclient.py 支持创建新的 task JSON/MD",
+      "status": "done"
+    },
+    {
+      "id": "queue_append_optional",
+      "text": "创建入口支持可选写入 TASKS/QUEUE.json",
+      "status": "done"
+    },
+    {
+      "id": "create_task_command",
+      "text": "python3 tools/taskclient.py --create-task --title \"...\" --goal \"...\" --scope tools/",
+      "status": "done"
+    },
+    {
+      "id": "py_compile",
+      "text": "python3 -m py_compile tools/taskclient.py tools/taskstore.py tools/project_config.py",
+      "status": "done"
+    },
+    {
+      "id": "evidence_updated",
+      "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+      "status": "done"
+    }
+  ],
+  "inputs": [
+    "tools/taskclient.py",
+    "tools/taskstore.py",
+    "TASKS/QUEUE.json",
+    "TASKS/_SCHEMA.task.json",
+    "TASKS/_SCHEMA.queue.json"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-taskclient-create-task.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "updated_at": "2026-03-11T17:50:00+00:00"
+}

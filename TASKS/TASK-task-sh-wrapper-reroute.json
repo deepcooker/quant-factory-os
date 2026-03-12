@@ -1,0 +1,65 @@
+{
+  "task_id": "task-task-sh-wrapper-reroute",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "done",
+  "priority": "P1",
+  "title": "task sh wrapper reroute",
+  "goal": "把原 tools/task.sh wrapper 的最常用主线路径直接改为转到 Python-first 的 taskclient，进一步减少旧 shell task 入口继续充当正式主线。",
+  "scope": [
+    "tools/task.sh",
+    "tools/project_config.json",
+    "AGENTS.md",
+    "docs/FILE_INDEX.md",
+    "docs/WORKFLOW.md",
+    "reports/run-2026-03-11-vnext-release-baseline/"
+  ],
+  "non_goals": [
+    "不重写 tools/backup/task.sh。",
+    "不动旧 ship 链。",
+    "不删除所有历史对 tools/task.sh 的引用。"
+  ],
+  "acceptance": [
+    {
+      "id": "task_sh_next_reroute",
+      "text": "tools/task.sh --next 直接转到 python3 tools/taskclient.py --pick-next",
+      "status": "done"
+    },
+    {
+      "id": "task_sh_pick_queue_next_reroute",
+      "text": "tools/task.sh --pick queue-next 直接转到 python3 tools/taskclient.py --pick-next",
+      "status": "done"
+    },
+    {
+      "id": "legacy_fallback_kept",
+      "text": "其他旧参数仍回退到 tools/backup/task.sh",
+      "status": "done"
+    },
+    {
+      "id": "active_pointer_aligned",
+      "text": "tools/project_config.json 的 active task 指针与当前 runtime task 一致",
+      "status": "done"
+    },
+    {
+      "id": "task_sh_next_command",
+      "text": "bash tools/task.sh --next",
+      "status": "done"
+    },
+    {
+      "id": "evidence_updated",
+      "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+      "status": "done"
+    }
+  ],
+  "inputs": [
+    "tools/task.sh",
+    "tools/taskclient.py",
+    "tools/backup/task.sh"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-task-sh-wrapper-reroute.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "updated_at": "2026-03-11T18:30:00+00:00"
+}

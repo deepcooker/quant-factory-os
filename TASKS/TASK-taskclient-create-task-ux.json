@@ -1,0 +1,65 @@
+{
+  "task_id": "task-taskclient-create-task-ux",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "done",
+  "priority": "P1",
+  "title": "taskclient create-task ux",
+  "goal": "优化 taskclient --create-task 的使用体验，在不破坏当前 JSON schema 的前提下，让它更适合日常直接使用。",
+  "scope": [
+    "tools/taskclient.py",
+    "tools/taskstore.py",
+    "tools/project_config.json",
+    "docs/FILE_INDEX.md",
+    "docs/WORKFLOW.md",
+    "reports/run-2026-03-11-vnext-release-baseline/"
+  ],
+  "non_goals": [
+    "不改 task JSON schema。",
+    "不做交互式 wizard。",
+    "不重写 pick-next 行为。"
+  ],
+  "acceptance": [
+    {
+      "id": "default_run_id",
+      "text": "--run-id 可省略，默认使用当前 runtime run",
+      "status": "done"
+    },
+    {
+      "id": "flexible_list_args",
+      "text": "--scope/--input/--non-goal/--acceptance 支持重复传参和逗号分隔",
+      "status": "done"
+    },
+    {
+      "id": "activate_after_create",
+      "text": "支持创建后立即绑定 active task",
+      "status": "done"
+    },
+    {
+      "id": "ux_command",
+      "text": "python3 tools/taskclient.py --create-task --title \"ux sample task\" --goal \"验证 create-task 体验优化。\" --scope \"tools/,docs/\" --non-goal \"不改 schema,不改 ship\" --input \"AGENTS.md,docs/WORKFLOW.md\" --acceptance \"docs updated,task json created\" --activate",
+      "status": "done"
+    },
+    {
+      "id": "py_compile",
+      "text": "python3 -m py_compile tools/taskclient.py tools/taskstore.py",
+      "status": "done"
+    },
+    {
+      "id": "evidence_updated",
+      "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+      "status": "done"
+    }
+  ],
+  "inputs": [
+    "tools/taskclient.py",
+    "tools/taskstore.py",
+    "tools/project_config.json"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-taskclient-create-task-ux.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "updated_at": "2026-03-11T18:10:00+00:00"
+}

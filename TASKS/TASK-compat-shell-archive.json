@@ -1,0 +1,73 @@
+{
+  "task_id": "task-compat-shell-archive",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "done",
+  "priority": "P1",
+  "title": "compatibility shell archive",
+  "goal": "把已被正式主线淘汰的 shell 兼容脚本归档到 tools/backup/，并在原路径保留最小兼容壳层，避免当前仓库引用立即断裂。",
+  "scope": [
+    "tools/backup/",
+    "tools/legacy.sh",
+    "tools/task.sh",
+    "tools/observe.sh",
+    "tools/ship.sh",
+    "tools/project_config.json",
+    "docs/",
+    "AGENTS.md",
+    "reports/run-2026-03-11-vnext-release-baseline/"
+  ],
+  "non_goals": [
+    "不重写这些兼容脚本的内部逻辑。",
+    "不在本任务里删除所有历史引用。",
+    "不扩 appserverclient 或 gitclient 新能力。"
+  ],
+  "acceptance": [
+    {
+      "id": "archive_shell_assets",
+      "text": "tools/backup/ 收纳 legacy.sh / task.sh / observe.sh / ship.sh",
+      "status": "done"
+    },
+    {
+      "id": "wrapper_paths",
+      "text": "原路径只保留兼容壳层并可转发到 tools/backup/",
+      "status": "done"
+    },
+    {
+      "id": "docs_downgraded",
+      "text": "formal mainline 文档说明这些 shell 脚本已降级为归档兼容资产",
+      "status": "done"
+    },
+    {
+      "id": "legacy_help",
+      "text": "bash tools/legacy.sh --help || true",
+      "status": "done"
+    },
+    {
+      "id": "project_config_ok",
+      "text": "python3 tools/project_config.py",
+      "status": "done"
+    },
+    {
+      "id": "evidence_updated",
+      "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+      "status": "done"
+    }
+  ],
+  "inputs": [
+    "AGENTS.md",
+    "docs/WORKFLOW.md",
+    "docs/FILE_INDEX.md",
+    "docs/PROJECT_GUIDE.md",
+    "TOOLS_METHOD_FLOW_MAP.md",
+    "tools/project_config.json",
+    "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-compat-shell-archive.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "updated_at": "2026-03-11T16:56:00+00:00"
+}

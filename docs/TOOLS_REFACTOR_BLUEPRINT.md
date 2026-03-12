@@ -182,8 +182,8 @@
 状态与产物真相层。只负责 `TASKS/`、`reports/`、`learn/` 等真相源的访问和定位。
 
 职责：
-- 读取和更新 `tools/project_config.json -> runtime_state`，并镜像到 `TASKS/STATE.md`
-- 读取和写入 `TASKS/TASK-*.md`
+- 读取和更新 `tools/project_config.json -> runtime_state`
+- 读取和写入 `TASKS/TASK-*.json`
 - 读取和写入 `reports/<RUN_ID>/...`
 - 读取和写入 `learn/<project_id>.*`
 - 提供统一 `resolve_*_for_run/project`
@@ -283,7 +283,7 @@
 
 | 当前方法/能力 | 现所在文件 | 说明 | 第一轮是否迁移 |
 | --- | --- | --- | --- |
-| `state_field_value` | `init.py` / `learn.py` / `ready.py` / `run_main.py` | 读取 `tools/project_config.json -> runtime_state`（镜像到 `TASKS/STATE.md`） | 必须 |
+| `state_field_value` | `init.py` / `learn.py` / `ready.py` / `run_main.py` | 读取 `tools/project_config.json -> runtime_state` | 必须 |
 | `resolve_state_current_run_id` / `resolve_state_current_project_id` | `init.py` / `ready.py` | 当前 active 指针解析 | 必须 |
 | `read_state_snapshot` | `learn.py` | 当前状态快照 | 必须 |
 | `resolve_project_id_for_cmd` / `resolve_run_id_for_cmd` | `learn.py` / `ready.py` 及被其他文件引用 | 运行上下文解析 | 必须 |

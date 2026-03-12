@@ -1,225 +1,232 @@
 # TOOLS_METHOD_FLOW_MAP
 
-这份文档只按业务流程写。
+这份文档只描述当前正式主线的方法入口与调用关系。
 
 阅读顺序固定为：
-1. 先看每个阶段的业务目标
-2. 再看每个阶段的主流程方法
-3. 最后才看该阶段的 `xxx_tools_xx`
+1. 先看主流程分层
+2. 再看每个入口调用哪些底层方法
+3. 最后再看历史兼容链路
 
-不允许再反过来把支撑方法当成业务主流程。
-
----
-
-## 1. 总规则
-
-- 每个阶段顶层只保留少量业务主流程方法
-- `main()` 只负责按顺序分发这些主流程方法
-- 非业务方法统一降为 `xxx_tools_xx`
-- 如果某个支撑方法不是该阶段独享，后面应该继续抽出去
+不再把研发期过渡链路当成当前正式主流程。
 
 ---
 
-## 2. `init`
+## 1. 当前正式主线
 
-### 业务目标
+当前正式主线固定为三层：
 
-- 确认当前自动化面对的是哪个项目
-- 确认项目、Codex、git 的前置条件是否满足
-- 给出 `INIT_STATUS / INIT_REASON_CODES / INIT_NEXT`
+1. 准备层
+   - `init`
+2. 主流程层
+   - `appserverclient`
+   - `--learnbaseline`
+   - `--fork-current`
+   - `--current-turn`
+   - `--summarize-current`
+   - `--refresh-baseline`
+3. 收尾层
+   - `gitclient`
+   - `--commit`
+   - `--rollback-last`
+   - `--rollback-commit`
 
-### 主流程方法
+---
+
+## 2. 准备层
+
+### 2.1 `init`
+
+业务目标：
+- 读取统一配置
+- 补齐项目基础骨架
+- 检查 Codex / Git 前置条件
+- 给出下一步动作建议
+
+主流程方法：
 
 | 编号 | 方法名 | 中文说明 |
 | --- | --- | --- |
-| `1001` | `init_step_01_load_context` | 读取固定项目配置和当前上下文。 |
-| `1002` | `init_step_02_check_project_files` | 检查项目路径和关键 owner docs。 |
-| `1003` | `init_step_03_check_codex_runtime` | 检查 Codex CLI、`app-server`、session 前提。 |
-| `1004` | `init_step_04_check_git_runtime` | 检查 git 仓库、远端、认证和工作区状态。 |
-| `1005` | `init_step_05_finalize` | 汇总结果并给出下一步。 |
+| `1001` | `init_step_01_load_context` | 调用 `project_config.py` 读取统一配置、校验必填项、打印统一配置 JSON。 |
+| `1002` | `init_step_02_check_project_files` | 确保项目根目录下的标准骨架存在：`tools/`、`docs/`、`AGENTS.md`、`PROJECT_GUIDE.md`。 |
+| `1003` | `init_step_03_check_codex_runtime` | 检查 `codex`、`app-server`、登录状态与 session 前提。 |
+| `1004` | `init_step_04_check_git_runtime` | 检查 git 仓库、远端、认证、连通性与工作区状态。 |
+| `1005` | `init_step_05_finalize` | 汇总检查结果并给出 `INIT_STATUS / INIT_REASON_CODES / INIT_NEXT`。 |
 
-### 支撑方法命名
-
-- `init_tools_01` ~ `init_tools_10`
+支撑方法命名：
+- `init_tools_01` ~ `init_tools_xx`
 
 ---
 
-## 3. `learn`
+## 3. 主流程层
 
-### 业务目标
+### 3.1 `appserverclient --learnbaseline`
 
-- 完成项目同频
-- 生成基础 `learn` 产物
-- 完成模型侧强同频
-- 输出可进入 `ready` 的学习结果
+业务目标：
+- 建立项目级 baseline 学习 session
+- 用一次重型 `plan` 完成主线同频
 
-### 主流程方法
+主流程调用关系：
 
-| 编号 | 方法名 | 中文说明 |
+| 顺序 | 方法/动作 | 中文说明 |
 | --- | --- | --- |
-| `2001` | `learn_step_01_resolve_context` | 锁定 `learn` 运行配置、项目上下文和日志镜像模式。 |
-| `2002` | `learn_step_02_prepare_artifacts` | 准备 `learn` 产物路径并清理旧的模型临时文件。 |
-| `2003` | `learn_step_03_build_base_packet` | 生成基础 `learn` 报告和主线锚点。 |
-| `2004` | `learn_step_04_run_model_sync` | 执行模型同频、解析结果、回写并校验 `learn` 产物。 |
-| `2005` | `learn_step_05_finalize` | 打印 `learn` 产物位置并给出下一步。 |
+| `A1` | `run_learnbaseline()` | baseline 学习流程总入口。 |
+| `A2` | `connect()` | 初始化 `codex app-server` 连接，完成 `initialize / initialized`。 |
+| `A3` | `list_collaboration_modes()` | 检查当前支持的协作模式。 |
+| `A4` | `start_thread()` | 创建 baseline 学习 thread。 |
+| `A5` | `start_turn()` | 以 `plan` 模式发送 baseline 学习提示词。 |
+| `A6` | `wait_for_turn_completion()` | 等待 `task_complete / turn completed`。 |
+| `A7` | `wait_for_rollout_ready()` | 等待 baseline rollout 文件可用。 |
+| `A8` | `update_session_registry()` | 写回 `learn_session_baseline`。 |
 
-### 支撑方法命名
+输出：
+- `session_registry.learn_session_baseline`
 
-- `learn_tools_01` ~ `learn_tools_24`
+### 3.2 `appserverclient --fork-current`
 
----
+业务目标：
+- 从 baseline 派生当前工作 session
 
-## 4. `ready`
+主流程调用关系：
 
-### 业务目标
-
-- 校验 `learn` / `sync` 门禁
-- 解决未收口 run 的继续决策
-- 生成最小 ready 合同
-- 写出 `ready.json` 并进入 `orient`
-
-### 主流程方法
-
-| 编号 | 方法名 | 中文说明 |
+| 顺序 | 方法/动作 | 中文说明 |
 | --- | --- | --- |
-| `3001` | `ready_step_01_resolve_context` | 锁定 `ready` 运行上下文和各类门禁配置。 |
-| `3002` | `ready_step_02_enforce_inputs` | 校验 `learn` / `sync` 输入门禁是否满足。 |
-| `3003` | `ready_step_03_resolve_decision` | 处理未收口 run 的继续决策并生成默认合同草稿。 |
-| `3004` | `ready_step_04_write_ready_contract` | 采集最小 ready 合同并写入 `ready.json`。 |
-| `3005` | `ready_step_05_finalize` | 回写状态、记录证据并打印 ready 结果。 |
+| `B1` | `run_fork_current()` | current session fork 总入口。 |
+| `B2` | `connect()` | 初始化连接。 |
+| `B3` | `resume_thread()` | 恢复 baseline session。 |
+| `B4` | `fork_thread()` | 从 baseline fork 当前工作 session。 |
+| `B5` | `wait_for_rollout_ready()` | 等待 current rollout 文件可用。 |
+| `B6` | `update_session_registry()` | 写回 `fork_current_session`。 |
 
-### 支撑方法命名
+输出：
+- `session_registry.fork_current_session`
 
-- `ready_tools_01` ~ `ready_tools_28`
+### 3.3 `appserverclient --current-turn`
 
----
+业务目标：
+- 在当前工作 session 上继续推进需求、讨论、验证
 
-## 5. `orient`
+主流程调用关系：
 
-### 业务目标
-
-- 基于当前 run 的 ready 合同和证据
-- 生成候选方向
-- 给出推荐方向和下一步 choose 命令
-
-### 主流程方法
-
-| 编号 | 方法名 | 中文说明 |
+| 顺序 | 方法/动作 | 中文说明 |
 | --- | --- | --- |
-| `4001` | `orient_step_01_resolve_context` | 锁定 `orient` 上下文并确定输出路径。 |
-| `4002` | `orient_step_02_generate_draft` | 生成方向草案和 orient 产物。 |
-| `4003` | `orient_step_03_finalize` | 记录 orient 证据并打印结果。 |
+| `C1` | `run_current_turn()` | current turn 总入口。 |
+| `C2` | `connect()` | 初始化连接。 |
+| `C3` | `resume_thread()` | 恢复 current session。 |
+| `C4` | `start_turn()` | 以 `default` 模式发送当前输入。 |
+| `C5` | `wait_for_turn_completion()` | 等待当前 turn 收口。 |
+| `C6` | `wait_for_rollout_ready()` | 等待 rollout 文件可用。 |
+| `C7` | `update_session_registry()` | 维持 `fork_current_session` 为当前工作副本。 |
 
-### 支撑方法命名
+说明：
+- `mode` 是 `turn` 级别，不是 `thread` 级别。
+- baseline 学习使用 `plan`。
+- 日常 current turn 使用 `default`。
 
-- `orient_tools_01` ~ `orient_tools_02`
+### 3.4 `appserverclient --summarize-current`
 
----
+业务目标：
+- 对当前工作 session 做去噪总结，并写回 `session_registry.current_summary`
 
-## 6. `choose`
+主流程调用关系：
 
-### 业务目标
-
-- 从 `orient` 给出的候选方向中确认一个方向
-- 生成 `orient_choice.json`
-- 生成方向合同，交给 `council`
-
-### 主流程方法
-
-| 编号 | 方法名 | 中文说明 |
+| 顺序 | 方法/动作 | 中文说明 |
 | --- | --- | --- |
-| `5001` | `choose_step_01_resolve_context` | 锁定 `choose` 上下文并检查输入文件。 |
-| `5002` | `choose_step_02_build_contract` | 确认方向并生成 choose/contract 产物。 |
-| `5003` | `choose_step_03_finalize` | 记录 choose 证据并打印结果。 |
+| `D1` | `run_summarize_current()` | current summary 总入口。 |
+| `D2` | `connect()` | 初始化连接。 |
+| `D3` | `resume_thread()` | 恢复 current session。 |
+| `D4` | `start_turn()` | 发送 summarize prompt。 |
+| `D5` | `wait_for_turn_completion()` | 等待总结 turn 收口。 |
+| `D6` | `read_thread()` | 读取当前 thread 详情。 |
+| `D7` | `extract_last_agent_message()` | 抽取最后一条 agent 摘要正文。 |
+| `D8` | `update_current_summary()` | 写回 `session_registry.current_summary`。 |
 
-### 支撑方法命名
+### 3.5 `appserverclient --refresh-baseline`
 
-- `choose_tools_01` ~ `choose_tools_02`
+业务目标：
+- 只用 current summary 的去噪结论增量刷新 baseline
 
----
+主流程调用关系：
 
-## 7. `council`
-
-### 业务目标
-
-- 对当前方向做多角色独立评审
-- 输出证据检查、角色意见和分歧
-- 给 `arbiter` 提供收敛输入
-
-### 主流程方法
-
-| 编号 | 方法名 | 中文说明 |
+| 顺序 | 方法/动作 | 中文说明 |
 | --- | --- | --- |
-| `6001` | `council_step_01_resolve_context` | 锁定 `council` 上下文并检查前置产物。 |
-| `6002` | `council_step_02_generate_reviews` | 生成多角色独立评审结果。 |
-| `6003` | `council_step_03_finalize` | 记录 council 证据并打印结果。 |
-
-### 支撑方法命名
-
-- `council_tools_01` ~ `council_tools_03`
+| `E1` | `run_refresh_baseline()` | baseline refresh 总入口。 |
+| `E2` | `connect()` | 初始化连接。 |
+| `E3` | `resume_thread()` | 恢复 baseline session。 |
+| `E4` | `start_turn()` | 发送 refresh prompt。 |
+| `E5` | `wait_for_turn_completion()` | 等待 refresh turn 收口。 |
+| `E6` | `read_thread()` | 读取 baseline thread 详情。 |
+| `E7` | `extract_last_agent_message()` | 抽取最新 baseline 增量更新。 |
+| `E8` | `update_session_registry()` | 维持 `learn_session_baseline` 最新状态。 |
+| `E9` | `update_current_summary()` | 在 `current_summary` 中记录本次 baseline refresh 结果。 |
 
 ---
 
-## 8. `arbiter`
+## 4. 收尾层
 
-### 业务目标
+### 4.1 `gitclient --commit`
 
-- 把 council 的独立评审收敛成执行合同
-- 明确 blockers、warnings、role conditions
-- 产出 `execution_contract`
+业务目标：
+- 将当前工作区改动提交、创建 PR、合并并同步本地 `main`
 
-### 主流程方法
+主流程调用关系：
 
-| 编号 | 方法名 | 中文说明 |
+| 顺序 | 方法/动作 | 中文说明 |
 | --- | --- | --- |
-| `7001` | `arbiter_step_01_resolve_context` | 锁定 `arbiter` 上下文并检查前置产物。 |
-| `7002` | `arbiter_step_02_build_contract` | 收敛 council 评审并生成 execution contract。 |
-| `7003` | `arbiter_step_03_finalize` | 记录 arbiter 证据并打印结果。 |
+| `G1` | `run_commit()` | 提交入口。 |
+| `G2` | `git checkout -b <work_branch>` | 从当前工作面建立提交分支。 |
+| `G3` | `git add -A` | 收集改动。 |
+| `G4` | `git commit` | 生成提交。 |
+| `G5` | `git push` | 推远端分支。 |
+| `G6` | `gh pr create` | 创建 PR。 |
+| `G7` | `gh pr merge` / `gh pr merge --auto` | 合并或挂 auto merge。 |
+| `G8` | `gh pr view` 轮询 | 等待真正 `MERGED`。 |
+| `G9` | `git fetch / checkout main / pull --rebase` | 同步本地 `main`。 |
 
-### 支撑方法命名
+### 4.2 `gitclient --rollback-last`
 
-- `arbiter_tools_01` ~ `arbiter_tools_02`
+业务目标：
+- 回滚主线最近一次提交
+
+主流程调用关系：
+- 从最新 `main` 建回滚分支
+- `git revert`
+- push
+- 创建回滚 PR
+- 合并并同步本地 `main`
+
+### 4.3 `gitclient --rollback-commit`
+
+业务目标：
+- 回滚指定提交
+
+主流程调用关系：
+- 与 `--rollback-last` 相同，只是回滚目标为指定 commit
 
 ---
 
-## 9. `slice_task`
+## 5. 实验性流程扩展
 
-### 业务目标
+当前正式主线之后的发展方向是：
+- baseline fork 多角色 session
+- 按角色拆最小 task
+- 各角色 session 去噪总结
+- 将有效结论回灌 baseline
 
-- 把 execution contract 切成最小任务
-- 写入 `TASKS/QUEUE.md`
-- 生成 `slice_state.json`
-
-### 主流程方法
-
-| 编号 | 方法名 | 中文说明 |
-| --- | --- | --- |
-| `8001` | `slice_step_01_resolve_context` | 锁定 `slice` 上下文并检查 execution contract。 |
-| `8002` | `slice_step_02_build_queue` | 把 execution contract 切成 queue 任务并写入 `slice_state`。 |
-| `8003` | `slice_step_03_finalize` | 记录 slice 证据并打印结果。 |
-
-### 支撑方法命名
-
-- `slice_tools_01` ~ `slice_tools_03`
+这部分未来会继续沉到 `appserverclient` 附近，而不是再回到旧的长链路中。
 
 ---
 
-## 10. 当前纠错方式
+## 6. 历史兼容链路
 
-后面纠错时，顺序固定：
+以下链路保留为研发期过渡材料或兼容实现，不再作为当前正式主线：
+- `learn`
+- `ready`
+- `orient`
+- `choose`
+- `council`
+- `arbiter`
+- `slice_task`
+- `run_main`
 
-1. 先指出某个阶段的业务目标错没错
-2. 再指出该阶段主流程步骤顺序错没错
-3. 最后才指出该阶段的 `xxx_tools_xx` 是否还混进了不该留的职责
-
-也就是说，优先纠错对象永远是：
-- `1001-1005`
-- `2001-2005`
-- `3001-3005`
-- `4001-4003`
-- `5001-5003`
-- `6001-6003`
-- `7001-7003`
-- `8001-8003`
-
-不是先纠结底层工具方法。
+这些文件仍可作为历史实现参考，但不再代表当前正式业务主流程。
+对应 shell 兼容入口已归档到 `tools/backup/`，原 `tools/*.sh` 只保留过渡转发层。

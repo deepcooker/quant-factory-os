@@ -14,9 +14,11 @@ from typing import Any
 try:
     from tools.project_config import load_unified_config
     from tools.result_schema import ERR_CONFIG_BASE, ERR_RUNTIME_BASE, err, ok
+    from tools.taskclient import load_active_task
 except Exception:  # pragma: no cover
     from project_config import load_unified_config  # type: ignore
     from result_schema import ERR_CONFIG_BASE, ERR_RUNTIME_BASE, err, ok  # type: ignore
+    from taskclient import load_active_task  # type: ignore
 
 
 LOGGER_NAME = "qf.gitclient"
@@ -66,15 +68,40 @@ def load_git_context() -> dict[str, Any]:
     }
 
 
-# gitclient 中文：解析提交说明；优先用 --commit，其次 runtime_state.current_task_file，最后回退到“手动提交+时间戳”。
+# gitclient 中文：解析提交说明；优先用 --commit，其次 active task JSON 的 title/task_id，再回退到 runtime_state 与时间戳。
+def resolve_active_task_message() -> str:
+    try:
+        task = load_active_task()
+    except Exception:
+        return ""
+    title = str(task.get("title", "")).strip()
+    task_id = str(task.get("task_id", "")).strip()
+    if title and task_id:
+        return f"{task_id}: {title}"
+    if title:
+        return title
+    if task_id:
+        return task_id
+    return ""
+
+
 def resolve_commit_message(raw_message: str | None) -> str:
     if raw_message is not None and str(raw_message).strip():
         return str(raw_message).strip()
+    active_task_message = resolve_active_task_message()
+    if active_task_message:
+        return active_task_message
     unified = load_unified_config()
     runtime_state = dict(unified.get("runtime_state", {}))
+    current_task_id = str(runtime_state.get("current_task_id", "")).strip()
     current_task_file = str(runtime_state.get("current_task_file", "")).strip()
     if current_task_file:
         return current_task_file
+    if current_task_id:
+        return current_task_id
+    current_run_id = str(runtime_state.get("current_run_id", "")).strip()
+    if current_run_id:
+        return current_run_id
     ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     return f"手动提交{ts}"
 

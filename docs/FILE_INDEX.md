@@ -22,9 +22,12 @@
 
 | 文件 | 作用 | 什么时候优先看 |
 | --- | --- | --- |
-| `tools/project_config.json` | 项目最小配置数据源，含 required / git / runtime_state / session_registry。 | 看项目接入最小字段和当前运行状态时 |
+| `tools/project_config.json` | 项目最小配置数据源，含 required / git / runtime_state / session_registry；`current_summary` 也在这里落盘。 | 看项目接入最小字段、当前运行状态和 summary 回写时 |
+| `TASKS/QUEUE.json` | 当前 queue 的机器真相源。 | 选择下一个 active/open task 时 |
+| `TASKS/TASK-*.json` | 当前或历史 task 的机器真相源。 | 需要程序稳定读取 task 字段时 |
 | `tools/project_config.template.json` | 其他项目接入时可复用的最小配置模板。 | 新项目接入时 |
 | `tools/project_config.py` | 统一配置出口；把 JSON 最小数据、系统常量和运行时状态拼成统一大配置视图。 | 任何脚本取配置时 |
+| `tools/taskclient.py` | Python-first 的统一 task 入口；当前同时承担 task/queue JSON 读写、queue 选择、runtime 绑定和 task bootstrap。 | 需要从 `QUEUE.json` 选择 task、读取 active task 或新建 task 时 |
 | `tools/result_schema.py` | 可组合流程方法统一返回协议：`err_code / err_desc / data`。 | 新增流程入口时 |
 
 ## 3. Prepare / Runtime / Git
@@ -32,36 +35,24 @@
 | 文件 | 作用 | 什么时候优先看 |
 | --- | --- | --- |
 | `tools/init.py` | 环境准备、项目骨架补齐、Codex/Git 前置检查。 | 开工前环境准备时 |
-| `tools/appserverclient.py` | Codex app-server runtime 核心；负责 baseline / fork / current-turn。 | 学习基线和当前 session 推进时 |
-| `tools/gitclient.py` | Git 底层；负责 commit、PR、merge、rollback、main 同步。 | 收尾交付和回滚时 |
-
-## 4. Learning / Workflow
-
-| 文件 | 作用 | 什么时候优先看 |
-| --- | --- | --- |
-| `tools/learn.py` | 当前 learn 工作流入口；包含课程化学习和产物收口逻辑。 | 看 learn 旧实现和迁移边界时 |
-| `tools/ready.py` | `learn` 后的门禁与合同准备。 | 看是否允许进入方向讨论时 |
-| `tools/orient.py` | 方向草案生成。 | 需求方向收敛开始时 |
-| `tools/choose.py` | 方向确认与合同生成。 | 确认方向时 |
-| `tools/council.py` | 多角色独立评审。 | 做独立评审时 |
-| `tools/arbiter.py` | 收敛 execution contract。 | 需要统一合同和 blockers 时 |
-| `tools/slice_task.py` | 把执行合同拆成最小 task。 | 进入最小任务拆分时 |
-| `tools/run_main.py` | Python 总入口骨架。 | 看统一 orchestrator 主入口时 |
+| `tools/appserverclient.py` | Codex app-server runtime 核心；负责 baseline / fork / current-turn / summarize-current / refresh-baseline，并显式打印当前 active task JSON 摘要。 | 学习基线、当前 session 推进和 baseline 回灌时 |
+| `tools/gitclient.py` | Git 底层；负责 commit、PR、merge、rollback、main 同步，并优先从 task JSON 读取当前任务上下文。 | 收尾交付和回滚时 |
 
 ## 5. Prompt / Learning Assets
 
 | 文件 | 作用 | 什么时候优先看 |
 | --- | --- | --- |
 | `tools/learnbaseline_prompt.md` | baseline 学习固定前言 prompt 文件。 | 调整 baseline 学习提示词时 |
+| `tools/summarize_current_prompt.md` | current fork 去噪总结提示词。 | 调整 `--summarize-current` 时 |
+| `tools/refresh_baseline_prompt.md` | baseline 增量回灌提示词。 | 调整 `--refresh-baseline` 时 |
 | `tools/learn_prompt_compare.md` | `learn.py` 与 `appserverclient` baseline prompt 对比说明。 | 做提示词迁移时 |
 
 ## 6. Task / State / Evidence
 
 | 文件 | 作用 | 什么时候优先看 |
 | --- | --- | --- |
-| `TASKS/QUEUE.md` | 待办队列与意图入口。 | 选择下一个 task 时 |
-| `TASKS/TASK-tools-orchestrator-entry.md` | 当前活跃任务文件。 | 确认本轮目标和验收时 |
-| `TASKS/STATE.md` | runtime_state 的镜像输出。 | 兼容查看当前 run/task 指针时 |
+| `TASKS/QUEUE.md` | queue 的遗留可读视图；迁移期保留。 | 需要人工快速扫历史 backlog 时 |
+| `TASKS/TASK-*.md` | task 的遗留可读视图；迁移期保留。 | 需要人工快速浏览任务说明时 |
 | `reports/<RUN_ID>/summary.md` | 当前 run 的总结证据。 | 看最近做了什么时 |
 | `reports/<RUN_ID>/decision.md` | 当前 run 的决策证据。 | 看为什么这么做时 |
 
@@ -69,9 +60,25 @@
 
 | 文件 | 作用 | 什么时候优先看 |
 | --- | --- | --- |
-| `tools/legacy.sh` | 兼容入口路由。 | 老 shell 子命令仍在使用时 |
+| `tools/backup/legacy.sh` | 已归档的旧兼容入口路由。 | 追溯旧 shell 入口设计时 |
+| `tools/backup/task.sh` | 已归档的旧 task shell 流程。 | 对照旧 shell task/ship 链时 |
+| `tools/backup/taskstore.py` | 已归档的独立 taskstore 实现，保留作历史参考。 | 对照 taskclient 合并前的实现时 |
+| `tools/backup/observe.sh` | 已归档的旧 observe shell 入口。 | 排查旧 shell 观察链时 |
+| `tools/backup/ship.sh` | 已归档的旧 ship 实现。 | 对照旧发货逻辑时 |
+| `tools/backup/legacy.wrapper.sh` | 已移出的旧顶层 `legacy.sh` wrapper。 | 追溯 wrapper 退场方式时 |
+| `tools/backup/task.wrapper.sh` | 已移出的旧顶层 `task.sh` wrapper。 | 追溯 task shell 入口退场方式时 |
+| `tools/backup/observe.wrapper.sh` | 已移出的旧顶层 `observe.sh` wrapper。 | 追溯 observe shell 入口退场方式时 |
+| `tools/backup/ship.wrapper.sh` | 已移出的旧顶层 `ship.sh` wrapper。 | 追溯 ship shell 入口退场方式时 |
+| `tools/backup/learn.py` | 已归档的历史 learn 工作流入口。 | 看 baseline 学习旧实现和迁移边界时 |
+| `tools/backup/ready.py` | 已归档的历史 `learn` 后门禁与合同准备。 | 对照旧门禁链时 |
+| `tools/backup/orient.py` | 已归档的历史方向草案生成。 | 对照旧讨论链时 |
+| `tools/backup/choose.py` | 已归档的历史方向确认与合同生成。 | 对照旧讨论链时 |
+| `tools/backup/council.py` | 已归档的历史多角色独立评审。 | 对照旧讨论链时 |
+| `tools/backup/arbiter.py` | 已归档的历史 execution contract 收敛。 | 对照旧讨论链时 |
+| `tools/backup/slice_task.py` | 已归档的历史最小 task 拆分入口。 | 对照旧 task 切片链时 |
+| `tools/backup/run_main.py` | 已归档的历史 Python 总入口骨架。 | 看旧 orchestrator 设计时 |
+| `tools/backup/run_a9.py` | 已归档的旧实验性 Python 入口。 | 排查历史实验入口时 |
 | `tools/doctor.sh` | 辅助诊断脚本。 | 排查环境和 Git/Codex 体检时 |
-| `tools/ship.sh` | 旧 ship 实现。 | 对照旧发货逻辑时 |
 | `tools/view.sh` | 分块读取长文件。 | 按仓库规则读长文件时 |
 
 ## 8. 当前建议阅读顺序

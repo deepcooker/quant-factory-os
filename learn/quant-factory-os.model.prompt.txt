@@ -20,7 +20,8 @@ Additional required files to read with tools/view.sh:
 - TASKS/QUEUE.md
 - reports/run-2026-03-08-tools-orchestrator-entry/summary.md
 - reports/run-2026-03-08-tools-orchestrator-entry/decision.md
-- CODEX_CLI_PLAYBOOK.md
+- docs/FILE_INDEX.md
+- TOOLS_METHOD_FLOW_MAP.md
 - tools/appserverclient.py
 - tools/gitclient.py
 

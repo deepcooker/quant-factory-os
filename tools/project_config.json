@@ -9,30 +9,51 @@
   },
   "runtime_state": {
     "current_project_id": "quant-factory-os",
-    "current_run_id": "run-2026-03-08-tools-orchestrator-entry",
-    "current_task_file": "TASKS/TASK-tools-orchestrator-entry.md",
-    "current_status": "active",
-    "current_updated_at": "2026-03-10T07:02:33+00:00"
+    "current_run_id": "run-2026-03-11-vnext-release-baseline",
+    "current_task_id": "task-appserverclient-summarize-refresh-baseline-loop",
+    "current_task_file": "TASKS/TASK-appserverclient-summarize-refresh-baseline-loop.md",
+    "current_task_json_file": "TASKS/TASK-appserverclient-summarize-refresh-baseline-loop.json",
+    "current_status": "completed",
+    "current_updated_at": "2026-03-12T09:04:30+00:00"
+  },
+  "task_registry": {
+    "active_task_json_file": "TASKS/TASK-appserverclient-summarize-refresh-baseline-loop.json",
+    "queue_json_file": "TASKS/QUEUE.json",
+    "task_md_is_legacy_view": true,
+    "queue_md_is_legacy_view": true
   },
   "session_registry": {
     "learn_session_baseline": {
       "thread_id": "019cd913-0405-70c2-9690-983b199909ce",
       "thread_path": "/root/.codex/sessions/2026/03/11/rollout-2026-03-11T02-47-08-019cd913-0405-70c2-9690-983b199909ce.jsonl",
       "status": "ready",
-      "updated_at": "2026-03-10T18:50:16.084770+00:00",
-      "source": "init_main",
+      "updated_at": "2026-03-12T09:02:08.057888+00:00",
+      "source": "refresh_baseline_main",
       "model": "gpt-5.4",
       "effort": "low"
     },
     "fork_current_session": {
-      "thread_id": "019cd29a-d235-7180-8918-12b0bfb7e569",
-      "thread_path": "/root/.codex/sessions/2026/03/09/rollout-2026-03-09T20-38-07-019cd29a-d235-7180-8918-12b0bfb7e569.jsonl",
+      "thread_id": "019ce142-c439-7ef2-974a-2ae542025d0f",
+      "thread_path": "/root/.codex/sessions/2026/03/12/rollout-2026-03-12T16-56-15-019ce142-c439-7ef2-974a-2ae542025d0f.jsonl",
       "status": "ready",
-      "updated_at": "2026-03-09T12:38:07.767867+00:00",
-      "source": "fork_current_main",
-      "forked_from_thread_id": "019cd296-bd3c-72c3-be6f-e835cd50aba6",
+      "updated_at": "2026-03-12T09:01:41.058809+00:00",
+      "source": "summarize_current_main",
+      "forked_from_thread_id": "019cd913-0405-70c2-9690-983b199909ce",
       "model": "gpt-5.4",
       "effort": "low"
+    },
+    "current_summary": {
+      "thread_id": "019ce142-c439-7ef2-974a-2ae542025d0f",
+      "thread_path": "/root/.codex/sessions/2026/03/12/rollout-2026-03-12T16-56-15-019ce142-c439-7ef2-974a-2ae542025d0f.jsonl",
+      "status": "refreshed",
+      "updated_at": "2026-03-12T09:02:08.059041+00:00",
+      "source": "refresh_baseline_main",
+      "model": "gpt-5.4",
+      "effort": "low",
+      "summary_text": "主线更新：本轮 session 的有效结论是，项目正式主线已经从旧的 `learn/ready/orient/...` 兼容链切到 `init -> appserverclient(--learnbaseline/--fork-current/--current-turn) -> gitclient`，活动指针与 task/queue 机器真相统一收口到 `tools/project_config.json -> runtime_state`、`TASKS/QUEUE.json`、`TASKS/TASK-*.json`。当前 active run 是 `run-2026-03-11-vnext-release-baseline`，active task 是 `task-appserverclient-summarize-refresh-baseline-loop`，目标是补齐 `appserverclient` 的 `summarize-current` 与 `refresh-baseline` 最小闭环，让 baseline 学习、当前工作分叉和去噪回灌形成正式路径。\n\n新的约束与风险：`TASKS/STATE.md`、`TASKS/*.md`、`QUEUE.md` 已降级为迁移期人类视图，不能再当机器真相；旧 `learn/ready/orient/choose/council/arbiter/slice_task/run_main` 与 shell 入口已归档到 `tools/backup/`，讨论与实现都不应再围绕它们设计正式流程。当前主要风险不是业务功能缺失，而是 baseline/session 总结回灌链还没补齐，同时 `appserverclient --fork-current` 仍受 `/root/.codex/sessions` 权限问题影响，说明新主线虽已扶正，但 session 生命周期与基线刷新能力还未完全打通。\n\n下一步：围绕当前 task 直接完成 `appserverclient --summarize-current`、`--refresh-baseline`、`runtime_state.current_summary` 指针写回，以及 `docs/WORKFLOW.md`、`docs/FILE_INDEX.md` 对新主线的同步说明。实现标准应继续服务主线去噪：只沉淀对 baseline 真正有价值的 run 级结论、约束和下一步，不回灌聊天过程、兼容历史或局部试错噪音。",
+      "summary_turn_id": "019ce147-6174-7f02-83a5-c3bfb31c4335",
+      "baseline_refresh_text": "主线理解更新为：项目正式执行主线已从旧的 `learn/ready/orient/...` 兼容链切换到 `init -> appserverclient(--learnbaseline/--fork-current/--current-turn) -> gitclient`。机器真相统一收口到 `tools/project_config.json -> runtime_state`、`TASKS/QUEUE.json`、`TASKS/TASK-*.json`，其中 Markdown 状态与任务文件仅保留为迁移期人类视图，不再作为正式自动化依据。\n\n当前阶段更新为：项目处于 vnext baseline 收口阶段，重点不是补旧链路，而是把 baseline 学习、当前工作分叉、当前总结去噪回灌这条新闭环补齐。当前 active run 为 `run-2026-03-11-vnext-release-baseline`，active task 为 `task-appserverclient-summarize-refresh-baseline-loop`，说明主线已正式转向 `appserverclient` 驱动的 session/baseline 生命周期治理。\n\n下一步更新为：优先完成 `appserverclient --summarize-current`、`--refresh-baseline`、`runtime_state.current_summary` 指针写回，以及 `docs/WORKFLOW.md`、`docs/FILE_INDEX.md` 对新主线的同步。回灌 baseline 时只沉淀 run 级有效结论、正式约束与下一步，避免把聊天过程、兼容历史和局部试错噪音带回基线。",
+      "baseline_refresh_turn_id": "019ce147-fa82-7e01-a464-36d43769f2ac"
     }
   }
 }
