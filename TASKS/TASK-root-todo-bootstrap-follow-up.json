@@ -1,0 +1,55 @@
+{
+  "task_id": "task-root-todo-bootstrap-follow-up",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P2",
+  "title": "root todo bootstrap follow-up",
+  "goal": "在仓库根目录增加一份后续待办，记录 bootstrap/intake 模板后续优化方向。",
+  "scope": [
+    "todo.md"
+  ],
+  "non_goals": [
+    "不继续扩协议文档",
+    "不改运行时实现"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "仓库根目录新增 todo.md，记录后续待办",
+      "status": "completed"
+    }
+  ],
+  "inputs": [
+    "docs/PROJECT_BOOTSTRAP_PROTOCOL.md",
+    "docs/PROJECT_GUIDE.md"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-root-todo-bootstrap-follow-up.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "在仓库根目录新增 todo.md，记录 bootstrap/intake 模板后续待办。"
+    ],
+    "decisions": [
+      "先把跨项目实验相关后续事项记到根目录 todo，再继续完成本仓主线。"
+    ],
+    "risks": [],
+    "verification": [
+      "todo.md 已创建"
+    ],
+    "next_steps": [
+      "后续按 todo.md 继续收敛跨项目 bootstrap 实验前置条件。"
+    ],
+    "source_threads": [
+      "fork_current_session"
+    ],
+    "updated_at": "2026-03-13T15:52:00+00:00"
+  },
+  "updated_at": "2026-03-13T15:52:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

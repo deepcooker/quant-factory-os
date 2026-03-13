@@ -1,0 +1,56 @@
+{
+  "task_id": "task-project-guide-self-structuring-skeleton",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "project-guide self-structuring skeleton",
+  "goal": "把高质量追问进一步压成客户材料输入后的 AI 自我梳理输出骨架，最小增强 PROJECT_GUIDE。",
+  "scope": [
+    "docs/"
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "PROJECT_GUIDE 增加最小自我梳理输出骨架，不改题库结构",
+      "status": "completed"
+    }
+  ],
+  "inputs": [
+    "docs/PROJECT_GUIDE.md",
+    "tools/需求管理及分析工作指南.doc"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-project-guide-self-structuring-skeleton.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "在 PROJECT_GUIDE 的 Q9-Q12 下补了客户材料输入后的 AI 自我梳理输出骨架。",
+      "输出骨架把 run 方向、角色计划、对象分层和 task 前置边界收成最小结构。"
+    ],
+    "decisions": [
+      "继续只增强协议层，不新增实现层工具或结构化生成器。",
+      "输出骨架直接挂在现有题目下，避免新增独立章节稀释课程主线。"
+    ],
+    "risks": [
+      "当前骨架仍是文档约定，尚未自动生成 JSON。"
+    ],
+    "verification": [
+      "已检查 PROJECT_GUIDE 的 Q9-Q12 段落，确认题库结构和题号保持不变。"
+    ],
+    "next_steps": [
+      "后续可以继续把这些骨架映射到 task/run 真相源字段，但当前先维持协议层。"
+    ],
+    "source_threads": [
+      "019ce5e2-50f1-7b20-aadf-4b746a1d1467"
+    ],
+    "updated_at": "2026-03-13T15:18:00+00:00"
+  },
+  "updated_at": "2026-03-13T15:18:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

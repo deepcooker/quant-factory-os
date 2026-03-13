@@ -1,0 +1,100 @@
+{
+  "task_id": "task-appserverclient-role-turn-runtime",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "appserverclient role turn runtime",
+  "goal": "新增 appserverclient --role-turn，让已绑定的 role thread 执行真实 turn。",
+  "scope": [
+    "tools/appserverclient.py",
+    "docs/WORKFLOW.md",
+    "docs/FILE_INDEX.md",
+    "TOOLS_METHOD_FLOW_MAP.md",
+    "AGENTS.md"
+  ],
+  "non_goals": [
+    "不做 thread summary 自动回收",
+    "不做多角色调度器"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "新增 --role-turn 命令; 已绑定 role thread 可执行真实 turn; docs/evidence updated",
+      "status": "completed"
+    }
+  ],
+  "inputs": [
+    "tools/appserverclient.py",
+    "tools/taskclient.py",
+    "TASKS/TASK-appserverclient-fork-role-command.json"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-appserverclient-role-turn-runtime.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "tools/appserverclient.py 新增 --role-turn，可在已绑定 role thread 上执行真实 turn。",
+      "当前 task 已成功 fork 并绑定 test role thread 019ce64a-8ad1-7733-a6e0-f8b0c15d22f2。",
+      "真实 role-turn 已执行成功，并返回 test 线程职责说明。"
+    ],
+    "decisions": [
+      "role thread 执行面先通过 appserverclient --role-turn 打通，不在本轮引入 thread summary 自动回收。"
+    ],
+    "risks": [],
+    "verification": [
+      "python3 -m py_compile tools/appserverclient.py tools/taskclient.py",
+      "python3 tools/appserverclient.py --fork-role test",
+      "python3 tools/taskclient.py --role-threads",
+      "python3 tools/appserverclient.py --role-turn test \"请用一句话说明你当前作为 test 线程的职责。\""
+    ],
+    "next_steps": [
+      "继续补 role thread 的 thread summary 产出与回收到 task summary。"
+    ],
+    "source_threads": [
+      "test:019ce64a-8ad1-7733-a6e0-f8b0c15d22f2"
+    ],
+    "updated_at": "2026-03-13T08:23:48+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "019ce64a-8ad1-7733-a6e0-f8b0c15d22f2",
+      "thread_path": "/root/.codex/sessions/2026/03/13/rollout-2026-03-13T16-22-50-019ce64a-8ad1-7733-a6e0-f8b0c15d22f2.jsonl",
+      "status": "ready"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-13T08:23:48+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

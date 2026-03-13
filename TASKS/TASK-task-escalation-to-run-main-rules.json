@@ -1,0 +1,156 @@
+{
+  "task_id": "task-task-escalation-to-run-main-rules",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "task escalation to run-main rules",
+  "goal": "定义 task 层哪些冲突必须升级给 run-main、哪些可在 task 内自行收敛，并补最小机器层落点。",
+  "scope": [
+    "tools/taskclient.py",
+    "TASKS/_SCHEMA.task.json",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/FILE_INDEX.md",
+    "TOOLS_METHOD_FLOW_MAP.md",
+    "AGENTS.md"
+  ],
+  "non_goals": [
+    "不做 run summary 自动聚合",
+    "不做多角色调度器"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "task 机器层有 escalation 规则字段或约定",
+      "status": "completed"
+    },
+    {
+      "id": "check-2",
+      "text": "taskclient 有最小 escalation 刷新入口或写回规则",
+      "status": "completed"
+    },
+    {
+      "id": "check-3",
+      "text": "docs/evidence updated",
+      "status": "completed"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-task-escalation-to-run-main-rules.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "task 机器层新增 escalation_policy 和 escalation_summary 字段约定。",
+      "taskclient 新增 --refresh-task-escalation，用于判断当前 task 是否必须升级给 run-main。",
+      "已用现有真实 task 做 escalation refresh 验证。"
+    ],
+    "decisions": [
+      "当前最小必须升级条件是 run-main summary missing、test_gate 未通过或 blocking issue 仍存在。"
+    ],
+    "risks": [],
+    "verification": [
+      "python3 -m py_compile tools/taskclient.py",
+      "python3 tools/taskclient.py --refresh-task-gaps --task-json-file TASKS/TASK-role-thread-summary-to-task-summary.json",
+      "python3 tools/taskclient.py --refresh-task-escalation --task-json-file TASKS/TASK-role-thread-summary-to-task-summary.json",
+      "python3 tools/taskclient.py --task-summary --task-json-file TASKS/TASK-role-thread-summary-to-task-summary.json"
+    ],
+    "next_steps": [
+      "继续定义升级给 run-main 后，run-main 应如何确认、回写和关闭升级项。"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": ""
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-13T08:49:50+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

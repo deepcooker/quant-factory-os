@@ -49,6 +49,7 @@ Runtime note:
   - `python3 tools/appserverclient.py --learnbaseline`
   - determine run-level demand direction
   - role/session forks on top of baseline
+  - `python3 tools/appserverclient.py --fork-role <dev|test|arch>` when a task needs a real role thread
   - minimal task execution inside forked sessions
   - `python3 tools/appserverclient.py --summarize-current`
   - `python3 tools/appserverclient.py --refresh-baseline`
@@ -81,6 +82,9 @@ Required visible progress:
 - Denoise / refresh must write back through runtime truth:
   - `--summarize-current` must write `session_registry.current_summary`
   - `--refresh-baseline` must consume `session_registry.current_summary` instead of rebuilding baseline from scratch
+- role-thread runtime currently also supports:
+  - `python3 tools/appserverclient.py --role-turn <dev|test|arch> [text...]`
+  - `python3 tools/appserverclient.py --summarize-role <dev|test|arch>`
 - practice evidence must show `tools/view.sh` coverage for every required file listed by the dynamic baseline prompt
 
 No coding until this gate is complete.
@@ -96,7 +100,7 @@ No coding until this gate is complete.
 2. Run `python3 tools/appserverclient.py --learnbaseline` to ensure project baseline learning exists.
 3. Determine the run-level demand direction (human-injected intent).
 4. Run `python3 tools/appserverclient.py --fork-current` to create the working session from baseline.
-5. Split work into minimal role/task units inside forked sessions and advance with `--current-turn`.
+5. Split work into minimal role/task units inside forked sessions; when a task needs real role thread binding, use `python3 tools/appserverclient.py --fork-role <dev|test|arch>`, continue role work with `python3 tools/appserverclient.py --role-turn <role> [text...]`, and denoise one role thread with `python3 tools/appserverclient.py --summarize-role <role>`.
 6. Run `python3 tools/appserverclient.py --summarize-current` to denoise the current session.
 7. Run `python3 tools/appserverclient.py --refresh-baseline` to feed the denoised summary back into baseline.
 8. Finish with `python3 tools/gitclient.py --commit` or rollback commands.
@@ -128,6 +132,9 @@ Use only these unless task explicitly authorizes more:
 - `python3 tools/init.py`
 - `python3 tools/appserverclient.py --learnbaseline`
 - `python3 tools/appserverclient.py --fork-current`
+- `python3 tools/appserverclient.py --fork-role <dev|test|arch>`
+- `python3 tools/appserverclient.py --role-turn <dev|test|arch> [text...]`
+- `python3 tools/appserverclient.py --summarize-role <dev|test|arch>`
 - `python3 tools/appserverclient.py --current-turn`
 - `python3 tools/appserverclient.py --summarize-current`
 - `python3 tools/appserverclient.py --refresh-baseline`
@@ -136,6 +143,12 @@ Use only these unless task explicitly authorizes more:
 - `python3 tools/gitclient.py --rollback-commit <sha>`
 - `python3 tools/taskclient.py --next`
 - `python3 tools/taskclient.py --create ...`
+- `python3 tools/taskclient.py --merge-role-summaries`
+- `python3 tools/taskclient.py --refresh-task-gaps`
+- `python3 tools/taskclient.py --refresh-task-escalation`
+- `python3 tools/taskclient.py --run-main-resolution`
+- `python3 tools/taskclient.py --set-run-main-resolution`
+- `python3 tools/taskclient.py --refresh-run-main-resolution`
 - `tools/doctor.sh`
 - `tools/enter.sh`
 - `tools/smoke.sh`

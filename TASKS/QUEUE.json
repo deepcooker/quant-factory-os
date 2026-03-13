@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_id": "quant-factory-os",
-  "updated_at": "2026-03-11T10:24:12+00:00",
+  "updated_at": "2026-03-13T09:40:05+00:00",
   "items": [
     {
       "queue_id": "queue-vnext-release-baseline",
@@ -45,8 +45,8 @@
       "task_id": "task-bootstrap-sample-task",
       "task_json_file": "TASKS/TASK-bootstrap-sample-task.json",
       "task_md_file": "TASKS/TASK-bootstrap-sample-task.md",
-      "status": "pending",
-      "picked_at": null,
+      "status": "active",
+      "picked_at": "2026-03-13T09:40:05+00:00",
       "goal": "验证 JSON-first task bootstrap 可用。",
       "scope": [
         "tools/"

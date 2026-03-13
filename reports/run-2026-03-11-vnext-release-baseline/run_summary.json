@@ -1,0 +1,32 @@
+{
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "status": "active",
+  "run_goal": "stabilize run-level machine summary writeback",
+  "active_tasks": [
+    "task-run-summary-writeback-entry"
+  ],
+  "completed_tasks": [
+    "task-task-summary-bootstrap"
+  ],
+  "source_tasks": [
+    "task-task-summary-bootstrap",
+    "task-run-summary-bootstrap",
+    "task-run-summary-writeback-entry"
+  ],
+  "key_updates": [
+    "run_summary.json now has a dedicated writeback entry"
+  ],
+  "cross_task_decisions": [
+    "run summary writeback stays in tools/evidence.py instead of a new runclient"
+  ],
+  "cross_task_risks": [
+    "baseline still does not consume run summary yet"
+  ],
+  "verification_overview": [
+    "python3 -m py_compile tools/evidence.py"
+  ],
+  "next_run_or_next_tasks": [
+    "connect baseline refresh to run summary after this stabilizes"
+  ],
+  "updated_at": "2026-03-12T12:55:32+00:00"
+}

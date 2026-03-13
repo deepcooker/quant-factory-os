@@ -1,0 +1,85 @@
+{
+  "task_id": "task-appserverclient-role-thread-fork-binding",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "active",
+  "priority": "P1",
+  "title": "appserverclient role thread fork binding",
+  "goal": "让 run-main 基于当前 fork session 派生 dev/test role thread，并回写 task role_threads。",
+  "scope": [
+    "tools/appserverclient.py",
+    "tools/taskclient.py",
+    "docs/WORKFLOW.md",
+    "docs/FILE_INDEX.md"
+  ],
+  "non_goals": [
+    "不做完整多agent orchestration",
+    "不自动聚合 thread summary"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "appserverclient 支持最小 role fork; task role_threads 回写生效; docs/evidence updated",
+      "status": "pending"
+    }
+  ],
+  "inputs": [
+    "tools/appserverclient.py",
+    "tools/taskclient.py",
+    "tools/project_config.json",
+    "docs/WORKFLOW.md"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-appserverclient-role-thread-fork-binding.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "draft",
+    "key_updates": [],
+    "decisions": [],
+    "risks": [],
+    "verification": [],
+    "next_steps": [],
+    "source_threads": [],
+    "updated_at": ""
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-13T08:11:12+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

@@ -29,6 +29,156 @@
     "summary_file": "reports/run-YYYY-MM-DD-example/summary.md",
     "decision_file": "reports/run-YYYY-MM-DD-example/decision.md"
   },
+  "task_summary": {
+    "status": "draft",
+    "key_updates": [
+      "Stable task-level update."
+    ],
+    "decisions": [
+      "Stable task-level decision."
+    ],
+    "risks": [
+      "Open task-level risk."
+    ],
+    "verification": [
+      "Command or evidence that validates this task."
+    ],
+    "next_steps": [
+      "Next task-level action."
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [
+        "dev"
+      ],
+      "open_gaps": [
+        "missing role summary"
+      ],
+      "updated_at": "2026-03-12T00:00:00+00:00"
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": true,
+      "reasons": [
+        "run-main summary missing"
+      ],
+      "updated_at": "2026-03-12T00:00:00+00:00"
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "pending_ack",
+      "close_escalation": false,
+      "notes": [
+        "Waiting for run-main confirmation."
+      ],
+      "updated_at": "2026-03-12T00:00:00+00:00"
+    },
+    "role_summary_evidence": [
+      "role:turn-or-thread"
+    ],
+    "source_threads": [
+      "thread-id-or-role"
+    ],
+    "updated_at": "2026-03-12T00:00:00+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
   "risks": "Short risk summary.",
   "rollback_plan": "Short rollback plan.",
   "updated_at": "2026-03-11T00:00:00+00:00"

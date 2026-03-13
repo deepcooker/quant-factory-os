@@ -1,0 +1,62 @@
+{
+  "task_id": "task-project-guide-markdown-draft-template",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "project-guide markdown draft template",
+  "goal": "将客户杂乱材料读完后的 AI 标准化 markdown 草稿模板沉淀到协议层，不改实现。",
+  "scope": [
+    "docs/PROJECT_GUIDE.md",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md"
+  ],
+  "non_goals": [
+    "不实现自动生成器",
+    "不改 appserverclient/taskclient/evidence 主流程"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "PROJECT_GUIDE 增加最小 markdown 草稿模板; WORKFLOW/ENTITIES 只做必要口径同步; evidence updated",
+      "status": "completed"
+    }
+  ],
+  "inputs": [
+    "tools/需求管理及分析工作指南.doc",
+    "docs/PROJECT_GUIDE.md",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-project-guide-markdown-draft-template.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "在 PROJECT_GUIDE 的 Q12 下新增标准化 Markdown intake draft 模板，用于 AI 读完客户材料后的首轮结构化输出。"
+    ],
+    "decisions": [
+      "Markdown intake draft 只作为 run 级协议层草稿，不作为机器真相源。"
+    ],
+    "risks": [
+      "如果后续把 intake draft 误当成 run summary 或 task 真相源，仍可能造成分层混乱。"
+    ],
+    "verification": [
+      "docs/PROJECT_GUIDE.md 已新增模板",
+      "docs/WORKFLOW.md 与 docs/ENTITIES.md 已同步其定位"
+    ],
+    "next_steps": [
+      "继续讨论是否需要把该模板抽成可复用的独立 markdown 提示模板。"
+    ],
+    "source_threads": [
+      "fork_current_session"
+    ],
+    "updated_at": "2026-03-13T15:29:00+00:00"
+  },
+  "updated_at": "2026-03-13T15:29:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

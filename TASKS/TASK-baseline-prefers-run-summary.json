@@ -1,0 +1,67 @@
+{
+  "task_id": "task-baseline-prefers-run-summary",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "baseline prefers run summary",
+  "goal": "让 refresh-baseline 优先消费 run_summary.json，并仅在缺失时回退 current_summary。",
+  "scope": [
+    "tools/appserverclient.py",
+    "tools/evidence.py",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/FILE_INDEX.md"
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "refresh-baseline loads run summary when available",
+      "status": "done"
+    },
+    {
+      "id": "check-2",
+      "text": "refresh-baseline falls back to current_summary only when run summary is unavailable",
+      "status": "done"
+    },
+    {
+      "id": "check-3",
+      "text": "docs describe baseline input priority clearly",
+      "status": "done"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-baseline-prefers-run-summary.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "refresh-baseline now prefers run_summary.json over current_summary"
+    ],
+    "decisions": [
+      "baseline refresh input priority is run_summary first, current_summary fallback second"
+    ],
+    "risks": [
+      "fallback path still depends on current_summary when run_summary is absent"
+    ],
+    "verification": [
+      "python3 -m py_compile tools/appserverclient.py",
+      "python3 tools/appserverclient.py --refresh-baseline"
+    ],
+    "next_steps": [
+      "decide whether summarize-current should also update run_summary more directly"
+    ],
+    "source_threads": [
+      "fork_current_session:019ce21f-9b13-7533-bb21-3fb90377f07e",
+      "learn_session_baseline:019cd913-0405-70c2-9690-983b199909ce"
+    ],
+    "updated_at": "2026-03-12T12:59:00+00:00"
+  },
+  "updated_at": "2026-03-12T12:59:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

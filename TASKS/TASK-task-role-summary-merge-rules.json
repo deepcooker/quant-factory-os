@@ -1,0 +1,145 @@
+{
+  "task_id": "task-task-role-summary-merge-rules",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "task role summary merge rules",
+  "goal": "为多角色 role summaries 并存时的 task-level 去重与聚合补最小规则和写回入口。",
+  "scope": [
+    "tools/taskclient.py",
+    "TASKS/_SCHEMA.task.json",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/FILE_INDEX.md",
+    "TOOLS_METHOD_FLOW_MAP.md",
+    "AGENTS.md"
+  ],
+  "non_goals": [
+    "不做 run summary 自动聚合",
+    "不做多角色调度器"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "task 机器层有 role summary merge 字段或约定",
+      "status": "completed"
+    },
+    {
+      "id": "check-2",
+      "text": "taskclient 有最小 merge 入口",
+      "status": "completed"
+    },
+    {
+      "id": "check-3",
+      "text": "已有 role_summaries 可聚合进 task_summary",
+      "status": "completed"
+    },
+    {
+      "id": "check-4",
+      "text": "docs/evidence updated",
+      "status": "completed"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-task-role-summary-merge-rules.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "taskclient 新增 --merge-role-summaries，用于按最小规则把 role summaries 汇入 task summary。",
+      "当前聚合规则会去重追加 source_threads、role_summary_evidence 和 '<role> summary merged' 标记。",
+      "已用现有 test role summary 做真实聚合验证。"
+    ],
+    "decisions": [
+      "当前只做最小去重聚合，不做复杂语义 merge 或 run-level 自动汇总。"
+    ],
+    "risks": [],
+    "verification": [
+      "python3 -m py_compile tools/taskclient.py",
+      "python3 tools/taskclient.py --merge-role-summaries --task-json-file TASKS/TASK-role-thread-summary-to-task-summary.json",
+      "python3 tools/taskclient.py --task-summary --task-json-file TASKS/TASK-role-thread-summary-to-task-summary.json"
+    ],
+    "next_steps": [
+      "继续定义多角色 summary 冲突时的优先级与缺口汇总规则。"
+    ],
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": ""
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-13T08:36:30+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

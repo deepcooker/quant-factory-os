@@ -1,0 +1,67 @@
+{
+  "task_id": "task-run-summary-writeback-entry",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "run summary writeback entry",
+  "goal": "为 run_summary.json 增加最小读写入口，不改 baseline 消费链。",
+  "scope": [
+    "tools/evidence.py",
+    "reports/_SCHEMA.run_summary.json",
+    "docs/WORKFLOW.md",
+    "docs/FILE_INDEX.md",
+    "docs/ENTITIES.md"
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "evidence.py can print run summary",
+      "status": "done"
+    },
+    {
+      "id": "check-2",
+      "text": "evidence.py can update run summary fields",
+      "status": "done"
+    },
+    {
+      "id": "check-3",
+      "text": "docs describe evidence.py as run summary writeback entry",
+      "status": "done"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-run-summary-writeback-entry.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "run summary writeback now lives in tools/evidence.py"
+    ],
+    "decisions": [
+      "run summary writeback stays inside tools/evidence.py instead of a new runclient"
+    ],
+    "risks": [
+      "baseline still does not consume run summary yet"
+    ],
+    "verification": [
+      "python3 -m py_compile tools/evidence.py",
+      "python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --set-run-summary ...",
+      "python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --run-summary"
+    ],
+    "next_steps": [
+      "connect baseline refresh to run summary after this stabilizes"
+    ],
+    "source_threads": [
+      "fork_current_session:019ce21c-8333-7b83-a343-232c363c52d4"
+    ],
+    "updated_at": "2026-03-12T12:56:00+00:00"
+  },
+  "updated_at": "2026-03-12T12:56:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}
