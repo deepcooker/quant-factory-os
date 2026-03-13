@@ -32,16 +32,12 @@ try:
     from tools.result_schema import ERR_CONFIG_BASE, ERR_SESSION_BASE, err, ok
     from tools.taskclient import (
         get_role_threads,
-        get_role_summaries,
         load_active_task,
         normalize_role,
-        refresh_run_main_resolution,
-        refresh_task_escalation,
-        refresh_task_gap_summary,
-        update_test_gate,
-        update_role_summary,
+        refresh_task_coordination,
+        update_test_gate_from_test_summary,
+        update_role_summary_with_task_links,
         update_role_thread,
-        update_task_summary,
     )
 except Exception:  # pragma: no cover
     from project_config import (  # type: ignore
@@ -60,16 +56,12 @@ except Exception:  # pragma: no cover
     from result_schema import ERR_CONFIG_BASE, ERR_SESSION_BASE, err, ok  # type: ignore
     from taskclient import (  # type: ignore
         get_role_threads,
-        get_role_summaries,
         load_active_task,
         normalize_role,
-        refresh_run_main_resolution,
-        refresh_task_escalation,
-        refresh_task_gap_summary,
-        update_test_gate,
-        update_role_summary,
+        refresh_task_coordination,
+        update_test_gate_from_test_summary,
+        update_role_summary_with_task_links,
         update_role_thread,
-        update_task_summary,
     )
 
 
@@ -145,6 +137,16 @@ def detect_inprogress_turn_ids(thread_payload: dict[str, Any]) -> list[str]:
             if turn_id:
                 turn_ids.append(turn_id)
     return turn_ids
+
+
+def detect_turn_status(thread_payload: dict[str, Any], turn_id: str) -> str:
+    target_turn_id = str(turn_id).strip()
+    if not target_turn_id:
+        return ""
+    for turn in (thread_payload.get("turns") or []):
+        if str((turn or {}).get("id", "")).strip() == target_turn_id:
+            return str((turn or {}).get("status", "")).strip()
+    return ""
 
 
 def load_prompt_text(path: Path) -> str:
@@ -273,9 +275,23 @@ def load_run_summary_for_current_run() -> dict[str, Any]:
 def format_run_summary_text(run_summary: dict[str, Any]) -> str:
     lines: list[str] = []
     run_goal = compact_text(str(run_summary.get("run_goal", "")).strip())
+    baseline_ready_summary = compact_text(str(run_summary.get("baseline_ready_summary", "")).strip())
+    run_status = compact_text(str(run_summary.get("status", "")).strip())
     if run_goal:
         lines.append(f"- run_goal: {run_goal}")
-    for key in ("active_tasks", "completed_tasks", "source_tasks"):
+    if run_status:
+        lines.append(f"- status: {run_status}")
+    active_tasks = [str(item).strip() for item in list(run_summary.get("active_tasks", []) or []) if str(item).strip()]
+    if active_tasks:
+        lines.append(f"- active_tasks: {', '.join(active_tasks)}")
+    if baseline_ready_summary:
+        lines.append("- baseline_ready_summary:")
+        for line in baseline_ready_summary.splitlines():
+            text = compact_text(line)
+            if text:
+                lines.append(f"  {text}")
+        return "\n".join(lines).strip()
+    for key in ("completed_tasks", "source_tasks"):
         values = [str(item).strip() for item in list(run_summary.get(key, []) or []) if str(item).strip()]
         if values:
             lines.append(f"- {key}: {', '.join(values)}")
@@ -295,17 +311,25 @@ def format_run_summary_text(run_summary: dict[str, Any]) -> str:
     return "\n".join(lines).strip()
 
 
+def choose_refresh_baseline_input(current_summary: dict[str, Any], run_summary: dict[str, Any] | None = None) -> tuple[str, str, str]:
+    run_summary = dict(run_summary or {})
+    run_summary_text = format_run_summary_text(run_summary)
+    current_summary_text = compact_text(str(current_summary.get("summary_text", "")).strip())
+    if run_summary_text:
+        return ("run_summary", run_summary_text, str(run_summary.get("run_id", "")).strip())
+    if current_summary_text:
+        return ("current_summary", current_summary_text, str(current_summary.get("thread_id", "")).strip())
+    raise AppServerError("run summary and current summary are both empty; run --set-run-summary or --summarize-current first")
+
+
 def build_refresh_baseline_text(current_summary: dict[str, Any], run_summary: dict[str, Any] | None = None) -> str:
     prompt = load_prompt_text(REPO_ROOT / "tools" / "refresh_baseline_prompt.md")
-    run_summary_text = format_run_summary_text(run_summary or {})
-    current_summary_text = compact_text(str(current_summary.get("summary_text", "")).strip())
+    input_type, input_text, _ = choose_refresh_baseline_input(current_summary, run_summary)
     lines = [prompt, ""]
-    if run_summary_text:
-        lines.extend(["run_summary:", run_summary_text, ""])
-    elif current_summary_text:
-        lines.extend(["current_summary:", current_summary_text, ""])
+    if input_type == "run_summary":
+        lines.extend(["run_summary:", input_text, ""])
     else:
-        raise AppServerError("run summary and current summary are both empty; run --set-run-summary or --summarize-current first")
+        lines.extend(["current_summary:", input_text, ""])
     lines.extend(
         [
             "输出要求：",
@@ -639,21 +663,60 @@ class CodexAppClient:
     def wait_for_turn_completion(self, turn_id: str) -> dict[str, Any]:
         transport = self._require_transport()
         deadline = time.time() + self.timeout_sec
+        next_poll_at = time.time() + 2.0
         while time.time() < deadline:
             event = transport.next_event(timeout_sec=1.0)
             if event is None:
+                if self.current_thread_id and time.time() >= next_poll_at:
+                    status = self._read_turn_status_from_thread(self.current_thread_id, turn_id)
+                    if status and status != "inProgress":
+                        return {
+                            "method": "thread/read/polled_completion",
+                            "params": {"turn": {"id": turn_id, "status": status}},
+                        }
+                    next_poll_at = time.time() + 2.0
                 continue
-            method = str(event.get("method", "")).strip()
-            params = event.get("params") or {}
-            if method == "turn/completed":
-                turn = params.get("turn") or {}
-                if str(turn.get("id", "")).strip() == turn_id:
-                    return event
-            msg = params.get("msg") or {}
-            if method == "codex/event/task_complete":
-                if str(msg.get("turn_id", "")).strip() == turn_id:
-                    return event
+            matched_event = self._match_turn_completion_event(event, turn_id)
+            if matched_event is not None:
+                return matched_event
+            if self.current_thread_id and time.time() >= next_poll_at:
+                status = self._read_turn_status_from_thread(self.current_thread_id, turn_id)
+                if status and status != "inProgress":
+                    return {
+                        "method": "thread/read/polled_completion",
+                        "params": {"turn": {"id": turn_id, "status": status}},
+                    }
+                next_poll_at = time.time() + 2.0
+        if self.current_thread_id:
+            status = self._read_turn_status_from_thread(self.current_thread_id, turn_id)
+            if status and status != "inProgress":
+                return {
+                    "method": "thread/read/polled_completion",
+                    "params": {"turn": {"id": turn_id, "status": status}},
+                }
         raise AppServerError(f"timeout waiting for turn completion: {turn_id}")
+
+    def _match_turn_completion_event(self, event: dict[str, Any], turn_id: str) -> dict[str, Any] | None:
+        method = str(event.get("method", "")).strip()
+        params = event.get("params") or {}
+        if method == "turn/completed":
+            turn = params.get("turn") or {}
+            if str(turn.get("id", "")).strip() == str(turn_id).strip():
+                return event
+        msg = params.get("msg") or {}
+        if method == "codex/event/task_complete":
+            if str(msg.get("turn_id", "")).strip() == str(turn_id).strip():
+                return event
+        return None
+
+    def _read_turn_status_from_thread(self, thread_id: str, turn_id: str) -> str:
+        transport = self._require_transport()
+        params = {"threadId": str(thread_id).strip(), "includeTurns": True}
+        response_json = transport.request("thread/read", params, timeout_sec=min(self.timeout_sec, 5))
+        if "error" in response_json:
+            return ""
+        thread_payload = ((response_json.get("result") or {}).get("thread") or {})
+        return detect_turn_status(thread_payload, turn_id)
 
     #codex 中文：在 turn 收口后继续等待 rollout 文件真正落盘，避免过早 fork 导致 no rollout found。
     def wait_for_rollout_ready(self, rollout_path: str, timeout_sec: int | None = None) -> Path:
@@ -884,7 +947,7 @@ def summarize_role_main(role: str) -> None:
     if not summary_text:
         raise AppServerError(f"failed to extract role summary text from role={normalized_role}")
     update_role_thread(task_json_file, normalized_role, role_thread_id, role_thread_path, "ready")
-    update_role_summary(
+    role_summary_result = update_role_summary_with_task_links(
         task_json_file,
         normalized_role,
         role_thread_id,
@@ -893,23 +956,9 @@ def summarize_role_main(role: str) -> None:
         summary_text,
         str(turn_id).strip(),
     )
-    update_task_summary(
-        task_json_file,
-        "",
-        [],
-        [],
-        [],
-        [],
-        [],
-        [f"{normalized_role}:{str(turn_id).strip() or role_thread_id}"],
-        [f"{normalized_role}:{role_thread_id}"],
-    )
-    gap_result = refresh_task_gap_summary(task_json_file)
-    print(f"refresh_task_gap_summary RESPONSE_JSON={json.dumps(gap_result, ensure_ascii=False)}")
-    escalation_result = refresh_task_escalation(task_json_file)
-    print(f"refresh_task_escalation RESPONSE_JSON={json.dumps(escalation_result, ensure_ascii=False)}")
-    resolution_result = refresh_run_main_resolution(task_json_file)
-    print(f"refresh_run_main_resolution RESPONSE_JSON={json.dumps(resolution_result, ensure_ascii=False)}")
+    print(f"update_role_summary_with_task_links RESPONSE_JSON={json.dumps(role_summary_result, ensure_ascii=False)}")
+    coordination_result = refresh_task_coordination(task_json_file, include_role_merge=True)
+    print(f"refresh_task_coordination RESPONSE_JSON={json.dumps(coordination_result, ensure_ascii=False)}")
     client.close()
     print("role_summary_text_start")
     print(summary_text)
@@ -927,32 +976,15 @@ def mark_test_gate_main(status: str, evidence_text: str | None = None, blocking_
     if normalized_status not in {"pending", "blocked", "passed"}:
         raise AppServerError("test gate status must be one of: pending, blocked, passed")
 
-    role_summaries = dict(get_role_summaries(task_json_file).get("role_summaries", {}) or {})
-    test_summary = dict(role_summaries.get("test", {}) or {})
-    summary_turn_id = str(test_summary.get("summary_turn_id", "")).strip()
-    thread_id = str(test_summary.get("thread_id", "")).strip()
-    auto_evidence: list[str] = []
-    if summary_turn_id:
-        auto_evidence.append(f"test-summary-turn:{summary_turn_id}")
-    if thread_id:
-        auto_evidence.append(f"test-thread:{thread_id}")
-    if evidence_text and str(evidence_text).strip():
-        auto_evidence.append(str(evidence_text).strip())
-
-    gate_result = update_test_gate(
+    gate_result = update_test_gate_from_test_summary(
         task_json_file,
         normalized_status,
-        [],
-        auto_evidence,
+        evidence_text,
         list(blocking_issues or []),
     )
-    print(f"update_test_gate RESPONSE_JSON={json.dumps(gate_result, ensure_ascii=False)}")
-    gap_result = refresh_task_gap_summary(task_json_file)
-    print(f"refresh_task_gap_summary RESPONSE_JSON={json.dumps(gap_result, ensure_ascii=False)}")
-    escalation_result = refresh_task_escalation(task_json_file)
-    print(f"refresh_task_escalation RESPONSE_JSON={json.dumps(escalation_result, ensure_ascii=False)}")
-    resolution_result = refresh_run_main_resolution(task_json_file)
-    print(f"refresh_run_main_resolution RESPONSE_JSON={json.dumps(resolution_result, ensure_ascii=False)}")
+    print(f"update_test_gate_from_test_summary RESPONSE_JSON={json.dumps(gate_result, ensure_ascii=False)}")
+    coordination_result = refresh_task_coordination(task_json_file, include_role_merge=False)
+    print(f"refresh_task_coordination RESPONSE_JSON={json.dumps(coordination_result, ensure_ascii=False)}")
 
 
 #codex 中文：在 fork_current_session 上继续发起一轮新 turn，用于后续讨论、需求和测试工作。
@@ -1069,6 +1101,7 @@ def refresh_baseline_main() -> None:
     print(f"initialize_refresh_baseline RESPONSE_JSON={json.dumps(init_response, ensure_ascii=False)}")
     resume_response = client.resume_thread(baseline_thread_id)
     print(f"resume_refresh_baseline RESPONSE_JSON={json.dumps(resume_response, ensure_ascii=False)}")
+    input_type, _, input_ref = choose_refresh_baseline_input(current_summary, run_summary)
     turn_text = build_refresh_baseline_text(current_summary, run_summary)
     turn_response = client.start_turn(turn_text)
     print(f"turn_refresh_baseline RESPONSE_JSON={json.dumps(turn_response, ensure_ascii=False)}")
@@ -1105,8 +1138,12 @@ def refresh_baseline_main() -> None:
         summary_turn_id=str(current_summary.get("summary_turn_id", "")).strip(),
         baseline_refresh_text=refresh_text,
         baseline_refresh_turn_id=str(turn_id).strip(),
+        baseline_refresh_input_type=input_type,
+        baseline_refresh_input_ref=input_ref,
     )
     client.close()
+    print(f"baseline_refresh_input_type={input_type}")
+    print(f"baseline_refresh_input_ref={input_ref or '(none)'}")
     print("baseline_refresh_text_start")
     print(refresh_text)
     print("baseline_refresh_text_end")

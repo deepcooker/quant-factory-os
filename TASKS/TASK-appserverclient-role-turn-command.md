@@ -3,7 +3,7 @@
 RUN_ID: run-2026-03-11-vnext-release-baseline
 TASK_ID: task-appserverclient-role-turn-command
 PROJECT_ID: quant-factory-os
-STATUS: active
+STATUS: completed
 PRIORITY: P1
 
 ## Goal
@@ -20,7 +20,7 @@ PRIORITY: P1
 - 不做多角色调度器
 
 ## Acceptance
-- [ ] 新增 --role-turn 命令; 已绑定 role thread 可执行真实 turn; docs/evidence updated
+- [x] 新增 --role-turn 命令; 已绑定 role thread 可执行真实 turn; docs/evidence updated
 
 ## Inputs
 - `tools/appserverclient.py`
@@ -48,17 +48,21 @@ PRIORITY: P1
 ### Blocking Issues
 
 ## Task Summary
-- Status: draft
+- Status: completed
 
 ### Key Updates
+- role-turn command behavior was later validated in `task-appserverclient-role-turn-runtime`.
 
 ### Decisions
+- this placeholder task is closed as superseded by later completed runtime validation tasks
 
 ### Risks
 
 ### Verification
+- `python3 tools/appserverclient.py --role-turn test "请用一句话说明你当前作为 test 线程的职责。"`
 
 ### Next Steps
+- use `task-appserverclient-role-turn-runtime` as the canonical role-turn evidence
 
 ### Source Threads
 

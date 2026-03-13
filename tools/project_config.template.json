@@ -25,6 +25,9 @@
   "session_registry": {
     "learn_session_baseline": {},
     "fork_current_session": {},
-    "current_summary": {}
+    "current_summary": {
+      "baseline_refresh_input_type": "",
+      "baseline_refresh_input_ref": ""
+    }
   }
 }

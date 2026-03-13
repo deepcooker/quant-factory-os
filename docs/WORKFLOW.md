@@ -203,11 +203,9 @@ run 主线程在这一步至少要收敛出：
 - 这一步只负责最小 role thread 绑定，不等于完整多 agent orchestration
 - 已绑定的 role thread 之后可通过 `python3 tools/appserverclient.py --role-turn <role> [text...]` 执行真实 turn
 - 已绑定的 role thread 还可通过 `python3 tools/appserverclient.py --summarize-role <role>` 生成去噪 role summary，并把结果写回当前 task 的 `role_summaries` 与 `task_summary.role_summary_evidence`
-- `--summarize-role` 现在还会自动刷新：
-  - `task_summary.gap_summary`
-  - `task_summary.escalation_summary`
-  - `task_summary.run_main_resolution`
-- 当 `test` 角色已给出真实 summary 后，可通过 `python3 tools/appserverclient.py --mark-test-gate <pending|blocked|passed> [evidence...]` 写回 `test_gate`，并自动刷新 `gap_summary / escalation_summary / run_main_resolution`
+- `--summarize-role` 写回 `role_summaries.<role>` 以及 `task_summary.role_summary_evidence/source_threads` 的联动，现在也由 `taskclient` 统一承接
+- `--summarize-role` 现在会调用 `taskclient.refresh_task_coordination(include_role_merge=True)`，由 task 层统一完成 role summary merge 与后续刷新
+- 当 `test` 角色已给出真实 summary 后，可通过 `python3 tools/appserverclient.py --mark-test-gate <pending|blocked|passed> [evidence...]` 写回 `test_gate`；其中 test thread/turn 证据拼接现由 `taskclient` 统一承接，再调用 `taskclient.refresh_task_coordination(include_role_merge=False)` 刷新 `gap_summary / escalation_summary / run_main_resolution`
 - 当一个 task 下已有多个 role summaries 时，可通过 `python3 tools/taskclient.py --merge-role-summaries` 把现有 `role_summaries` 按最小去重规则汇入 `task_summary`
 - 当需要把多角色缺口和冲突优先级写回 task 机器层时，可通过 `python3 tools/taskclient.py --refresh-task-gaps` 刷新 `task_summary.conflict_policy` 与 `task_summary.gap_summary`
 - 当需要判断当前 task 是否必须升级给 `run-main` 时，可通过 `python3 tools/taskclient.py --refresh-task-escalation` 刷新 `task_summary.escalation_policy` 与 `task_summary.escalation_summary`
@@ -228,8 +226,56 @@ run 主线程在这一步至少要收敛出：
 - 从 baseline 或 current session 再分叉多角色 session
 - 把需求方向拆成最小 task 单元逐个完成
 
+### 4.5 Formal Tool Boundaries
+当前 formal mainline 的四个主工具边界如下：
+
+- `python3 tools/appserverclient.py`
+  - 负责 baseline / run-main / role threads 的真实 runtime
+  - 负责 `fork-current / fork-role / role-turn / summarize-role / summarize-current / refresh-baseline`
+  - 不应继续演化成 task truth 或 run evidence 的总控脚本
+
+- `python3 tools/taskclient.py`
+  - 负责 task machine truth
+  - 负责 `role_threads / role_summaries / test_gate / gap_summary / escalation_summary / run_main_resolution`
+  - 不应负责 runtime transport 或 baseline session lifecycle
+
+- `python3 tools/evidence.py`
+  - 负责 run evidence 骨架与 `run_summary.json`
+  - 负责 `reconcile / compact / normalize / task->run merge`
+  - 不应接管 task 机器层或 role runtime
+
+- `python3 tools/gitclient.py`
+  - 负责提交、回滚和 message fallback
+  - 应保持与 runtime / task / run 聚合逻辑解耦
+
+当前稳定化原则：
+- 新能力先判断应落在 `runtime / task truth / run evidence / git delivery` 哪一层
+- 避免把更多聚合规则直接堆进 `appserverclient`
+- 避免把 `gitclient` 再次耦合回旧 `ship` 式总控
+
 说明：
 - 这是当前正式主线的发展方向
+
+### 4.6 Shortest Stable Mainline
+当前推荐的最短稳定主线，只保留必要动作：
+
+1. `python3 tools/init.py`
+2. `python3 tools/appserverclient.py --learnbaseline`
+3. 明确本轮 `run` 方向
+4. `python3 tools/appserverclient.py --fork-current`
+5. 仅在 task 需要真实角色线程时，再使用：
+   - `python3 tools/appserverclient.py --fork-role <run-main|dev|test|arch>`
+   - `python3 tools/appserverclient.py --role-turn <role> [text...]`
+   - `python3 tools/appserverclient.py --summarize-role <role>`
+   - `python3 tools/appserverclient.py --mark-test-gate <status> [evidence...]`
+6. `python3 tools/appserverclient.py --summarize-current`
+7. `python3 tools/appserverclient.py --refresh-baseline`
+8. `python3 tools/gitclient.py --commit`
+
+当前冻结原则：
+- 不为“更纯”继续拆出更多中间层
+- 不把 task policy 重新放回 runtime
+- 不把 runtime/task/run 逻辑重新耦合回 git 层
 - 角色 session 应互不干扰
 - 每个角色 session 结束后要先做去噪总结，再考虑回灌 baseline
 - 推荐的最小角色结构是：run 主线程负责收敛与确认；task 下默认 `dev/test`，复杂任务按需增加 `arch`
@@ -265,6 +311,23 @@ run 主线程在这一步至少要收敛出：
 - 当前过渡态下，人类可读 run 视图仍主要在 `reports/<RUN_ID>/summary.md` 和 `decision.md`
 - 当前机器层的最小 run 聚合真相源已落在 `reports/<RUN_ID>/run_summary.json`
 - 当前最小写回入口已落在 `python3 tools/evidence.py --set-run-summary --run-id <RUN_ID> ...`
+- 当前还支持 `python3 tools/evidence.py --merge-task-summary --run-id <RUN_ID> --task-json-file TASKS/TASK-*.json`，把稳定的 task summary 提升进 run summary
+- `run_summary.json` 当前显式保留 `merge_policy`，把字段分成三类：`reconcile_only`、`append_dedup`、`merge_rewrite`
+- 当前规则表如下：
+  - `active_tasks` / `completed_tasks`: `reconcile_only`
+  - `source_tasks` / `verification_overview`: `append_dedup`
+  - `key_updates` / `cross_task_decisions` / `cross_task_risks` / `next_run_or_next_tasks`: `merge_rewrite`
+- 当前 `merge_rewrite` 仍是规则化轻归并，不做模型改写：它会去掉 task 前缀、做最小 humanize，并对少量高频模式做 run-level 归并
+- 当前已显式归并的高频模式包括：
+  - 多个 `<role> summary merged` -> `multi-role runtime summaries are now preserved at run level`
+  - `test gate=blocked` -> `test gate remains blocked`
+  - `all three real summaries are preserved ...` -> 更短的 multi-role run-level 结论
+- 当前 `cross_task_risks` 还额外遵守一个窄规则：如果同时存在通用 `test gate remains blocked` 与更具体的 blocked-gate 解释句，则只保留更具体的 run-level 风险句；底层验证证据继续留在 `verification_overview`
+- 当前还支持 `python3 tools/evidence.py --reconcile-run-summary --run-id <RUN_ID>`，按同一 run 下的 `TASKS/TASK-*.json` 真实状态重算 `active_tasks/completed_tasks/source_tasks`
+- 当前还支持 `python3 tools/evidence.py --compact-run-summary --run-id <RUN_ID>`，为 baseline refresh 生成更短的 `baseline_ready_summary`
+- 当前还支持 `python3 tools/evidence.py --normalize-run-summary --run-id <RUN_ID>`，对历史 `merge_rewrite` 字段中的旧 task 前缀条目做显式维护式清理
+- `reconcile-run-summary` 的目标是减少 `run_summary.json` 与 task 真相源的手工漂移；它不会自动掩盖历史遗留的 active task
+- `normalize-run-summary` 的目标不是批量重写历史，而是在 owner 明确触发维护动作时，只清理已经落在 run-level 语义字段中的旧 task 前缀表达；`verification_overview` 和 `source_tasks` 仍保留原有证据粒度
 
 ### 4.7 `appserverclient --summarize-current`
 
@@ -304,12 +367,14 @@ run 主线程在这一步至少要收敛出：
 
 职责：
 - `resume` baseline session
-- 优先用 run summary 发起一次最小 baseline refresh
+- 优先用 run summary 发起一次最小 baseline refresh；若 `baseline_ready_summary` 存在，则优先使用其压缩表达
 - 不重建 baseline，不回灌聊天噪音
 - 把 baseline refresh 文本回写到 `session_registry.current_summary`
+- 显式记录本次 refresh 实际消费的是 `run_summary` 还是 `current_summary`
 
 当前与长期边界：
 - 当前实现优先消费 `run_summary.json`，仅在缺失时回退 `session_registry.current_summary`
+- 当前 `session_registry.current_summary` 还会记录 `baseline_refresh_input_type` 和 `baseline_refresh_input_ref`，用于追踪 baseline refresh 的真实输入来源
 - 长期推荐链路应为 `thread summary -> task summary -> run summary -> baseline refresh`
 - baseline 长期应优先吸收 run-level stable summaries，而不是直接吸收原始 thread 噪音
 

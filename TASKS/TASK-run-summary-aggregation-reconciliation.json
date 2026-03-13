@@ -1,0 +1,182 @@
+{
+  "task_id": "task-run-summary-aggregation-reconciliation",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "run-summary-aggregation-reconciliation",
+  "goal": "收紧 run_summary 的任务聚合语义，优先基于 task JSON 的真实状态维护 active/completed/source task 列表，减少陈旧条目和手工漂移。",
+  "scope": [
+    "tools/evidence.py",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/FILE_INDEX.md",
+    "AGENTS.md",
+    "reports/_SCHEMA.run_summary.json"
+  ],
+  "non_goals": [
+    "不改 baseline refresh 入口",
+    "不做通用 orchestrator"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "run_summary active/completed/source task reconciliation available",
+      "status": "completed"
+    },
+    {
+      "id": "check-2",
+      "text": "docs and evidence updated",
+      "status": "completed"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-run-summary-aggregation-reconciliation.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "tools/evidence.py now supports run-summary reconciliation from task JSON truth"
+    ],
+    "decisions": [
+      "run summary active/completed/source task lists should be reconciled from same-run task JSON payloads instead of hand-maintained leftovers"
+    ],
+    "risks": [
+      "reconciliation now exposes historical active task truth; stale task cleanup still requires separate task-level cleanup"
+    ],
+    "verification": [
+      "python3 -m py_compile tools/evidence.py",
+      "python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --reconcile-run-summary",
+      "python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --run-summary"
+    ],
+    "next_steps": [
+      "clean stale active task truth so run_summary reconciliation can converge with less historical noise"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": ""
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "pending_ack",
+      "close_escalation": false,
+      "notes": [],
+      "updated_at": ""
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-13T11:42:00+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-13T11:42:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

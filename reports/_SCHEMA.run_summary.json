@@ -12,6 +12,26 @@
     "task-example-active",
     "task-example-completed"
   ],
+  "merge_policy": {
+    "active_tasks": "reconcile_only",
+    "completed_tasks": "reconcile_only",
+    "source_tasks": "append_dedup",
+    "key_updates": "merge_rewrite",
+    "cross_task_decisions": "merge_rewrite",
+    "cross_task_risks": "merge_rewrite",
+    "verification_overview": "append_dedup",
+    "next_run_or_next_tasks": "merge_rewrite"
+  },
+  "legacy_cleanup_policy": {
+    "mode": "explicit_maintenance_only",
+    "target_fields": [
+      "key_updates",
+      "cross_task_decisions",
+      "cross_task_risks",
+      "next_run_or_next_tasks"
+    ],
+    "rewrite_rule": "humanize_and_strip_legacy_task_prefix"
+  },
   "key_updates": [
     "Stable run-level update."
   ],
@@ -27,5 +47,7 @@
   "next_run_or_next_tasks": [
     "Next run-level direction or next task."
   ],
+  "baseline_ready_summary": "Short run-level compact summary prepared for baseline refresh.",
+  "legacy_cleanup_last_applied_at": "2026-03-13T00:00:00+00:00",
   "updated_at": "2026-03-12T00:00:00+00:00"
 }

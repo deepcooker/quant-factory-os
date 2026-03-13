@@ -803,6 +803,25 @@ def refresh_run_main_resolution(task_json_file: str | None) -> dict[str, Any]:
     }
 
 
+def refresh_task_coordination(task_json_file: str | None, include_role_merge: bool = False) -> dict[str, Any]:
+    merge_result: dict[str, Any] | None = None
+    if include_role_merge:
+        merge_result = merge_role_summaries_into_task_summary(task_json_file)
+    gap_result = refresh_task_gap_summary(task_json_file)
+    escalation_result = refresh_task_escalation(task_json_file)
+    resolution_result = refresh_run_main_resolution(task_json_file)
+    return {
+        "action": "refresh_task_coordination",
+        "task_json_file": resolve_task_file_arg(task_json_file),
+        "task_id": str(gap_result.get("task_id", "")).strip(),
+        "include_role_merge": bool(include_role_merge),
+        "merge_result": merge_result,
+        "gap_result": gap_result,
+        "escalation_result": escalation_result,
+        "resolution_result": resolution_result,
+    }
+
+
 def merge_role_summaries_into_task_summary(task_json_file: str | None) -> dict[str, Any]:
     resolved = resolve_task_file_arg(task_json_file)
     payload = load_task(resolved)
@@ -946,6 +965,47 @@ def update_role_summary(
     }
 
 
+def update_role_summary_with_task_links(
+    task_json_file: str | None,
+    role: str,
+    thread_id: str,
+    thread_path: str,
+    status: str,
+    summary_text: str,
+    summary_turn_id: str,
+) -> dict[str, Any]:
+    role_result = update_role_summary(
+        task_json_file,
+        role,
+        thread_id,
+        thread_path,
+        status,
+        summary_text,
+        summary_turn_id,
+    )
+    normalized_role = normalize_role(role)
+    evidence_id = str(summary_turn_id).strip() or str(thread_id).strip()
+    summary_result = update_task_summary(
+        task_json_file,
+        "",
+        [],
+        [],
+        [],
+        [],
+        [],
+        [f"{normalized_role}:{evidence_id}"] if evidence_id else [],
+        [f"{normalized_role}:{str(thread_id).strip()}"] if str(thread_id).strip() else [],
+    )
+    return {
+        "action": "update_role_summary_with_task_links",
+        "task_json_file": role_result.get("task_json_file", ""),
+        "task_id": role_result.get("task_id", ""),
+        "role": normalized_role,
+        "role_result": role_result,
+        "task_summary_result": summary_result,
+    }
+
+
 def get_test_gate(task_json_file: str | None) -> dict[str, Any]:
     resolved = resolve_task_file_arg(task_json_file)
     payload = load_task(resolved)
@@ -986,6 +1046,41 @@ def update_test_gate(
         "task_json_file": resolved,
         "task_id": str(payload.get("task_id", "")).strip(),
         "test_gate": test_gate,
+    }
+
+
+def update_test_gate_from_test_summary(
+    task_json_file: str | None,
+    status: str,
+    evidence_text: str | None = None,
+    blocking_issues: list[str] | None = None,
+) -> dict[str, Any]:
+    resolved = resolve_task_file_arg(task_json_file)
+    payload = load_task(resolved)
+    role_summaries = default_role_summaries()
+    role_summaries.update(dict(payload.get("role_summaries", {}) or {}))
+    test_summary = dict(role_summaries.get("test", {}) or {})
+    summary_turn_id = str(test_summary.get("summary_turn_id", "")).strip()
+    thread_id = str(test_summary.get("thread_id", "")).strip()
+    auto_evidence: list[str] = []
+    if summary_turn_id:
+        auto_evidence.append(f"test-summary-turn:{summary_turn_id}")
+    if thread_id:
+        auto_evidence.append(f"test-thread:{thread_id}")
+    if evidence_text and str(evidence_text).strip():
+        auto_evidence.append(str(evidence_text).strip())
+    gate_result = update_test_gate(
+        resolved,
+        str(status).strip().lower(),
+        [],
+        auto_evidence,
+        list(blocking_issues or []),
+    )
+    return {
+        "action": "update_test_gate_from_test_summary",
+        "task_json_file": resolved,
+        "task_id": str(payload.get("task_id", "")).strip(),
+        "gate_result": gate_result,
     }
 
 

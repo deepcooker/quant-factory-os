@@ -2,7 +2,7 @@
   "task_id": "task-schema-sample-task",
   "run_id": "run-2026-03-11-vnext-release-baseline",
   "project_id": "quant-factory-os",
-  "status": "active",
+  "status": "completed",
   "priority": "P2",
   "title": "schema sample task",
   "goal": "验证 schema 收紧。",
@@ -16,7 +16,7 @@
     {
       "id": "check-1",
       "text": "owner docs updated",
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "inputs": [
@@ -27,7 +27,7 @@
     "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
     "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
   },
-  "updated_at": "2026-03-11T10:16:36+00:00",
+  "updated_at": "2026-03-13T11:47:00+00:00",
   "risks": "",
   "rollback_plan": ""
 }

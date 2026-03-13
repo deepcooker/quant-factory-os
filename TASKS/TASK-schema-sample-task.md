@@ -3,7 +3,7 @@
 RUN_ID: run-2026-03-11-vnext-release-baseline
 TASK_ID: task-schema-sample-task
 PROJECT_ID: quant-factory-os
-STATUS: active
+STATUS: completed
 PRIORITY: P2
 
 ## Goal
@@ -16,7 +16,7 @@ PRIORITY: P2
 - 不改运行时
 
 ## Acceptance
-- [ ] owner docs updated
+- [x] owner docs updated
 
 ## Inputs
 - `AGENTS.md`

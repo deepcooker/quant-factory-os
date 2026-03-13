@@ -188,6 +188,56 @@
   - `task_summary.role_summary_evidence`
   - `task_summary.key_updates` 中的 `<role> summary merged`
 
+### 4.3b `evidence.py --merge-task-summary`
+
+业务目标：
+- 把稳定的 task summary 提升到 run summary，同时按字段类别执行不同聚合规则
+
+主流程调用关系：
+
+| 顺序 | 方法/动作 | 中文说明 |
+| --- | --- | --- |
+| `R1` | `_merge_task_summary()` | run-level 聚合总入口。 |
+| `R2` | `_field_merge_mode()` | 读取 `run_summary.merge_policy` 中该字段的归并类别。 |
+| `R3` | `_merge_append_dedup_field()` | 对 `append_dedup` 字段保留 task 证据前缀并去重。 |
+| `R4` | `_merge_rewrite_field()` | 对 `merge_rewrite` 字段做最小 run-level 轻改写再去重。 |
+| `R5` | `_reconcile_run_summary()` | 对 `reconcile_only` 字段交由 task 真相源重算。 |
+
+说明：
+- 当前规则表是：
+  - `active_tasks` / `completed_tasks`: `reconcile_only`
+  - `source_tasks` / `verification_overview`: `append_dedup`
+  - `key_updates` / `cross_task_decisions` / `cross_task_risks` / `next_run_or_next_tasks`: `merge_rewrite`
+- 当前 `merge_rewrite` 仍是规则化轻归并，不做模型推理
+- 当前已内置的高频规则包括：
+  - 多个 `<role> summary merged` -> 一条 multi-role run-level 结论
+  - `test gate=blocked/passed` -> 更稳定的 gate 状态表达
+  - `cross_task_risks` 中通用 blocked-gate 句与更具体 blocked-gate 解释句并存时，保留更具体那条
+
+### 4.3c `evidence.py --normalize-run-summary`
+
+业务目标：
+- 对历史已经落进 run-level 语义字段的旧 task 前缀条目做显式维护式清理
+
+主流程调用关系：
+
+| 顺序 | 方法/动作 | 中文说明 |
+| --- | --- | --- |
+| `R6` | `_normalize_run_summary()` | 历史语义清理总入口。 |
+| `R7` | `_normalize_legacy_run_summary_fields()` | 只处理 `legacy_cleanup_policy.target_fields` 中声明的字段。 |
+| `R8` | `_humanize_summary_item()` | 去掉旧 task 前缀并做最小规范化。 |
+| `R9` | `_build_baseline_ready_summary()` | 用清理后的 run-level 表达重建 baseline 压缩视图。 |
+
+说明：
+- 当前 `legacy_cleanup_policy.mode=explicit_maintenance_only`
+- 它不会在普通 `merge-task-summary` 或 `reconcile-run-summary` 中自动执行
+- 当前只清理：
+  - `key_updates`
+  - `cross_task_decisions`
+  - `cross_task_risks`
+  - `next_run_or_next_tasks`
+- `verification_overview` 和 `source_tasks` 继续保留证据粒度，不在这一步被重写
+
 ### 4.4 `taskclient --refresh-task-gaps`
 
 业务目标：
@@ -282,7 +332,13 @@
 - 当前输出落点是：
   - `role_summaries.<role>`
   - `task_summary.role_summary_evidence`
-- 当前还会自动联动刷新：
+- 当前单个 role summary 与 `task_summary.role_summary_evidence/source_threads` 的联动写回由：
+  - `taskclient.update_role_summary_with_task_links()`
+  统一承接
+- 当前会统一调用：
+  - `taskclient.refresh_task_coordination(include_role_merge=True)`
+- 由 task 层统一完成：
+  - `merge_role_summaries_into_task_summary()`
   - `task_summary.gap_summary`
   - `task_summary.escalation_summary`
   - `task_summary.run_main_resolution`
@@ -291,6 +347,15 @@
 
 业务目标：
 - 把真实 `test` 角色线程的阶段性结论写回 `test_gate`，并刷新 task 层升级状态
+
+说明：
+- 当前会先写回：
+  - `test_gate`
+- 当前 test summary 对应的 thread/turn 证据拼接由：
+  - `taskclient.update_test_gate_from_test_summary()`
+  统一承接
+- 然后统一调用：
+  - `taskclient.refresh_task_coordination(include_role_merge=False)`
 
 说明：
 - 当前会自动复用：

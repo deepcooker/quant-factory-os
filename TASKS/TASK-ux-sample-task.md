@@ -3,7 +3,7 @@
 RUN_ID: run-2026-03-11-vnext-release-baseline
 TASK_ID: task-ux-sample-task
 PROJECT_ID: quant-factory-os
-STATUS: active
+STATUS: completed
 PRIORITY: P1
 
 ## Goal
@@ -18,8 +18,8 @@ PRIORITY: P1
 - 不改 ship
 
 ## Acceptance
-- [ ] docs updated
-- [ ] task json created
+- [x] docs updated
+- [x] task json created
 
 ## Inputs
 - `AGENTS.md`

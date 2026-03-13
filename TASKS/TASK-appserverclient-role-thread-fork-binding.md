@@ -3,7 +3,7 @@
 RUN_ID: run-2026-03-11-vnext-release-baseline
 TASK_ID: task-appserverclient-role-thread-fork-binding
 PROJECT_ID: quant-factory-os
-STATUS: active
+STATUS: completed
 PRIORITY: P1
 
 ## Goal
@@ -20,7 +20,7 @@ PRIORITY: P1
 - 不自动聚合 thread summary
 
 ## Acceptance
-- [ ] appserverclient 支持最小 role fork; task role_threads 回写生效; docs/evidence updated
+- [x] appserverclient 支持最小 role fork; task role_threads 回写生效; docs/evidence updated
 
 ## Inputs
 - `tools/appserverclient.py`
@@ -49,17 +49,21 @@ PRIORITY: P1
 ### Blocking Issues
 
 ## Task Summary
-- Status: draft
+- Status: completed
 
 ### Key Updates
+- role thread fork binding capability was later validated through `task-appserverclient-fork-role-command` and downstream runtime tasks.
 
 ### Decisions
+- this placeholder task is closed as superseded by later completed runtime validation tasks
 
 ### Risks
 
 ### Verification
+- `python3 tools/appserverclient.py --fork-role test`
 
 ### Next Steps
+- use later completed role runtime tasks as the canonical evidence for fork-role behavior
 
 ### Source Threads
 

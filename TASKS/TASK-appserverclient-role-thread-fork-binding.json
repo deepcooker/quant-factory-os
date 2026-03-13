@@ -2,7 +2,7 @@
   "task_id": "task-appserverclient-role-thread-fork-binding",
   "run_id": "run-2026-03-11-vnext-release-baseline",
   "project_id": "quant-factory-os",
-  "status": "active",
+  "status": "completed",
   "priority": "P1",
   "title": "appserverclient role thread fork binding",
   "goal": "让 run-main 基于当前 fork session 派生 dev/test role thread，并回写 task role_threads。",
@@ -20,7 +20,7 @@
     {
       "id": "check-1",
       "text": "appserverclient 支持最小 role fork; task role_threads 回写生效; docs/evidence updated",
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "inputs": [
@@ -35,14 +35,22 @@
     "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
   },
   "task_summary": {
-    "status": "draft",
-    "key_updates": [],
-    "decisions": [],
+    "status": "completed",
+    "key_updates": [
+      "role thread fork binding capability was later validated through task-appserverclient-fork-role-command and downstream runtime tasks"
+    ],
+    "decisions": [
+      "this placeholder task is closed as superseded by later completed runtime validation tasks"
+    ],
     "risks": [],
-    "verification": [],
-    "next_steps": [],
+    "verification": [
+      "python3 tools/appserverclient.py --fork-role test"
+    ],
+    "next_steps": [
+      "use later completed role runtime tasks as the canonical evidence for fork-role behavior"
+    ],
     "source_threads": [],
-    "updated_at": ""
+    "updated_at": "2026-03-13T11:47:00+00:00"
   },
   "role_threads": {
     "run-main": {
@@ -79,7 +87,7 @@
     "blocking_issues": [],
     "updated_at": ""
   },
-  "updated_at": "2026-03-13T08:11:12+00:00",
+  "updated_at": "2026-03-13T11:47:00+00:00",
   "risks": "",
   "rollback_plan": ""
 }

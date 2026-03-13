@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_id": "quant-factory-os",
-  "updated_at": "2026-03-13T09:40:05+00:00",
+  "updated_at": "2026-03-13T14:30:01+00:00",
   "items": [
     {
       "queue_id": "queue-vnext-release-baseline",
@@ -71,8 +71,8 @@
       "task_id": "task-schema-sample-task",
       "task_json_file": "TASKS/TASK-schema-sample-task.json",
       "task_md_file": "TASKS/TASK-schema-sample-task.md",
-      "status": "pending",
-      "picked_at": null,
+      "status": "active",
+      "picked_at": "2026-03-13T10:38:46+00:00",
       "goal": "验证 schema 收紧。",
       "scope": [
         "docs/"
@@ -81,6 +81,180 @@
         {
           "id": "check-1",
           "text": "owner docs updated",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-run-summary-risk-near-duplicate-merge-policy",
+      "title": "run summary risk near-duplicate merge policy",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-run-summary-risk-near-duplicate-merge-policy",
+      "task_json_file": "TASKS/TASK-run-summary-risk-near-duplicate-merge-policy.json",
+      "task_md_file": "TASKS/TASK-run-summary-risk-near-duplicate-merge-policy.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "收紧 run_summary.cross_task_risks 的近义风险句合并规则，区分应保留的并列证据和应归并的 run-level 风险表达。",
+      "scope": [
+        "tools/evidence.py",
+        "reports/_SCHEMA.run_summary.json",
+        "docs/WORKFLOW.md",
+        "docs/ENTITIES.md",
+        "docs/FILE_INDEX.md",
+        "TOOLS_METHOD_FLOW_MAP.md",
+        "AGENTS.md"
+      ],
+      "acceptance": [
+        {
+          "id": "check-1",
+          "text": "cross_task_risks 近义 blocked-gate 风险不再重复堆叠；保留证据粒度字段不变；文档与 evidence 同步",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-tool-boundary-decoupling-review",
+      "title": "tool boundary decoupling review",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-tool-boundary-decoupling-review",
+      "task_json_file": "TASKS/TASK-tool-boundary-decoupling-review.json",
+      "task_md_file": "TASKS/TASK-tool-boundary-decoupling-review.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "梳理四个主工具的职责边界、当前变厚点和下一轮解耦方向，并把 agent 配置化后置到 todo。",
+      "scope": [
+        "tools/",
+        "docs/",
+        "todo.md"
+      ],
+      "acceptance": [
+        {
+          "id": "check-1",
+          "text": "owner docs 明确四工具边界和解耦方向；todo.md 记录 agent 配置化后置",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-appserverclient-task-rule-boundary-tightening",
+      "title": "appserverclient task-rule boundary tightening",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-appserverclient-task-rule-boundary-tightening",
+      "task_json_file": "TASKS/TASK-appserverclient-task-rule-boundary-tightening.json",
+      "task_md_file": "TASKS/TASK-appserverclient-task-rule-boundary-tightening.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "把 appserverclient 中继续变厚的 task/rule 刷新调用做最小收口，保持主流程语义不变。",
+      "scope": [
+        "tools/appserverclient.py",
+        "tools/taskclient.py",
+        "docs/WORKFLOW.md",
+        "docs/ENTITIES.md",
+        "docs/FILE_INDEX.md"
+      ],
+      "acceptance": [
+        {
+          "id": "check-1",
+          "text": "最小解耦完成且 docs/evidence 同步",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-appserverclient-task-policy-boundary-tightening-pass-2",
+      "title": "appserverclient task-policy boundary tightening pass 2",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-appserverclient-task-policy-boundary-tightening-pass-2",
+      "task_json_file": "TASKS/TASK-appserverclient-task-policy-boundary-tightening-pass-2.json",
+      "task_md_file": "TASKS/TASK-appserverclient-task-policy-boundary-tightening-pass-2.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "继续把 appserverclient 中剩余偏 task policy 的写回做最小下沉，保持 formal mainline 行为不变。",
+      "scope": [
+        "tools/appserverclient.py",
+        "tools/taskclient.py",
+        "docs/WORKFLOW.md",
+        "docs/ENTITIES.md",
+        "docs/FILE_INDEX.md",
+        "TOOLS_METHOD_FLOW_MAP.md"
+      ],
+      "acceptance": [
+        {
+          "id": "check-1",
+          "text": "再减少一处 appserverclient 对 task policy 细节的直接写回，docs/evidence 同步",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-appserverclient-task-policy-boundary-tightening-pass-3",
+      "title": "appserverclient task-policy boundary tightening pass 3",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-appserverclient-task-policy-boundary-tightening-pass-3",
+      "task_json_file": "TASKS/TASK-appserverclient-task-policy-boundary-tightening-pass-3.json",
+      "task_md_file": "TASKS/TASK-appserverclient-task-policy-boundary-tightening-pass-3.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "继续把 appserverclient 中 mark-test-gate 仍在自己拼 test 证据的逻辑下沉到 taskclient，保持 formal mainline 更短更清晰。",
+      "scope": [
+        "tools/appserverclient.py",
+        "tools/taskclient.py",
+        "docs/WORKFLOW.md",
+        "docs/ENTITIES.md",
+        "docs/FILE_INDEX.md",
+        "TOOLS_METHOD_FLOW_MAP.md"
+      ],
+      "acceptance": [
+        {
+          "id": "check-1",
+          "text": "mark-test-gate 的 test 证据拼接下沉到 taskclient，docs/evidence 同步",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-appserverclient-task-policy-touchpoint-audit",
+      "title": "appserverclient task-policy touchpoint audit",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-appserverclient-task-policy-touchpoint-audit",
+      "task_json_file": "TASKS/TASK-appserverclient-task-policy-touchpoint-audit.json",
+      "task_md_file": "TASKS/TASK-appserverclient-task-policy-touchpoint-audit.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "审计 appserverclient 中剩余直接触碰 task policy 的点，并判断是否还有必要继续做第四刀最小解耦。",
+      "scope": [
+        "tools/appserverclient.py",
+        "tools/taskclient.py",
+        "docs/WORKFLOW.md",
+        "docs/FILE_INDEX.md"
+      ],
+      "acceptance": [
+        {
+          "id": "check-1",
+          "text": "列出剩余 touchpoints，并给出是否继续第四刀的结论；若只需文档收尾则同步 evidence",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-shortest-stable-mainline-documentation",
+      "title": "shortest stable mainline documentation",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-shortest-stable-mainline-documentation",
+      "task_json_file": "TASKS/TASK-shortest-stable-mainline-documentation.json",
+      "task_md_file": "TASKS/TASK-shortest-stable-mainline-documentation.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "把当前最短稳定主线、四个主工具边界和不应再继续拆的原则写成非常清晰的操作面。",
+      "scope": [
+        "docs/WORKFLOW.md",
+        "docs/FILE_INDEX.md",
+        "AGENTS.md"
+      ],
+      "acceptance": [
+        {
+          "id": "check-1",
+          "text": "owner docs 明确最短稳定主线和当前冻结边界",
           "status": "pending"
         }
       ]
