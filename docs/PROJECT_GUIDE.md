@@ -8,6 +8,7 @@
 - 题目本身与整体结构是 owner 精心挑选后的固定课程资产，不应被随意改写、重排或替换。
 - 正常允许变化的是：项目变动后同步更新标准答案，或为保持同频质量做最小必要微调。
 - `learn` 必须先阅读本文件，再按每题的 `必查文件` 与 `查找线索` 去读取证据。
+- 如果目标项目尚未接入这套基座、缺少 owner docs，先参考 [PROJECT_BOOTSTRAP_PROTOCOL.md](/root/quant-factory-os/docs/PROJECT_BOOTSTRAP_PROTOCOL.md) 做首轮项目学习与文档补齐，再继续使用本题库。
 - 这些题的目的不是“考试打分”，而是用高质量提问反向逼模型去读全量 owner docs、run evidence、session continuity 线索，并把主线固化成可复用的证据。
 - 如果输出偏到具体细节、工具琐事或单一 bug，而没有回到项目目标、门禁、工作流、当前阶段，就说明已经偏离主线。
 - 一旦漂移，不是继续闲聊，而是回到 `PROJECT_GUIDE` 的问题体系里重答，并重新引用证据把模型拉回主线。
@@ -163,13 +164,27 @@
 #### 为什么问这题
 这题负责把“讨论”和“执行”分开，防止先写代码后补理由。
 #### 标准答案
-项目需求讨论现在更适合挂在 `appserverclient` 的 run/session 体系上做：先有项目级 baseline，同频当前主线和证据；再在 run 级别明确本轮需求方向；再从 baseline fork 多个角色 session 去做需求分析、方案评审、实现设计和验证拆分，最后把方向收敛成最小 task。旧的 `orient -> choose -> council -> arbiter -> slice` 可以视为兼容性的讨论链骨架，但主流程重心已经转到 baseline/fork/session 的分层运行方式。
+项目需求讨论现在更适合挂在 `appserverclient` 的 run/session 体系上做：先有项目级 baseline，同频当前主线和证据；再在 run 级别明确本轮需求方向；再从 baseline fork 多个角色 session 去做需求分析、方案评审、实现设计和验证拆分，最后把方向收敛成最小 task。run 级需求收敛至少要问清：背景与目标、必须做/应该做/可以做、明确不做项、影响模块与外部依赖、异常流与非功能约束、以及后续如何验收。旧的 `orient -> choose -> council -> arbiter -> slice` 可以视为兼容性的讨论链骨架，但主流程重心已经转到 baseline/fork/session 的分层运行方式。
 #### 必查文件
 - docs/WORKFLOW.md
 - AGENTS.md
 #### 查找线索
 - 在 WORKFLOW 里找 `Direction gate`、`Council gate`、`Arbiter gate`、`Slice gate`。
 - 在 AGENTS 里看 Plan -> Confirm -> Execute 约束。
+#### 高质量追问模板
+- 这次需求真正要解决的业务问题是什么，为什么现在必须做？
+- 本轮 run 的必须做 / 应该做 / 可以做分别是什么，哪些明确不做？
+- 影响到哪些模块、数据、外部系统或角色，边界在哪里？
+- 如果不按用户原话里的实现方案做，是否有更简单、更低耦合的系统实现？
+- 后续怎么验收，哪些异常流、非功能约束和风险必须提前写清？
+#### 自我梳理输出骨架
+- `run_goal`: 这轮 run 真正要解决的问题
+- `scope`: 当前明确纳入范围的模块、流程、数据和角色
+- `non_goals`: 本轮明确不做的内容
+- `impacted_modules`: 受影响模块、外部系统或依赖
+- `risks`: 已知风险、异常流、潜在冲突
+- `non_functional_constraints`: 性能、稳定性、安全、审计、环境约束
+- `acceptance`: 后续如何判断这轮 run 可以进入 task 拆分
 #### 主线意义
 - 这题负责守住“讨论先于执行”。
 - 常见漂移是把讨论代理和执行代理混成同一轮输出。
@@ -178,13 +193,23 @@
 #### 为什么问这题
 这题用来区分“多角色讨论能力”和“单一实现能力”，避免只靠一个视角拍脑袋出方案。
 #### 标准答案
-项目实施流程现在更适合理解成：项目级 baseline 学习一次建好后，围绕当前 run 的需求方向 fork 多个角色 session，各角色互不干扰地推进自己的最小 task，再把结论去噪收口回 baseline。多角色协作的理想角色仍然包括产品、架构、研发、测试，但独立性不再主要靠旧讨论链文字约束，而是靠 session 隔离：每个角色在自己的 fork thread 里独立思考，减少互相污染。当前已经具备 baseline、current fork 和普通 turn 这类核心 session 能力，但“多角色 fork -> 去噪总结 -> baseline 回灌”这条线还在继续强化。
+项目实施流程现在更适合理解成：项目级 baseline 学习一次建好后，围绕当前 run 的需求方向 fork 多个角色 session，各角色互不干扰地推进自己的最小 task，再把结论去噪收口回 baseline。当前更合理的角色结构是：run 主线程负责需求收敛、任务拆分和最终确认；task 下的 `dev/test/arch` 角色线程按需协作，其中 `test` 必须保持独立验证，`arch` 只在复杂任务时介入，独立性主要靠 session 隔离和 summary 回收，而不是靠旧讨论链文字约束。当前已经具备 baseline、current fork 和普通 turn 这类核心 session 能力，但“多角色 fork -> task summary -> run summary -> baseline 回灌”这条线还在继续强化。
 #### 必查文件
 - docs/WORKFLOW.md
 - AGENTS.md
 #### 查找线索
 - 看 WORKFLOW 里 baseline、fork session 和角色推进的职责边界。
 - 看工具文件名称和输出物，确认当前实现到什么程度。
+#### 高质量追问模板
+- 这次 task 是不是只需要 `dev/test`，还是已经复杂到需要额外开启 `arch`？
+- 哪些判断应该由 run 主线程拍板，哪些应留给 `dev/test/arch` 独立结论后再回收？
+- `test` 需要独立覆盖哪些功能、流程、数据和非功能验证面？
+- 当前系统实现到了 session 隔离、task summary、run summary 的哪一层，哪些还只是目标态？
+#### 自我梳理输出骨架
+- `role_plan`: 本次是否只需要 `dev/test`，还是需要增加 `arch`
+- `role_responsibilities`: run-main / dev / test / arch 分别负责什么
+- `verification_axes`: 这次至少要覆盖哪些功能、流程、数据、非功能验证面
+- `current_capability_gap`: 当前仓库已经实现到哪一层，哪些仍是目标态
 #### 主线意义
 - 这题防止把“多角色评审”说成已经完整实现。
 - 常见漂移是把角色分工说得很理想，但忽略当前还只是流程骨架。
@@ -193,7 +218,7 @@
 #### 为什么问这题
 这题负责统一名词系统，避免 agent 在 task、run、project 这些层级上混乱。
 #### 标准答案
-`project` 是最高层项目维度，负责项目级配置、baseline 学习和长期主线；`run` 是一次需求方向或执行周期，对应 run 级证据和 session 推进；`task` 是从 run 中拆出来的最小执行单元；`PR` 是 Git 交付与审查单元。除此之外，还有 `runtime_state` 作为当前活动指针，`session_registry` 作为 baseline/current session 记录，`evidence` 作为仓库内记忆。生命周期更接近：`PROJECT baseline -> RUN direction -> role fork sessions -> TASK execution -> Git PR -> baseline refresh`。
+`project` 是最高层项目维度，负责项目级配置、baseline 学习和长期主线；`run` 是一次需求方向或执行周期，对应 run 级证据、需求边界和 session 推进；`task` 是从 run 中拆出来的最小执行单元；`PR` 是 Git 交付与审查单元。除此之外，还有 `runtime_state` 作为当前活动指针，`session_registry` 作为 baseline/current session 记录，`evidence` 作为仓库内记忆；其中 run 应承载 `run_goal / scope / non_goals / impacted_modules / acceptance` 这类方向级字段，task 应承载更细的实现边界、风险和验证信息。生命周期更接近：`PROJECT baseline -> RUN direction -> role fork sessions -> TASK execution -> Git PR -> baseline refresh`。
 #### 必查文件
 - docs/ENTITIES.md
 - docs/WORKFLOW.md
@@ -202,6 +227,15 @@
 - 先看 ENTITIES 的名词定义。
 - 再看 WORKFLOW 里的状态流转。
 - 最后用 AGENTS 理解这些概念如何形成硬规则。
+#### 高质量追问模板
+- 这次信息属于 project、run、task 还是 thread summary，放错层会造成什么混乱？
+- 哪些需求边界应该属于 run，哪些实现边界、风险和验证细节应该属于 task？
+- 当前要沉淀的是 thread summary、task summary 还是 run summary，后续会被谁消费？
+#### 自我梳理输出骨架
+- `object_layer`: 当前信息属于 `project / run / task / thread summary` 哪一层
+- `run_fields`: 应沉淀到 run 的边界与聚合字段
+- `task_fields`: 应沉淀到 task 的实现、风险和验证字段
+- `summary_target`: 当前更适合生成 `thread summary / task summary / run summary` 中的哪一个
 #### 主线意义
 - 这题负责名词统一。
 - 常见漂移是把 run 当需求方向、把 task 当 run、把 project 当 session。
@@ -210,7 +244,7 @@
 #### 为什么问这题
 这题确认“准备完成后做什么”，避免 learn/ready 做完还直接跳到写代码。
 #### 标准答案
-准备工作完成后，应该进入 `run(appserverclient)`，而不是直接写代码。先确认或建立 `--learnbaseline`，再在 run 级别明确这次需求方向，然后从 baseline fork 当前工作 session 和角色 session，把方向拆成最小 task 逐个推进。也就是说，准备工作之后的第一步不再是旧链里的 `orient`，而是进入项目级 baseline/session 主线。
+准备工作完成后，应该进入 `run(appserverclient)`，而不是直接写代码。先确认或建立 `--learnbaseline`，再在 run 级别先做一轮需求收敛，至少明确背景目标、范围边界、不做项、影响模块、异常流、非功能和验收方式，然后再从 baseline fork 当前工作 session 和角色 session，把方向拆成最小 task 逐个推进。也就是说，准备工作之后的第一步不再是旧链里的 `orient`，而是进入项目级 baseline/session 主线中的 run 方向收敛。
 #### 必查文件
 - docs/WORKFLOW.md
 - AGENTS.md
@@ -218,6 +252,76 @@
 #### 查找线索
 - 看 WORKFLOW 里 `appserverclient --learnbaseline / --fork-current / --current-turn` 的主流程说明。
 - 看当前 run summary 中有没有对方向讨论的近期结论。
+#### 高质量追问模板
+- 在创建 task 之前，这轮 run 的背景目标、范围边界、不做项和验收条件是否已经清楚？
+- 还有哪些影响模块、依赖、异常流或非功能要求没有在 run 层说明白？
+- 如果现在直接进入实现，最可能漏掉的边界和回归面是什么？
+#### 自我梳理输出骨架
+- `task_ready`: 当前是否已经满足创建 task 的前提
+- `missing_boundaries`: 仍未说清的边界、依赖、异常流、非功能要求
+- `first_task_candidate`: 最小可执行 task 候选是什么
+- `why_not_code_yet`: 如果还不能进实现，当前阻塞点是什么
+#### 标准化 Markdown 草稿模板
+当 AI 读完客户给的杂乱材料后，先输出一版标准化 Markdown 草稿，再进入 run 方向收敛与 task 拆分；这一步是协议层草稿，不是机器真相源。
+```md
+# Run Intake Draft
+
+## 1. Background
+- 业务背景：
+- 当前痛点：
+- 为什么现在要做：
+
+## 2. Run Goal
+- 本轮 run 要解决的问题：
+- 期望产出：
+
+## 3. Scope
+- 明确纳入范围：
+- 涉及模块/流程/数据：
+- 外部系统/依赖：
+
+## 4. Non-Goals
+- 本轮明确不做：
+
+## 5. Impacted Modules
+- 模块：
+- 数据面：
+- 角色面：
+
+## 6. Risks And Abnormal Flows
+- 已知风险：
+- 异常流：
+- 仍不清楚的边界：
+
+## 7. Non-Functional Constraints
+- 性能：
+- 稳定性：
+- 安全/审计：
+- 环境/部署：
+
+## 8. Acceptance
+- 如何判断 run 已收敛到可以拆 task：
+- 必要验证面：
+
+## 9. Role Plan
+- run-main：
+- dev：
+- test：
+- arch（如需要）：
+
+## 10. Task Candidates
+- 候选 task 1：
+- 候选 task 2：
+- 为什么它们是最小切片：
+
+## 11. Open Questions
+- 还需要用户或 owner 明确什么：
+
+## 12. Summary Target
+- 当前应先形成：
+  - thread summary / task summary / run summary
+- 暂不进入实现的原因：
+```
 #### 主线意义
 - 这题负责接上岗后的下一步。
 - 常见漂移是把 `ready` 误当“可以直接改代码”。

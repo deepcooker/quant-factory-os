@@ -1,0 +1,31 @@
+{
+  "run_id": "run-YYYY-MM-DD-example",
+  "status": "active",
+  "run_goal": "One-sentence run goal.",
+  "active_tasks": [
+    "task-example-active"
+  ],
+  "completed_tasks": [
+    "task-example-completed"
+  ],
+  "source_tasks": [
+    "task-example-active",
+    "task-example-completed"
+  ],
+  "key_updates": [
+    "Stable run-level update."
+  ],
+  "cross_task_decisions": [
+    "Stable run-level decision."
+  ],
+  "cross_task_risks": [
+    "Cross-task risk that still matters."
+  ],
+  "verification_overview": [
+    "High-level verification result."
+  ],
+  "next_run_or_next_tasks": [
+    "Next run-level direction or next task."
+  ],
+  "updated_at": "2026-03-12T00:00:00+00:00"
+}

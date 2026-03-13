@@ -1,0 +1,56 @@
+{
+  "task_id": "task-project-guide-probing-templates",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "project-guide probing templates",
+  "goal": "从需求分析指南中提炼少量可迁移的高质量追问模板，最小增强 PROJECT_GUIDE，不改题库结构。",
+  "scope": [
+    "docs/"
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "PROJECT_GUIDE 在不改题号和结构的前提下补少量高质量追问模板",
+      "status": "completed"
+    }
+  ],
+  "inputs": [
+    "tools/需求管理及分析工作指南.doc",
+    "docs/PROJECT_GUIDE.md"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-project-guide-probing-templates.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "在 PROJECT_GUIDE 的 Q9-Q12 下补了少量高质量追问模板，不改题库结构。",
+      "追问模板重点覆盖需求背景、范围边界、不做项、影响面、异常流、非功能和验收。"
+    ],
+    "decisions": [
+      "只增强 PROJECT_GUIDE 的学习与提问质量，不把传统需求管理文档整份迁入。",
+      "追问模板优先服务 run 方向收敛、角色协作边界和对象分层判断。"
+    ],
+    "risks": [
+      "当前模板仍是文档级提示，尚未变成结构化 prompt 生成器。"
+    ],
+    "verification": [
+      "已检查 PROJECT_GUIDE 的 Q9-Q12 段落并确认题号和结构未变化。"
+    ],
+    "next_steps": [
+      "继续从需求分析原则中筛出少量可复用模板，服务 AI 面对杂乱客户材料时的自我梳理。"
+    ],
+    "source_threads": [
+      "019ce5e2-50f1-7b20-aadf-4b746a1d1467"
+    ],
+    "updated_at": "2026-03-13T15:15:00+00:00"
+  },
+  "updated_at": "2026-03-13T15:15:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

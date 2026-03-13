@@ -1,0 +1,61 @@
+{
+  "task_id": "task-project-guide-requirement-analysis-principles",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "project-guide requirement-analysis principles",
+  "goal": "提炼需求分析指南中适合 AI/Codex 的原则，并最小增强 PROJECT_GUIDE/WORKFLOW/ENTITIES。",
+  "scope": [
+    "docs/",
+    "tools/"
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "PROJECT_GUIDE 增强学习追问；WORKFLOW/ENTITIES 同步新主线下的需求收敛边界；不引回旧流程",
+      "status": "completed"
+    }
+  ],
+  "inputs": [
+    "tools/需求管理及分析工作指南.doc",
+    "docs/PROJECT_GUIDE.md",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-project-guide-requirement-analysis-principles.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "从需求分析指南中提炼出适合 AI/Codex 的需求收敛原则，并补到 PROJECT_GUIDE 的 Q9-Q12 标准答案中。",
+      "WORKFLOW 已补 run 主线程在新主线下需要确认的背景、边界、影响面、风险、非功能和验收规则。",
+      "ENTITIES 已补 run/task 的需求边界字段建议，以及 run-main/dev/test/arch 的角色定义。"
+    ],
+    "decisions": [
+      "不恢复旧 orient/choose/council/arbiter 为正式流程，只迁移其有价值的需求收敛方法到新主线。",
+      "优先增强 PROJECT_GUIDE 的高质量提问能力，再让 WORKFLOW 和 ENTITIES 承接稳定结构字段。"
+    ],
+    "risks": [
+      "当前只是文档层增强，task/run 的结构化字段还未全面落到 JSON 真相源。"
+    ],
+    "verification": [
+      "已检查 PROJECT_GUIDE 的 Q9-Q12、WORKFLOW 的 run 方向收敛与多角色拆解段落、ENTITIES 的 run/task/thread 定义。"
+    ],
+    "next_steps": [
+      "继续从需求管理文档中提炼少量可迁移原则，优先服务 PROJECT_GUIDE 的学习协议增强。",
+      "后续再评估哪些边界字段需要正式进入 TASKS/TASK-*.json 与 run_summary.json。"
+    ],
+    "source_threads": [
+      "019ce5e2-50f1-7b20-aadf-4b746a1d1467"
+    ],
+    "updated_at": "2026-03-13T14:45:00+00:00"
+  },
+  "updated_at": "2026-03-13T14:45:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

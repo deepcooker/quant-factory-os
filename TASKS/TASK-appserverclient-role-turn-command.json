@@ -1,0 +1,84 @@
+{
+  "task_id": "task-appserverclient-role-turn-command",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "active",
+  "priority": "P1",
+  "title": "appserverclient role turn command",
+  "goal": "新增 appserverclient --role-turn，让已绑定的 dev/test role thread 能执行真实 current-turn。",
+  "scope": [
+    "tools/appserverclient.py",
+    "docs/WORKFLOW.md",
+    "docs/FILE_INDEX.md",
+    "TOOLS_METHOD_FLOW_MAP.md"
+  ],
+  "non_goals": [
+    "不做 thread summary 自动汇总",
+    "不做多角色调度器"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "新增 --role-turn 命令; 已绑定 role thread 可执行真实 turn; docs/evidence updated",
+      "status": "pending"
+    }
+  ],
+  "inputs": [
+    "tools/appserverclient.py",
+    "tools/taskclient.py",
+    "TASKS/TASK-appserverclient-fork-role-command.json"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-appserverclient-role-turn-command.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "draft",
+    "key_updates": [],
+    "decisions": [],
+    "risks": [],
+    "verification": [],
+    "next_steps": [],
+    "source_threads": [],
+    "updated_at": ""
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-13T08:19:05+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

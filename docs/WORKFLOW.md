@@ -16,6 +16,7 @@
 - `init` 只属于开工前准备层，不属于主业务流程。
 - 真正自动化主线以项目为中心，由 `appserverclient` 驱动学习基线、run 级方向推进、fork 多角色 session、去噪回灌 baseline，并由 `gitclient` 完成交付收尾。
 - 研发期主要通过 Codex CLI 调试和接管；长期正式运行应收敛到普通窗口中的 Python orchestrator + Codex app-server。
+- 如果目标项目尚未接入本仓 owner docs 与自动化主线，先按 [PROJECT_BOOTSTRAP_PROTOCOL.md](/root/quant-factory-os/docs/PROJECT_BOOTSTRAP_PROTOCOL.md) 完成首轮项目学习与文档补齐，再进入本状态机。
 
 ## 1. 设计原则
 
@@ -174,6 +175,20 @@ project
 - 人给方向，系统负责收敛、拆解、执行、验证
 - 当前 task/queue 机器真相源优先使用 `TASKS/*.json`；`*.md` 只保留人类阅读兼容层
 
+run 主线程在这一步至少要收敛出：
+- 背景与目标：为什么做，这轮 run 想解决什么
+- 范围边界：必须做 / 应该做 / 可以做，以及明确不做项
+- 影响面：涉及哪些模块、数据、外部系统或角色
+- 风险面：异常流、回退点、依赖与潜在冲突
+- 非功能约束：性能、稳定性、安全、审计、环境前提
+- 验收方式：后续 task 与 test 应如何判断完成
+- 第一版 `Markdown intake draft`：先把客户杂乱材料整理成 run 级讨论草稿，再继续收敛
+
+说明：
+- 这里强调的是新主线下的 run 方向收敛，不是回到旧的 `orient/choose/council/arbiter`
+- run 方向收敛后的稳定结论，才适合继续拆成 task 或沉淀到 run summary
+- `Markdown intake draft` 只是协议层草稿，不是 `run summary`，也不是机器真相源
+
 ### 4.3 `appserverclient --fork-current`
 
 命令：
@@ -181,6 +196,23 @@ project
 
 目标：
 - 从 baseline 派生当前工作 session
+
+补充：
+- 当前还支持 `python3 tools/appserverclient.py --fork-role <run-main|dev|test|arch>`
+- 该入口会基于当前 `fork_current_session` 再派生一个 role thread，并回写到当前 task 的 `role_threads`
+- 这一步只负责最小 role thread 绑定，不等于完整多 agent orchestration
+- 已绑定的 role thread 之后可通过 `python3 tools/appserverclient.py --role-turn <role> [text...]` 执行真实 turn
+- 已绑定的 role thread 还可通过 `python3 tools/appserverclient.py --summarize-role <role>` 生成去噪 role summary，并把结果写回当前 task 的 `role_summaries` 与 `task_summary.role_summary_evidence`
+- `--summarize-role` 现在还会自动刷新：
+  - `task_summary.gap_summary`
+  - `task_summary.escalation_summary`
+  - `task_summary.run_main_resolution`
+- 当 `test` 角色已给出真实 summary 后，可通过 `python3 tools/appserverclient.py --mark-test-gate <pending|blocked|passed> [evidence...]` 写回 `test_gate`，并自动刷新 `gap_summary / escalation_summary / run_main_resolution`
+- 当一个 task 下已有多个 role summaries 时，可通过 `python3 tools/taskclient.py --merge-role-summaries` 把现有 `role_summaries` 按最小去重规则汇入 `task_summary`
+- 当需要把多角色缺口和冲突优先级写回 task 机器层时，可通过 `python3 tools/taskclient.py --refresh-task-gaps` 刷新 `task_summary.conflict_policy` 与 `task_summary.gap_summary`
+- 当需要判断当前 task 是否必须升级给 `run-main` 时，可通过 `python3 tools/taskclient.py --refresh-task-escalation` 刷新 `task_summary.escalation_policy` 与 `task_summary.escalation_summary`
+- 当 task 已升级给 `run-main` 后，可通过 `python3 tools/taskclient.py --refresh-run-main-resolution` 刷新 `task_summary.run_main_resolution_policy` 与 `task_summary.run_main_resolution`
+- 如需手动确认或关闭升级项，可通过 `python3 tools/taskclient.py --set-run-main-resolution ...` 写回 run-main 的确认状态与 closing note
 
 输出：
 - `session_registry.fork_current_session`
@@ -200,8 +232,13 @@ project
 - 这是当前正式主线的发展方向
 - 角色 session 应互不干扰
 - 每个角色 session 结束后要先做去噪总结，再考虑回灌 baseline
+- 推荐的最小角色结构是：run 主线程负责收敛与确认；task 下默认 `dev/test`，复杂任务按需增加 `arch`
+- `test` 负责独立验证，不等同于开发自测；`dev` 负责实现与单元/最小集成自证；`arch` 负责复杂任务的边界与结构风险
+- 当前最小协作链优先收敛为：`run-main -> dev/test -> thread summary -> task summary`
+- 在这条最小链里，`test` 的独立结论应先进入 `test_gate`，再决定 task 是否可以进入更高层 summary
 - 当前正式 task 入口是 `python3 tools/taskclient.py --next`，用于从 `TASKS/QUEUE.json` 选择并绑定下一个 active task
 - 当前也可用 `python3 tools/taskclient.py --create ...` 生成新的 JSON-first task，并按需追加到 `TASKS/QUEUE.json` 或直接激活
+- 当前也可用 `python3 tools/taskclient.py --set-task-summary ...` 把多个 thread 的稳定结论聚合回 task JSON 内的 `task_summary`
 - `tools/task.sh` 已退出正式层，只保留历史版本于 `tools/backup/task.sh`
 
 ### 4.5 `appserverclient --current-turn`
@@ -225,6 +262,9 @@ project
 说明：
 - 不是把所有工作噪音直接写回 baseline
 - 只回灌已去噪的主线更新、结论、证据和下一步
+- 当前过渡态下，人类可读 run 视图仍主要在 `reports/<RUN_ID>/summary.md` 和 `decision.md`
+- 当前机器层的最小 run 聚合真相源已落在 `reports/<RUN_ID>/run_summary.json`
+- 当前最小写回入口已落在 `python3 tools/evidence.py --set-run-summary --run-id <RUN_ID> ...`
 
 ### 4.7 `appserverclient --summarize-current`
 
@@ -239,9 +279,15 @@ project
 
 职责：
 - `resume` current session
-- 以最小 prompt 生成 run 级去噪摘要
+- 以最小 prompt 生成当前 thread 的去噪摘要
 - 读取最新 thread 内容并抽取最后一条 agent 结论
 - 把 summary 文本和来源 thread 指针写回 `tools/project_config.json`
+
+当前定位：
+- `session_registry.current_summary` 是 thread-level transitional summary
+- 当前只有单槽位实现，适合作为最小闭环，不代表最终 run summary
+- 多角色场景下，应先有多个 thread summaries，再聚合成 task summary / run summary
+- 当前机器层的最小落点是 `TASKS/TASK-*.json -> role_threads / test_gate / task_summary`
 
 ### 4.8 `appserverclient --refresh-baseline`
 
@@ -249,17 +295,23 @@ project
 - `python3 tools/appserverclient.py --refresh-baseline`
 
 目标：
-- 只使用 `session_registry.current_summary` 中的有效增量更新 baseline
+- 优先使用 `run_summary.json` 中的有效增量更新 baseline；缺失时再回退 `session_registry.current_summary`
 
 输入：
 - `session_registry.learn_session_baseline`
-- `session_registry.current_summary`
+- `reports/<RUN_ID>/run_summary.json`
+- `session_registry.current_summary`（fallback）
 
 职责：
 - `resume` baseline session
-- 用 current summary 发起一次最小 baseline refresh
+- 优先用 run summary 发起一次最小 baseline refresh
 - 不重建 baseline，不回灌聊天噪音
 - 把 baseline refresh 文本回写到 `session_registry.current_summary`
+
+当前与长期边界：
+- 当前实现优先消费 `run_summary.json`，仅在缺失时回退 `session_registry.current_summary`
+- 长期推荐链路应为 `thread summary -> task summary -> run summary -> baseline refresh`
+- baseline 长期应优先吸收 run-level stable summaries，而不是直接吸收原始 thread 噪音
 
 ## 5. 收尾层
 

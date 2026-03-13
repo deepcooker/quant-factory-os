@@ -21,6 +21,9 @@
    - `appserverclient`
    - `--learnbaseline`
    - `--fork-current`
+   - `--fork-role`
+   - `--role-turn`
+   - `--summarize-role`
    - `--current-turn`
    - `--summarize-current`
    - `--refresh-baseline`
@@ -99,6 +102,206 @@
 
 输出：
 - `session_registry.fork_current_session`
+
+### 3.2a `appserverclient --fork-role`
+
+业务目标：
+- 基于当前 `fork_current_session` 派生一个真实 role thread
+- 把 role thread 绑定回当前 task 的 `role_threads`
+
+主流程调用关系：
+
+| 顺序 | 方法/动作 | 中文说明 |
+| --- | --- | --- |
+| `B1a` | `run_fork_role()` | role thread fork 总入口。 |
+| `B2a` | `connect()` | 初始化连接。 |
+| `B3a` | `resume_thread()` | 恢复当前 run-main thread。 |
+| `B4a` | `fork_thread()` | 从当前工作 thread 派生 role thread。 |
+| `B5a` | `wait_for_rollout_ready()` | 等待 role rollout 文件可用。 |
+| `B6a` | `set_thread_name()` | 给 role thread 写入角色名。 |
+| `B7a` | `update_role_thread()` | 回写当前 task 的 `role_threads.<role>`。 |
+
+输出：
+- `TASKS/TASK-*.json -> role_threads.<role>`
+
+说明：
+- 这是最小 role thread binding 入口，不等于完整多 agent orchestration
+- 当前优先服务 `dev/test`，`arch` 按需
+
+### 3.2b `appserverclient --role-turn`
+
+业务目标：
+- 在已绑定的 role thread 上继续推进真实 turn
+
+主流程调用关系：
+
+| 顺序 | 方法/动作 | 中文说明 |
+| --- | --- | --- |
+| `B1b` | `run_role_turn()` | role thread turn 总入口。 |
+| `B2b` | `get_role_threads()` | 从当前 task 读取 role thread 绑定。 |
+| `B3b` | `connect()` | 初始化连接。 |
+| `B4b` | `resume_thread()` | 恢复对应 role thread。 |
+| `B5b` | `start_turn()` | 在 role thread 上发送输入。 |
+| `B6b` | `wait_for_turn_completion()` | 等待当前 turn 收口。 |
+| `B7b` | `wait_for_rollout_ready()` | 等待 role rollout 文件可用。 |
+| `B8b` | `update_role_thread()` | 维持当前 task 的 role 绑定状态。 |
+
+### 3.2c `appserverclient --summarize-role`
+
+业务目标：
+- 在已绑定的 role thread 上生成一个 role-level 去噪总结
+- 把结果写回当前 task 的 `role_summaries`
+- 同时把引用证据追加到 `task_summary.role_summary_evidence`
+
+主流程调用关系：
+
+| 顺序 | 方法/动作 | 中文说明 |
+| --- | --- | --- |
+| `B1c` | `run_summarize_role()` | role summary 总入口。 |
+| `B2c` | `get_role_threads()` | 从当前 task 读取 role thread 绑定。 |
+| `B3c` | `resume_thread()` | 恢复对应 role thread。 |
+| `B4c` | `start_turn()` | 在 role thread 上发送 role summary prompt。 |
+| `B5c` | `wait_for_turn_completion()` | 等待 role summary turn 收口。 |
+| `B6c` | `read_thread()` | 读取对应 thread 最新内容。 |
+| `B7c` | `extract_last_agent_message()` | 抽取 role summary 正文。 |
+| `B8c` | `update_role_summary()` | 把 role summary 写回 task JSON。 |
+| `B9c` | `update_task_summary()` | 给 task summary 追加 source/evidence。 |
+
+### 4.3 `taskclient --merge-role-summaries`
+
+业务目标：
+- 当一个 task 下已有多个 role summaries 时，把它们按最小去重规则汇入 `task_summary`
+
+主流程调用关系：
+
+| 顺序 | 方法/动作 | 中文说明 |
+| --- | --- | --- |
+| `T1` | `merge_role_summaries_into_task_summary()` | task-level 聚合总入口。 |
+| `T2` | `default_role_summaries()` | 提供标准角色位。 |
+| `T3` | `normalize_list()` | 对 `source_threads` 和 `role_summary_evidence` 做去重。 |
+| `T4` | `save_task()` | 把更新后的 task summary 写回 task JSON。 |
+
+说明：
+- 当前只做最小聚合，不做复杂语义 merge
+- 当前会去重追加：
+  - `task_summary.source_threads`
+  - `task_summary.role_summary_evidence`
+  - `task_summary.key_updates` 中的 `<role> summary merged`
+
+### 4.4 `taskclient --refresh-task-gaps`
+
+业务目标：
+- 根据现有 `role_summaries` 和 `test_gate` 刷新 task 层的缺口汇总与冲突优先级
+
+主流程调用关系：
+
+| 顺序 | 方法/动作 | 中文说明 |
+| --- | --- | --- |
+| `T5` | `refresh_task_gap_summary()` | task-level 缺口刷新总入口。 |
+| `T6` | `default_role_summaries()` | 提供标准角色位。 |
+| `T7` | `default_test_gate()` | 提供 test gate 默认结构。 |
+| `T8` | `normalize_list()` | 对 `missing_roles` 与 `open_gaps` 做去重。 |
+| `T9` | `save_task()` | 把冲突规则和缺口汇总写回 task JSON。 |
+
+说明：
+- 当前默认优先级顺序是 `run-main -> test -> arch -> dev`
+- 当前最小缺口来源是：
+  - 缺失的 `role_summaries`
+  - 未完成的 `test_gate`
+  - `test_gate.blocking_issues`
+
+### 4.5 `taskclient --refresh-task-escalation`
+
+业务目标：
+- 判断当前 task 是否必须升级给 `run-main`
+
+主流程调用关系：
+
+| 顺序 | 方法/动作 | 中文说明 |
+| --- | --- | --- |
+| `T10` | `refresh_task_escalation()` | task-level 升级判断总入口。 |
+| `T11` | `gap_summary` | 读取当前缺口汇总。 |
+| `T12` | `test_gate` | 读取当前 test gate 状态与阻塞项。 |
+| `T13` | `normalize_list()` | 对升级原因做去重。 |
+| `T14` | `save_task()` | 把升级规则和当前升级结果写回 task JSON。 |
+
+说明：
+- 当前最小必须升级条件是：
+  - `run-main summary missing`
+  - `test_gate` 未通过
+  - 仍有 blocking issue
+- 当前输出落点是：
+  - `task_summary.escalation_policy`
+  - `task_summary.escalation_summary`
+
+### 4.6 `taskclient --refresh-run-main-resolution`
+
+业务目标：
+- 当 task 已升级给 `run-main` 后，判断 run-main 是否已确认、以及升级项是否可关闭
+
+主流程调用关系：
+
+| 顺序 | 方法/动作 | 中文说明 |
+| --- | --- | --- |
+| `T15` | `refresh_run_main_resolution()` | run-main resolution 刷新总入口。 |
+| `T16` | `escalation_summary` | 读取当前 task 是否仍需升级。 |
+| `T17` | `role_summaries.run-main` | 判断 run-main 是否已给出 summary。 |
+| `T18` | `test_gate` | 判断测试门是否已通过、是否仍有 blocking issue。 |
+| `T19` | `save_task()` | 把 resolution policy 和 resolution result 写回 task JSON。 |
+
+说明：
+- 当前最小状态约定是：
+  - `not_needed`
+  - `pending_ack`
+  - `acknowledged`
+  - `closed`
+- 当前最小关闭条件是：
+  - 已存在 `run-main` summary
+  - `test_gate` 已通过
+  - 没有 blocking issue
+- 当前输出落点是：
+  - `task_summary.run_main_resolution_policy`
+  - `task_summary.run_main_resolution`
+
+### 3.2b `appserverclient --fork-role <run-main|dev|test|arch>`
+
+业务目标：
+- 从当前 `run-main` 工作副本再派生真实 role thread，并绑定回当前 task
+
+说明：
+- 当前 `run-main` 也可以通过该入口建立真实 role thread
+- 当前 role thread 的真实写回落点是：
+  - `role_threads.<role>`
+
+### 3.2c `appserverclient --summarize-role <role>`
+
+业务目标：
+- 对单个 role thread 做去噪总结，并把结果回写 task 机器层
+
+说明：
+- 当前输出落点是：
+  - `role_summaries.<role>`
+  - `task_summary.role_summary_evidence`
+- 当前还会自动联动刷新：
+  - `task_summary.gap_summary`
+  - `task_summary.escalation_summary`
+  - `task_summary.run_main_resolution`
+
+### 3.2d `appserverclient --mark-test-gate <status>`
+
+业务目标：
+- 把真实 `test` 角色线程的阶段性结论写回 `test_gate`，并刷新 task 层升级状态
+
+说明：
+- 当前会自动复用：
+  - `role_summaries.test.summary_turn_id`
+  - `role_summaries.test.thread_id`
+- 当前输出落点是：
+  - `test_gate`
+- 当前还会自动联动刷新：
+  - `task_summary.gap_summary`
+  - `task_summary.escalation_summary`
+  - `task_summary.run_main_resolution`
 
 ### 3.3 `appserverclient --current-turn`
 

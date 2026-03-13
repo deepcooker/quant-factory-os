@@ -1,0 +1,86 @@
+{
+  "task_id": "task-multi-thread-collaboration-minimum-chain",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "multi-thread collaboration minimum chain",
+  "goal": "定义并最小落地 run-main 到 dev/test 的多线程协作链，明确 task 绑定、summary 回收和 test gate。",
+  "scope": [
+    "docs/ENTITIES.md",
+    "docs/WORKFLOW.md",
+    "docs/FILE_INDEX.md",
+    "tools/appserverclient.py",
+    "tools/taskclient.py"
+  ],
+  "non_goals": [
+    "不一次性实现完整多agent orchestration",
+    "不引入 swarm"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "明确 run-main/dev/test 最小协作链; 文档与必要最小实现同步; evidence updated",
+      "status": "completed"
+    }
+  ],
+  "inputs": [
+    "docs/ENTITIES.md",
+    "docs/WORKFLOW.md",
+    "tools/appserverclient.py",
+    "tools/taskclient.py",
+    "tools/project_config.json"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-multi-thread-collaboration-minimum-chain.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "task JSON now supports role_threads and test_gate for the minimum run-main/dev/test chain"
+    ],
+    "decisions": [
+      "minimum multi-thread collaboration persists in taskclient and TASKS/TASK-*.json before app-server orchestration"
+    ],
+    "risks": [
+      "full role-thread lifecycle and automatic summary aggregation are still not implemented"
+    ],
+    "verification": [
+      "python3 -m py_compile tools/taskclient.py",
+      "python3 tools/taskclient.py --role-threads",
+      "python3 tools/taskclient.py --test-gate"
+    ],
+    "next_steps": [
+      "wire run-main/dev/test thread creation to real appserver sessions later"
+    ],
+    "source_threads": [
+      "dev",
+      "test"
+    ],
+    "updated_at": "2026-03-13T08:06:07+00:00"
+  },
+  "updated_at": "2026-03-13T16:06:00+00:00",
+  "risks": "",
+  "rollback_plan": "",
+  "role_threads": {
+    "dev": {
+      "thread_id": "thread-dev-sample",
+      "thread_path": "/tmp/thread-dev-sample.jsonl",
+      "status": "active"
+    }
+  },
+  "test_gate": {
+    "status": "blocked",
+    "owner_role": "test",
+    "required_axes": [],
+    "evidence": [
+      "test plan drafted"
+    ],
+    "blocking_issues": [
+      "functional regression coverage pending"
+    ],
+    "updated_at": "2026-03-13T08:05:16+00:00"
+  }
+}

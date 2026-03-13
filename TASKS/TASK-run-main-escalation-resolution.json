@@ -1,0 +1,202 @@
+{
+  "task_id": "task-run-main-escalation-resolution",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "run-main escalation resolution",
+  "goal": "补 run-main 收到 task 升级后的确认、回写和关闭链。",
+  "scope": [
+    "tools/taskclient.py",
+    "TASKS/_SCHEMA.task.json",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/FILE_INDEX.md",
+    "TOOLS_METHOD_FLOW_MAP.md",
+    "AGENTS.md"
+  ],
+  "non_goals": [
+    "不扩 run summary",
+    "不做多角色调度器"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "task 机器层有 run-main resolution 字段或约定",
+      "status": "completed"
+    },
+    {
+      "id": "check-2",
+      "text": "taskclient 有最小 run-main resolution 刷新/写回入口",
+      "status": "completed"
+    },
+    {
+      "id": "check-3",
+      "text": "docs/evidence updated",
+      "status": "completed"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-run-main-escalation-resolution.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "task 机器层新增 run_main_resolution_policy 和 run_main_resolution。",
+      "taskclient 新增 --run-main-resolution / --set-run-main-resolution / --refresh-run-main-resolution。",
+      "已验证 pending_ack 和手动 close_escalation 写回。"
+    ],
+    "decisions": [
+      "run-main resolution 只处理升级后的确认与关闭，不替代 escalation 判断。"
+    ],
+    "risks": [],
+    "verification": [
+      "python3 -m py_compile tools/taskclient.py",
+      "python3 tools/taskclient.py --refresh-task-gaps --task-json-file TASKS/TASK-run-main-escalation-resolution.json",
+      "python3 tools/taskclient.py --refresh-task-escalation --task-json-file TASKS/TASK-run-main-escalation-resolution.json",
+      "python3 tools/taskclient.py --refresh-run-main-resolution --task-json-file TASKS/TASK-run-main-escalation-resolution.json",
+      "python3 tools/taskclient.py --set-run-main-resolution --task-json-file TASKS/TASK-run-main-escalation-resolution.json --resolution-status closed --resolution-note 'run-main manually closed resolved escalation.' --close-escalation",
+      "python3 tools/taskclient.py --run-main-resolution --task-json-file TASKS/TASK-run-main-escalation-resolution.json",
+      "make evidence RUN_ID=run-2026-03-11-vnext-release-baseline"
+    ],
+    "next_steps": [
+      "继续定义 run-main 收到升级后的真实 role thread turn 与 resolution 的联动。"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [
+        "dev",
+        "test"
+      ],
+      "open_gaps": [
+        "dev summary missing",
+        "test summary missing"
+      ],
+      "updated_at": "2026-03-13T09:43:06+00:00"
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": "2026-03-13T09:43:06+00:00"
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-13T09:44:06+00:00",
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "closed",
+      "close_escalation": true,
+      "notes": [
+        "run-main manually closed resolved escalation."
+      ],
+      "updated_at": "2026-03-13T09:43:30+00:00"
+    }
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "ready",
+      "thread_id": "run-main-demo-thread",
+      "thread_path": "/tmp/run-main-demo-thread.jsonl",
+      "summary_text": "run-main confirmed current escalation and requests final test clearance.",
+      "summary_turn_id": "run-main-demo-turn",
+      "updated_at": "2026-03-13T09:42:52+00:00"
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "passed",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [
+      "manual verification demo"
+    ],
+    "blocking_issues": [],
+    "updated_at": "2026-03-13T09:42:52+00:00"
+  },
+  "updated_at": "2026-03-13T09:44:06+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

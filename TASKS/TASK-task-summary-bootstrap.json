@@ -1,0 +1,65 @@
+{
+  "task_id": "task-task-summary-bootstrap",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "task summary bootstrap",
+  "goal": "为 task summary 设计并落最小真相源与入口，不扩 run summary。",
+  "scope": [
+    "tools/taskclient.py",
+    "TASKS/_SCHEMA.task.json",
+    "docs/ENTITIES.md",
+    "docs/WORKFLOW.md",
+    "docs/FILE_INDEX.md"
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "task json supports summary payload",
+      "status": "done"
+    },
+    {
+      "id": "check-2",
+      "text": "taskclient can show or update task summary",
+      "status": "done"
+    },
+    {
+      "id": "check-3",
+      "text": "docs describe task summary as task-level aggregate",
+      "status": "done"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-task-summary-bootstrap.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "updated_at": "2026-03-12T12:47:00+00:00",
+  "risks": "",
+  "rollback_plan": "",
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "task summary stored inside TASKS/TASK-*.json"
+    ],
+    "decisions": [
+      "task summary stays inside task json instead of a separate file"
+    ],
+    "risks": [
+      "run summary still not implemented"
+    ],
+    "verification": [
+      "python3 -m py_compile tools/taskclient.py"
+    ],
+    "next_steps": [
+      "design run summary after task summary stabilizes"
+    ],
+    "source_threads": [
+      "fork_current_session:019ce213-6d27-70c3-bb87-b53ba904f28c"
+    ],
+    "updated_at": "2026-03-12T12:46:20+00:00"
+  }
+}

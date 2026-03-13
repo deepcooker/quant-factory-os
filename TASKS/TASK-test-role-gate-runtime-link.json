@@ -1,0 +1,211 @@
+{
+  "task_id": "task-test-role-gate-runtime-link",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "test role gate runtime link",
+  "goal": "把 test 真实 role thread、summarize-role 与 test_gate / escalation close 条件串起来。",
+  "scope": [
+    "tools/appserverclient.py",
+    "tools/taskclient.py",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/FILE_INDEX.md",
+    "TOOLS_METHOD_FLOW_MAP.md",
+    "AGENTS.md"
+  ],
+  "non_goals": [
+    "不扩 run summary",
+    "不做多角色调度器"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "test 可用 fork-role/role-turn/summarize-role 走真实链",
+      "status": "completed"
+    },
+    {
+      "id": "check-2",
+      "text": "可通过 appserverclient 真实写回 test_gate 并自动刷新 task escalation/resolution",
+      "status": "completed"
+    },
+    {
+      "id": "check-3",
+      "text": "docs/evidence updated",
+      "status": "completed"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-test-role-gate-runtime-link.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "test 角色线程已通过真实 runtime 完成 fork-role、role-turn、summarize-role。",
+      "appserverclient 新增 --mark-test-gate，可把 test 真实 summary 证据写回 test_gate。",
+      "在 test_gate=passed 且 run-main summary 存在后，escalation_summary 自动收成 needs_run_main=false。"
+    ],
+    "decisions": [
+      "test gate 的真实运行态写回继续收在 appserverclient，不新开独立客户端。",
+      "多角色证据聚合需要 append_dedup，不能覆盖已有 role_summary_evidence/source_threads。"
+    ],
+    "risks": [],
+    "verification": [
+      "python3 -m py_compile tools/appserverclient.py tools/taskclient.py",
+      "python3 tools/appserverclient.py --fork-role test",
+      "python3 tools/appserverclient.py --role-turn test \"请从独立测试视角说明当前 task 关闭升级项前最关键的验证结论。\"",
+      "python3 tools/appserverclient.py --summarize-role test",
+      "python3 tools/appserverclient.py --mark-test-gate passed \"real test gate passed from runtime\"",
+      "python3 tools/appserverclient.py --fork-role run-main",
+      "python3 tools/appserverclient.py --summarize-role run-main",
+      "python3 tools/taskclient.py --run-main-resolution --task-json-file TASKS/TASK-test-role-gate-runtime-link.json",
+      "make evidence RUN_ID=run-2026-03-11-vnext-release-baseline"
+    ],
+    "next_steps": [
+      "继续把 dev 角色线程接入同一套 runtime 协作链。"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [
+        "dev"
+      ],
+      "open_gaps": [
+        "dev summary missing"
+      ],
+      "updated_at": "2026-03-13T10:01:34+00:00"
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": "2026-03-13T10:01:34+00:00"
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "not_needed",
+      "close_escalation": true,
+      "notes": [
+        "No active escalation requires run-main handling."
+      ],
+      "updated_at": "2026-03-13T10:01:34+00:00"
+    },
+    "role_summary_evidence": [
+      "run-main:019ce6a4-a8c4-7b20-989a-8bf082ce019f",
+      "test:019ce6a2-b02d-7ab2-85d1-1a174f7964e2"
+    ],
+    "source_threads": [
+      "run-main:019ce6a3-60c3-7860-a79d-4a204ad15508",
+      "test:019ce6a1-61dd-7003-a3ef-ebcc3dcfcfd1"
+    ],
+    "updated_at": "2026-03-13T10:02:15+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "019ce6a3-60c3-7860-a79d-4a204ad15508",
+      "thread_path": "/root/.codex/sessions/2026/03/13/rollout-2026-03-13T17-59-52-019ce6a3-60c3-7860-a79d-4a204ad15508.jsonl",
+      "status": "ready"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "019ce6a1-61dd-7003-a3ef-ebcc3dcfcfd1",
+      "thread_path": "/root/.codex/sessions/2026/03/13/rollout-2026-03-13T17-57-41-019ce6a1-61dd-7003-a3ef-ebcc3dcfcfd1.jsonl",
+      "status": "ready"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "ready",
+      "thread_id": "019ce6a3-60c3-7860-a79d-4a204ad15508",
+      "thread_path": "/root/.codex/sessions/2026/03/13/rollout-2026-03-13T17-59-52-019ce6a3-60c3-7860-a79d-4a204ad15508.jsonl",
+      "summary_text": "本角色已完成：已从 run-main 视角把当前 task 的关闭判定收口到机器层规则，确认升级项关闭不再只看 test 线程是否存在，而是要同时满足 `run-main summary exists`、`test_gate passed`、`no blocking issue remains`。当前 task 已具备 `run_main_resolution_policy`、`run_main_resolution`、`role_threads`、`role_summaries` 与 `test_gate` 这些正式字段，且 test 侧真实线程与测试摘要证据已经进入 task 机器层，`test_gate` 当前状态已为 passed。\n\n风险与阻塞：当前最大的阻塞不是 test gate，而是 run-main 自身的关闭确认还未完成。机器层仍显示 `role_summaries.run-main` 为 planned、`task_summary.gap_summary` 里存在 `run-main summary missing`、`task_summary.escalation_summary.needs_run_main=true`，且 `run_main_resolution.status=pending_ack`、`close_escalation=false`，这意味着升级项还不能正式关闭；同时三个 acceptance 仍是 pending，说明 task 级完成态尚未被显式收口。\n\n建议下一步：先把本次 run-main 去噪总结正式写入 `role_summaries.run-main`，随后刷新 task gaps / escalation / run-main resolution，让机器层重新计算关闭条件。若刷新后仍保持 `test_gate=passed`、无 blocking issue，且 run-main summary 已存在，再推进 `run_main_resolution` 进入可关闭状态，并同步更新 task summary 与 run evidence，把“test gate 已过、升级项可否关闭”的最终结论沉淀到 task 层。",
+      "summary_turn_id": "019ce6a4-a8c4-7b20-989a-8bf082ce019f",
+      "updated_at": "2026-03-13T10:01:34+00:00"
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "ready",
+      "thread_id": "019ce6a1-61dd-7003-a3ef-ebcc3dcfcfd1",
+      "thread_path": "/root/.codex/sessions/2026/03/13/rollout-2026-03-13T17-57-41-019ce6a1-61dd-7003-a3ef-ebcc3dcfcfd1.jsonl",
+      "summary_text": "本角色已完成：已从独立测试视角确认当前 task 的关键关闭条件不是“角色线程存在”本身，而是 test 真实线程产出的验证结论必须进入 task 机器层并驱动 `test_gate` 与升级关闭判断。当前已能确认正式主线要求 test 作为独立质量门参与关闭决策，且关闭升级项至少需要满足 `test_gate passed`、无 blocking issue，并与 run-main resolution 状态联动。\n\n风险与阻塞：当前 task 机器层仍未形成可关闭的测试证据链，`test_gate` 还是待通过状态，`role_summaries.test` 还没有稳定摘要，说明 `fork-role -> role-turn -> summarize-role -> test_gate` 的正式闭环在本 task 上还未完成。若此时提前关闭升级项，会把“测试角色已接入 runtime”和“测试验证已完成并写回机器层”混为一谈，导致 task summary 与 escalation close 缺少独立测试证据支撑。\n\n建议下一步：先在当前 test 角色线程上完成一次真实 `role-turn` 与 `summarize-role`，沉淀只保留稳定验证结论的 role summary，再把结果写入 `test_gate`，明确各验证维度是否通过以及是否存在 blocking issue。只有当 test 侧机器层状态明确为通过，且不再存在阻塞项时，再推动 run-main resolution 进入关闭升级项。",
+      "summary_turn_id": "019ce6a2-b02d-7ab2-85d1-1a174f7964e2",
+      "updated_at": "2026-03-13T09:59:21+00:00"
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "passed",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [
+      "test-summary-turn:019ce6a2-b02d-7ab2-85d1-1a174f7964e2",
+      "test-thread:019ce6a1-61dd-7003-a3ef-ebcc3dcfcfd1",
+      "real test gate passed from runtime"
+    ],
+    "blocking_issues": [],
+    "updated_at": "2026-03-13T09:59:39+00:00"
+  },
+  "updated_at": "2026-03-13T10:02:15+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

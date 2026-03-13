@@ -1,0 +1,63 @@
+{
+  "task_id": "task-project-bootstrap-learning-protocol",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "project bootstrap learning protocol",
+  "goal": "为未接入基座的新项目定义最小同频学习与文档补齐协议，强调通用 PROJECT_GUIDE 先行。",
+  "scope": [
+    "docs/PROJECT_GUIDE.md",
+    "docs/WORKFLOW.md",
+    "docs/FILE_INDEX.md"
+  ],
+  "non_goals": [
+    "不实现跨项目复制工具",
+    "不修改 appserverclient/taskclient 运行时"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "新增最小 bootstrap 协议文档或章节; PROJECT_GUIDE/WORKFLOW/FILE_INDEX 口径同步; evidence updated",
+      "status": "completed"
+    }
+  ],
+  "inputs": [
+    "docs/PROJECT_GUIDE.md",
+    "docs/WORKFLOW.md",
+    "docs/FILE_INDEX.md",
+    "docs/ENTITIES.md"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-project-bootstrap-learning-protocol.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "新增 docs/PROJECT_BOOTSTRAP_PROTOCOL.md，定义陌生项目尚未接入基座时的最小学习与文档补齐协议。",
+      "在 PROJECT_GUIDE 与 WORKFLOW 中补了最小入口，明确先 bootstrap 再进入正式主线。"
+    ],
+    "decisions": [
+      "通用 PROJECT_GUIDE 继续作为跨项目学习协议，项目化 owner docs 通过 bootstrap 协议逐步补齐。"
+    ],
+    "risks": [
+      "若后续把 bootstrap 协议误当成自动化接入脚本，会再次混淆学习层与实现层。"
+    ],
+    "verification": [
+      "docs/PROJECT_BOOTSTRAP_PROTOCOL.md 已创建",
+      "docs/PROJECT_GUIDE.md、docs/WORKFLOW.md、docs/FILE_INDEX.md 已同步引用"
+    ],
+    "next_steps": [
+      "继续讨论是否需要把陌生项目首轮 intake 输出再压成独立模板文件。"
+    ],
+    "source_threads": [
+      "fork_current_session"
+    ],
+    "updated_at": "2026-03-13T15:32:00+00:00"
+  },
+  "updated_at": "2026-03-13T15:32:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

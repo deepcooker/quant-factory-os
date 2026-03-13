@@ -1,0 +1,40 @@
+{
+  "task_id": "task-entity-layering-clarifications",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "entity layering clarifications",
+  "goal": "把 thread/task/run/baseline 四层职责与数据流以最小方式写入 owner docs。",
+  "scope": [
+    "docs/ENTITIES.md",
+    "docs/WORKFLOW.md"
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "entities defines thread-task-run-baseline layering",
+      "status": "done"
+    },
+    {
+      "id": "check-2",
+      "text": "workflow describes current_summary as thread-level transitional summary",
+      "status": "done"
+    },
+    {
+      "id": "check-3",
+      "text": "workflow states baseline should eventually prefer run-level summaries",
+      "status": "done"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-entity-layering-clarifications.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "updated_at": "2026-03-12T20:41:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}
