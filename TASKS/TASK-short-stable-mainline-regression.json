@@ -1,0 +1,182 @@
+{
+  "task_id": "task-short-stable-mainline-regression",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "short stable mainline regression",
+  "goal": "围绕当前最短稳定主线做一轮回归验证，确认默认路径在不扩结构的前提下可持续稳定运行。",
+  "scope": [
+    "tools/init.py",
+    "tools/appserverclient.py",
+    "tools/gitclient.py",
+    "tools/taskclient.py",
+    "tools/evidence.py",
+    "docs/WORKFLOW.md"
+  ],
+  "non_goals": [
+    "不新增功能，不改对象模型，不引入新角色配置系统"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "完成一轮短主线回归并记录结论与阻塞",
+      "status": "completed"
+    }
+  ],
+  "inputs": [
+    "docs/WORKFLOW.md",
+    "docs/FILE_INDEX.md",
+    "tools/project_config.json"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-short-stable-mainline-regression.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "short stable mainline regression completed for init, learnbaseline, and fork-current"
+    ],
+    "decisions": [
+      "treat sandbox access to /root/.codex/sessions as environment-specific, not a mainline logic failure"
+    ],
+    "risks": [
+      "fork-current still needs escalated access to /root/.codex/sessions in the current sandboxed environment"
+    ],
+    "verification": [
+      "python3 tools/init.py started normally with visible INIT_STEP output",
+      "python3 tools/appserverclient.py --learnbaseline passed in sandbox",
+      "python3 tools/appserverclient.py --fork-current passed after escalated rerun and wrote a new fork_current_session"
+    ],
+    "next_steps": [
+      "keep shortest stable mainline as the default path and treat role-thread steps as opt-in"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": ""
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "not_needed",
+      "close_escalation": false,
+      "notes": [
+        "This regression task only validates the shortest stable mainline and does not require run-main escalation."
+      ],
+      "updated_at": "2026-03-13T14:44:42+00:00"
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-13T14:44:42+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-13T14:44:42+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

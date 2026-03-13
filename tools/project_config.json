@@ -10,14 +10,14 @@
   "runtime_state": {
     "current_project_id": "quant-factory-os",
     "current_run_id": "run-2026-03-11-vnext-release-baseline",
-    "current_task_id": "task-shortest-stable-mainline-documentation",
-    "current_task_file": "TASKS/TASK-shortest-stable-mainline-documentation.md",
-    "current_task_json_file": "TASKS/TASK-shortest-stable-mainline-documentation.json",
+    "current_task_id": "task-codex-full-access-runtime-prerequisite",
+    "current_task_file": "TASKS/TASK-codex-full-access-runtime-prerequisite.md",
+    "current_task_json_file": "TASKS/TASK-codex-full-access-runtime-prerequisite.json",
     "current_status": "completed",
-    "current_updated_at": "2026-03-13T14:30:44+00:00"
+    "current_updated_at": "2026-03-13T15:00:57+00:00"
   },
   "task_registry": {
-    "active_task_json_file": "TASKS/TASK-shortest-stable-mainline-documentation.json",
+    "active_task_json_file": "TASKS/TASK-codex-full-access-runtime-prerequisite.json",
     "queue_json_file": "TASKS/QUEUE.json",
     "task_md_is_legacy_view": true,
     "queue_md_is_legacy_view": true
@@ -27,33 +27,33 @@
       "thread_id": "019cd913-0405-70c2-9690-983b199909ce",
       "thread_path": "/root/.codex/sessions/2026/03/11/rollout-2026-03-11T02-47-08-019cd913-0405-70c2-9690-983b199909ce.jsonl",
       "status": "ready",
-      "updated_at": "2026-03-13T12:18:50.276000+00:00",
+      "updated_at": "2026-03-13T14:59:18.950344+00:00",
       "source": "refresh_baseline_main",
       "model": "gpt-5.4",
       "effort": "low"
     },
     "fork_current_session": {
-      "thread_id": "019ce73f-528c-7310-989a-9e420b2142c1",
-      "thread_path": "/root/.codex/sessions/2026/03/13/rollout-2026-03-13T20-50-12-019ce73f-528c-7310-989a-9e420b2142c1.jsonl",
+      "thread_id": "019ce7b4-c653-79c3-8482-eacc971679cf",
+      "thread_path": "/root/.codex/sessions/2026/03/13/rollout-2026-03-13T22-58-30-019ce7b4-c653-79c3-8482-eacc971679cf.jsonl",
       "status": "ready",
-      "updated_at": "2026-03-13T12:50:12.907075+00:00",
-      "source": "fork_current_main",
+      "updated_at": "2026-03-13T14:59:39.870713+00:00",
+      "source": "summarize_current_main",
       "forked_from_thread_id": "019cd913-0405-70c2-9690-983b199909ce",
       "model": "gpt-5.4",
       "effort": "low"
     },
     "current_summary": {
-      "thread_id": "019ce142-c439-7ef2-974a-2ae542025d0f",
-      "thread_path": "/root/.codex/sessions/2026/03/12/rollout-2026-03-12T16-56-15-019ce142-c439-7ef2-974a-2ae542025d0f.jsonl",
-      "status": "refreshed",
-      "updated_at": "2026-03-13T12:18:50.277147+00:00",
-      "source": "refresh_baseline_main",
+      "thread_id": "019ce7b4-c653-79c3-8482-eacc971679cf",
+      "thread_path": "/root/.codex/sessions/2026/03/13/rollout-2026-03-13T22-58-30-019ce7b4-c653-79c3-8482-eacc971679cf.jsonl",
+      "status": "ready",
+      "updated_at": "2026-03-13T14:59:39.871823+00:00",
+      "source": "summarize_current_main",
       "model": "gpt-5.4",
       "effort": "low",
-      "summary_text": "主线更新：当前 session 已明确项目正式主线是以 `appserverclient` 为核心的 baseline/fork/current-turn 会话生命周期，而不是旧的 `learn/ready/orient/...` 兼容链；运行时唯一真相源也已收口到 `tools/project_config.json -> runtime_state`，task/queue 的机器真相源切到 `TASKS/TASK-*.json` 与 `TASKS/QUEUE.json`。本轮 active task `task-appserverclient-summarize-refresh-baseline-loop` 的主线价值，是补齐 `summarize-current` 与 `refresh-baseline`，让当前工作结论能去噪回灌到 baseline，而不是停留在单次 fork session 里。\n\n新的约束与风险：`TASKS/*.md`、`TASKS/QUEUE.md`、旧 shell 入口和历史 Python 流程都只剩迁移期或归档价值，后续判断与实现不能再把它们当正式主线依据。当前最大风险不是功能多少，而是 baseline refresh 闭环还未正式打通；如果 `summarize-current` 不能稳定沉淀主线结论、`refresh-baseline` 不能稳定写回 baseline，会继续依赖人工复述，导致 session continuity 和同频质量不稳；同时 `appserverclient --fork-current` 仍有本地 sessions 权限风险，说明新主线还有运行时阻塞点。\n\n下一步：直接完成 `appserverclient --summarize-current`、`--refresh-baseline` 和 `runtime_state.current_summary` 指针写回，让 run 级去噪摘要成为 baseline 的正式输入。摘要内容必须只保留主线更新、约束风险和下一步，不回灌聊天过程、历史兼容细节或试错噪音；文档侧同步到 `docs/WORKFLOW.md` 与 `docs/FILE_INDEX.md`，确保 baseline 学习、当前 fork 工作和去噪回灌使用同一套正式口径。",
-      "summary_turn_id": "019ce14f-1553-7fe3-9bc5-baba6d42dfc2",
-      "baseline_refresh_text": "主线理解补充为：run 级机器摘要写回链已稳定完成，`run_summary.json` 现在具备独立 writeback 入口，且正式保留在 `tools/evidence.py`，不再引入新的 `runclient`。同时，多角色 runtime 链的验证标准已经收敛为保留真实角色 summary 并输出可解释的 machine state，而不是追求表面关闭。\n\n当前阶段补充为：当前阶段已完成 run-level machine summary writeback 稳定化，项目从“能否写回 run summary”进入“如何让 baseline 正式消费 run summary”的下一阶段。多角色集成链已有稳定结论，至少 test 与 run-main 的真实 summary 已并入 run 级结果；当前保留的主要风险是 baseline 侧尚未接入该摘要链，且 test gate 仍按设计保持 blocked 以表达可解释的未关闭状态。\n\n下一步补充为：优先把 baseline refresh 正式接到 run summary 消费路径上，让 baseline 默认吸收 run 级稳定结论。后续任务应直接建立在已验证的多角色集成链之上推进，避免回退到单角色 runtime plumbing 的重复建设。",
-      "baseline_refresh_turn_id": "019ce722-711b-70e3-961f-59eff4a2ed0c",
+      "summary_text": "主线更新：本轮 session 的稳定结论是，baseline 同频与回灌链已经进一步收口为“先做当前 session 去噪，再把稳定增量写回 baseline”，且回灌内容应优先吸收 run summary 中已经稳定的结论，而不是重复重建全量 baseline。对 baseline 真正有价值的增量，已明确聚焦为主线理解、当前阶段和下一步这三类稳定认知，不再携带会话过程本身。\n\n新的约束与风险：当前总结与回灌必须坚持去噪原则，只保留对正式主线、稳定约束和后续动作有价值的结论，不能把闲聊、重复试错、兼容历史或局部过程带回 baseline。当前风险不在于缺少总结入口，而在于如果回灌继续混入 session 噪音，就会重新污染 baseline，使其失去作为长期学习快照的稳定性。\n\n下一步：围绕当前 task `task-short-stable-mainline-regression`，继续把 summarize-current 和 baseline refresh 的输出压缩为短、稳、可复用的主线摘要，并保持固定结构输出。后续 baseline refresh 应默认消费这种去噪后的稳定摘要，只沉淀 run/session 级有效结论、约束和下一动作。",
+      "summary_turn_id": "019ce7b5-5649-79c3-ad5f-7c7f66704f32",
+      "baseline_refresh_text": "主线理解补充为：run 级摘要已经成为稳定的机器证据层，现已具备独立 writeback 入口，并继续收口在 evidence 工具内，而不是拆出新的 runclient。摘要聚合规则也进一步明确，merge rule table 现在区分 `append_dedup` 与 `merge_rewrite` 两条路径；同时，多角色 runtime summary 已能在 run 层长期保留，说明项目正在把角色级运行结果沉淀为可持续消费的 run 级认知。\n\n当前阶段补充为：本轮已完成 run-level machine summary writeback 的稳定化，项目进入“run summary 已稳定、baseline 尚未正式消费”的过渡阶段。当前稳定结论包括：run summary 写回链已经成立，多角色 runtime 摘要已能保留到 run 层，并能输出可解释的 test gate 状态；当前保留风险是 baseline 侧尚未接入 run summary，且 test gate 仍按设计保持 blocked，用于表达非关闭但可解释的状态，而不是最终发布完成。\n\n下一步补充为：优先把 baseline refresh 直接接到 run summary 消费路径上，让 baseline 默认吸收 run 级稳定结论。后续新任务应建立在已验证的多角色集成链之上继续推进，不再回头重做单角色 runtime plumbing。",
+      "baseline_refresh_turn_id": "019ce7b5-5686-7823-aca2-68b5758edfcf",
       "baseline_refresh_input_type": "run_summary",
       "baseline_refresh_input_ref": "run-2026-03-11-vnext-release-baseline"
     }
