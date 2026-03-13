@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_id": "quant-factory-os",
-  "updated_at": "2026-03-13T14:30:01+00:00",
+  "updated_at": "2026-03-13T14:42:10+00:00",
   "items": [
     {
       "queue_id": "queue-vnext-release-baseline",
@@ -255,6 +255,32 @@
         {
           "id": "check-1",
           "text": "owner docs 明确最短稳定主线和当前冻结边界",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-short-stable-mainline-regression",
+      "title": "short stable mainline regression",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-short-stable-mainline-regression",
+      "task_json_file": "TASKS/TASK-short-stable-mainline-regression.json",
+      "task_md_file": "TASKS/TASK-short-stable-mainline-regression.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "围绕当前最短稳定主线做一轮回归验证，确认默认路径在不扩结构的前提下可持续稳定运行。",
+      "scope": [
+        "tools/init.py",
+        "tools/appserverclient.py",
+        "tools/gitclient.py",
+        "tools/taskclient.py",
+        "tools/evidence.py",
+        "docs/WORKFLOW.md"
+      ],
+      "acceptance": [
+        {
+          "id": "check-1",
+          "text": "完成一轮短主线回归并记录结论与阻塞",
           "status": "pending"
         }
       ]

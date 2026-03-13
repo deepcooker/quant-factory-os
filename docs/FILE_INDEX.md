@@ -45,6 +45,7 @@
 当前最短稳定操作面：
 - `init -> learnbaseline -> 明确 run 方向 -> fork-current -> （按需 fork-role/role-turn/summarize-role/mark-test-gate） -> summarize-current -> refresh-baseline -> gitclient`
 - 如果没有真实多角色需要，不要额外引入 role thread 步骤
+- 如果在 Codex TUI 内做真实 session/runtime 调试，`Default` 权限模式可能拦住 workspace 外的 `/root/.codex/sessions`；此时应临时切 `/permissions -> Full Access`，避免把外层权限问题误判为主线逻辑问题
 
 ## 5. Prompt / Learning Assets
 

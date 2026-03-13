@@ -357,6 +357,34 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 - `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --compact-run-summary` -> pass; `baseline_ready_summary` 已更新成更自然表述
 - `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --run-summary` -> pass; 可见新的 prose-like `baseline_ready_summary`
 
+## Short stable mainline regression
+- 新建并完成 `task-short-stable-mainline-regression`，只验证当前最短稳定主线，不扩结构，也不引入 role thread。
+- 本轮真实执行了：
+  - `python3 tools/init.py`
+  - `python3 tools/appserverclient.py --learnbaseline`
+  - `python3 tools/appserverclient.py --fork-current`
+- 结论是：
+  - `learnbaseline` 在当前环境直接通过
+  - `fork-current` 在当前沙箱中会因 `/root/.codex/sessions` 访问受限而失败
+  - 同一命令在提权后通过，并成功写回新的 `fork_current_session`
+- 这说明当前最短稳定主线的 repo 逻辑仍然成立；本轮暴露的是环境权限差异，而不是 formal mainline 失效。
+
+## Commands / Outputs (short stable mainline regression)
+- `python3 tools/init.py` -> started normally; visible `INIT_STEP[...]` output observed
+- `python3 tools/appserverclient.py --learnbaseline` -> pass
+- `python3 tools/appserverclient.py --fork-current` -> sandbox permission denied on `/root/.codex/sessions`
+- escalated `python3 tools/appserverclient.py --fork-current` -> pass; `fork_current_thread_id=019ce7a6-464f-7d52-8820-1a8c4376933f`
+
+## Codex Full Access runtime prerequisite
+- 新建并完成 `task-codex-full-access-runtime-prerequisite`，只补最小运行前提说明，不改 formal mainline。
+- 本轮确认：在 Codex TUI 的 `Default` 权限模式下，真实 `baseline / fork-current / summarize-current / refresh-baseline` 调试会受 workspace 外 `/root/.codex/sessions` 边界影响；切到 `/permissions -> Full Access` 后，这条真实 session 链恢复正常。
+- 这条说明已同步到 [docs/WORKFLOW.md](/root/quant-factory-os/docs/WORKFLOW.md) 和 [docs/FILE_INDEX.md](/root/quant-factory-os/docs/FILE_INDEX.md)，定位为运行前提，而不是主线逻辑修复。
+
+## Commands / Outputs (Codex Full Access runtime prerequisite)
+- `python3 tools/appserverclient.py --fork-current` -> pass under Codex TUI `Full Access`; `fork_current_thread_id=019ce7b4-c653-79c3-8482-eacc971679cf`
+- `python3 tools/appserverclient.py --summarize-current` -> pass; `current_summary_text_start ... current_summary_text_end`
+- `python3 tools/appserverclient.py --refresh-baseline` -> pass; `baseline_refresh_input_type=run_summary`
+
 ## Baseline prefers run summary
 - 新建并完成 `task-baseline-prefers-run-summary`，把 `appserverclient --refresh-baseline` 的输入优先级改为：
   - `reports/<RUN_ID>/run_summary.json`

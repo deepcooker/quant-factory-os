@@ -169,6 +169,16 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 - 通用 `PROJECT_GUIDE` 继续承担跨项目学习协议角色；项目化 owner docs 则通过 bootstrap 协议逐步补齐。
 - 这样可以把“学习协议层”和“自动化实现层”分开，先验证 AI 是否真的能从陌生项目材料中自我学习、自我建模，再决定后续接入深度。
 
+## Short stable mainline regression decision
+- 当前最短稳定主线维持不变，继续作为默认推荐路径。
+- `fork-current` 在当前会话环境里的失败被判定为沙箱访问 `/root/.codex/sessions` 的权限差异，不是 repo 主线逻辑失败。
+- 本轮 stop reason 记为 `task_done`；后续处理方向不是改 formal mainline，而是在需要真实 session 文件访问的环境里继续执行或显式提权。
+
+## Codex Full Access runtime prerequisite decision
+- 对 Codex TUI 内的真实 session/runtime 调试，当前选择补充运行前提说明，而不是改 formal mainline。
+- 在 `Default` 权限模式下，workspace 外的 `/root/.codex/sessions` 可能被外层权限边界拦住；切到 `/permissions -> Full Access` 后，`fork-current / summarize-current / refresh-baseline` 已真实通过。
+- 因此这类失败应判定为外层会话权限问题，不应继续误判为 repo 主线逻辑问题。
+
 ## Multi-thread collaboration minimum-chain decision
 - 当前先不实现完整多 agent orchestration，而是先把最小可用协作链落到 task 机器层：`run-main -> dev/test -> thread summary -> task summary`。
 - `test` 的独立性先通过 `test_gate` 固化为 task 内质量门，而不是继续停留在口头规则；`dev` 与其他角色线程通过 `role_threads` 留下最小绑定关系。

@@ -272,6 +272,11 @@ run 主线程在这一步至少要收敛出：
 7. `python3 tools/appserverclient.py --refresh-baseline`
 8. `python3 tools/gitclient.py --commit`
 
+运行前提补充：
+- 在普通终端中直接运行上述命令时，只要当前用户能访问真实 Codex session 文件即可。
+- 在 Codex TUI 中做真实 `baseline / fork-current / summarize-current / refresh-baseline` 调试时，如果权限模式还是 `Default`，对 workspace 外的 `/root/.codex/sessions` 访问可能被拦住。
+- 这类真实 session/runtime 调试建议临时切到 `/permissions -> Full Access`；否则 `fork-current` 一类命令可能因为外层权限边界失败，而不是 repo 主线逻辑失败。
+
 当前冻结原则：
 - 不为“更纯”继续拆出更多中间层
 - 不把 task policy 重新放回 runtime
