@@ -2,7 +2,7 @@
   "task_id": "task-taskclient-unify-entry",
   "run_id": "run-2026-03-11-vnext-release-baseline",
   "project_id": "quant-factory-os",
-  "status": "active",
+  "status": "completed",
   "priority": "P1",
   "title": "taskclient unify entry",
   "goal": "直接弃用 tools/task.sh，并把 tools/taskstore.py 的公共方法合入 tools/taskclient.py，统一 task 对外入口。",
@@ -51,7 +51,7 @@
     "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
     "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
   },
-  "updated_at": "2026-03-11T10:43:32+00:00",
+  "updated_at": "2026-03-13T11:47:00+00:00",
   "risks": "",
   "rollback_plan": ""
 }

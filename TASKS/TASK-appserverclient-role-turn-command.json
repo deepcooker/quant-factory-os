@@ -2,7 +2,7 @@
   "task_id": "task-appserverclient-role-turn-command",
   "run_id": "run-2026-03-11-vnext-release-baseline",
   "project_id": "quant-factory-os",
-  "status": "active",
+  "status": "completed",
   "priority": "P1",
   "title": "appserverclient role turn command",
   "goal": "新增 appserverclient --role-turn，让已绑定的 dev/test role thread 能执行真实 current-turn。",
@@ -20,7 +20,7 @@
     {
       "id": "check-1",
       "text": "新增 --role-turn 命令; 已绑定 role thread 可执行真实 turn; docs/evidence updated",
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "inputs": [
@@ -34,14 +34,22 @@
     "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
   },
   "task_summary": {
-    "status": "draft",
-    "key_updates": [],
-    "decisions": [],
+    "status": "completed",
+    "key_updates": [
+      "role-turn command behavior was later validated in task-appserverclient-role-turn-runtime"
+    ],
+    "decisions": [
+      "this placeholder task is closed as superseded by later completed runtime validation tasks"
+    ],
     "risks": [],
-    "verification": [],
-    "next_steps": [],
+    "verification": [
+      "python3 tools/appserverclient.py --role-turn test \"请用一句话说明你当前作为 test 线程的职责。\""
+    ],
+    "next_steps": [
+      "use task-appserverclient-role-turn-runtime as the canonical role-turn evidence"
+    ],
     "source_threads": [],
-    "updated_at": ""
+    "updated_at": "2026-03-13T11:47:00+00:00"
   },
   "role_threads": {
     "run-main": {
@@ -78,7 +86,7 @@
     "blocking_issues": [],
     "updated_at": ""
   },
-  "updated_at": "2026-03-13T08:19:05+00:00",
+  "updated_at": "2026-03-13T11:47:00+00:00",
   "risks": "",
   "rollback_plan": ""
 }

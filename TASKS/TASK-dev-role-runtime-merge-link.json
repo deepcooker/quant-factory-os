@@ -1,0 +1,207 @@
+{
+  "task_id": "task-dev-role-runtime-merge-link",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "dev role runtime merge link",
+  "goal": "把 dev 真实 role thread 接入 runtime，并让 summarize-role 后自动 merge 进 task summary。",
+  "scope": [
+    "tools/appserverclient.py",
+    "tools/taskclient.py",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/FILE_INDEX.md",
+    "TOOLS_METHOD_FLOW_MAP.md",
+    "AGENTS.md"
+  ],
+  "non_goals": [
+    "不扩 run summary",
+    "不做多角色调度器"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "dev 可用 fork-role/role-turn/summarize-role 走真实链",
+      "status": "completed"
+    },
+    {
+      "id": "check-2",
+      "text": "summarize-role 后自动 merge-role-summaries 到 task summary",
+      "status": "completed"
+    },
+    {
+      "id": "check-3",
+      "text": "docs/evidence updated",
+      "status": "completed"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-dev-role-runtime-merge-link.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "dev role thread forked into real runtime",
+      "dev role-turn completed on real thread",
+      "dev summary merged"
+    ],
+    "decisions": [
+      "dev role runtime validation stays task-local; run-main/test gates remain separate follow-up tasks"
+    ],
+    "risks": [
+      "gap_summary still reports run-main/test missing because task policy is generic across roles, but that does not block this dev-focused validation task"
+    ],
+    "verification": [
+      "python3 -m py_compile tools/appserverclient.py tools/taskclient.py",
+      "python3 tools/appserverclient.py --fork-role dev",
+      "python3 tools/appserverclient.py --role-turn dev \"请从开发视角说明当前 task 已完成什么、还缺什么。\"",
+      "python3 tools/appserverclient.py --summarize-role dev"
+    ],
+    "next_steps": [
+      "continue with integrated multi-role runtime chain on top of this verified dev path"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [
+        "run-main",
+        "test"
+      ],
+      "open_gaps": [
+        "run-main summary missing",
+        "test summary missing",
+        "test_gate=pending"
+      ],
+      "updated_at": "2026-03-13T10:36:34+00:00"
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": true,
+      "reasons": [
+        "run-main summary missing",
+        "test_gate=pending"
+      ],
+      "updated_at": "2026-03-13T10:36:34+00:00"
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "pending_ack",
+      "close_escalation": false,
+      "notes": [
+        "Waiting for run-main summary."
+      ],
+      "updated_at": "2026-03-13T10:36:34+00:00"
+    },
+    "role_summary_evidence": [
+      "dev:019ce6c4-9521-7861-b5f7-4881ea0e2f65"
+    ],
+    "source_threads": [
+      "dev:019ce6aa-e6cb-7903-9f84-938b3e83238c"
+    ],
+    "updated_at": "2026-03-13T10:37:49+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "019ce6aa-e6cb-7903-9f84-938b3e83238c",
+      "thread_path": "/root/.codex/sessions/2026/03/13/rollout-2026-03-13T18-08-05-019ce6aa-e6cb-7903-9f84-938b3e83238c.jsonl",
+      "status": "ready"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "ready",
+      "thread_id": "019ce6aa-e6cb-7903-9f84-938b3e83238c",
+      "thread_path": "/root/.codex/sessions/2026/03/13/rollout-2026-03-13T18-08-05-019ce6aa-e6cb-7903-9f84-938b3e83238c.jsonl",
+      "summary_text": "本角色已完成：当前 task 依赖的公共能力已经具备，`appserverclient` 已支持 `--fork-role`、`--role-turn`、`--summarize-role`，`taskclient` 已支持 `--merge-role-summaries`，相关 owner docs 也已把 role summary 自动 merge 进 task summary 的正式口径写清。就本 task 而言，`dev` 角色线程已经完成真实绑定并写入当前 task，说明 dev role thread 已接入 runtime 基础层，不再停留在纯设计状态。\n\n风险与阻塞：当前 task 还没有形成 dev 侧的闭环证据，`role_summaries.dev` 仍为空，`task_summary` 仍是 draft，说明还缺少一次真实的 `dev role-turn -> summarize-role` 结果写回，也还没有证明 summarize 后会自动 merge 到当前 task summary。换句话说，现在已证明“能力存在”和“dev 线程已绑定”，但还没有证明“当前 task 上的 dev 真链路已跑通并自动沉淀”，因此 acceptance 仍不能关闭。\n\n建议下一步：先在当前 dev 线程上执行一次真实 `role-turn`，聚焦实现视角说明这个 task 还缺的最小落点，再立即执行 `summarize-role dev`，确认摘要被写入 `role_summaries.dev`，并自动联动更新 `task_summary.role_summary_evidence`、`source_threads` 与聚合内容。完成这条验证后，再同步更新 task evidence 和 owner docs 状态，把“公共能力已具备”转成“当前 dev task 已闭环”的明确证据。",
+      "summary_turn_id": "019ce6c4-9521-7861-b5f7-4881ea0e2f65",
+      "updated_at": "2026-03-13T10:36:34+00:00"
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-13T10:37:49+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

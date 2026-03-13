@@ -1,0 +1,181 @@
+{
+  "task_id": "task-run-summary-merge-quality",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "run-summary-merge-quality",
+  "goal": "Improve run-level semantic merge quality so merge_rewrite fields produce more stable run-level expressions instead of lightly humanized task fragments.",
+  "scope": [
+    "tools/evidence.py",
+    "reports/_SCHEMA.run_summary.json",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/FILE_INDEX.md",
+    "TOOLS_METHOD_FLOW_MAP.md",
+    "reports/run-2026-03-11-vnext-release-baseline/run_summary.json"
+  ],
+  "non_goals": [
+    "Do not introduce model-based rewriting or change baseline refresh boundaries."
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "merge_rewrite produces more stable run-level phrasing for common task summary patterns and the rule is documented.",
+      "status": "completed"
+    }
+  ],
+  "inputs": [
+    "tools/evidence.py",
+    "reports/run-2026-03-11-vnext-release-baseline/run_summary.json",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-run-summary-merge-quality.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "merge_rewrite now canonicalizes common multi-role and test-gate patterns into steadier run-level phrasing"
+    ],
+    "decisions": [
+      "high-frequency semantic cleanup should happen in the merge_rewrite path before baseline compaction, not only in the final display layer"
+    ],
+    "risks": [
+      "canonicalization is intentionally narrow and still leaves uncommon task-local phrasings untouched"
+    ],
+    "verification": [
+      "python3 -m py_compile tools/evidence.py",
+      "python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --normalize-run-summary"
+    ],
+    "next_steps": [
+      "expand canonical merge rules only when a repeated run-level pattern appears often enough to justify a stable rule"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": ""
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "pending_ack",
+      "close_escalation": false,
+      "notes": [],
+      "updated_at": ""
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-13T13:04:06+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-13T13:04:06+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

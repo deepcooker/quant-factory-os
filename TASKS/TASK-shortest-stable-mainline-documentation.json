@@ -1,0 +1,178 @@
+{
+  "task_id": "task-shortest-stable-mainline-documentation",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "shortest stable mainline documentation",
+  "goal": "把当前最短稳定主线、四个主工具边界和不应再继续拆的原则写成非常清晰的操作面。",
+  "scope": [
+    "docs/WORKFLOW.md",
+    "docs/FILE_INDEX.md",
+    "AGENTS.md"
+  ],
+  "non_goals": [
+    "不改任何 runtime 行为，不新增命令"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "owner docs 明确最短稳定主线和当前冻结边界",
+      "status": "completed"
+    }
+  ],
+  "inputs": [
+    "AGENTS.md",
+    "docs/WORKFLOW.md",
+    "docs/FILE_INDEX.md"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-shortest-stable-mainline-documentation.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "shortest stable mainline is now written explicitly in WORKFLOW and FILE_INDEX"
+    ],
+    "decisions": [
+      "pause further splitting and keep the current operator path as the recommended stable path"
+    ],
+    "risks": [
+      "adding more optional middle steps would increase flow length and reduce debug clarity"
+    ],
+    "verification": [
+      "python3 -m py_compile tools/appserverclient.py tools/taskclient.py tools/evidence.py tools/gitclient.py",
+      "make evidence RUN_ID=run-2026-03-11-vnext-release-baseline"
+    ],
+    "next_steps": [
+      "treat this shortest path as the default until a new capability proves it needs another formal step"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": ""
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "not_needed",
+      "close_escalation": true,
+      "notes": [
+        "documentation-only shortest-path clarification"
+      ],
+      "updated_at": "2026-03-13T14:30:44+00:00"
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-13T14:30:44+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-13T14:30:44+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

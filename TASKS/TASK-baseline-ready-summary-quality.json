@@ -1,0 +1,188 @@
+{
+  "task_id": "task-baseline-ready-summary-quality",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "baseline-ready-summary-quality",
+  "goal": "提升 baseline_ready_summary 的表达质量，减少 task 前缀和机械列表感，让 baseline refresh 吃到更像真正 run-level summary 的压缩表述。",
+  "scope": [
+    "tools/evidence.py",
+    "tools/appserverclient.py",
+    "reports/_SCHEMA.run_summary.json",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/FILE_INDEX.md",
+    "reports/run-2026-03-11-vnext-release-baseline/run_summary.json"
+  ],
+  "non_goals": [
+    "不改 baseline thread storage",
+    "不引入新的 summarizer client"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "baseline_ready_summary expression improved",
+      "status": "completed"
+    },
+    {
+      "id": "check-2",
+      "text": "run_summary updated",
+      "status": "completed"
+    },
+    {
+      "id": "check-3",
+      "text": "docs and evidence updated",
+      "status": "completed"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-baseline-ready-summary-quality.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "baseline_ready_summary now reads more like run-level prose instead of task-prefixed mechanical lists"
+    ],
+    "decisions": [
+      "baseline-ready summary quality should be improved inside evidence.py by normalizing common task-prefixed phrases before baseline refresh consumes them"
+    ],
+    "risks": [
+      "quality is still based on deterministic rewrite rules, so wording remains bounded by existing run_summary inputs"
+    ],
+    "verification": [
+      "python3 -m py_compile tools/evidence.py",
+      "python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --compact-run-summary",
+      "python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --run-summary"
+    ],
+    "next_steps": [
+      "if needed later, add a stricter normalization table for common run-level phrases before baseline refresh"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": ""
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "pending_ack",
+      "close_escalation": false,
+      "notes": [],
+      "updated_at": ""
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-13T12:21:15+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-13T12:21:15+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

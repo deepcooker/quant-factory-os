@@ -1,0 +1,178 @@
+{
+  "task_id": "task-appserverclient-task-policy-touchpoint-audit",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "appserverclient task-policy touchpoint audit",
+  "goal": "审计 appserverclient 中剩余直接触碰 task policy 的点，并判断是否还有必要继续做第四刀最小解耦。",
+  "scope": [
+    "tools/appserverclient.py",
+    "tools/taskclient.py",
+    "docs/WORKFLOW.md",
+    "docs/FILE_INDEX.md"
+  ],
+  "non_goals": [
+    "不直接扩实现，除非发现非常明显的一刀式解耦点"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "列出剩余 touchpoints，并给出是否继续第四刀的结论；若只需文档收尾则同步 evidence",
+      "status": "completed"
+    }
+  ],
+  "inputs": [
+    "tools/appserverclient.py",
+    "tools/taskclient.py"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-appserverclient-task-policy-touchpoint-audit.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "remaining appserverclient touchpoints are now mostly runtime-necessary rather than task-policy-heavy"
+    ],
+    "decisions": [
+      "no fourth decoupling pass is justified right now; further cuts would likely reduce clarity more than they reduce coupling"
+    ],
+    "risks": [
+      "over-decoupling the remaining runtime-required touchpoints would make the flow longer and harder to debug"
+    ],
+    "verification": [
+      "grep -nE \"load_active_task|get_role_threads|update_role_thread|update_role_summary_with_task_links|update_test_gate_from_test_summary|refresh_task_coordination\" tools/appserverclient.py",
+      "tools/view.sh tools/appserverclient.py --from 836 --to 1001"
+    ],
+    "next_steps": [
+      "pause decoupling here and keep future cuts limited to obvious task-policy leakage"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": ""
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "not_needed",
+      "close_escalation": true,
+      "notes": [
+        "touchpoint audit only; no run-main escalation needed"
+      ],
+      "updated_at": "2026-03-13T14:25:29+00:00"
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-13T14:25:29+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-13T14:25:29+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

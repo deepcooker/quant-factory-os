@@ -150,6 +150,11 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 - 当前继续优先增强 `PROJECT_GUIDE` 的高质量提问能力，而不是先做新的自动提示词层或额外客户端。
 - 追问模板只落在 Q9-Q12 这类最直接承接需求收敛的题目下，避免为了补模板而改动题库结构或稀释课程主线。
 
+## Run summary risk near-duplicate merge decision
+- `cross_task_risks` 的近义 blocked-gate 风险句不再并列堆叠；如果同时存在通用 blocked-gate 句与更具体的 blocked-gate 解释句，则优先保留更具体那条。
+- 这条规则只作用于 run-level 风险表达，不挪动 `verification_overview` 的证据粒度，也不引入模型改写。
+- 当前先把这类“通用句被更具体句覆盖”的最小策略写死，后续再决定哪些其他风险近义族值得按同样模式归并。
+
 ## Project guide self-structuring decision
 - 当前继续把 `PROJECT_GUIDE` 往“AI 自我梳理客户材料”的方向推进，但仍停留在协议层，不急着做自动生成器。
 - 选择把最小输出骨架挂在 Q9-Q12 下，是因为这几题正好承接 run 方向收敛、角色分工、对象分层和 task 创建前置条件。
@@ -207,3 +212,116 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 - `test_gate` 的真实写回入口继续放在 `appserverclient`，命令为 `--mark-test-gate`。
 - 这样 `test` 线程的真实 summary 证据可以直接进入 `test_gate.evidence`，并立刻联动刷新 `gap_summary / escalation_summary / run_main_resolution`。
 - 在同一 task 中补齐 `run-main` 和 `test` 两条真实链后，升级项已自动收成 `needs_run_main=false`；说明“独立测试通过 + run-main 确认”这条关闭链已经可执行。
+
+## Dev role runtime merge decision
+- `dev` 角色线程继续沿 `appserverclient` 的真实 runtime 路径推进，不单独开新客户端，也不把这一步并进 run-main/test gate 任务。
+- `summarize-role dev` 现在会直接触发 `merge_role_summaries_into_task_summary`，再刷新 `gap_summary / escalation_summary / run_main_resolution`；这让 `dev` 真实执行结果能自动沉淀到 task 机器层。
+- 当前把 `task-dev-role-runtime-merge-link` 收为完成，意味着多角色协作链已经具备 `dev`、`test`、`run-main` 三条真实 runtime 验证路径；下一步应在此基础上继续收多角色协同而不是再回头补单角色底座。
+
+## Integrated multi-role runtime chain decision
+- 当前把 `dev/test/run-main` 三条真实 runtime 线程首次收进同一个 task，并把结果定格成“可解释的 blocked 状态”，而不是强行追求一次性收成 `passed`。
+- `test_gate=blocked`、`run_main_resolution=acknowledged`、`role_summary_evidence/source_threads` 三角色并存，证明当前系统已经能表达“多角色已收敛，但仍未放行”的真实主线状态。
+- 这比只验证单角色成功更接近正式协作主线；下一步应该基于这个 integrated chain 往更高层聚合推进，而不是再回去重做单线程/单角色 plumbing。
+
+## Run summary reconciliation decision
+- `run_summary.json` 的 `active_tasks/completed_tasks/source_tasks` 不再继续靠历史写入结果维持，而是增加 `tools/evidence.py --reconcile-run-summary`，按同一 run 下的 task JSON 真相源重算。
+- 这一步的目标是减少 run 层手工漂移，不是掩盖历史遗留 truth；因此如果 task JSON 本身仍残留多个 `active` 项，run summary 应如实暴露，并把清理责任留给后续 task truth cleanup。
+
+## Stale active task cleanup decision
+- 在 `reconcile-run-summary` 暴露出历史遗留 `active` task 后，本轮继续直接清理 task JSON 真相源，而不是在 run summary 层做额外隐藏规则。
+- 当前选择只关闭明显属于样例验证或被后续完成任务覆盖的条目，避免扩大为历史内容重写；这样 `run_summary.json` 才能自然收敛到 `active_tasks=[]` 和 `status=completed`。
+
+## Run summary baseline refresh boundary decision
+- `refresh-baseline` 的输入边界不再停留在“代码里隐式 if/else + prompt 里旧口径”，而是显式记录本次 baseline refresh 实际消费的是 `run_summary` 还是 `current_summary`。
+- 当前仍保持最小实现：优先消费 `run_summary`，缺失时回退 `current_summary`；下一步优化不再是继续扩 fallback，而是提升 `run_summary` 本身的语义压缩质量。
+
+## Run summary semantic compaction decision
+- `run_summary` 继续保留宽表 machine truth，但 baseline refresh 不再直接吃整份宽表，而是新增 `baseline_ready_summary` 作为压缩视图。
+- 当前 compaction 保持规则化最小实现：只提取 `run_goal/status/key_updates/decisions/risks/next_steps` 的小集合；这一步先解决 baseline 输入过宽问题，不引入新的 run client 或模型内聚合器。
+
+## Baseline-ready summary quality decision
+- 在 `baseline_ready_summary` 已存在后，下一步不是继续扩字段，而是提升表达质量，让 baseline 吃到的更像 run-level prose。
+- 当前选择最小规则化改进：对常见 `task-...:` 前缀和工具路径语句做规范化，不引入新的 summarizer client，也不让 evidence.py 直接承担模型级改写责任。
+
+## Task summary to run summary decision
+- run-level 聚合继续收口在 `tools/evidence.py`，并通过 `--merge-task-summary` 直接提升稳定 task summary，不新增独立 run client。
+- 当前聚合策略只做最小 append-dedup：把 task 的稳定 `key_updates / decisions / risks / verification / next_steps` 提升到 run 层，并维护 `source_tasks/completed_tasks`。
+- 这一步让 run summary 首次开始真正消费 task summary，而不是只靠手工写回；下一步可以在此基础上再讨论更强的 run-level 归并与基线消费。
+
+## Task-to-run merge rule decision
+- 当前不再把 `task summary -> run summary` 的所有字段统一按 `task_id: ...` 前缀直接 append，而是显式分成三类：
+  - `reconcile_only`
+  - `append_dedup`
+  - `merge_rewrite`
+- 具体规则定为：
+  - `active_tasks` / `completed_tasks` -> `reconcile_only`
+  - `source_tasks` / `verification_overview` -> `append_dedup`
+  - `key_updates` / `cross_task_decisions` / `cross_task_risks` / `next_run_or_next_tasks` -> `merge_rewrite`
+- 当前 `merge_rewrite` 仍然只做规则化轻改写，不引入模型推理；这样先把 run-level 归并责任从 `baseline_ready_summary` 前移回 `run_summary.json` 本身。
+- 当前已知风险是历史 run summary 中已有的 task 前缀条目不会自动清洗；只有后续 task 重新走 `merge_policy` 聚合时，新增项才会逐步进入更干净的 run-level 表达。
+
+## Legacy prefix cleanup decision
+- 对已经写入 `run_summary.json` 的历史 task 前缀语义项，不在普通 `merge-task-summary` 或 `reconcile-run-summary` 流程中自动重写。
+- 当前改为显式维护动作：
+  - `python3 tools/evidence.py --run-id <RUN_ID> --normalize-run-summary`
+- 该动作只处理 run-level 语义字段，不处理证据粒度字段；也就是说：
+  - 会清理 `key_updates / cross_task_decisions / cross_task_risks / next_run_or_next_tasks`
+  - 不会重写 `verification_overview / source_tasks`
+- 这样做的原因是：历史语义清理应可追踪、可控制，不应在正常聚合路径里静默改变已经落盘的证据表达。
+
+## Run summary merge quality decision
+- `merge_rewrite` 不再只做“去前缀 + humanize”，而是允许少量高频模式在进入 run-level 字段时直接归并成更稳定的 run-level 表达。
+- 当前只收了高复用、低歧义的模式：
+  - 多个 `<role> summary merged`
+  - `test gate=blocked/passed`
+  - `all three real summaries are preserved ...`
+- 这样做的原因是：这些模式本来就属于 run-level 结构化结论，不应一直等到 `baseline_ready_summary` 才做最后一层修辞压缩。
+- 当前仍然刻意不扩大到模型推理或通用文本改写，避免把 run truth 层重新做成不可控的黑箱 summarizer。
+
+## Run summary risk merge quality decision
+- `cross_task_risks` 继续沿同一条规则化路线推进，只收高频、低歧义的 blocked-gate 风险模式。
+- 当前先把 `test gate=blocked` 统一改写为 `test gate remains blocked`，以避免 run-level 风险字段继续保留实现型等号表达。
+- 当前仍然不扩大到通用风险改写；如果后续出现更多重复模式，再逐步加稳定规则，而不是一次性做宽泛 NLP 清洗。
+
+## Appserverclient task-rule boundary tightening decision
+- 当前先不做新的 role/agent 配置系统，而是继续收紧四个主工具边界。
+- `appserverclient` 不再显式了解 task 层的四步刷新链；task 协调刷新改由 `taskclient.refresh_task_coordination()` 统一承接。
+- 这样 runtime 只负责真实线程生命周期和必要写回，task policy 继续优先归属 `taskclient`。
+- 当前这一步仍保持最小实现：
+  - 不改 role runtime 协议
+  - 不引入新客户端
+  - 不改变 formal mainline 命令面
+
+## Appserverclient task-policy boundary tightening pass 2 decision
+- 第二刀继续沿同一方向推进，但只处理 `summarize-role` 里的直接 task aggregate 写回。
+- `appserverclient` 不再直接写 `task_summary.role_summary_evidence/source_threads`；该联动改由 `taskclient.update_role_summary_with_task_links()` 统一承接。
+- 这样 role summary 到 task aggregate 的写回路径也回到 task truth 层，runtime 进一步收窄到“真实线程 + 必要调用”。
+- 当前仍然保持最小实现：
+  - 不改 role runtime 协议
+  - 不新增 agent 配置系统
+  - 不改变 formal mainline 命令面
+
+## Appserverclient task-policy boundary tightening pass 3 decision
+- 第三刀继续沿同一方向推进，但只处理 `mark-test-gate` 里的 test 证据拼接。
+- `appserverclient` 不再直接读取 `role_summaries.test` 去拼 `test-summary-turn/test-thread` 证据；该逻辑改由 `taskclient.update_test_gate_from_test_summary()` 统一承接。
+- 这样 `mark-test-gate` 也进一步收窄到“传状态和补充说明”，runtime 继续远离 task policy 细节。
+- 当前仍然保持最小实现：
+  - 不改 test gate 语义
+  - 不引入新配置层
+  - 不改变 formal mainline 命令面
+
+## Appserverclient task-policy touchpoint audit decision
+- 当前暂停第四刀最小解耦。
+- 审计后剩余 touchpoints 主要已是 runtime 必需：
+  - active task 定位
+  - role thread 绑定读写
+  - task-side helper 调用
+- 如果继续为“更纯”而拆，会让主流程更长、更绕、更难定位问题，收益已经低于复杂度成本。
+- 后续只在再次发现明显 task policy 泄漏时，再做新的最小下沉；当前阶段先保持这条边界。
+
+## Shortest stable mainline documentation decision
+- 当前把“最短稳定主线”正式写死成 owner docs，作为默认操作面。
+- 原则是：
+  - 不再为了理论纯度继续加中间步骤
+  - 没有真实多角色需要时，不引入 role thread
+  - 当前主线先以短、稳、好定位为第一优先级

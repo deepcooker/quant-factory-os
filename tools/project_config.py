@@ -666,6 +666,8 @@ def update_current_summary(
     summary_turn_id: str = "",
     baseline_refresh_text: str = "",
     baseline_refresh_turn_id: str = "",
+    baseline_refresh_input_type: str = "",
+    baseline_refresh_input_ref: str = "",
 ) -> None:
     config = load_project_config_json()
     registry = config.setdefault("session_registry", {})
@@ -687,6 +689,14 @@ def update_current_summary(
         record["baseline_refresh_turn_id"] = baseline_refresh_turn_id
     elif "baseline_refresh_turn_id" not in record:
         record["baseline_refresh_turn_id"] = ""
+    if baseline_refresh_input_type:
+        record["baseline_refresh_input_type"] = baseline_refresh_input_type
+    elif "baseline_refresh_input_type" not in record:
+        record["baseline_refresh_input_type"] = ""
+    if baseline_refresh_input_ref:
+        record["baseline_refresh_input_ref"] = baseline_refresh_input_ref
+    elif "baseline_refresh_input_ref" not in record:
+        record["baseline_refresh_input_ref"] = ""
     save_project_config_json(config)
 
 

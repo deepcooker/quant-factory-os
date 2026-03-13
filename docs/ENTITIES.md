@@ -117,6 +117,20 @@
 - `verification_overview`
 - `next_run_or_next_tasks`
 
+当前 machine merge 规则：
+- `active_tasks` / `completed_tasks`: `reconcile_only`
+- `source_tasks` / `verification_overview`: `append_dedup`
+- `key_updates` / `cross_task_decisions` / `cross_task_risks` / `next_run_or_next_tasks`: `merge_rewrite`
+
+说明：
+- `reconcile_only` 表示该字段应由 task 真相源重算，不从单个 task summary 直接追加
+- `append_dedup` 表示保留 task 级证据粒度，允许带 task 前缀追加后去重
+- `merge_rewrite` 表示 task-level 文本在进入 run summary 前应先做最小 run-level 归并；当前实现只做规则化轻改写，不做模型推理
+- 当前 `merge_rewrite` 允许少量明确的高频模式归并，例如：
+  - 多个角色的 `summary merged` 合并成一条 multi-role run-level 结论
+  - `test gate=blocked/passed` 归并成更稳定的 gate 状态表达
+- 对 `cross_task_risks`，若同时存在通用 blocked-gate 句与更具体的 blocked-gate 解释句，则优先保留更具体的 run-level 风险表达；证据粒度仍保留在 `verification_overview`
+
 ### 3.4 生命周期
 1. 新需求方向或新一轮迭代开始时创建
 2. 在该 run 内完成 discussion -> contract -> slice -> task execution
@@ -216,6 +230,9 @@
 - 当前 `run-main` 也属于正式 role，可通过真实 role thread 路径参与 task 升级处理
 - task 机器层现在同时承载 `role_threads`、`role_summaries` 和 `task_summary.role_summary_evidence`
 - `taskclient --merge-role-summaries` 是当前 task-level 最小聚合入口：它不做复杂推理，只按去重规则把已有 role summaries 的来源和引用证据并入 `task_summary`
+- `taskclient.refresh_task_coordination()` 是当前 task-level 的统一刷新入口：它负责按需 merge role summaries，并继续刷新 `gap_summary / escalation_summary / run_main_resolution`
+- `appserverclient --summarize-role <role>` 现在会在写回单个 `role_summaries.<role>` 后调用该统一刷新入口
+- `taskclient.update_role_summary_with_task_links()` 现在统一承接 `role_summaries.<role>` 与 `task_summary.role_summary_evidence/source_threads` 的联动写回，避免 runtime 直接改 task aggregate 字段
 - `task_summary.conflict_policy` 是当前 task 层的最小优先级约定，当前默认顺序是：`run-main -> test -> arch -> dev`
 - `task_summary.gap_summary` 是当前 task 层的最小缺口汇总，当前至少记录：
   - `missing_roles`
@@ -227,8 +244,7 @@
 - `task_summary.run_main_resolution_policy` 是当前 task 层“升级给 run-main 后，什么条件下必须确认、什么条件下可以关闭升级项”的最小规则
 - `task_summary.run_main_resolution` 是当前 task 层“run-main 已否确认、是否可以关闭升级项”的最小结果
 - `taskclient --refresh-run-main-resolution` 会基于现有 `escalation_summary`、`role_summaries.run-main` 与 `test_gate` 刷新这两块
-- `appserverclient --summarize-role <role>` 现在会在写回 role summary 后自动联动刷新 `gap_summary / escalation_summary / run_main_resolution`
-- `appserverclient --mark-test-gate <status>` 是当前最小 test runtime 写回入口：它会复用 `role_summaries.test` 的 thread/turn 证据写回 `test_gate`，并继续自动刷新 `gap_summary / escalation_summary / run_main_resolution`
+- `appserverclient --mark-test-gate <status>` 是当前最小 test runtime 写回入口：其 test thread/turn 证据拼接现由 `taskclient.update_test_gate_from_test_summary()` 统一承接，并继续调用统一刷新入口
 
 ### 4.9 Test Gate
 `test_gate` 是 task 内独立验证门，不等于开发自测结果。
@@ -244,6 +260,28 @@
 说明：
 - task 不应只因 `dev` 完成实现就直接视为完成
 - `test_gate` 应作为 task summary 与 run summary 之间的重要质量门
+
+### 4.10 Tool Boundaries
+当前正式主工具边界固定为：
+- `appserverclient`: runtime / session / role thread
+- `taskclient`: task machine truth / task gates / task escalation
+- `evidence.py`: run evidence / run summary / run-level normalization
+- `gitclient`: git delivery / rollback / commit message fallback
+
+当前推荐边界：
+- `appserverclient` 只负责真实 thread 生命周期与必要写回，不继续承载更多 task/run 聚合规则
+- `taskclient` 只负责 `TASKS/TASK-*.json` 的结构化真相源，不接管 runtime transport
+- `evidence.py` 只负责 `reports/<RUN_ID>/` 下的 run-level truth 与压缩视图，不接管 task 机器层
+- `gitclient` 保持独立，不回灌 runtime / task / run 规则
+
+当前已观察到的变厚点：
+- `appserverclient` 已开始了解 `test_gate / gap_summary / escalation_summary / run_main_resolution`
+- `evidence.py` 已同时承担 run summary 写回、聚合、压缩和历史清理
+
+下一轮解耦方向：
+- 把更多 task 规则继续留在 `taskclient`
+- 让 `appserverclient` 只调用 task/run 层的显式入口，而不是继续内嵌规则
+- 保持 `gitclient` 不被重新耦合回 runtime 主线
 
 ## 5. Thread Summary
 
@@ -494,6 +532,12 @@ project
 - `reports/<RUN_ID>/summary.md` 和 `decision.md` 目前仍以 active task evidence 为主，属于 run 容器下的过渡态表达
 - `session_registry.current_summary` 当前是 thread-level transitional summary，不应长期等同于最终 run summary
 - `reports/<RUN_ID>/run_summary.json` 当前是最小 machine truth 落点；`summary.md/decision.md` 继续承担 run 级 md 视图
+- `run_summary.json.baseline_ready_summary` 是给 baseline refresh 使用的压缩视图，不是新的独立对象；它只是 run-level machine truth 的一段更短表达
+- `run_summary.json.merge_policy` 是 task -> run 聚合规则的机器层声明；长期可以演进，但当前必须显式保留字段类别，不允许把所有 summary 字段继续当成统一 append 列表
+- `run_summary.json.legacy_cleanup_policy` 是 run-level 历史语义项的渐进清理声明；当前策略必须是 `explicit_maintenance_only`，不允许在普通 merge/reconcile 时静默重写全部旧条目
+- `run_summary.json.legacy_cleanup_last_applied_at` 只记录最近一次显式清理动作；它不是 run-level 业务状态
+- `run_summary.json.active_tasks/completed_tasks/source_tasks` 当前应优先通过 task JSON 真相源重算；如果 task 真相源本身保留历史 `active` 项，run summary 也应如实暴露，而不是在 run 层静默抹平
 - baseline 当前已优先消费 `run_summary`，仅在缺失时回退 `current_summary`；长期仍应以 run summary 为主，必要时再吸收经过筛选的 task summary
+- `session_registry.current_summary` 当前还承担 baseline refresh 的回写槽位，并记录 `baseline_refresh_input_type / baseline_refresh_input_ref`，用于说明本次 baseline refresh 的真实输入源
 
 后续如果 `docs/WORKFLOW.md` 与这里冲突，以本文件为准，并同步修正 workflow。

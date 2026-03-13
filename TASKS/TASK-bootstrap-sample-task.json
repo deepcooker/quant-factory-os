@@ -2,7 +2,7 @@
   "task_id": "task-bootstrap-sample-task",
   "run_id": "run-2026-03-11-vnext-release-baseline",
   "project_id": "quant-factory-os",
-  "status": "active",
+  "status": "completed",
   "priority": "P1",
   "title": "bootstrap sample task",
   "goal": "验证 JSON-first task bootstrap 可用。",
@@ -14,12 +14,12 @@
     {
       "id": "verify",
       "text": "Command(s) pass: make verify",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "evidence",
       "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "inputs": [],
@@ -28,7 +28,7 @@
     "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
     "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
   },
-  "updated_at": "2026-03-11T09:50:06+00:00",
+  "updated_at": "2026-03-13T11:47:00+00:00",
   "risks": "",
   "rollback_plan": ""
 }

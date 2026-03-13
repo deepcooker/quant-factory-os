@@ -3,7 +3,7 @@
 RUN_ID: run-2026-03-11-vnext-release-baseline
 TASK_ID: task-taskclient-unify-entry
 PROJECT_ID: quant-factory-os
-STATUS: active
+STATUS: completed
 PRIORITY: P1
 
 ## Goal

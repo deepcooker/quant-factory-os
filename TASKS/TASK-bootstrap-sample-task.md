@@ -3,7 +3,7 @@
 RUN_ID: run-2026-03-11-vnext-release-baseline
 TASK_ID: task-bootstrap-sample-task
 PROJECT_ID: quant-factory-os
-STATUS: active
+STATUS: completed
 PRIORITY: P1
 
 ## Goal
@@ -15,8 +15,8 @@ PRIORITY: P1
 ## Non-goals
 
 ## Acceptance
-- [ ] Command(s) pass: make verify
-- [ ] reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated
+- [x] Command(s) pass: make verify
+- [x] reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated
 
 ## Inputs
 

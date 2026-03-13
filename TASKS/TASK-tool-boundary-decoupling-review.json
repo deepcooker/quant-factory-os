@@ -1,0 +1,182 @@
+{
+  "task_id": "task-tool-boundary-decoupling-review",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "active",
+  "priority": "P1",
+  "title": "tool boundary decoupling review",
+  "goal": "梳理四个主工具的职责边界、当前变厚点和下一轮解耦方向，并把 agent 配置化后置到 todo。",
+  "scope": [
+    "tools/",
+    "docs/",
+    "todo.md"
+  ],
+  "non_goals": [
+    "不扩新 runtime 能力"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "owner docs 明确四工具边界和解耦方向；todo.md 记录 agent 配置化后置",
+      "status": "pending"
+    }
+  ],
+  "inputs": [
+    "tools/appserverclient.py",
+    "tools/taskclient.py",
+    "tools/evidence.py",
+    "tools/gitclient.py",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "todo.md"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-tool-boundary-decoupling-review.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "formal tool boundaries and current thick spots are now documented"
+    ],
+    "decisions": [
+      "agent role configuration is deferred until tool boundaries stabilize"
+    ],
+    "risks": [
+      "appserverclient and evidence.py remain the current thick spots if new logic keeps accumulating there"
+    ],
+    "verification": [
+      "python3 -m py_compile tools/appserverclient.py tools/taskclient.py tools/evidence.py tools/gitclient.py",
+      "make evidence RUN_ID=run-2026-03-11-vnext-release-baseline"
+    ],
+    "next_steps": [
+      "keep new runtime logic out of gitclient and prefer taskclient/evidence boundary-first growth"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": ""
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "not_needed",
+      "close_escalation": true,
+      "notes": [
+        "documentation-only boundary review; no run-main escalation needed"
+      ],
+      "updated_at": "2026-03-13T13:52:04+00:00"
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-13T13:52:04+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-13T13:52:04+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}
