@@ -33,6 +33,7 @@
 
 ### 1.3 单一真相源
 - 当前活动指针真相源：`tools/project_config.json -> runtime_state`
+- 初始化门禁真相源：`tools/project_config.json -> bootstrap_state`
 - 当前 task 合同真相源：`TASKS/TASK-*.json`
 - 当前 run 证据真相源：`reports/<RUN_ID>/`
 - 项目长期认知真相源：`docs/PROJECT_GUIDE.md`
@@ -58,7 +59,39 @@
 ### 2.3 真相源
 - `tools/project_config.json -> project_id`
 - 当前状态指针：`tools/project_config.json -> runtime_state.current_project_id`
+- 初始化状态：`tools/project_config.json -> bootstrap_state.is_inited`
 - 缺省值：`quant-factory-os`
+
+### 2.3A Bootstrap State
+`bootstrap_state` 用于表达项目是否已完成首轮接入。
+
+最小字段：
+- `is_inited`
+- `initialized_at`
+- `initialized_by`
+- `bootstrap_source`
+
+约束：
+- 只有 `is_inited = Y` 才允许进入 baseline 主线
+- `is_inited = Y` 后，才允许 `--learnbaseline / --fork-current / --summarize-current / --refresh-baseline`
+
+### 2.3B Init Project Session
+`session_registry.init_project_session` 用于表达首轮接入过程本身的 thread/session 指针。
+
+最小字段：
+- `thread_id`
+- `thread_path`
+- `status`
+- `updated_at`
+- `source`
+- `model`
+- `effort`
+
+约束：
+- `bootstrap_state.is_inited` 管项目是否已完成首轮接入
+- `session_registry.init_project_session` 管初始化过程在哪个 thread 上继续
+- 默认 `--init-project` 应续跑同一个 `init_project_session`
+- 只有显式 `--init-project -new` 才允许重开新的初始化 session
 
 ### 2.4 生命周期
 - 创建时机：项目建立时
@@ -364,6 +397,69 @@ evidence 是仓库内记忆，不依赖聊天上下文。
 - 记录为什么这么做
 - 记录验证和风险
 - 记录模型同频结果
+
+## 9. Init-Project Phase Protocol
+
+### 9.1 Phase 1
+`--init-project` 第一阶段是 JSON-first 的 plan/gating 阶段。
+
+职责：
+- 读取 `README.md` 和原始 docs
+- 提取显式线索
+- 结合轻量仓库探测结果
+- 判断当前是否已具备反写 owner docs 的证据条件
+
+推荐输出字段：
+- `project_understanding`
+- `explicit_refs`
+- `light_repo_findings`
+- `implementation_gaps`
+- `must_read_next`
+- `can_write_owner_docs`
+- `why_not_ready`
+
+`light_repo_findings` 当前推荐最小字段：
+- `project_root`
+- `top_level_files`
+- `docs_files`
+- `entry_candidates`
+- `test_candidates`
+- `config_candidates`
+- `state_or_contract_candidates`
+- `readme_refs_missing_in_repo`
+
+`must_read_next` 当前推荐最小约束：
+- 相对 `project_root` 的路径列表
+- 只允许仓库内真实存在的：
+  - `*.py`
+  - `*.md`
+  - `*.txt`
+  - `*.json`
+  - `*.doc`
+  - `*.docx`
+- 默认最多 8 个
+- 为空时只能伴随 `can_write_owner_docs = true`
+- 不允许指向 owner docs 目标文件
+
+### 9.2 Phase 2
+`--init-project` 第二阶段是 Markdown-first 的 owner-doc writing 阶段。
+
+职责：
+- 在 `can_write_owner_docs = true` 后，按目标文件分别输出详细 owner docs 草稿
+- 不要求把所有详细内容再放进一个巨大 JSON
+
+目标文件：
+- `AGENTS.md`
+- `docs/PROJECT_GUIDE.md`
+- `docs/WORKFLOW.md`
+- `docs/ENTITIES.md`
+- `docs/FILE_INDEX.md`
+- `docs/TOOLS_METHOD_FLOW_MAP.md`
+
+说明：
+- Phase 1 管门禁和补证据
+- Phase 2 管详细正文生成
+- 这套分层是为了兼顾机器 gate 稳定性和同频正文的详细表达
 
 ## 9. Session
 

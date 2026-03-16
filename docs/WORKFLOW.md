@@ -154,6 +154,10 @@ project
 目标：
 - 建立或重建项目级 baseline 学习 session
 
+前置门禁：
+- `tools/project_config.json -> bootstrap_state.is_inited` 必须为 `Y`
+- 只要不是 `Y`，都说明项目尚未完成首轮接入，必须先走 `python3 tools/appserverclient.py --init-project`
+
 输入：
 - `docs/PROJECT_GUIDE.md`
 - `AGENTS.md`
@@ -171,6 +175,93 @@ project
 - 以项目为中心完成一次重型 `plan` 同频
 - 把主线、课程、问题、材料锚定进 baseline session
 - baseline 已存在时直接复用；`-new` 时重建
+
+### 4.1A `appserverclient --init-project`
+
+命令：
+- `python3 tools/appserverclient.py --init-project`
+- `python3 tools/appserverclient.py --init-project -new`
+
+目标：
+- 作为未初始化项目进入正式主线前的首轮接入入口
+- 先以 plan 模式完成学习、补证据和门禁判断，再决定是否允许反写 owner docs
+
+前置条件：
+- `tools/project_config.json -> bootstrap_state.is_inited` 不是 `Y`
+- owner docs 必须为空或不存在：
+  - `AGENTS.md`
+  - `docs/PROJECT_GUIDE.md`
+  - `docs/WORKFLOW.md`
+  - `docs/ENTITIES.md`
+  - `docs/FILE_INDEX.md`
+  - `docs/TOOLS_METHOD_FLOW_MAP.md`
+
+失败条件：
+- 只要其中任一 owner doc 非空，就直接失败，返回非零错误；不允许自动覆盖
+
+session 语义：
+- `session_registry.init_project_session` 是初始化过程的 thread 指针
+- `python3 tools/appserverclient.py --init-project` 默认应 `resume` 既有 init-project session
+- `python3 tools/appserverclient.py --init-project -new` 才允许显式重开新的 init-project session
+- `bootstrap_state.is_inited` 管项目是否已完成首轮接入；`init_project_session` 管初始化过程本身，二者不是同一概念
+
+默认输入规则：
+1. 先读项目根目录的 `README.md` 作为 guide
+2. 再读 `docs/**/*.md|txt|doc|docx` 原始材料
+3. 排除 owner docs 目标文件：
+   - `AGENTS.md`
+   - `docs/PROJECT_GUIDE.md`
+   - `docs/WORKFLOW.md`
+   - `docs/ENTITIES.md`
+   - `docs/FILE_INDEX.md`
+   - `docs/TOOLS_METHOD_FLOW_MAP.md`
+   - `docs/PROJECT_BOOTSTRAP_PROTOCOL.md`
+4. 再结合程序提供的轻量仓库探测结果做判断
+
+阶段协议：
+- Phase 1: JSON plan/gating
+  - 从 `README` 和原始 docs 中提取显式线索
+  - 结合轻量仓库探测结果输出：
+    - `project_understanding`
+    - `explicit_refs`
+    - `light_repo_findings`
+    - `implementation_gaps`
+    - `must_read_next`
+    - `can_write_owner_docs`
+    - `why_not_ready`
+  - 当前证据不足时，必须返回 `can_write_owner_docs = false`
+  - `light_repo_findings` 只负责仓库现状摘要，不替代真正读代码；当前推荐最小字段：
+    - `project_root`
+    - `top_level_files`
+    - `docs_files`
+    - `entry_candidates`
+    - `test_candidates`
+    - `config_candidates`
+    - `state_or_contract_candidates`
+    - `readme_refs_missing_in_repo`
+  - `must_read_next` 必须遵守最小运行时约束：
+    - 使用相对 `project_root` 的路径
+    - 仅允许仓库内真实存在的 `py/md/txt/json/doc/docx` 文件
+    - 默认最多 8 个
+    - 为空时只能伴随 `can_write_owner_docs = true`
+    - 不允许包含 owner docs 目标文件
+    - 超过上限时优先保留：主入口 -> 状态/契约 -> 配置 -> 测试 -> 其他补充文件
+- Phase 2: Markdown owner-doc writing
+  - 只有在 `can_write_owner_docs = true` 后才允许进入
+  - 逐文件输出 detailed markdown 草稿，而不是把所有详细正文再塞进一个大 JSON
+  - 目标文件：
+    - `AGENTS.md`
+    - `docs/PROJECT_GUIDE.md`
+    - `docs/WORKFLOW.md`
+    - `docs/ENTITIES.md`
+    - `docs/FILE_INDEX.md`
+    - `docs/TOOLS_METHOD_FLOW_MAP.md`
+
+说明：
+- 当前 `--init-project` 正式门禁、状态机和 prompt 协议已确定
+- 当前 repo 里已落最小 Phase 1 intake：默认可收集 `README + docs` 输入、生成 `light_repo_findings`、提取显式文件引用并给出第一批 `must_read_next`
+- 当前 repo 里已落最小 `init_project_session` 续跑语义：默认 `--init-project` 会复用同一个本地 phase-1 session 记录，`--init-project -new` 会显式生成新的 session id
+- 当前 repo 里仍未接 app-server init thread 和 owner-doc reverse-writing；Phase 2 仍后续再接
 
 ### 4.2 确定需求方向（run 级）
 

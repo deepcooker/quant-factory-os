@@ -7,6 +7,12 @@
     "remote_url": "https://github.com/your-org/your-project.git",
     "github_login": "your-github-login"
   },
+  "bootstrap_state": {
+    "is_inited": "N",
+    "initialized_at": "",
+    "initialized_by": "",
+    "bootstrap_source": ""
+  },
   "runtime_state": {
     "current_project_id": "your-project-id",
     "current_run_id": "",
@@ -23,6 +29,7 @@
     "queue_md_is_legacy_view": true
   },
   "session_registry": {
+    "init_project_session": {},
     "learn_session_baseline": {},
     "fork_current_session": {},
     "current_summary": {

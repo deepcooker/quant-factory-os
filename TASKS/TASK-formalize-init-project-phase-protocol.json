@@ -1,0 +1,177 @@
+{
+  "task_id": "task-formalize-init-project-phase-protocol",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "Formalize init-project phase protocol",
+  "goal": "Define the formal two-phase init-project protocol: phase 1 JSON planning/gating and phase 2 markdown owner-doc writing.",
+  "scope": [
+    "Update prompt and owner docs to define init-project input rules",
+    "phase outputs",
+    "and session/state behavior without implementing reverse-writing yet."
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "verify",
+      "text": "Command(s) pass: python3 -m py_compile tools/project_config.py tools/appserverclient.py",
+      "status": "completed"
+    },
+    {
+      "id": "evidence",
+      "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+      "status": "completed"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-formalize-init-project-phase-protocol.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "formalized init-project phase protocol across prompt and owner docs",
+      "locked init-project into phase 1 JSON gating and phase 2 markdown owner-doc writing"
+    ],
+    "decisions": [
+      "resume init_project_session by default and only recreate it with --init-project -new",
+      "treat README.md as the default guide and docs/**/*.md|txt|doc|docx as raw intake materials, excluding owner docs targets"
+    ],
+    "risks": [
+      "reverse-writing implementation is still not wired into appserverclient runtime",
+      "phase 1 and phase 2 schemas are formalized in docs/prompt but not yet enforced by execution code"
+    ],
+    "verification": [
+      "python3 -m py_compile tools/project_config.py tools/appserverclient.py"
+    ],
+    "next_steps": [
+      "design and implement the runtime flow that resumes init_project_session and executes phase 1 before any owner-doc writing"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": ""
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "pending_ack",
+      "close_escalation": false,
+      "notes": [],
+      "updated_at": ""
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-16T21:40:00+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-16T21:40:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

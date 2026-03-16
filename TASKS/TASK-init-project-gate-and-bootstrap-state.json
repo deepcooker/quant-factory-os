@@ -1,0 +1,81 @@
+{
+  "task_id": "task-init-project-gate-and-bootstrap-state",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "init-project gate and bootstrap state",
+  "goal": "增加 bootstrap_state.is_inited 门禁，并在 appserverclient 中引入 --init-project 预检入口，禁止未初始化项目直接进入 baseline 主线。",
+  "scope": [
+    "tools/project_config.json",
+    "tools/project_config.template.json",
+    "tools/project_config.py",
+    "tools/appserverclient.py",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/FILE_INDEX.md",
+    "AGENTS.md"
+  ],
+  "non_goals": [
+    "不实现 owner docs 反写",
+    "不实现 plan 模式 bootstrap 编排",
+    "不改变当前已初始化项目的主线行为"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "project_config 引入 bootstrap_state.is_inited",
+      "status": "completed"
+    },
+    {
+      "id": "check-2",
+      "text": "未初始化项目无法直接执行 learnbaseline 和其他 baseline 主线动作",
+      "status": "completed"
+    },
+    {
+      "id": "check-3",
+      "text": "--init-project 仅在 is_inited 不是 Y 且 owner docs 全为空时允许进入下一步",
+      "status": "completed"
+    }
+  ],
+  "inputs": [
+    "tools/project_config.json",
+    "tools/appserverclient.py",
+    "docs/WORKFLOW.md"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-init-project-gate-and-bootstrap-state.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "project_config 现在包含 bootstrap_state.is_inited；模板默认 N，当前仓库显式标记为 Y。",
+      "appserverclient 新增 --init-project 预检入口，并在 is_inited 不是 Y 时阻止 baseline 主线。",
+      "未初始化项目只有在 owner docs 全为空时才允许通过 --init-project 预检。"
+    ],
+    "decisions": [
+      "--bootstrap-project 命名收成 --init-project。",
+      "PROJECT_GUIDE 过于关键，owner docs 只要任一非空就不允许自动反写，必须先手动清空。",
+      "初始化门禁只认 is_inited = Y；其他任何值都按未初始化处理。"
+    ],
+    "risks": [
+      "--init-project 当前只做预检，不做真正反写；后续还需讨论 plan 模式下的初始化编排。"
+    ],
+    "verification": [
+      "python3 -m py_compile tools/project_config.py tools/appserverclient.py tools/init.py",
+      "python3 tools/appserverclient.py --init-project",
+      "python3 tools/appserverclient.py --learnbaseline"
+    ],
+    "next_steps": [
+      "继续讨论 --init-project 在 plan 模式下如何执行 owner docs 反写。"
+    ],
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-16T15:08:00+00:00"
+  },
+  "updated_at": "2026-03-16T15:08:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

@@ -7,17 +7,23 @@
     "remote_url": "https://github.com/deepcooker/quant-factory-os.git",
     "github_login": "deepcooker"
   },
+  "bootstrap_state": {
+    "is_inited": "Y",
+    "initialized_at": "2026-03-16T12:45:00+00:00",
+    "initialized_by": "owner",
+    "bootstrap_source": "legacy-foundation-repo"
+  },
   "runtime_state": {
     "current_project_id": "quant-factory-os",
     "current_run_id": "run-2026-03-11-vnext-release-baseline",
-    "current_task_id": "task-init-standard-bootstrap-skeleton",
-    "current_task_file": "TASKS/TASK-init-standard-bootstrap-skeleton.md",
-    "current_task_json_file": "TASKS/TASK-init-standard-bootstrap-skeleton.json",
+    "current_task_id": "task-wire-init-project-session-resume-semantics",
+    "current_task_file": "TASKS/TASK-wire-init-project-session-resume-semantics.md",
+    "current_task_json_file": "TASKS/TASK-wire-init-project-session-resume-semantics.json",
     "current_status": "completed",
-    "current_updated_at": "2026-03-16T12:32:00+00:00"
+    "current_updated_at": "2026-03-16T22:19:30+00:00"
   },
   "task_registry": {
-    "active_task_json_file": "TASKS/TASK-init-standard-bootstrap-skeleton.json",
+    "active_task_json_file": "TASKS/TASK-wire-init-project-session-resume-semantics.json",
     "queue_json_file": "TASKS/QUEUE.json",
     "task_md_is_legacy_view": true,
     "queue_md_is_legacy_view": true
