@@ -1,0 +1,179 @@
+{
+  "task_id": "task-sync-view-tool-usage-docs",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P2",
+  "title": "sync view tool usage docs",
+  "goal": "将 view.sh 的正式使用说明最小同步到主线文档，反映当前支持的调用方式和阅读协议。",
+  "scope": [
+    "docs/WORKFLOW.md",
+    "docs/PROJECT_GUIDE.md",
+    "README.md"
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "WORKFLOW/PROJECT_GUIDE/README 同步 view.sh 当前用法",
+      "status": "done"
+    },
+    {
+      "id": "check-2",
+      "text": "不改题库结构",
+      "status": "done"
+    },
+    {
+      "id": "check-3",
+      "text": "evidence 更新",
+      "status": "done"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-sync-view-tool-usage-docs.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "WORKFLOW and PROJECT_GUIDE now explicitly document tools/view.sh as the formal file-reading surface",
+      "README now includes minimal tools/view.sh examples for direct execution and python3 invocation"
+    ],
+    "decisions": [
+      "keep the sync minimal and avoid changing the PROJECT_GUIDE question bank structure",
+      "document both supported invocation forms so historical python3 usage is no longer ambiguous"
+    ],
+    "risks": [],
+    "verification": [
+      "python3 tools/view.sh docs/PROJECT_GUIDE.md --from 1 --to 12",
+      "python3 tools/view.sh docs/WORKFLOW.md --from 1 --to 18",
+      "python3 tools/view.sh README.md --from 1 --to 20"
+    ],
+    "next_steps": [],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": ""
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "not_needed",
+      "close_escalation": true,
+      "notes": [],
+      "updated_at": "2026-03-16T11:56:00+00:00"
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-16T11:56:00+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "not_needed",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": "2026-03-16T11:56:00+00:00"
+  },
+  "updated_at": "2026-03-16T11:56:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

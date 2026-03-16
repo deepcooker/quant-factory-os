@@ -23,6 +23,28 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 ## Follow-up task
 - 新建 `task-compat-shell-archive`，把 `legacy.sh` / `task.sh` / `observe.sh` / `ship.sh` 归档到 `tools/backup/`，原路径改成转发 wrapper，避免旧引用立即断裂。
 
+## View tool stabilization
+- `tools/view.sh` 已改成稳定的 Python 实现，但保留原工具路径，避免正式阅读协议继续漂移。
+- 现在同时支持 `tools/view.sh ...` 和 `python3 tools/view.sh ...`，并兼容历史 `--lines START:END`。
+- 新增标准库回归测试 `tests/test_view_tool.py`，覆盖范围读取、`--find`、repo 边界和 denylist。
+
+## Commands / Outputs (view tool stabilization)
+- `python3 -m py_compile tools/view.sh` -> pass
+- `tools/view.sh AGENTS.md --from 1 --to 3` -> pass
+- `python3 tools/view.sh AGENTS.md --from 1 --to 3` -> pass
+- `python3 tools/view.sh AGENTS.md --lines 1:3` -> pass
+- `tools/view.sh AGENTS.md --find '^## 0' --context 1` -> pass
+- `python3 -m unittest -q tests.test_view_tool` -> pass
+
+## View usage docs sync
+- `docs/WORKFLOW.md` 和 `docs/PROJECT_GUIDE.md` 现在明确写了 `tools/view.sh` 是正式文件读取入口，并支持直接执行与 `python3` 调用。
+- `README.md` 新增了最小 `tools/view.sh` 示例，方便后续按统一方式阅读仓库长文件。
+
+## Commands / Outputs (view usage docs sync)
+- `python3 tools/view.sh docs/PROJECT_GUIDE.md --from 1 --to 12` -> pass
+- `python3 tools/view.sh docs/WORKFLOW.md --from 1 --to 18` -> pass
+- `python3 tools/view.sh README.md --from 1 --to 20` -> pass
+
 ## Compatibility archive update
 - 已创建 `tools/backup/`，并把 `legacy.sh` / `task.sh` / `observe.sh` / `ship.sh` 迁入归档目录。
 - 原 `tools/*.sh` 路径现在只保留最小 wrapper，执行时先打印 deprecated 提示，再转发到 `tools/backup/`。
@@ -822,3 +844,28 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 - `python3 -m py_compile tools/appserverclient.py tools/project_config.py tools/evidence.py tools/taskclient.py` -> pass
 - `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline` -> pass
 - 正式面 grep 已无 `TASKS/QUEUE.md` 命中；剩余命中只在 checkpoint/backup 文档
+
+## Archive stale blueprint and project guide backups
+- 新建并完成 `task-archive-stale-blueprint-and-project-guide-backups`，把：
+  - `docs/PROJECT_GUIDE_1.0_backup.md`
+  - `docs/TOOLS_REFACTOR_BLUEPRINT.md`
+  移到 `chatlogs/`。
+- 审计结果显示，这两个文件已经不在正式文档引用链里；当前只剩 checkpoint 残留提到它们。
+
+## Commands / Outputs (archive stale blueprint and project guide backups)
+- `find chatlogs -maxdepth 1 -type f \( -name 'PROJECT_GUIDE_1.0_backup.md' -o -name 'TOOLS_REFACTOR_BLUEPRINT.md' \) -print` -> pass
+- 正式面 grep 不再命中这两个 `docs/` 路径；剩余命中只在 checkpoint 残留
+
+## Docs stale flow noise cleanup
+- 新建并完成 `task-docs-stale-flow-noise-cleanup`，把正式 `docs/` 面里仍会误导当前主线的旧流程话术删掉。
+- 当前处理包括：
+  - `PROJECT_GUIDE.md` 不再把旧阶段脚本当作讨论主线
+  - `WORKFLOW.md` 删除历史兼容链路整段，只保留当前正式主线
+  - `FILE_INDEX.md` 删除 legacy/compatibility 区，避免把归档资产继续放进正式阅读索引
+  - `ENTITIES.md` 去掉旧 `direction/selection/ready contract` 等对象定义，改成 run 方向收敛与 task 规划表达
+  - `TOOLS_METHOD_FLOW_MAP.md` 去掉历史兼容链路段落
+
+## Commands / Outputs (docs stale flow noise cleanup)
+- `grep -RIn "\bready\b\|orient\|choose\|council\|arbiter\|slice_task\|run_main\|discussion artifacts\|execution contract\|orient_choice" docs/*.md | sort` -> 正式 docs 剩余命中只涉及当前对象名 `run_main_resolution`
+- `python3 -m py_compile tools/appserverclient.py tools/project_config.py tools/evidence.py tools/taskclient.py` -> pass
+- `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline` -> pass

@@ -8,6 +8,7 @@
 - 题目本身与整体结构是 owner 精心挑选后的固定课程资产，不应被随意改写、重排或替换。
 - 正常允许变化的是：项目变动后同步更新标准答案，或为保持同频质量做最小必要微调。
 - `learn` 必须先阅读本文件，再按每题的 `必查文件` 与 `查找线索` 去读取证据。
+- 文件阅读统一走 `tools/view.sh`；当前正式支持 `tools/view.sh ...` 和 `python3 tools/view.sh ...`，并兼容历史 `--lines START:END`。
 - 如果目标项目尚未接入这套基座、缺少 owner docs，先参考 [PROJECT_BOOTSTRAP_PROTOCOL.md](/root/quant-factory-os/docs/PROJECT_BOOTSTRAP_PROTOCOL.md) 做首轮项目学习与文档补齐，再继续使用本题库。
 - 这些题的目的不是“考试打分”，而是用高质量提问反向逼模型去读全量 owner docs、run evidence、session continuity 线索，并把主线固化成可复用的证据。
 - 如果输出偏到具体细节、工具琐事或单一 bug，而没有回到项目目标、门禁、工作流、当前阶段，就说明已经偏离主线。
@@ -59,7 +60,7 @@
 #### 为什么问这题
 这题是把“基座仓”与“业务仓”分开，防止把所有问题都堆在一个仓里，造成基建和业务互相污染。
 #### 标准答案
-基建项目做完后，它应作为 foundation repo，负责流程、门禁、同频和执行治理。它当前首先要产出的不是业务项目模板，而是一套更稳定的 `tools` 自动化 AI 研发团队运行层。研发期用 Codex CLI 来定义 agent 行为、检验 `PROJECT_GUIDE / ENTITIES / WORKFLOW / AGENTS` 是否足以约束研发流程，并通过日志暴露问题；成熟后，日常运行应主要在普通窗口通过 Python 总入口执行，而与 Codex 的程序化交互统一落在 app-server。原因是：当前最难的不是复用分发，而是正确理解需求、对齐主线、保证流程稳定。如果过早把未稳定流程包装成接口或模板，会放大耦合和返工。更合理的做法是：基座仓继续稳定 learn / ready / discuss / execute / review 机制，把 owner docs 和状态机打磨清楚；我的承接方式应该是先跑同频，再确认当前 run、任务和方向，然后才进入讨论和执行。
+基建项目做完后，它应作为 foundation repo，负责流程、门禁、同频和执行治理。它当前首先要产出的不是业务项目模板，而是一套更稳定的 `tools` 自动化 AI 研发团队运行层。研发期用 Codex CLI 来定义 agent 行为、检验 `PROJECT_GUIDE / ENTITIES / WORKFLOW / AGENTS` 是否足以约束研发流程，并通过日志暴露问题；成熟后，日常运行应主要在普通窗口通过 Python 总入口执行，而与 Codex 的程序化交互统一落在 app-server。原因是：当前最难的不是复用分发，而是正确理解需求、对齐主线、保证流程稳定。如果过早把未稳定流程包装成接口或模板，会放大耦合和返工。更合理的做法是：基座仓继续稳定 baseline/session 主线、task/run 机器真相和 owner docs 状态机；我的承接方式应该是先跑同频，再确认当前 run、任务和方向，然后才进入讨论和执行。
 #### 必查文件
 - docs/WORKFLOW.md
 - docs/ENTITIES.md
@@ -164,12 +165,12 @@
 #### 为什么问这题
 这题负责把“讨论”和“执行”分开，防止先写代码后补理由。
 #### 标准答案
-项目需求讨论现在更适合挂在 `appserverclient` 的 run/session 体系上做：先有项目级 baseline，同频当前主线和证据；再在 run 级别明确本轮需求方向；再从 baseline fork 多个角色 session 去做需求分析、方案评审、实现设计和验证拆分，最后把方向收敛成最小 task。run 级需求收敛至少要问清：背景与目标、必须做/应该做/可以做、明确不做项、影响模块与外部依赖、异常流与非功能约束、以及后续如何验收。旧的 `orient -> choose -> council -> arbiter -> slice` 可以视为兼容性的讨论链骨架，但主流程重心已经转到 baseline/fork/session 的分层运行方式。
+项目需求讨论现在应挂在 `appserverclient` 的 run/session 体系上做：先有项目级 baseline，同频当前主线和证据；再在 run 级别明确本轮需求方向；再从 baseline fork 多个角色 session 去做需求分析、方案评审、实现设计和验证拆分，最后把方向收敛成最小 task。run 级需求收敛至少要问清：背景与目标、必须做/应该做/可以做、明确不做项、影响模块与外部依赖、异常流与非功能约束、以及后续如何验收。
 #### 必查文件
 - docs/WORKFLOW.md
 - AGENTS.md
 #### 查找线索
-- 在 WORKFLOW 里找 `Direction gate`、`Council gate`、`Arbiter gate`、`Slice gate`。
+- 在 WORKFLOW 里找 run 方向收敛、role fork、task 拆分与 summary/evidence 回写。
 - 在 AGENTS 里看 Plan -> Confirm -> Execute 约束。
 #### 高质量追问模板
 - 这次需求真正要解决的业务问题是什么，为什么现在必须做？
@@ -242,9 +243,9 @@
 
 ### Q12. 我们在项目的准备工作做好后，我们一个需求讨论方向，从流程的哪一步开始？
 #### 为什么问这题
-这题确认“准备完成后做什么”，避免 learn/ready 做完还直接跳到写代码。
+这题确认“准备完成后做什么”，避免准备完成后还直接跳到写代码。
 #### 标准答案
-准备工作完成后，应该进入 `run(appserverclient)`，而不是直接写代码。先确认或建立 `--learnbaseline`，再在 run 级别先做一轮需求收敛，至少明确背景目标、范围边界、不做项、影响模块、异常流、非功能和验收方式，然后再从 baseline fork 当前工作 session 和角色 session，把方向拆成最小 task 逐个推进。也就是说，准备工作之后的第一步不再是旧链里的 `orient`，而是进入项目级 baseline/session 主线中的 run 方向收敛。
+准备工作完成后，应该进入 `run(appserverclient)`，而不是直接写代码。先确认或建立 `--learnbaseline`，再在 run 级别先做一轮需求收敛，至少明确背景目标、范围边界、不做项、影响模块、异常流、非功能和验收方式，然后再从 baseline fork 当前工作 session 和角色 session，把方向拆成最小 task 逐个推进。也就是说，准备工作之后的第一步就是进入项目级 baseline/session 主线中的 run 方向收敛。
 #### 必查文件
 - docs/WORKFLOW.md
 - AGENTS.md
@@ -324,7 +325,7 @@
 ```
 #### 主线意义
 - 这题负责接上岗后的下一步。
-- 常见漂移是把 `ready` 误当“可以直接改代码”。
+- 常见漂移是把环境准备或 baseline 学习误当成“可以直接改代码”。
 
 ### Q13. 项目的分支与交付管理规则是什么，当前是否满足需求？
 #### 为什么问这题

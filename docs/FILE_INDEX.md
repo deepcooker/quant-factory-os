@@ -38,6 +38,7 @@
 | --- | --- | --- |
 | `tools/init.py` | 环境准备、项目骨架补齐、Codex/Git 前置检查。 | 开工前环境准备时 |
 | `tools/appserverclient.py` | Codex app-server runtime 核心；负责 baseline / fork / fork-role / role-turn / summarize-role / mark-test-gate / current-turn / summarize-current / refresh-baseline，并显式打印当前 active task JSON 摘要；`refresh-baseline` 现优先消费 `run_summary.json`，`summarize-role` 会自动 merge role summaries 并刷新 task gap/escalation/resolution，`mark-test-gate` 会继续联动刷新。当前风险是它已经同时看见 runtime 与部分 task gate 规则，后续应继续保持“真实线程生命周期 + 必要写回”的边界，避免演化成总控脚本。 | 学习基线、当前 session 推进、role thread 绑定/执行/去噪、test gate 写回和 baseline 回灌时 |
+| `tools/view.sh` | 稳定的分段文件读取工具；支持直接执行和 `python3 tools/view.sh ...`，兼容历史 `--lines START:END` 用法，并内置 repo 边界与 denylist 检查。 | 读取长文件、按范围查看、查找命中行或验证读取边界时 |
 | `tools/prompts/summarize_role_prompt.md` | role thread 去噪总结模板；用于把单个角色线程总结成可写入 task 机器层的 role summary。 | 调用 `appserverclient --summarize-role` 时 |
 | `tools/taskclient.py` | task/queue 机器真相入口；负责 create/next、task summary 写回、role thread/role summary/test gate 更新，以及 `--merge-role-summaries` / `--refresh-task-gaps` / `--refresh-task-escalation` / `--refresh-run-main-resolution` 的 task-level 聚合、缺口刷新、升级判断和 run-main 确认闭环。当前还提供内部统一刷新入口 `refresh_task_coordination()`，以及 `update_role_summary_with_task_links()`、`update_test_gate_from_test_summary()` 这类 task-side 联动 helper，供 runtime 在不理解具体 task 规则细节的前提下完成 task 层联动。它是 task 级规则的优先归属层，后续新增 task policy 应优先落在这里，而不是回流到 runtime。 | 处理 task JSON truth、聚合 role summaries、刷新缺口/升级状态和绑定 active task 时 |
 | `tools/gitclient.py` | Git 底层；负责 commit、PR、merge、rollback、main 同步，并优先从 task JSON 读取当前任务上下文。当前保持独立性较好，后续应继续避免把 runtime 或 task/run 聚合逻辑重新耦合回这里。 | 收尾交付和回滚时 |
@@ -69,33 +70,7 @@
 | `reports/<RUN_ID>/summary.md` | 当前 run 的总结证据。 | 看最近做了什么时 |
 | `reports/<RUN_ID>/decision.md` | 当前 run 的决策证据。 | 看为什么这么做时 |
 
-## 7. Legacy / Compatibility
-
-| 文件 | 作用 | 什么时候优先看 |
-| --- | --- | --- |
-| `chatlogs/backup/legacy.sh` | 已归档的旧兼容入口路由。 | 追溯旧 shell 入口设计时 |
-| `chatlogs/backup/task.sh` | 已归档的旧 task shell 流程。 | 对照旧 shell task/ship 链时 |
-| `chatlogs/backup/taskstore.py` | 已归档的独立 taskstore 实现，保留作历史参考。 | 对照 taskclient 合并前的实现时 |
-| `chatlogs/backup/taskstore.forwarder.py` | 已移出的顶层 taskstore 兼容转发层。 | 追溯 taskstore 顶层入口退场方式时 |
-| `chatlogs/backup/sync_exam.py` | 已归档的学习考试评分脚本，当前不属于正式主线。 | 追溯旧学习/评分实验能力时 |
-| `chatlogs/backup/observe.sh` | 已归档的旧 observe shell 入口。 | 排查旧 shell 观察链时 |
-| `chatlogs/backup/ship.sh` | 已归档的旧 ship 实现。 | 对照旧发货逻辑时 |
-| `chatlogs/backup/legacy.wrapper.sh` | 已移出的旧顶层 `legacy.sh` wrapper。 | 追溯 wrapper 退场方式时 |
-| `chatlogs/backup/task.wrapper.sh` | 已移出的旧顶层 `task.sh` wrapper。 | 追溯 task shell 入口退场方式时 |
-| `chatlogs/backup/observe.wrapper.sh` | 已移出的旧顶层 `observe.sh` wrapper。 | 追溯 observe shell 入口退场方式时 |
-| `chatlogs/backup/ship.wrapper.sh` | 已移出的旧顶层 `ship.sh` wrapper。 | 追溯 ship shell 入口退场方式时 |
-| `chatlogs/backup/learn.py` | 已归档的历史 learn 工作流入口。 | 看 baseline 学习旧实现和迁移边界时 |
-| `chatlogs/backup/ready.py` | 已归档的历史 `learn` 后门禁与合同准备。 | 对照旧门禁链时 |
-| `chatlogs/backup/orient.py` | 已归档的历史方向草案生成。 | 对照旧讨论链时 |
-| `chatlogs/backup/choose.py` | 已归档的历史方向确认与合同生成。 | 对照旧讨论链时 |
-| `chatlogs/backup/council.py` | 已归档的历史多角色独立评审。 | 对照旧讨论链时 |
-| `chatlogs/backup/arbiter.py` | 已归档的历史 execution contract 收敛。 | 对照旧讨论链时 |
-| `chatlogs/backup/slice_task.py` | 已归档的历史最小 task 拆分入口。 | 对照旧 task 切片链时 |
-| `chatlogs/backup/run_main.py` | 已归档的历史 Python 总入口骨架。 | 看旧 orchestrator 设计时 |
-| `chatlogs/backup/run_a9.py` | 已归档的旧实验性 Python 入口。 | 排查历史实验入口时 |
-| `tools/view.sh` | 分块读取长文件。 | 按仓库规则读长文件时 |
-
-## 8. 当前建议阅读顺序
+## 7. 当前建议阅读顺序
 
 1. `AGENTS.md`
 2. `docs/PROJECT_GUIDE.md`

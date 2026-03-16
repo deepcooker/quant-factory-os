@@ -10,6 +10,13 @@ This file is an index only. It does not define workflow rules.
 python3 tools/init.py
 ```
 
+Read long files with:
+
+```bash
+tools/view.sh docs/PROJECT_GUIDE.md --from 1 --to 80
+python3 tools/view.sh AGENTS.md --lines 1:40
+```
+
 Proxy:
 - `tools/start.sh` 已归档到 `chatlogs/backup/start.sh`；当前正式入口是 `python3 tools/init.py`
 
@@ -31,10 +38,10 @@ Proxy:
 - `docs/WORKFLOW.md`
 - `docs/ENTITIES.md`
 - `docs/PROJECT_GUIDE.md`
-- `CODEX_CLI_PLAYBOOK.md`
-- `CODEX_CLI_SOURCE_AUDIT.md`
-- `docs/LEARN_EXAM_RUBRIC.json`
-- `docs/LEARN_EXAM_ANSWER_TEMPLATE.md`
+- `docs/PROJECT_BOOTSTRAP_PROTOCOL.md`
+- `docs/TOOLS_METHOD_FLOW_MAP.md`
+- `chatlogs/CODEX_CLI_PLAYBOOK.md`
+- `chatlogs/CODEX_CLI_SOURCE_AUDIT.md`
 
 ## Repo layout
 - `TASKS/`: queue and task contracts

@@ -79,6 +79,15 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 ## Legacy entrypoint archive decision
 - 不再把旧 `learn/ready/orient/choose/council/arbiter/slice_task/run_main` 或顶层 `legacy/observe/ship/task` 视为仍在正式 `tools/` 层占位的兼容入口。
 
+## View tool decision
+- 保留 `tools/view.sh` 作为正式长文件读取入口，不再引入第二个正式 `view.py` 入口。
+- 实现改成 Python，以同时支持直接执行和 `python3 tools/view.sh ...`，从而消除历史误调用导致的 `SyntaxError`。
+- 回归测试使用标准库 `unittest`，避免正式阅读工具依赖外部 `pytest` 安装。
+
+## View usage docs decision
+- 将 `tools/view.sh` 的正式调用方式最小同步到 `WORKFLOW`、`PROJECT_GUIDE` 和 `README`。
+- 不改 `PROJECT_GUIDE` 题库结构，只补阅读协议说明和最小示例。
+
 ## Run-main escalation resolution decision
 - 在 task 层继续补 `run-main` 收到升级后的最小闭环，但不把它扩成新的 orchestrator。
 - `run_main_resolution` 只负责：
@@ -386,3 +395,13 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 - `TASKS/QUEUE.md` 已删除；queue 现在只保留 `TASKS/QUEUE.json` 作为机器真相源。
 - sample/demo task 和孤立旧 task md 已删除；真实历史 task 和 run evidence 保留。
 - reports 下只清理 checkpoint 垃圾，不删除有真实 run 价值的历史目录。
+
+## Archive stale blueprint and project guide backups decision
+- `PROJECT_GUIDE_1.0_backup.md` 与 `TOOLS_REFACTOR_BLUEPRINT.md` 已退出正式 `docs/` 面，改存到 `chatlogs/`。
+- `docs/` 现在只保留仍参与当前 owner docs / formal mainline 的文件。
+- 这一步不改历史 checkpoint，只收正式面，避免把一次目录减负扩大成历史材料重写。
+
+## Docs stale flow noise cleanup decision
+- 正式 `docs/` 面不再继续保留旧阶段流程名作为当前主线说明。
+- 归档资产仍存在于 `chatlogs/backup/`，但不再进入正式流程文档和正式阅读索引。
+- 这一步只收正式文档口径，不重写 checkpoint、旧备份或历史 evidence。
