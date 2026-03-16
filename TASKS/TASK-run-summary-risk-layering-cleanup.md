@@ -1,33 +1,27 @@
-# TASK: tool boundary decoupling review
+# TASK: run summary risk layering cleanup
 
 RUN_ID: run-2026-03-11-vnext-release-baseline
-TASK_ID: task-tool-boundary-decoupling-review
+TASK_ID: task-run-summary-risk-layering-cleanup
 PROJECT_ID: quant-factory-os
 STATUS: completed
 PRIORITY: P1
 
 ## Goal
-梳理四个主工具的职责边界、当前变厚点和下一轮解耦方向，并把 agent 配置化后置到 todo。
+separate operational/mainline risks from audit-history risks in run summary so baseline-facing summaries stay cleaner
 
 ## Scope
+- `reports/`
 - `tools/`
 - `docs/`
-- `todo.md`
 
 ## Non-goals
-- 不扩新 runtime 能力
 
 ## Acceptance
-- [ ] owner docs 明确四工具边界和解耦方向；todo.md 记录 agent 配置化后置
+- [x] run summary risk fields are layered or filtered
+- [x] baseline_ready_summary excludes audit-only noise
+- [x] docs and evidence updated
 
 ## Inputs
-- `tools/appserverclient.py`
-- `tools/taskclient.py`
-- `tools/evidence.py`
-- `tools/gitclient.py`
-- `docs/WORKFLOW.md`
-- `docs/ENTITIES.md`
-- `todo.md`
 
 ## Role Threads
 - `run-main`: status=planned, thread_id=(none)
@@ -59,20 +53,22 @@ PRIORITY: P1
 - Status: completed
 
 ### Key Updates
-- formal tool boundaries and current thick spots are now documented
+- run summary now separates operational risks from audit-history risks
 
 ### Decisions
-- agent role configuration is deferred until tool boundaries stabilize
+- baseline-facing compaction should consume `cross_task_risks` only and leave audit-only cleanup risk in `audit_risks`
 
 ### Risks
-- appserverclient and evidence.py remain the current thick spots if new logic keeps accumulating there
+- future normalize rules must keep audit classification narrow so real runtime risk does not get hidden
 
 ### Verification
-- python3 -m py_compile tools/appserverclient.py tools/taskclient.py tools/evidence.py tools/gitclient.py
-- make evidence RUN_ID=run-2026-03-11-vnext-release-baseline
+- `python3 -m py_compile tools/evidence.py`
+- `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --normalize-run-summary`
+- `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --compact-run-summary`
+- `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --run-summary`
 
 ### Next Steps
-- keep new runtime logic out of gitclient and prefer taskclient/evidence boundary-first growth
+- continue tightening run-level prose without mixing audit residue back into baseline-facing summaries
 
 ### Conflict Policy
 - Priority order: run-main, test, arch, dev
@@ -99,9 +95,8 @@ PRIORITY: P1
 - can_close_if: no blocking issue remains
 
 ### Run-Main Resolution
-- status: not_needed
-- close_escalation: true
-- note: documentation-only boundary review; no run-main escalation needed
+- status: pending_ack
+- close_escalation: false
 
 ### Role Summary Evidence
 

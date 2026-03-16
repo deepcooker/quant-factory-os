@@ -2,7 +2,7 @@
   "task_id": "task-compat-shell-archive",
   "run_id": "run-2026-03-11-vnext-release-baseline",
   "project_id": "quant-factory-os",
-  "status": "done",
+  "status": "completed",
   "priority": "P1",
   "title": "compatibility shell archive",
   "goal": "把已被正式主线淘汰的 shell 兼容脚本归档到 tools/backup/，并在原路径保留最小兼容壳层，避免当前仓库引用立即断裂。",
@@ -69,5 +69,5 @@
     "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
     "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
   },
-  "updated_at": "2026-03-11T16:56:00+00:00"
+  "updated_at": "2026-03-16T01:57:30+00:00"
 }

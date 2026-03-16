@@ -52,7 +52,8 @@
     "task-taskstore-bootstrap",
     "task-test-role-gate-runtime-link",
     "task-ux-sample-task",
-    "task-vnext-release-baseline"
+    "task-vnext-release-baseline",
+    "task-task-queue-truth-reconciliation-cleanup"
   ],
   "source_tasks": [
     "task-task-summary-bootstrap",
@@ -103,22 +104,28 @@
     "task-baseline-ready-summary-quality",
     "task-run-summary-baseline-refresh-automation-boundary",
     "task-run-summary-semantic-compaction",
-    "task-task-to-run-summary-merge-rules"
+    "task-task-to-run-summary-merge-rules",
+    "task-task-queue-truth-reconciliation-cleanup"
   ],
   "key_updates": [
     "run summary now has a dedicated writeback entry",
     "merge rule table now distinguishes append_dedup and merge_rewrite paths",
-    "multi-role runtime summaries are now preserved at run level"
+    "multi-role runtime summaries are now preserved at run level",
+    "taskclient now provides a single reconcile_task_queue_truth entry for runtime_state, task JSON, and queue JSON cleanup",
+    "historical task statuses using done or stale active states were normalized into completed or the current active task only",
+    "QUEUE.md is now reduced to a deprecated compatibility note instead of carrying stale backlog content"
   ],
   "cross_task_decisions": [
     "run summary writeback stays in evidence tool instead of a new runclient",
     "integrated multi-role runtime summaries are preserved and produce an explainable test gate state",
-    "run-level semantic fields should not keep task prefixes by default"
+    "run-level semantic fields should not keep task prefixes by default",
+    "QUEUE.json remains the only queue machine truth and QUEUE.md no longer participates in automation",
+    "non-current active tasks are downgraded during reconcile unless their own task summary already proves completion"
   ],
   "cross_task_risks": [
-    "baseline still does not consume run summary yet",
+    "baseline refresh now consumes run summary by default; remaining work is to keep run-level prose aligned with current truth",
     "test gate remains blocked by design in this task, proving explainable non-close state rather than final release",
-    "legacy run summaries still contain historical task-prefixed items until re-merged"
+    "future queue drift will return if new commands mutate task or queue truth without reusing reconcile-task-queue-truth"
   ],
   "verification_overview": [
     "python3 -m py_compile tools/evidence.py",
@@ -133,15 +140,20 @@
     "task-integrated-multi-role-runtime-chain: python3 tools/appserverclient.py --summarize-role dev",
     "task-integrated-multi-role-runtime-chain: python3 tools/appserverclient.py --summarize-role run-main",
     "task-integrated-multi-role-runtime-chain: python3 tools/appserverclient.py --mark-test-gate blocked \"integrated runtime chain verified but final closure still requires explicit test release\"",
-    "task-task-to-run-summary-merge-rules: python3 -m py_compile tools/evidence.py"
+    "task-task-to-run-summary-merge-rules: python3 -m py_compile tools/evidence.py",
+    "task-task-queue-truth-reconciliation-cleanup: python3 -m py_compile tools/taskclient.py",
+    "task-task-queue-truth-reconciliation-cleanup: python3 tools/taskclient.py --reconcile-task-queue-truth",
+    "task-task-queue-truth-reconciliation-cleanup: python3 tools/project_config.py"
   ],
   "next_run_or_next_tasks": [
-    "connect baseline refresh to run summary after this stabilizes",
+    "continue tightening run-level prose so baseline-ready summaries stay aligned with current code and runtime truth",
     "build next task on top of this verified integrated chain instead of revisiting single-role runtime plumbing",
-    "re-run task-to-run aggregation on future tasks with merge_policy enabled"
+    "re-run task-to-run aggregation on future tasks with merge_policy enabled",
+    "keep future queue maintenance on QUEUE.json only",
+    "continue run evidence cleanup so report prose matches the now-clean task and queue truth"
   ],
-  "updated_at": "2026-03-13T13:11:56+00:00",
-  "baseline_ready_summary": "Run goal: stabilize run-level machine summary writeback.\nRun status: completed.\nStable updates:\n- run summary now has a dedicated writeback entry\n- merge rule table now distinguishes append_dedup and merge_rewrite paths\n- multi-role runtime summaries are now preserved at run level\nStable decisions:\n- run summary writeback stays in evidence tool instead of a new runclient\n- integrated multi-role runtime summaries are preserved and produce an explainable test gate state\nOpen risks:\n- baseline still does not consume run summary yet\n- test gate remains blocked by design in this task, proving explainable non-close state rather than final release\nNext steps:\n- connect baseline refresh to run summary after this stabilizes\n- build next task on top of this verified integrated chain instead of revisiting single-role runtime plumbing",
+  "updated_at": "2026-03-16T02:12:44+00:00",
+  "baseline_ready_summary": "Run goal: stabilize run-level machine summary writeback.\nRun status: completed.\nStable updates:\n- run summary now has a dedicated writeback entry\n- merge rule table now distinguishes append_dedup and merge_rewrite paths\n- multi-role runtime summaries are now preserved at run level\nStable decisions:\n- run summary writeback stays in evidence tool instead of a new runclient\n- integrated multi-role runtime summaries are preserved and produce an explainable test gate state\nOpen risks:\n- baseline refresh now consumes run summary by default; remaining work is to keep run-level prose aligned with current truth\n- test gate remains blocked by design in this task, proving explainable non-close state rather than final release\nNext steps:\n- continue tightening run-level prose so baseline-ready summaries stay aligned with current code and runtime truth\n- build next task on top of this verified integrated chain instead of revisiting single-role runtime plumbing",
   "merge_policy": {
     "active_tasks": "reconcile_only",
     "completed_tasks": "reconcile_only",
@@ -162,5 +174,9 @@
     ],
     "rewrite_rule": "humanize_and_strip_legacy_task_prefix"
   },
-  "legacy_cleanup_last_applied_at": "2026-03-13T13:11:56+00:00"
+  "legacy_cleanup_last_applied_at": "2026-03-16T02:12:44+00:00",
+  "audit_risks": [
+    "legacy run summaries still contain historical task-prefixed items until re-merged",
+    "project_all_files.txt and console history still preserve historical QUEUE.md references as audit artifacts"
+  ]
 }

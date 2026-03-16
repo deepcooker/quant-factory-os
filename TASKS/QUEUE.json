@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_id": "quant-factory-os",
-  "updated_at": "2026-03-13T14:42:10+00:00",
+  "updated_at": "2026-03-16T01:59:57+00:00",
   "items": [
     {
       "queue_id": "queue-vnext-release-baseline",
@@ -10,7 +10,7 @@
       "task_id": "task-taskclient-pick-next",
       "task_json_file": "TASKS/TASK-taskclient-pick-next.json",
       "task_md_file": "TASKS/TASK-taskclient-pick-next.md",
-      "status": "active",
+      "status": "completed",
       "picked_at": "2026-03-11T09:43:54+00:00",
       "goal": "进入开发设计阶段的新版本基线，保持流程最小可用并可继续迭代。",
       "scope": [
@@ -39,60 +39,13 @@
       ]
     },
     {
-      "queue_id": "queue-bootstrap-sample-task",
-      "title": "bootstrap sample task",
-      "run_id": "run-2026-03-11-vnext-release-baseline",
-      "task_id": "task-bootstrap-sample-task",
-      "task_json_file": "TASKS/TASK-bootstrap-sample-task.json",
-      "task_md_file": "TASKS/TASK-bootstrap-sample-task.md",
-      "status": "active",
-      "picked_at": "2026-03-13T09:40:05+00:00",
-      "goal": "验证 JSON-first task bootstrap 可用。",
-      "scope": [
-        "tools/"
-      ],
-      "acceptance": [
-        {
-          "id": "verify",
-          "text": "Command(s) pass: make verify",
-          "status": "pending"
-        },
-        {
-          "id": "evidence",
-          "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
-          "status": "pending"
-        }
-      ]
-    },
-    {
-      "queue_id": "queue-schema-sample-task",
-      "title": "schema sample task",
-      "run_id": "run-2026-03-11-vnext-release-baseline",
-      "task_id": "task-schema-sample-task",
-      "task_json_file": "TASKS/TASK-schema-sample-task.json",
-      "task_md_file": "TASKS/TASK-schema-sample-task.md",
-      "status": "active",
-      "picked_at": "2026-03-13T10:38:46+00:00",
-      "goal": "验证 schema 收紧。",
-      "scope": [
-        "docs/"
-      ],
-      "acceptance": [
-        {
-          "id": "check-1",
-          "text": "owner docs updated",
-          "status": "pending"
-        }
-      ]
-    },
-    {
       "queue_id": "queue-run-summary-risk-near-duplicate-merge-policy",
       "title": "run summary risk near-duplicate merge policy",
       "run_id": "run-2026-03-11-vnext-release-baseline",
       "task_id": "task-run-summary-risk-near-duplicate-merge-policy",
       "task_json_file": "TASKS/TASK-run-summary-risk-near-duplicate-merge-policy.json",
       "task_md_file": "TASKS/TASK-run-summary-risk-near-duplicate-merge-policy.md",
-      "status": "pending",
+      "status": "completed",
       "picked_at": null,
       "goal": "收紧 run_summary.cross_task_risks 的近义风险句合并规则，区分应保留的并列证据和应归并的 run-level 风险表达。",
       "scope": [
@@ -119,7 +72,7 @@
       "task_id": "task-tool-boundary-decoupling-review",
       "task_json_file": "TASKS/TASK-tool-boundary-decoupling-review.json",
       "task_md_file": "TASKS/TASK-tool-boundary-decoupling-review.md",
-      "status": "pending",
+      "status": "completed",
       "picked_at": null,
       "goal": "梳理四个主工具的职责边界、当前变厚点和下一轮解耦方向，并把 agent 配置化后置到 todo。",
       "scope": [
@@ -142,7 +95,7 @@
       "task_id": "task-appserverclient-task-rule-boundary-tightening",
       "task_json_file": "TASKS/TASK-appserverclient-task-rule-boundary-tightening.json",
       "task_md_file": "TASKS/TASK-appserverclient-task-rule-boundary-tightening.md",
-      "status": "pending",
+      "status": "completed",
       "picked_at": null,
       "goal": "把 appserverclient 中继续变厚的 task/rule 刷新调用做最小收口，保持主流程语义不变。",
       "scope": [
@@ -167,7 +120,7 @@
       "task_id": "task-appserverclient-task-policy-boundary-tightening-pass-2",
       "task_json_file": "TASKS/TASK-appserverclient-task-policy-boundary-tightening-pass-2.json",
       "task_md_file": "TASKS/TASK-appserverclient-task-policy-boundary-tightening-pass-2.md",
-      "status": "pending",
+      "status": "completed",
       "picked_at": null,
       "goal": "继续把 appserverclient 中剩余偏 task policy 的写回做最小下沉，保持 formal mainline 行为不变。",
       "scope": [
@@ -193,7 +146,7 @@
       "task_id": "task-appserverclient-task-policy-boundary-tightening-pass-3",
       "task_json_file": "TASKS/TASK-appserverclient-task-policy-boundary-tightening-pass-3.json",
       "task_md_file": "TASKS/TASK-appserverclient-task-policy-boundary-tightening-pass-3.md",
-      "status": "pending",
+      "status": "completed",
       "picked_at": null,
       "goal": "继续把 appserverclient 中 mark-test-gate 仍在自己拼 test 证据的逻辑下沉到 taskclient，保持 formal mainline 更短更清晰。",
       "scope": [
@@ -219,7 +172,7 @@
       "task_id": "task-appserverclient-task-policy-touchpoint-audit",
       "task_json_file": "TASKS/TASK-appserverclient-task-policy-touchpoint-audit.json",
       "task_md_file": "TASKS/TASK-appserverclient-task-policy-touchpoint-audit.md",
-      "status": "pending",
+      "status": "completed",
       "picked_at": null,
       "goal": "审计 appserverclient 中剩余直接触碰 task policy 的点，并判断是否还有必要继续做第四刀最小解耦。",
       "scope": [
@@ -243,7 +196,7 @@
       "task_id": "task-shortest-stable-mainline-documentation",
       "task_json_file": "TASKS/TASK-shortest-stable-mainline-documentation.json",
       "task_md_file": "TASKS/TASK-shortest-stable-mainline-documentation.md",
-      "status": "pending",
+      "status": "completed",
       "picked_at": null,
       "goal": "把当前最短稳定主线、四个主工具边界和不应再继续拆的原则写成非常清晰的操作面。",
       "scope": [
@@ -266,7 +219,7 @@
       "task_id": "task-short-stable-mainline-regression",
       "task_json_file": "TASKS/TASK-short-stable-mainline-regression.json",
       "task_md_file": "TASKS/TASK-short-stable-mainline-regression.md",
-      "status": "pending",
+      "status": "completed",
       "picked_at": null,
       "goal": "围绕当前最短稳定主线做一轮回归验证，确认默认路径在不扩结构的前提下可持续稳定运行。",
       "scope": [
@@ -288,6 +241,6 @@
   ],
   "notes": [
     "QUEUE.json is the machine-oriented queue source for active/open work.",
-    "QUEUE.md remains a legacy human-readable backlog during transition and has not been fully backfilled."
+    "Human-readable queue compatibility has been removed; use task JSON files and run evidence for manual review."
   ]
 }

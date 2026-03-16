@@ -90,10 +90,11 @@ LEARN_INIT_THREAD_NAME = str(RUNTIME_DEFAULTS["learn_init_thread_name"])
 LEARN_INIT_EFFORT = str(RUNTIME_DEFAULTS["learn_init_effort"])
 LEARN_INIT_TURN_TEXT = str(RUNTIME_DEFAULTS["learn_init_turn_text"])
 
-DEFAULT_EVENTS_FILE = REPO_ROOT / "test_app.events.jsonl"
-DEFAULT_STDERR_FILE = REPO_ROOT / "test_app.stderr.log"
-LEARN_INIT_EVENTS_FILE = REPO_ROOT / "test_app.learn_init.events.jsonl"
-LEARN_INIT_STDERR_FILE = REPO_ROOT / "test_app.learn_init.stderr.log"
+APPSERVER_LOG_DIR = REPO_ROOT / "appserver_log"
+DEFAULT_EVENTS_FILE = APPSERVER_LOG_DIR / "test_app.events.jsonl"
+DEFAULT_STDERR_FILE = APPSERVER_LOG_DIR / "test_app.stderr.log"
+LEARN_INIT_EVENTS_FILE = APPSERVER_LOG_DIR / "test_app.learn_init.events.jsonl"
+LEARN_INIT_STDERR_FILE = APPSERVER_LOG_DIR / "test_app.learn_init.stderr.log"
 DEFAULT_LOG_LEVEL = logging.INFO
 DEFAULT_LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 LOGGER_NAME = "qf.appserverclient"
@@ -206,7 +207,7 @@ def build_summarize_current_text() -> str:
         active_task = load_active_task()
     except Exception:
         active_task = {}
-    prompt = load_prompt_text(REPO_ROOT / "tools" / "summarize_current_prompt.md")
+    prompt = load_prompt_text(REPO_ROOT / "tools" / "prompts" / "summarize_current_prompt.md")
     lines = [prompt, "", "当前运行态："]
     lines.append(f"- current_project_id: {str(runtime_state.current_project_id).strip() or '(none)'}")
     lines.append(f"- current_run_id: {str(runtime_state.current_run_id).strip() or '(none)'}")
@@ -234,7 +235,7 @@ def build_summarize_role_text(role: str) -> str:
         active_task = load_active_task()
     except Exception:
         active_task = {}
-    prompt = load_prompt_text(REPO_ROOT / "tools" / "summarize_role_prompt.md")
+    prompt = load_prompt_text(REPO_ROOT / "tools" / "prompts" / "summarize_role_prompt.md")
     lines = [prompt, "", "当前运行态："]
     lines.append(f"- current_project_id: {str(runtime_state.current_project_id).strip() or '(none)'}")
     lines.append(f"- current_run_id: {str(runtime_state.current_run_id).strip() or '(none)'}")
@@ -323,7 +324,7 @@ def choose_refresh_baseline_input(current_summary: dict[str, Any], run_summary: 
 
 
 def build_refresh_baseline_text(current_summary: dict[str, Any], run_summary: dict[str, Any] | None = None) -> str:
-    prompt = load_prompt_text(REPO_ROOT / "tools" / "refresh_baseline_prompt.md")
+    prompt = load_prompt_text(REPO_ROOT / "tools" / "prompts" / "refresh_baseline_prompt.md")
     input_type, input_text, _ = choose_refresh_baseline_input(current_summary, run_summary)
     lines = [prompt, ""]
     if input_type == "run_summary":

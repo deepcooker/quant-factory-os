@@ -1,57 +1,59 @@
 {
-  "task_id": "task-tool-boundary-decoupling-review",
+  "task_id": "task-run-summary-risk-layering-cleanup",
   "run_id": "run-2026-03-11-vnext-release-baseline",
   "project_id": "quant-factory-os",
   "status": "completed",
   "priority": "P1",
-  "title": "tool boundary decoupling review",
-  "goal": "梳理四个主工具的职责边界、当前变厚点和下一轮解耦方向，并把 agent 配置化后置到 todo。",
+  "title": "run summary risk layering cleanup",
+  "goal": "separate operational/mainline risks from audit-history risks in run summary so baseline-facing summaries stay cleaner",
   "scope": [
+    "reports/",
     "tools/",
-    "docs/",
-    "todo.md"
+    "docs/"
   ],
-  "non_goals": [
-    "不扩新 runtime 能力"
-  ],
+  "non_goals": [],
   "acceptance": [
     {
       "id": "check-1",
-      "text": "owner docs 明确四工具边界和解耦方向；todo.md 记录 agent 配置化后置",
-      "status": "pending"
+      "text": "run summary risk fields are layered or filtered",
+      "status": "completed"
+    },
+    {
+      "id": "check-2",
+      "text": "baseline_ready_summary excludes audit-only noise",
+      "status": "completed"
+    },
+    {
+      "id": "check-3",
+      "text": "docs and evidence updated",
+      "status": "completed"
     }
   ],
-  "inputs": [
-    "tools/appserverclient.py",
-    "tools/taskclient.py",
-    "tools/evidence.py",
-    "tools/gitclient.py",
-    "docs/WORKFLOW.md",
-    "docs/ENTITIES.md",
-    "todo.md"
-  ],
+  "inputs": [],
   "artifacts": {
-    "task_md_file": "TASKS/TASK-tool-boundary-decoupling-review.md",
+    "task_md_file": "TASKS/TASK-run-summary-risk-layering-cleanup.md",
     "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
     "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
   },
   "task_summary": {
     "status": "completed",
     "key_updates": [
-      "formal tool boundaries and current thick spots are now documented"
+      "run summary now separates operational risks from audit-history risks"
     ],
     "decisions": [
-      "agent role configuration is deferred until tool boundaries stabilize"
+      "baseline-facing compaction should consume cross_task_risks only and leave audit-only cleanup risk in audit_risks"
     ],
     "risks": [
-      "appserverclient and evidence.py remain the current thick spots if new logic keeps accumulating there"
+      "future normalize rules must keep audit classification narrow so real runtime risk does not get hidden"
     ],
     "verification": [
-      "python3 -m py_compile tools/appserverclient.py tools/taskclient.py tools/evidence.py tools/gitclient.py",
-      "make evidence RUN_ID=run-2026-03-11-vnext-release-baseline"
+      "python3 -m py_compile tools/evidence.py",
+      "python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --normalize-run-summary",
+      "python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --compact-run-summary",
+      "python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --run-summary"
     ],
     "next_steps": [
-      "keep new runtime logic out of gitclient and prefer taskclient/evidence boundary-first growth"
+      "continue tightening run-level prose without mixing audit residue back into baseline-facing summaries"
     ],
     "conflict_policy": {
       "priority_order": [
@@ -96,16 +98,14 @@
       ]
     },
     "run_main_resolution": {
-      "status": "not_needed",
-      "close_escalation": true,
-      "notes": [
-        "documentation-only boundary review; no run-main escalation needed"
-      ],
-      "updated_at": "2026-03-13T13:52:04+00:00"
+      "status": "pending_ack",
+      "close_escalation": false,
+      "notes": [],
+      "updated_at": ""
     },
     "role_summary_evidence": [],
     "source_threads": [],
-    "updated_at": "2026-03-13T13:52:04+00:00"
+    "updated_at": "2026-03-16T02:08:22+00:00"
   },
   "role_threads": {
     "run-main": {
@@ -176,7 +176,7 @@
     "blocking_issues": [],
     "updated_at": ""
   },
-  "updated_at": "2026-03-16T01:57:30+00:00",
+  "updated_at": "2026-03-16T02:08:22+00:00",
   "risks": "",
   "rollback_plan": ""
 }

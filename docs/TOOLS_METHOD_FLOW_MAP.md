@@ -497,4 +497,4 @@
 - `run_main`
 
 这些文件仍可作为历史实现参考，但不再代表当前正式业务主流程。
-对应 shell 兼容入口已归档到 `tools/backup/`，原 `tools/*.sh` 只保留过渡转发层。
+对应 shell 兼容入口已归档到 `chatlogs/backup/`，原 `tools/*.sh` 只保留过渡转发层。

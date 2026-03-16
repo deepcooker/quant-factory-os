@@ -2,7 +2,7 @@
   "task_id": "task-gitclient-taskstore-integration",
   "run_id": "run-2026-03-11-vnext-release-baseline",
   "project_id": "quant-factory-os",
-  "status": "done",
+  "status": "completed",
   "priority": "P1",
   "title": "gitclient taskstore integration",
   "goal": "让 tools/gitclient.py 通过 taskstore 读取当前 active task，提交说明优先使用 task JSON 的结构化上下文，而不是继续依赖 TASKS/*.md 文件名。",
@@ -56,5 +56,5 @@
     "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
     "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
   },
-  "updated_at": "2026-03-11T17:25:00+00:00"
+  "updated_at": "2026-03-16T01:57:30+00:00"
 }

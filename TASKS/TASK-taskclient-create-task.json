@@ -2,7 +2,7 @@
   "task_id": "task-taskclient-create-task",
   "run_id": "run-2026-03-11-vnext-release-baseline",
   "project_id": "quant-factory-os",
-  "status": "done",
+  "status": "completed",
   "priority": "P1",
   "title": "taskclient create task",
   "goal": "给 tools/taskclient.py 增加一个最小 JSON-first task bootstrap 入口，用来创建新的 TASKS/TASK-*.json 和兼容 md 视图，并可选追加到 TASKS/QUEUE.json。",
@@ -59,5 +59,5 @@
     "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
     "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
   },
-  "updated_at": "2026-03-11T17:50:00+00:00"
+  "updated_at": "2026-03-16T01:57:30+00:00"
 }

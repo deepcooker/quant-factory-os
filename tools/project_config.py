@@ -21,7 +21,7 @@ TOOLS_DIR_NAME = "tools"
 DOCS_DIR_NAME = "docs"
 AGENTS_FILE_NAME = "AGENTS.md"
 PROJECT_GUIDE_FILE_NAME = "docs/PROJECT_GUIDE.md"
-LEARN_BASELINE_PROMPT_FILE_NAME = "tools/learnbaseline_prompt.md"
+LEARN_BASELINE_PROMPT_FILE_NAME = "tools/prompts/learnbaseline_prompt.md"
 OWNER_FILES = [
     "docs/PROJECT_GUIDE.md",
     "AGENTS.md",

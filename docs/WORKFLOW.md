@@ -39,7 +39,7 @@
    - `--rollback-commit`
 
 旧的 `learn -> ready -> orient -> choose -> council -> arbiter -> slice -> do -> review -> ship`
-链路现在视为研发期过渡流程和兼容材料，不再作为当前正式主线；对应旧 Python 与 shell 入口都已归档到 `tools/backup/`，不再占据正式 `tools/` 入口位。
+链路现在视为研发期过渡流程和兼容材料，不再作为当前正式主线；对应旧 Python 与 shell 入口都已归档到 `chatlogs/backup/`，不再占据正式 `tools/` 入口位。
 
 ### 1.2 边界原则
 - `init` 只做环境准备、项目骨架补齐、Git/Codex 前置检查。
@@ -151,7 +151,7 @@ project
 - `AGENTS.md`
 - `docs/WORKFLOW.md`
 - `docs/FILE_INDEX.md`
-- `TOOLS_METHOD_FLOW_MAP.md`
+- `docs/TOOLS_METHOD_FLOW_MAP.md`
 - `tools/project_config.json`
 - 动态 prompt 组装结果
 
@@ -289,8 +289,9 @@ run 主线程在这一步至少要收敛出：
 - 在这条最小链里，`test` 的独立结论应先进入 `test_gate`，再决定 task 是否可以进入更高层 summary
 - 当前正式 task 入口是 `python3 tools/taskclient.py --next`，用于从 `TASKS/QUEUE.json` 选择并绑定下一个 active task
 - 当前也可用 `python3 tools/taskclient.py --create ...` 生成新的 JSON-first task，并按需追加到 `TASKS/QUEUE.json` 或直接激活
+- 当前也可用 `python3 tools/taskclient.py --reconcile-task-queue-truth` 收口 `runtime_state`、`TASKS/QUEUE.json` 与 `TASKS/TASK-*.json` 的状态漂移
 - 当前也可用 `python3 tools/taskclient.py --set-task-summary ...` 把多个 thread 的稳定结论聚合回 task JSON 内的 `task_summary`
-- `tools/task.sh` 已退出正式层，只保留历史版本于 `tools/backup/task.sh`
+- `tools/task.sh` 已退出正式层，只保留历史版本于 `chatlogs/backup/task.sh`
 
 ### 4.5 `appserverclient --current-turn`
 
@@ -331,6 +332,8 @@ run 主线程在这一步至少要收敛出：
 - 当前还支持 `python3 tools/evidence.py --reconcile-run-summary --run-id <RUN_ID>`，按同一 run 下的 `TASKS/TASK-*.json` 真实状态重算 `active_tasks/completed_tasks/source_tasks`
 - 当前还支持 `python3 tools/evidence.py --compact-run-summary --run-id <RUN_ID>`，为 baseline refresh 生成更短的 `baseline_ready_summary`
 - 当前还支持 `python3 tools/evidence.py --normalize-run-summary --run-id <RUN_ID>`，对历史 `merge_rewrite` 字段中的旧 task 前缀条目做显式维护式清理
+- `normalize-run-summary` 现在还会把历史清理、审计残留、兼容资产类风险分流到 `audit_risks`；只有仍然成立的主线运行风险继续保留在 `cross_task_risks`
+- `baseline_ready_summary` 只消费 `cross_task_risks`，不再带入 `audit_risks`
 - `reconcile-run-summary` 的目标是减少 `run_summary.json` 与 task 真相源的手工漂移；它不会自动掩盖历史遗留的 active task
 - `normalize-run-summary` 的目标不是批量重写历史，而是在 owner 明确触发维护动作时，只清理已经落在 run-level 语义字段中的旧 task 前缀表达；`verification_overview` 和 `source_tasks` 仍保留原有证据粒度
 
@@ -424,7 +427,7 @@ run 主线程在这一步至少要收敛出：
 - `do`
 - `verify`
 - `review`
-- archived shell entrypoints in `tools/backup/`
+- archived shell entrypoints in `chatlogs/backup/`
 - `ship`
 
 条件：
@@ -474,14 +477,14 @@ run 主线程在这一步至少要收敛出：
 
 说明：
 - baseline 只负责项目级主认知，不直接承载日常噪音讨论。
-- 旧的 `learn / ready / orient / choose / council / arbiter / slice_task / run_main / ship.sh` 仍可作为 `tools/backup/` 下的参考资产，但不再是默认正式主线。
+- 旧的 `learn / ready / orient / choose / council / arbiter / slice_task / run_main / ship.sh` 仍可作为 `chatlogs/backup/` 下的参考资产，但不再是默认正式主线。
 - `runtime_state` 允许“当前已有 run，但 task 尚未切出”的中间状态。
 
 ## 10. Pause / Resume
 
 当 run 中断时：
 - 优先依赖 `tools/project_config.json -> runtime_state`、`session_registry` 和 run evidence 恢复上下文
-- `legacy.sh` 只保留历史版本于 `tools/backup/legacy.sh`，不再是正式恢复入口
+- `legacy.sh` 只保留历史版本于 `chatlogs/backup/legacy.sh`，不再是正式恢复入口
 
 停止原因统一记录到：
 - `reports/<RUN_ID>/decision.md`

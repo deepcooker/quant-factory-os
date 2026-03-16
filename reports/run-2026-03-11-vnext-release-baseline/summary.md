@@ -385,6 +385,95 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 - `python3 tools/appserverclient.py --summarize-current` -> pass; `current_summary_text_start ... current_summary_text_end`
 - `python3 tools/appserverclient.py --refresh-baseline` -> pass; `baseline_refresh_input_type=run_summary`
 
+## Task / queue truth reconciliation cleanup
+- 新建并完成 `task-task-queue-truth-reconciliation-cleanup`，专门收口 `runtime_state`、`TASKS/QUEUE.json` 和 `TASKS/TASK-*.json` 之间的历史状态漂移。
+- `tools/taskclient.py` 新增 `--reconcile-task-queue-truth`，统一完成三件事：
+  - 把旧 `done` 状态归一成 `completed`
+  - 把非当前的陈旧 `active` task 收回到 `completed` 或 `pending`
+  - 把 `QUEUE.json` 的历史 `active/pending` 条目按 task 真相源重算
+- 当前收口后：
+  - `TASKS/QUEUE.json` 已无遗留未完成项
+  - 当前唯一 active task 只剩本轮收口 task
+  - `TASKS/QUEUE.md` 已缩成废弃兼容说明页，不再保留会误导自动化的旧 backlog 文本
+- owner docs 口径同步更新：
+  - `AGENTS.md`
+  - `docs/PROJECT_GUIDE.md`
+  - `docs/WORKFLOW.md`
+  - `docs/FILE_INDEX.md`
+
+## Commands / Outputs (task / queue truth reconciliation cleanup)
+- `python3 -m py_compile tools/taskclient.py` -> pass
+- `python3 tools/taskclient.py --reconcile-task-queue-truth` -> pass; normalized historical task statuses and queue item statuses
+- `python3 tools/project_config.py` -> pass; `current_task_id=task-task-queue-truth-reconciliation-cleanup`
+
+## Run summary stale prose cleanup
+- 新建并完成 `task-run-summary-stale-prose-cleanup`，只收仍然落后于当前代码现实的 run-level 风险句和 next-step 句。
+- `tools/evidence.py` 的 `normalize-run-summary` 现在会把两类已过时表述改写成当前事实：
+  - `baseline still does not consume run summary yet`
+  - `connect baseline refresh to run summary after this stabilizes`
+- 当前 [run_summary.json](/root/quant-factory-os/reports/run-2026-03-11-vnext-release-baseline/run_summary.json) 已更新成：
+  - `baseline refresh now consumes run summary by default; remaining work is to keep run-level prose aligned with current truth`
+  - `continue tightening run-level prose so baseline-ready summaries stay aligned with current code and runtime truth`
+- 这一步没有扩新功能，只把 evidence 语义重新拉回当前真实主线。
+
+## Commands / Outputs (run summary stale prose cleanup)
+- `python3 -m py_compile tools/evidence.py` -> pass
+- `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --normalize-run-summary` -> pass
+- `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --compact-run-summary` -> pass
+- `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --run-summary` -> pass; stale baseline-consumption and next-step prose removed
+
+## Run summary risk layering cleanup
+- `normalize-run-summary` 现在会把 run-level 风险分成两层：
+  - `cross_task_risks`：当前主线仍成立的运行风险
+  - `audit_risks`：历史清理、审计残留、兼容资产风险
+- `baseline_ready_summary` 继续只消费 `cross_task_risks`，不会把 audit-only 噪音带入 baseline-facing compaction。
+
+## Commands / Outputs (run summary risk layering cleanup)
+- `python3 -m py_compile tools/evidence.py` -> pass
+- `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --normalize-run-summary` -> pass; 审计/历史风险已分流到 `audit_risks`
+- `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --compact-run-summary` -> pass; `baseline_ready_summary` 仍只包含主线运行风险
+- `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --run-summary` -> pass
+
+## Tool surface and prompt asset cleanup
+- `tools/prompts/` 已建立，正式 prompt 模板已从 `tools/` 顶层迁入：
+  - `learnbaseline_prompt.md`
+  - `summarize_current_prompt.md`
+  - `summarize_role_prompt.md`
+  - `refresh_baseline_prompt.md`
+- 传统需求分析材料已从 `tools/` 迁到 `chatlogs/需求管理及分析工作指南.doc`。
+- `TOOLS_METHOD_FLOW_MAP.md` 已迁到 `docs/TOOLS_METHOD_FLOW_MAP.md`。
+- 顶层 `tools/start.sh` 与 `tools/onboard.sh` 已归档到 `tools/backup/`，不再占据正式工具面。
+- 正式主线引用已同步到新路径；历史 task / learn artifacts 保留旧路径作为审计痕迹，不做批量重写。
+
+## Commands / Outputs (tool surface and prompt asset cleanup)
+- `python3 -m py_compile tools/project_config.py tools/appserverclient.py` -> pass
+- `make evidence RUN_ID=run-2026-03-11-vnext-release-baseline` -> pass
+
+## Unused top-level tool artifact cleanup
+- 删除了未被正式主线引用的 `tools/console.txt`。
+- 顶层 `tools/taskstore.py` 与 `tools/sync_exam.py` 已迁到 `tools/backup/`：
+  - `tools/backup/taskstore.forwarder.py`
+  - `tools/backup/sync_exam.py`
+- `tools/slice.py` 保留在顶层，因为 `make slice` 仍然直接依赖它。
+
+## Commands / Outputs (unused top-level tool artifact cleanup)
+- `grep -RIn "slice\\.py\\|sync_exam\\.py\\|taskstore\\.py" Makefile AGENTS.md README.md docs tools --exclude-dir=.git --exclude-dir=backup` -> confirmed only `slice.py` is still used by `Makefile`
+- `python3 -m py_compile tools/project_config.py tools/appserverclient.py` -> pass
+- `make evidence RUN_ID=run-2026-03-11-vnext-release-baseline` -> pass
+
+## Unused shell helper and Make target cleanup
+- 顶层 `tools/doctor.sh`、`tools/enter.sh`、`tools/smoke.sh` 已归档到 `tools/backup/`。
+- `Makefile` 保留，但已删掉失效的 `doctor / awareness / ship / orchestrator` targets。
+- 保留的正式 targets 现在只聚焦：
+  - `make evidence`
+  - `make verify`
+  - `make slice`
+
+## Commands / Outputs (unused shell helper and Make target cleanup)
+- `python3 -m py_compile tools/project_config.py tools/appserverclient.py` -> pass
+- `make evidence RUN_ID=run-2026-03-11-vnext-release-baseline` -> pass
+- `make verify` -> no tests present; skipped pytest as expected
+
 ## Baseline prefers run summary
 - 新建并完成 `task-baseline-prefers-run-summary`，把 `appserverclient --refresh-baseline` 的输入优先级改为：
   - `reports/<RUN_ID>/run_summary.json`
@@ -689,3 +778,47 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 - `python3 -m py_compile tools/evidence.py` -> pass
 - `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --normalize-run-summary` -> pass; `cross_task_risks` 已出现 `test gate remains blocked`
 - `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --run-summary` -> pass; risk 语句保持 run-level 表达
+
+## Remove Makefile alias layer
+- 新建并完成 `task-remove-makefile-alias-layer`，删除 repo 根目录 `Makefile`，把正式入口进一步收成 Python/pytest 原生命令。
+- `AGENTS.md` 与 `README.md` 中原本的：
+  - `make evidence`
+  - `make verify`
+  - `make slice`
+  已全部替换为：
+  - `python3 tools/evidence.py --run-id <RUN_ID>`
+  - `pytest -q`
+  - `python3 tools/slice.py --run-id <RUN_ID> --day YYYY-MM-DD --symbols A,B --start HH:MM --end HH:MM`
+- 这一步的目标不是改能力，而是删掉一层只做转发的别名入口，降低 repo 理解成本。
+
+## Commands / Outputs (remove Makefile alias layer)
+- `python3 -m py_compile tools/project_config.py tools/appserverclient.py tools/evidence.py tools/taskclient.py` -> pass
+- `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline` -> pass
+- `pytest -q` -> `/bin/bash: pytest: command not found`
+
+## Relocate appserver logs and backup assets
+- 新建并完成 `task-relocate-appserver-logs-and-backup-assets`，把顶层 `test_app*.jsonl/.log` 收进 `appserver_log/`，并删除顶层 `log.txt`。
+- `tools/backup/` 已整体迁到 `chatlogs/backup/`，正式文档与默认路径已同步改到新位置。
+- `tools/appserverclient.py` 的默认 runtime 日志输出现在落到：
+  - `appserver_log/test_app.events.jsonl`
+  - `appserver_log/test_app.stderr.log`
+  - `appserver_log/test_app.learn_init.events.jsonl`
+  - `appserver_log/test_app.learn_init.stderr.log`
+
+## Commands / Outputs (relocate appserver logs and backup assets)
+- `python3 -m py_compile tools/appserverclient.py tools/project_config.py tools/evidence.py tools/taskclient.py` -> pass
+- `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline` -> pass
+- `find appserver_log chatlogs/backup -maxdepth 1 -type f | sort` -> pass; 日志与归档资产都已落到新目录
+
+## Cleanup stale tasks and reports artifacts
+- 新建并完成 `task-cleanup-stale-tasks-and-reports-artifacts`，删除了：
+  - `TASKS/QUEUE.md`
+  - sample/demo task: `TASK-bootstrap-sample-task.*`、`TASK-schema-sample-task.*`、`TASK-ux-sample-task.*`
+  - 孤立旧 task: `TASK-tools-orchestrator-entry.md`
+  - reports 下的 `.ipynb_checkpoints` 残留
+- 保留了真实 run evidence 和真实 task JSON/MD；这轮只清掉无正式主线价值的样例、兼容和 checkpoint 垃圾。
+
+## Commands / Outputs (cleanup stale tasks and reports artifacts)
+- `python3 -m py_compile tools/appserverclient.py tools/project_config.py tools/evidence.py tools/taskclient.py` -> pass
+- `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline` -> pass
+- 正式面 grep 已无 `TASKS/QUEUE.md` 命中；剩余命中只在 checkpoint/backup 文档
