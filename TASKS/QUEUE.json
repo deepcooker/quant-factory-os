@@ -4,6 +4,35 @@
   "updated_at": "2026-03-16T01:59:57+00:00",
   "items": [
     {
+      "queue_id": "queue-init-standard-bootstrap-skeleton",
+      "title": "init standard bootstrap skeleton",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-init-standard-bootstrap-skeleton",
+      "task_json_file": "TASKS/TASK-init-standard-bootstrap-skeleton.json",
+      "task_md_file": "TASKS/TASK-init-standard-bootstrap-skeleton.md",
+      "status": "completed",
+      "picked_at": null,
+      "goal": "把 init 扩成最小标准协议骨架创建入口，确保新项目缺少 owner docs 与最小目录时也能先建协议壳。",
+      "scope": [
+        "tools/init.py",
+        "docs/WORKFLOW.md",
+        "docs/FILE_INDEX.md",
+        "TASKS/QUEUE.json"
+      ],
+      "acceptance": [
+        {
+          "id": "check-1",
+          "text": "init 自动创建最小标准协议骨架目录和文件",
+          "status": "completed"
+        },
+        {
+          "id": "check-2",
+          "text": "docs 明确 init 的 bootstrap 范围",
+          "status": "completed"
+        }
+      ]
+    },
+    {
       "queue_id": "queue-vnext-release-baseline",
       "title": "vnext release baseline",
       "run_id": "run-2026-03-11-vnext-release-baseline",

@@ -12,6 +12,7 @@ from pathlib import Path
 try:
     from tools.common_helpers import first_line
     from tools.project_config import (
+        PROJECT_CONFIG_FILE,
         ProjectConfig,
         RuntimeState,
         get_app_server_session_id,
@@ -26,6 +27,7 @@ try:
 except Exception:  # pragma: no cover
     from common_helpers import first_line  # type: ignore
     from project_config import (  # type: ignore
+        PROJECT_CONFIG_FILE,
         ProjectConfig,
         RuntimeState,
         get_app_server_session_id,
@@ -79,9 +81,87 @@ INIT_DEFAULT_AGENTS_CONTENT = """# AGENTS.md
 项目宪法文件由 owner 后续补充。
 """
 
+INIT_DEFAULT_README_CONTENT = """# README
+
+项目入口说明由 owner 后续补充。
+"""
+
+INIT_DEFAULT_TODO_CONTENT = """# TODO
+
+后续待办由 owner 后续补充。
+"""
+
 INIT_DEFAULT_PROJECT_GUIDE_CONTENT = """# PROJECT_GUIDE
 
 项目学习锚点文件由 owner 后续补充。
+"""
+
+INIT_DEFAULT_WORKFLOW_CONTENT = """# WORKFLOW
+
+项目工作流由 owner 后续补充。
+"""
+
+INIT_DEFAULT_ENTITIES_CONTENT = """# ENTITIES
+
+项目对象定义由 owner 后续补充。
+"""
+
+INIT_DEFAULT_FILE_INDEX_CONTENT = """# FILE_INDEX
+
+项目文件索引由 owner 后续补充。
+"""
+
+INIT_DEFAULT_PROJECT_BOOTSTRAP_PROTOCOL_CONTENT = """# PROJECT_BOOTSTRAP_PROTOCOL
+
+项目接入协议由 owner 后续补充。
+"""
+
+INIT_DEFAULT_TOOLS_METHOD_FLOW_MAP_CONTENT = ""
+
+INIT_DEFAULT_QUEUE_JSON_CONTENT = """{
+  "items": []
+}
+"""
+
+INIT_DEFAULT_TASK_SCHEMA_CONTENT = """{}
+"""
+
+INIT_DEFAULT_QUEUE_SCHEMA_CONTENT = """{}
+"""
+
+INIT_DEFAULT_PROJECT_CONFIG_TEMPLATE_CONTENT = """{
+  "required": {
+    "project_id": "your-project-id",
+    "project_root": "/abs/path/to/your-project"
+  },
+  "git": {
+    "remote_url": "https://github.com/your-org/your-project.git",
+    "github_login": "your-github-login"
+  },
+  "runtime_state": {
+    "current_project_id": "your-project-id",
+    "current_run_id": "",
+    "current_task_id": "",
+    "current_task_file": "",
+    "current_task_json_file": "",
+    "current_status": "",
+    "current_updated_at": ""
+  },
+  "task_registry": {
+    "active_task_json_file": "",
+    "queue_json_file": "TASKS/QUEUE.json",
+    "task_md_is_legacy_view": true,
+    "queue_md_is_legacy_view": true
+  },
+  "session_registry": {
+    "learn_session_baseline": {},
+    "fork_current_session": {},
+    "current_summary": {
+      "baseline_refresh_input_type": "",
+      "baseline_refresh_input_ref": ""
+    }
+  }
+}
 """
 
 
@@ -195,9 +275,34 @@ def init_tools_11_ensure_file(path: Path, content: str) -> str:
     return "created"
 
 
+# init_tools_14 中文：确保 project_config 模板和最小配置存在，避免新项目第一次运行 init 就因缺配置失败。
+def init_tools_14_ensure_project_config_bootstrap() -> None:
+    template_path = PROJECT_CONFIG_FILE.with_name("project_config.template.json")
+    init_tools_11_ensure_file(template_path, INIT_DEFAULT_PROJECT_CONFIG_TEMPLATE_CONTENT)
+    if PROJECT_CONFIG_FILE.exists():
+        return
+    project_root = Path.cwd().resolve()
+    project_id = project_root.name
+    config = json.loads(template_path.read_text(encoding="utf-8"))
+    required = config.setdefault("required", {})
+    required["project_id"] = project_id
+    required["project_root"] = str(project_root)
+    runtime_state = config.setdefault("runtime_state", {})
+    runtime_state["current_project_id"] = project_id
+    runtime_state["current_run_id"] = ""
+    runtime_state["current_task_id"] = ""
+    runtime_state["current_task_file"] = ""
+    runtime_state["current_task_json_file"] = ""
+    runtime_state["current_status"] = ""
+    runtime_state["current_updated_at"] = ""
+    PROJECT_CONFIG_FILE.write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    os.chmod(PROJECT_CONFIG_FILE, 0o644)
+
+
 # 1001 中文：第一步，读取并校验项目配置文件。
 def init_step_01_load_context(logger: logging.Logger) -> InitContext:
     init_tools_09_log_step(logger, 1, 5, "读取配置文件", "调用 project_config.py 读取统一配置、校验必填字段，并打印完整配置JSON。")
+    init_tools_14_ensure_project_config_bootstrap()
     cfg = init_tools_06_load_project_config()
     raw_config = load_project_config_json()
     unified_config = init_tools_07_load_unified_config()
@@ -249,7 +354,7 @@ def init_tools_12_load_runtime_state(context: InitContext, logger: logging.Logge
 
 # 1002 中文：第二步，检查项目路径和关键 owner docs。
 def init_step_02_check_project_files(context: InitContext, logger: logging.Logger) -> InitStepResult:
-    init_tools_09_log_step(logger, 2, 5, "确保项目骨架存在", "项目根目录必须存在；tools/docs/AGENTS/PROJECT_GUIDE 缺失时自动创建。")
+    init_tools_09_log_step(logger, 2, 5, "确保项目骨架存在", "项目根目录必须存在；缺失时自动创建最小标准协议骨架。")
     reasons: list[str] = []
     status: dict[str, str] = {}
 
@@ -262,17 +367,76 @@ def init_step_02_check_project_files(context: InitContext, logger: logging.Logge
     if status["PROJECT_ROOT"] == "ok":
         status["TOOLS_DIR"] = init_tools_10_ensure_dir(context.cfg.tools_dir)
         status["DOCS_DIR"] = init_tools_10_ensure_dir(context.cfg.docs_dir)
+        status["TASKS_DIR"] = init_tools_10_ensure_dir(context.cfg.project_root / "TASKS")
+        status["REPORTS_DIR"] = init_tools_10_ensure_dir(context.cfg.project_root / "reports")
+        status["CHATLOGS_DIR"] = init_tools_10_ensure_dir(context.cfg.project_root / "chatlogs")
+        status["APPSERVER_LOG_DIR"] = init_tools_10_ensure_dir(context.cfg.project_root / "appserver_log")
         status["AGENTS_FILE"] = init_tools_11_ensure_file(context.cfg.agents_file, INIT_DEFAULT_AGENTS_CONTENT)
+        status["README_FILE"] = init_tools_11_ensure_file(context.cfg.project_root / "README.md", INIT_DEFAULT_README_CONTENT)
+        status["TODO_FILE"] = init_tools_11_ensure_file(context.cfg.project_root / "todo.md", INIT_DEFAULT_TODO_CONTENT)
         status["PROJECT_GUIDE_FILE"] = init_tools_11_ensure_file(
             context.cfg.project_guide_file,
             INIT_DEFAULT_PROJECT_GUIDE_CONTENT,
         )
+        status["WORKFLOW_FILE"] = init_tools_11_ensure_file(
+            context.cfg.project_root / "docs/WORKFLOW.md",
+            INIT_DEFAULT_WORKFLOW_CONTENT,
+        )
+        status["ENTITIES_FILE"] = init_tools_11_ensure_file(
+            context.cfg.project_root / "docs/ENTITIES.md",
+            INIT_DEFAULT_ENTITIES_CONTENT,
+        )
+        status["FILE_INDEX_FILE"] = init_tools_11_ensure_file(
+            context.cfg.project_root / "docs/FILE_INDEX.md",
+            INIT_DEFAULT_FILE_INDEX_CONTENT,
+        )
+        status["PROJECT_BOOTSTRAP_PROTOCOL_FILE"] = init_tools_11_ensure_file(
+            context.cfg.project_root / "docs/PROJECT_BOOTSTRAP_PROTOCOL.md",
+            INIT_DEFAULT_PROJECT_BOOTSTRAP_PROTOCOL_CONTENT,
+        )
+        status["TOOLS_METHOD_FLOW_MAP_FILE"] = init_tools_11_ensure_file(
+            context.cfg.project_root / "docs/TOOLS_METHOD_FLOW_MAP.md",
+            INIT_DEFAULT_TOOLS_METHOD_FLOW_MAP_CONTENT,
+        )
+        status["QUEUE_JSON_FILE"] = init_tools_11_ensure_file(
+            context.cfg.project_root / "TASKS/QUEUE.json",
+            INIT_DEFAULT_QUEUE_JSON_CONTENT,
+        )
+        status["TASK_SCHEMA_FILE"] = init_tools_11_ensure_file(
+            context.cfg.project_root / "TASKS/_SCHEMA.task.json",
+            INIT_DEFAULT_TASK_SCHEMA_CONTENT,
+        )
+        status["QUEUE_SCHEMA_FILE"] = init_tools_11_ensure_file(
+            context.cfg.project_root / "TASKS/_SCHEMA.queue.json",
+            INIT_DEFAULT_QUEUE_SCHEMA_CONTENT,
+        )
+        status["PROJECT_CONFIG_TEMPLATE_FILE"] = init_tools_11_ensure_file(
+            PROJECT_CONFIG_FILE.with_name("project_config.template.json"),
+            INIT_DEFAULT_PROJECT_CONFIG_TEMPLATE_CONTENT,
+        )
+        status["PROJECT_CONFIG_FILE"] = "ok" if PROJECT_CONFIG_FILE.exists() else "missing"
 
     init_tools_08_log(logger, f"INIT_PROJECT_PATH_STATUS: {status['PROJECT_ROOT']}")
     init_tools_08_log(logger, f"INIT_TOOLS_DIR_STATUS: {status['TOOLS_DIR']}")
     init_tools_08_log(logger, f"INIT_DOCS_DIR_STATUS: {status['DOCS_DIR']}")
+    init_tools_08_log(logger, f"INIT_TASKS_DIR_STATUS: {status['TASKS_DIR']}")
+    init_tools_08_log(logger, f"INIT_REPORTS_DIR_STATUS: {status['REPORTS_DIR']}")
+    init_tools_08_log(logger, f"INIT_CHATLOGS_DIR_STATUS: {status['CHATLOGS_DIR']}")
+    init_tools_08_log(logger, f"INIT_APPSERVER_LOG_DIR_STATUS: {status['APPSERVER_LOG_DIR']}")
     init_tools_08_log(logger, f"INIT_AGENTS_STATUS: {status['AGENTS_FILE']}")
+    init_tools_08_log(logger, f"INIT_README_STATUS: {status['README_FILE']}")
+    init_tools_08_log(logger, f"INIT_TODO_STATUS: {status['TODO_FILE']}")
     init_tools_08_log(logger, f"INIT_PROJECT_GUIDE_STATUS: {status['PROJECT_GUIDE_FILE']}")
+    init_tools_08_log(logger, f"INIT_WORKFLOW_STATUS: {status['WORKFLOW_FILE']}")
+    init_tools_08_log(logger, f"INIT_ENTITIES_STATUS: {status['ENTITIES_FILE']}")
+    init_tools_08_log(logger, f"INIT_FILE_INDEX_STATUS: {status['FILE_INDEX_FILE']}")
+    init_tools_08_log(logger, f"INIT_PROJECT_BOOTSTRAP_PROTOCOL_STATUS: {status['PROJECT_BOOTSTRAP_PROTOCOL_FILE']}")
+    init_tools_08_log(logger, f"INIT_TOOLS_METHOD_FLOW_MAP_STATUS: {status['TOOLS_METHOD_FLOW_MAP_FILE']}")
+    init_tools_08_log(logger, f"INIT_QUEUE_JSON_STATUS: {status['QUEUE_JSON_FILE']}")
+    init_tools_08_log(logger, f"INIT_TASK_SCHEMA_STATUS: {status['TASK_SCHEMA_FILE']}")
+    init_tools_08_log(logger, f"INIT_QUEUE_SCHEMA_STATUS: {status['QUEUE_SCHEMA_FILE']}")
+    init_tools_08_log(logger, f"INIT_PROJECT_CONFIG_TEMPLATE_STATUS: {status['PROJECT_CONFIG_TEMPLATE_FILE']}")
+    init_tools_08_log(logger, f"INIT_PROJECT_CONFIG_STATUS: {status['PROJECT_CONFIG_FILE']}")
     return InitStepResult(reasons=reasons, status=status)
 
 

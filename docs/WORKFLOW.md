@@ -119,6 +119,13 @@ project
 - 读取固定项目常量配置
 - 识别当前项目与项目路径
 - 检查关键 owner docs 是否齐备
+- 缺失时自动创建最小标准协议骨架：
+  - 根目录：`AGENTS.md`、`README.md`、`todo.md`
+  - `docs/`：`PROJECT_GUIDE.md`、`WORKFLOW.md`、`ENTITIES.md`、`FILE_INDEX.md`、`PROJECT_BOOTSTRAP_PROTOCOL.md`、`TOOLS_METHOD_FLOW_MAP.md`
+  - 目录：`TASKS/`、`reports/`、`chatlogs/`、`appserver_log/`
+  - `TASKS/`：`QUEUE.json`、`_SCHEMA.task.json`、`_SCHEMA.queue.json`
+  - `tools/`：`project_config.template.json`
+- `tools/project_config.json` 缺失时，从模板 bootstrap 最小配置
 - 检查 Codex / app-server 是否具备运行前提
 - 检查 git 仓库、远端、账号和工作区状态
 - 给出自动化是否允许继续的总判定
@@ -128,6 +135,7 @@ project
 - 不创建业务 `RUN_ID`
 - 不做项目同频
 - 不生成讨论产物
+- 不替项目预写业务 owner docs 内容
 - 不授权执行
 - 不替代 app-server 运行时交互
 

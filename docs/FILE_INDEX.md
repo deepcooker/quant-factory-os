@@ -36,7 +36,7 @@
 
 | 文件 | 作用 | 什么时候优先看 |
 | --- | --- | --- |
-| `tools/init.py` | 环境准备、项目骨架补齐、Codex/Git 前置检查。 | 开工前环境准备时 |
+| `tools/init.py` | 环境准备、项目骨架补齐、Codex/Git 前置检查；缺失时会补最小标准协议骨架和 `project_config.json` bootstrap。 | 开工前环境准备或新项目首次接入时 |
 | `tools/appserverclient.py` | Codex app-server runtime 核心；负责 baseline / fork / fork-role / role-turn / summarize-role / mark-test-gate / current-turn / summarize-current / refresh-baseline，并显式打印当前 active task JSON 摘要；`refresh-baseline` 现优先消费 `run_summary.json`，`summarize-role` 会自动 merge role summaries 并刷新 task gap/escalation/resolution，`mark-test-gate` 会继续联动刷新。当前风险是它已经同时看见 runtime 与部分 task gate 规则，后续应继续保持“真实线程生命周期 + 必要写回”的边界，避免演化成总控脚本。 | 学习基线、当前 session 推进、role thread 绑定/执行/去噪、test gate 写回和 baseline 回灌时 |
 | `tools/view.sh` | 稳定的分段文件读取工具；支持直接执行和 `python3 tools/view.sh ...`，兼容历史 `--lines START:END` 用法，并内置 repo 边界与 denylist 检查。 | 读取长文件、按范围查看、查找命中行或验证读取边界时 |
 | `tools/prompts/summarize_role_prompt.md` | role thread 去噪总结模板；用于把单个角色线程总结成可写入 task 机器层的 role summary。 | 调用 `appserverclient --summarize-role` 时 |

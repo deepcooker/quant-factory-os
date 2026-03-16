@@ -10,14 +10,14 @@
   "runtime_state": {
     "current_project_id": "quant-factory-os",
     "current_run_id": "run-2026-03-11-vnext-release-baseline",
-    "current_task_id": "task-sync-view-tool-usage-docs",
-    "current_task_file": "TASKS/TASK-sync-view-tool-usage-docs.md",
-    "current_task_json_file": "TASKS/TASK-sync-view-tool-usage-docs.json",
+    "current_task_id": "task-init-standard-bootstrap-skeleton",
+    "current_task_file": "TASKS/TASK-init-standard-bootstrap-skeleton.md",
+    "current_task_json_file": "TASKS/TASK-init-standard-bootstrap-skeleton.json",
     "current_status": "completed",
-    "current_updated_at": "2026-03-16T11:56:00+00:00"
+    "current_updated_at": "2026-03-16T12:32:00+00:00"
   },
   "task_registry": {
-    "active_task_json_file": "TASKS/TASK-sync-view-tool-usage-docs.json",
+    "active_task_json_file": "TASKS/TASK-init-standard-bootstrap-skeleton.json",
     "queue_json_file": "TASKS/QUEUE.json",
     "task_md_is_legacy_view": true,
     "queue_md_is_legacy_view": true
