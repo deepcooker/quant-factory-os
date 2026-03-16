@@ -411,3 +411,37 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 - 这些骨架文件先只放空内容或极小占位，不预写新项目业务内容；后续由原始材料、代码现状和 `PROJECT_GUIDE` 高质量追问反写。
 - `docs/TOOLS_METHOD_FLOW_MAP.md` 也纳入标准骨架，但缺失时只创建空文件，避免提前写死新项目流程。
 - `tools/project_config.json` 缺失时，由 `init` 从模板 bootstrap 最小配置；`init` 仍然只属于准备层，不替代 baseline 学习和 owner docs 同频过程。
+
+## Init-project gate and bootstrap state decision
+- 项目首轮接入需要单独门禁，不能直接让未初始化项目进入 baseline 主线。
+- 硬门禁定为：
+  - `tools/project_config.json -> bootstrap_state.is_inited`
+  - 只有 `is_inited = Y` 才允许 baseline 主线
+  - 入口统一命名为 `python3 tools/appserverclient.py --init-project`
+- `--init-project` 当前只做预检，不做反写；后续真正的初始化反写仍应走 plan 模式
+- 为保护 `PROJECT_GUIDE` 等关键 owner docs，只要任一 owner doc 非空，就必须手动清空，禁止自动覆盖
+
+## Init-project phase protocol decision
+- `--init-project` 的首轮学习和反写不再模糊处理，而是正式拆成两阶段：
+  - Phase 1: JSON-first 的 plan/gating
+  - Phase 2: Markdown-first 的 owner-doc writing
+- `session_registry.init_project_session` 负责保存初始化过程本身的 session 指针；默认 `--init-project` 必须 resume 这个 session，只有显式 `--init-project -new` 才允许重开。
+- 默认 intake 顺序固定为：`README.md -> docs/**/*.md|txt|doc|docx -> 显式线索提取 -> 轻量仓库探测结果 -> must_read_next`。当前 owner docs 目标文件一律从原始输入集合中排除。
+- Phase 1 的正式职责是判断“证据是否足以进入反写”；在 `can_write_owner_docs = true` 之前，禁止输出 owner docs 正文。
+- Phase 2 的正式职责是按目标文件逐个生成详细 markdown 草稿，而不是把所有详细内容再次塞进一个大 JSON。
+
+## Init-project phase-1 intake implementation decision
+- 当前先只落 phase-1 的最小实现，不假装已经接通完整 init-project runtime。
+- `appserverclient --init-project` 现在会真实生成：
+  - `light_repo_findings`
+  - `explicit_refs`
+  - `must_read_next`
+  - `can_write_owner_docs`
+  - `why_not_ready`
+- 第一轮文件发现明确走“程序轻探测 + 文档显式匹配”，不依赖 NLP 猜测文件路径。
+- 下一步应先把 phase-1 输出接到 `init_project_session` 的续跑机制里，再讨论 phase-2 owner-doc reverse-writing。
+
+## Init-project session resume semantics decision
+- `init_project_session` 当前先收成“本地 phase-1 session 记录”，而不是伪造一个已经存在的 app-server thread。
+- 默认 `--init-project` 必须复用这个本地 session 记录，只有显式 `--init-project -new` 才生成新的 session id。
+- 这样可以先把 session 续跑语义稳定下来，再决定是否真的需要把 init-project 提升成完整 app-server lifecycle。

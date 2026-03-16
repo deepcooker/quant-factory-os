@@ -331,6 +331,7 @@ def load_unified_config() -> dict[str, Any]:
     raw = load_project_config_json()
     required = dict(raw.get("required", {}) or {})
     git = dict(raw.get("git", {}) or {})
+    bootstrap_state = dict(raw.get("bootstrap_state", {}) or {})
     project_id = str(required.get("project_id", raw.get("project_id", ""))).strip()
     project_root = resolve_config_path(str(required.get("project_root", raw.get("project_root", ""))), REPO_ROOT)
     runtime_state = dict(raw.get("runtime_state", {}) or {})
@@ -355,6 +356,12 @@ def load_unified_config() -> dict[str, Any]:
             "git_user_name": GIT_USER_NAME,
             "git_user_email": GIT_USER_EMAIL,
             "auth_check_command": GIT_AUTH_CHECK_COMMAND,
+        },
+        "bootstrap_state": {
+            "is_inited": str(bootstrap_state.get("is_inited", "N")).strip().upper() or "N",
+            "initialized_at": str(bootstrap_state.get("initialized_at", "")).strip(),
+            "initialized_by": str(bootstrap_state.get("initialized_by", "")).strip(),
+            "bootstrap_source": str(bootstrap_state.get("bootstrap_source", "")).strip(),
         },
         "codex": {
             "bin": CODEX_BIN,
@@ -443,6 +450,16 @@ def load_runtime_state() -> RuntimeState:
         current_status=str(raw.get("current_status", "")).strip(),
         current_updated_at=str(raw.get("current_updated_at", "")).strip(),
     )
+
+
+# project_config 中文：读取项目 bootstrap_state，判断当前项目是否已完成首轮初始化接入。
+def get_bootstrap_state() -> dict[str, Any]:
+    return dict(load_unified_config().get("bootstrap_state", {}) or {})
+
+
+# project_config 中文：判断当前项目是否已完成初始化接入。
+def is_project_inited() -> bool:
+    return str(get_bootstrap_state().get("is_inited", "N")).strip().upper() == "Y"
 
 
 # project_config 中文：统一打印关键项目配置，便于后续各入口做中文参数确认。
@@ -654,6 +671,32 @@ def update_session_registry(slot: str, thread_id: str, thread_path: str, status:
     save_project_config_json(config)
 
 
+def update_init_project_session(
+    status: str,
+    source: str,
+    model: str,
+    effort: str,
+    payload: dict[str, Any] | None = None,
+) -> None:
+    config = load_project_config_json()
+    registry = config.setdefault("session_registry", {})
+    record = registry.setdefault("init_project_session", {})
+    if not str(record.get("thread_id", "")).strip():
+        record["thread_id"] = f"init-project-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')}"
+    record["thread_path"] = "phase1_local_runtime"
+    record["status"] = status
+    record["updated_at"] = datetime.now(timezone.utc).isoformat()
+    record["source"] = source
+    record["model"] = model
+    record["effort"] = effort
+    if payload is not None:
+        record["phase"] = str(payload.get("phase", "")).strip()
+        record["can_write_owner_docs"] = bool(payload.get("can_write_owner_docs", False))
+        record["must_read_next"] = list(payload.get("must_read_next", []) or [])
+        record["why_not_ready"] = list(payload.get("why_not_ready", []) or [])
+    save_project_config_json(config)
+
+
 # project_config 中文：写回 current_summary 去噪摘要，供 baseline refresh 作为唯一输入来源。
 def update_current_summary(
     thread_id: str,
@@ -712,6 +755,14 @@ def clear_session_registry(slot: str) -> None:
     record["source"] = ""
     record["model"] = ""
     record["effort"] = ""
+    if "phase" in record:
+        record["phase"] = ""
+    if "can_write_owner_docs" in record:
+        record["can_write_owner_docs"] = False
+    if "must_read_next" in record:
+        record["must_read_next"] = []
+    if "why_not_ready" in record:
+        record["why_not_ready"] = []
     if "forked_from_thread_id" in record:
         record["forked_from_thread_id"] = ""
     save_project_config_json(config)

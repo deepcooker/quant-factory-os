@@ -1,8 +1,41 @@
 {
   "version": 1,
   "project_id": "quant-factory-os",
-  "updated_at": "2026-03-16T01:59:57+00:00",
+  "updated_at": "2026-03-16T14:16:42+00:00",
   "items": [
+    {
+      "queue_id": "queue-init-project-gate-and-bootstrap-state",
+      "title": "init-project gate and bootstrap state",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-init-project-gate-and-bootstrap-state",
+      "task_json_file": "TASKS/TASK-init-project-gate-and-bootstrap-state.json",
+      "task_md_file": "TASKS/TASK-init-project-gate-and-bootstrap-state.md",
+      "status": "completed",
+      "picked_at": null,
+      "goal": "增加 bootstrap_state.is_inited 门禁，并在 appserverclient 中引入 --init-project 预检入口，禁止未初始化项目直接进入 baseline 主线。",
+      "scope": [
+        "tools/project_config.json",
+        "tools/project_config.template.json",
+        "tools/project_config.py",
+        "tools/appserverclient.py",
+        "docs/WORKFLOW.md",
+        "docs/ENTITIES.md",
+        "docs/FILE_INDEX.md",
+        "AGENTS.md"
+      ],
+      "acceptance": [
+        {
+          "id": "check-1",
+          "text": "project_config 引入 bootstrap_state.is_inited",
+          "status": "completed"
+        },
+        {
+          "id": "check-2",
+          "text": "未初始化项目无法直接执行 baseline 主线",
+          "status": "completed"
+        }
+      ]
+    },
     {
       "queue_id": "queue-init-standard-bootstrap-skeleton",
       "title": "init standard bootstrap skeleton",
@@ -264,6 +297,86 @@
           "id": "check-1",
           "text": "完成一轮短主线回归并记录结论与阻塞",
           "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-formalize-init-project-phase-protocol",
+      "title": "Formalize init-project phase protocol",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-formalize-init-project-phase-protocol",
+      "task_json_file": "TASKS/TASK-formalize-init-project-phase-protocol.json",
+      "task_md_file": "TASKS/TASK-formalize-init-project-phase-protocol.md",
+      "status": "completed",
+      "picked_at": "2026-03-16T13:38:18+00:00",
+      "goal": "Define the formal two-phase init-project protocol: phase 1 JSON planning/gating and phase 2 markdown owner-doc writing.",
+      "scope": [
+        "Update prompt and owner docs to define init-project input rules",
+        "phase outputs",
+        "and session/state behavior without implementing reverse-writing yet."
+      ],
+      "acceptance": [
+        {
+          "id": "verify",
+          "text": "Command(s) pass: python3 -m py_compile tools/project_config.py tools/appserverclient.py",
+          "status": "completed"
+        },
+        {
+          "id": "evidence",
+          "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-implement-init-project-phase-1-intake",
+      "title": "Implement init-project phase-1 intake",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-implement-init-project-phase-1-intake",
+      "task_json_file": "TASKS/TASK-implement-init-project-phase-1-intake.json",
+      "task_md_file": "TASKS/TASK-implement-init-project-phase-1-intake.md",
+      "status": "completed",
+      "picked_at": "2026-03-16T22:03:10+00:00",
+      "goal": "Implement minimal runtime support for init-project phase 1: collect README/raw docs inputs, generate light_repo_findings, and expose must-read planning inputs without owner-doc writing.",
+      "scope": [
+        "Extend appserverclient init-project flow with lightweight repo scanning and raw material discovery while preserving current gates and session model."
+      ],
+      "acceptance": [
+        {
+          "id": "verify",
+          "text": "Command(s) pass: python3 -m py_compile tools/appserverclient.py tools/project_config.py",
+          "status": "completed"
+        },
+        {
+          "id": "evidence",
+          "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-wire-init-project-session-resume-semantics",
+      "title": "Wire init-project session resume semantics",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-wire-init-project-session-resume-semantics",
+      "task_json_file": "TASKS/TASK-wire-init-project-session-resume-semantics.json",
+      "task_md_file": "TASKS/TASK-wire-init-project-session-resume-semantics.md",
+      "status": "completed",
+      "picked_at": "2026-03-16T14:16:42+00:00",
+      "goal": "Connect init-project phase-1 intake to session_registry.init_project_session so --init-project resumes by default and --init-project -new resets the slot explicitly.",
+      "scope": [
+        "Implement minimal session-slot lifecycle and writeback for init-project without attempting full owner-doc reverse-writing or full app-server init-thread execution."
+      ],
+      "acceptance": [
+        {
+          "id": "verify",
+          "text": "Command(s) pass: python3 -m py_compile tools/project_config.py tools/appserverclient.py",
+          "status": "completed"
+        },
+        {
+          "id": "evidence",
+          "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+          "status": "completed"
         }
       ]
     }

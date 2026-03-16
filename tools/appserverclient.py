@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import queue
+import re
 import shutil
 import subprocess
 import sys
@@ -20,12 +21,15 @@ try:
         REPO_ROOT,
         clear_session_registry,
         describe_runtime_state,
+        get_bootstrap_state,
         get_session_registry,
         get_session_thread_id,
         get_session_thread_path,
+        is_project_inited,
         load_unified_config,
         load_runtime_state,
         require_session_thread_id,
+        update_init_project_session,
         update_session_registry,
         update_current_summary,
     )
@@ -44,12 +48,15 @@ except Exception:  # pragma: no cover
         REPO_ROOT,
         clear_session_registry,
         describe_runtime_state,
+        get_bootstrap_state,
         get_session_registry,
         get_session_thread_id,
         get_session_thread_path,
+        is_project_inited,
         load_unified_config,
         load_runtime_state,
         require_session_thread_id,
+        update_init_project_session,
         update_session_registry,
         update_current_summary,
     )
@@ -100,9 +107,407 @@ DEFAULT_LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 LOGGER_NAME = "qf.appserverclient"
 logger = logging.getLogger(LOGGER_NAME)
 
+INIT_PROJECT_INPUT_EXCLUDES = {
+    "AGENTS.md",
+    "docs/PROJECT_GUIDE.md",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/FILE_INDEX.md",
+    "docs/TOOLS_METHOD_FLOW_MAP.md",
+    "docs/PROJECT_BOOTSTRAP_PROTOCOL.md",
+}
+INIT_PROJECT_ALLOWED_SUFFIXES = (".py", ".md", ".txt", ".json", ".doc", ".docx")
+INIT_PROJECT_TEXT_SUFFIXES = (".md", ".txt")
+INIT_PROJECT_MAX_TOP_LEVEL_FILES = 20
+INIT_PROJECT_MAX_MUST_READ = 8
+INIT_PROJECT_SCAN_EXCLUDED_DIRS = {
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    "node_modules",
+    "appserver_log",
+    "chatlogs",
+    "reports",
+    "TASKS",
+}
+
 
 class AppServerError(RuntimeError):
     pass
+
+
+def read_bootstrap_state() -> dict[str, Any]:
+    return get_bootstrap_state()
+
+
+def require_project_inited(next_command: str = "python3 tools/appserverclient.py --init-project") -> None:
+    if is_project_inited():
+        return
+    raise AppServerError(f"project is not initialized yet; run {next_command} first")
+
+
+def file_is_effectively_empty(path: Path) -> bool:
+    if not path.exists():
+        return True
+    return not path.read_text(encoding="utf-8").strip()
+
+
+def get_current_project_root() -> Path:
+    return Path(str(load_unified_config()["project_root"]))
+
+
+def get_init_project_owner_docs(project_root: Path) -> tuple[Path, ...]:
+    return (
+        project_root / "AGENTS.md",
+        project_root / "docs/PROJECT_GUIDE.md",
+        project_root / "docs/WORKFLOW.md",
+        project_root / "docs/ENTITIES.md",
+        project_root / "docs/FILE_INDEX.md",
+        project_root / "docs/TOOLS_METHOD_FLOW_MAP.md",
+    )
+
+
+def normalize_relpath(path: Path, project_root: Path | None = None) -> str:
+    project_root = project_root or get_current_project_root()
+    return str(path.resolve().relative_to(project_root.resolve())).replace("\\", "/")
+
+
+def is_owner_doc_target(path: Path, project_root: Path | None = None) -> bool:
+    project_root = project_root or get_current_project_root()
+    try:
+        rel = normalize_relpath(path, project_root)
+    except Exception:
+        return False
+    return rel in INIT_PROJECT_INPUT_EXCLUDES
+
+
+def read_text_safely(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except Exception:
+        return ""
+
+
+def parse_init_project_args(argv: list[str]) -> tuple[bool, list[str], list[str]]:
+    force_new = False
+    input_files: list[str] = []
+    guide_files: list[str] = []
+    idx = 0
+    while idx < len(argv):
+        token = str(argv[idx]).strip()
+        if token == "-new":
+            force_new = True
+            idx += 1
+            continue
+        if token == "--input-file":
+            if idx + 1 >= len(argv):
+                raise AppServerError("--input-file requires a path")
+            input_files.append(str(argv[idx + 1]).strip())
+            idx += 2
+            continue
+        if token == "--guide-file":
+            if idx + 1 >= len(argv):
+                raise AppServerError("--guide-file requires a path")
+            guide_files.append(str(argv[idx + 1]).strip())
+            idx += 2
+            continue
+        raise AppServerError(f"unknown --init-project argument: {token}")
+    return force_new, input_files, guide_files
+
+
+def resolve_project_file(raw_path: str, project_root: Path | None = None) -> Path:
+    project_root = project_root or get_current_project_root()
+    candidate = Path(str(raw_path).strip())
+    if not candidate.is_absolute():
+        candidate = project_root / candidate
+    candidate = candidate.resolve()
+    try:
+        candidate.relative_to(project_root.resolve())
+    except Exception as exc:
+        raise AppServerError(f"path is outside project_root: {raw_path}") from exc
+    if not candidate.exists():
+        raise AppServerError(f"path does not exist: {raw_path}")
+    if not candidate.is_file():
+        raise AppServerError(f"path is not a file: {raw_path}")
+    return candidate
+
+
+def discover_top_level_files(project_root: Path | None = None) -> list[str]:
+    project_root = project_root or get_current_project_root()
+    files = [normalize_relpath(path, project_root) for path in sorted(project_root.iterdir()) if path.is_file()]
+    return files[:INIT_PROJECT_MAX_TOP_LEVEL_FILES]
+
+
+def discover_docs_files(project_root: Path | None = None) -> list[Path]:
+    project_root = project_root or get_current_project_root()
+    docs_dir = project_root / "docs"
+    if not docs_dir.exists():
+        return []
+    results: list[Path] = []
+    for path in sorted(docs_dir.rglob("*")):
+        if not path.is_file():
+            continue
+        if path.suffix.lower() not in INIT_PROJECT_ALLOWED_SUFFIXES:
+            continue
+        if is_owner_doc_target(path, project_root):
+            continue
+        results.append(path)
+    return results
+
+
+def iter_scannable_files(project_root: Path | None = None) -> list[Path]:
+    project_root = project_root or get_current_project_root()
+    results: list[Path] = []
+    for path in sorted(project_root.rglob("*")):
+        if not path.is_file():
+            continue
+        rel_parts = path.relative_to(project_root).parts
+        if any(part in INIT_PROJECT_SCAN_EXCLUDED_DIRS for part in rel_parts[:-1]):
+            continue
+        results.append(path)
+    return results
+
+
+def build_light_repo_findings(project_root: Path | None = None, raw_docs: list[Path] | None = None, readme_refs: list[str] | None = None) -> dict[str, Any]:
+    project_root = project_root or get_current_project_root()
+    raw_docs = raw_docs or []
+    readme_refs = readme_refs or []
+    scan_paths = iter_scannable_files(project_root)
+    entry_candidates: list[str] = []
+    test_candidates: list[str] = []
+    config_candidates: list[str] = []
+    state_or_contract_candidates: list[str] = []
+    existing_relpaths = {normalize_relpath(path, project_root) for path in scan_paths}
+    existing_basenames = {path.name for path in scan_paths}
+    for path in scan_paths:
+        rel = normalize_relpath(path, project_root)
+        name = path.name.lower()
+        suffix = path.suffix.lower()
+        if suffix == ".py" and (name.startswith("main") or name.startswith("app") or name.startswith("run") or "controller" in name):
+            entry_candidates.append(rel)
+        if suffix == ".py" and (name.startswith("test_") or name.endswith("_test.py")):
+            test_candidates.append(rel)
+        if name.startswith("config") or name.startswith("settings") or suffix == ".json":
+            config_candidates.append(rel)
+        if any(token in name for token in ("state", "contract", "schema", "model")):
+            state_or_contract_candidates.append(rel)
+    missing: list[str] = []
+    for ref in readme_refs:
+        ref_clean = str(ref).strip().replace("\\", "/")
+        if not ref_clean:
+            continue
+        if ref_clean not in existing_relpaths and Path(ref_clean).name not in existing_basenames:
+            missing.append(ref_clean)
+    return {
+        "project_root": str(project_root),
+        "top_level_files": discover_top_level_files(project_root),
+        "docs_files": [normalize_relpath(path, project_root) for path in raw_docs],
+        "entry_candidates": sorted(dict.fromkeys(entry_candidates)),
+        "test_candidates": sorted(dict.fromkeys(test_candidates)),
+        "config_candidates": sorted(dict.fromkeys(config_candidates)),
+        "state_or_contract_candidates": sorted(dict.fromkeys(state_or_contract_candidates)),
+        "readme_refs_missing_in_repo": sorted(dict.fromkeys(missing)),
+    }
+
+
+def extract_file_like_tokens(text: str) -> list[str]:
+    if not text:
+        return []
+    pattern = re.compile(r"([A-Za-z0-9_./-]+\.(?:py|md|txt|json|doc|docx))")
+    return [match.group(1).strip() for match in pattern.finditer(text)]
+
+
+def collect_init_project_inputs(
+    manual_inputs: list[str],
+    manual_guides: list[str],
+    project_root: Path | None = None,
+) -> tuple[list[Path], list[Path], list[str]]:
+    project_root = project_root or get_current_project_root()
+    guide_files: list[Path] = []
+    readme = project_root / "README.md"
+    if readme.exists():
+        guide_files.append(readme)
+    for raw in manual_guides:
+        resolved = resolve_project_file(raw, project_root)
+        if resolved not in guide_files:
+            guide_files.append(resolved)
+    raw_docs = discover_docs_files(project_root)
+    for raw in manual_inputs:
+        resolved = resolve_project_file(raw, project_root)
+        if resolved.suffix.lower() not in INIT_PROJECT_ALLOWED_SUFFIXES:
+            raise AppServerError(f"unsupported --input-file suffix: {raw}")
+        if is_owner_doc_target(resolved, project_root):
+            raise AppServerError(f"--input-file points to owner doc target: {raw}")
+        if resolved not in raw_docs:
+            raw_docs.append(resolved)
+    if not raw_docs:
+        raise AppServerError("no intake materials found under docs/ or manual inputs")
+    readme_refs = extract_file_like_tokens(read_text_safely(readme)) if readme.exists() else []
+    return guide_files, sorted(raw_docs), readme_refs
+
+
+def build_explicit_refs(guide_files: list[Path], raw_docs: list[Path], project_root: Path | None = None) -> dict[str, Any]:
+    project_root = project_root or get_current_project_root()
+    scan_paths = iter_scannable_files(project_root)
+    existing_relpaths = {normalize_relpath(path, project_root): normalize_relpath(path, project_root) for path in scan_paths}
+    basename_map: dict[str, str] = {}
+    for path in scan_paths:
+        rel = normalize_relpath(path, project_root)
+        basename_map.setdefault(path.name, rel)
+    files: list[str] = []
+    modules: list[str] = []
+    objects: list[str] = []
+    flows: list[str] = []
+    text_paths = [path for path in [*guide_files, *raw_docs] if path.suffix.lower() in INIT_PROJECT_TEXT_SUFFIXES]
+    for path in text_paths:
+        text = read_text_safely(path)
+        for token in extract_file_like_tokens(text):
+            token_clean = token.replace("\\", "/")
+            matched = existing_relpaths.get(token_clean) or basename_map.get(Path(token_clean).name)
+            if matched and matched not in files and not is_owner_doc_target(project_root / matched, project_root):
+                files.append(matched)
+        for line in text.splitlines():
+            line_clean = line.strip().lstrip("-* ").strip()
+            if not line_clean:
+                continue
+            if "->" in line_clean or "→" in line_clean:
+                compact = compact_text(line_clean)
+                if compact and compact not in flows:
+                    flows.append(compact)
+            if any(keyword in line_clean for keyword in ("模块", "引擎", "架构", "系统", "流程")) and len(modules) < 12:
+                compact = compact_text(line_clean)
+                if compact and compact not in modules:
+                    modules.append(compact)
+            if any(keyword in line_clean for keyword in ("State", "Contract", "Schema", "Model", "状态", "契约", "对象")) and len(objects) < 12:
+                compact = compact_text(line_clean)
+                if compact and compact not in objects:
+                    objects.append(compact)
+    return {
+        "files": files,
+        "modules": modules[:12],
+        "objects": objects[:12],
+        "flows": flows[:12],
+    }
+
+
+def build_must_read_next(explicit_refs: dict[str, Any], light_repo_findings: dict[str, Any], guide_files: list[Path], raw_docs: list[Path], project_root: Path | None = None) -> list[str]:
+    project_root = project_root or get_current_project_root()
+    already_read = {normalize_relpath(path, project_root) for path in [*guide_files, *raw_docs]}
+    priority_buckets = [
+        light_repo_findings.get("entry_candidates", []),
+        light_repo_findings.get("state_or_contract_candidates", []),
+        light_repo_findings.get("config_candidates", []),
+        light_repo_findings.get("test_candidates", []),
+    ]
+    ordered: list[str] = []
+    for ref in explicit_refs.get("files", []):
+        if ref in already_read or ref in ordered:
+            continue
+        if Path(ref).suffix.lower() not in INIT_PROJECT_ALLOWED_SUFFIXES:
+            continue
+        ordered.append(ref)
+    for bucket in priority_buckets:
+        for candidate in bucket:
+            candidate_str = str(candidate).strip()
+            if not candidate_str or candidate_str in already_read or candidate_str in ordered:
+                continue
+            if candidate_str in INIT_PROJECT_INPUT_EXCLUDES:
+                continue
+            ordered.append(candidate_str)
+    return ordered[:INIT_PROJECT_MAX_MUST_READ]
+
+
+def build_init_project_phase1_payload(manual_inputs: list[str], manual_guides: list[str], project_root: Path | None = None) -> dict[str, Any]:
+    project_root = project_root or get_current_project_root()
+    guide_files, raw_docs, readme_refs = collect_init_project_inputs(manual_inputs, manual_guides, project_root)
+    light_repo_findings = build_light_repo_findings(project_root, raw_docs, readme_refs)
+    explicit_refs = build_explicit_refs(guide_files, raw_docs, project_root)
+    must_read_next = build_must_read_next(explicit_refs, light_repo_findings, guide_files, raw_docs, project_root)
+    can_write_owner_docs = len(must_read_next) == 0
+    implementation_gaps = []
+    if must_read_next:
+        implementation_gaps.append("key implementation files still need to be read before owner-doc writing")
+    if light_repo_findings.get("readme_refs_missing_in_repo"):
+        implementation_gaps.append("some README file references do not currently resolve inside the repository")
+    why_not_ready = []
+    if not can_write_owner_docs:
+        why_not_ready.append("must_read_next is not empty")
+    if light_repo_findings.get("readme_refs_missing_in_repo"):
+        why_not_ready.append("README references missing files that need human review")
+    return {
+        "phase": "phase1_plan",
+        "readme_guide": [normalize_relpath(path, project_root) for path in guide_files],
+        "raw_docs_read": [normalize_relpath(path, project_root) for path in raw_docs],
+        "project_understanding": {
+            "project_root": str(project_root),
+            "guide_count": len(guide_files),
+            "raw_doc_count": len(raw_docs),
+        },
+        "explicit_refs": explicit_refs,
+        "light_repo_findings": light_repo_findings,
+        "implementation_gaps": implementation_gaps,
+        "must_read_next": must_read_next,
+        "can_write_owner_docs": can_write_owner_docs,
+        "why_not_ready": why_not_ready,
+    }
+
+
+def init_project_main(force_new: bool = False, manual_inputs: list[str] | None = None, manual_guides: list[str] | None = None) -> dict[str, Any]:
+    manual_inputs = manual_inputs or []
+    manual_guides = manual_guides or []
+    project_root = get_current_project_root()
+    owner_docs = get_init_project_owner_docs(project_root)
+    state = read_bootstrap_state()
+    is_inited = str(state.get("is_inited", "N")).strip().upper() or "N"
+    if is_inited == "Y":
+        raise AppServerError('project is already initialized; --init-project only runs when bootstrap_state.is_inited is not "Y"')
+    non_empty_files = [normalize_relpath(path, project_root) for path in owner_docs if not file_is_effectively_empty(path)]
+    if non_empty_files:
+        raise AppServerError(
+            "owner docs are not empty; clear them manually before --init-project: " + ", ".join(non_empty_files)
+        )
+    if force_new:
+        clear_session_registry("init_project_session")
+    existing_init_session = get_session_registry("init_project_session")
+    payload = build_init_project_phase1_payload(manual_inputs, manual_guides, project_root)
+    payload["action"] = "init_project"
+    payload["init_project_ready"] = True
+    payload["init_project_owner_docs"] = [normalize_relpath(path, project_root) for path in owner_docs]
+    payload["init_project_session_behavior"] = "reused_existing_session" if str(existing_init_session.get("thread_id", "")).strip() and not force_new else "created_or_refreshed_local_phase1_session"
+    payload["init_project_recreate_flag"] = force_new
+    payload["init_project_next"] = "phase1_plan_only; reverse-writing is not implemented yet"
+    update_init_project_session(
+        status="phase1_ready",
+        source="init_project_main",
+        model=DEFAULT_MODEL,
+        effort=DEFAULT_EFFORT,
+        payload=payload,
+    )
+    current_init_session = get_session_registry("init_project_session")
+    payload["init_project_session"] = {
+        "thread_id": str(current_init_session.get("thread_id", "")).strip(),
+        "thread_path": str(current_init_session.get("thread_path", "")).strip(),
+        "status": str(current_init_session.get("status", "")).strip(),
+        "updated_at": str(current_init_session.get("updated_at", "")).strip(),
+        "source": str(current_init_session.get("source", "")).strip(),
+    }
+    print("init_project_ready=true")
+    print("init_project_owner_docs_start")
+    for path in owner_docs:
+        print(normalize_relpath(path, project_root))
+    print("init_project_owner_docs_end")
+    print(f"init_project_session_id={payload['init_project_session']['thread_id']}")
+    print(f"init_project_session_status={payload['init_project_session']['status']}")
+    print(f"init_project_phase={payload['phase']}")
+    print(f"init_project_can_write_owner_docs={str(payload['can_write_owner_docs']).lower()}")
+    print("init_project_must_read_next_start")
+    for item in payload["must_read_next"]:
+        print(item)
+    print("init_project_must_read_next_end")
+    return payload
 
 
 #codex 中文：统一打印当前运行状态，保证 appserverclient 入口与 project_config 的状态口径一致。
@@ -1152,6 +1557,7 @@ def refresh_baseline_main() -> None:
 
 def run_learnbaseline(force_new: bool = False) -> dict[str, Any]:
     try:
+        require_project_inited()
         init_main(force_new=force_new)
         return ok({"action": "learnbaseline", "force_new": force_new})
     except AppServerError as exc:
@@ -1160,6 +1566,7 @@ def run_learnbaseline(force_new: bool = False) -> dict[str, Any]:
 
 def run_fork_current() -> dict[str, Any]:
     try:
+        require_project_inited()
         fork_current_main()
         return ok({"action": "fork_current"})
     except AppServerError as exc:
@@ -1168,6 +1575,7 @@ def run_fork_current() -> dict[str, Any]:
 
 def run_fork_role(role: str) -> dict[str, Any]:
     try:
+        require_project_inited()
         fork_role_main(role)
         return ok({"action": "fork_role", "role": normalize_role(role)})
     except AppServerError as exc:
@@ -1178,6 +1586,7 @@ def run_fork_role(role: str) -> dict[str, Any]:
 
 def run_role_turn(role: str, text: str | None = None) -> dict[str, Any]:
     try:
+        require_project_inited()
         role_turn_main(role, text)
         return ok({"action": "role_turn", "role": normalize_role(role), "text": (text or DEFAULT_TURN_TEXT).strip()})
     except AppServerError as exc:
@@ -1186,6 +1595,7 @@ def run_role_turn(role: str, text: str | None = None) -> dict[str, Any]:
 
 def run_summarize_role(role: str) -> dict[str, Any]:
     try:
+        require_project_inited()
         summarize_role_main(role)
         return ok({"action": "summarize_role", "role": normalize_role(role)})
     except AppServerError as exc:
@@ -1198,6 +1608,7 @@ def run_summarize_role(role: str) -> dict[str, Any]:
 
 def run_mark_test_gate(status: str, evidence_text: str | None = None, blocking_issues: list[str] | None = None) -> dict[str, Any]:
     try:
+        require_project_inited()
         mark_test_gate_main(status, evidence_text, blocking_issues)
         return ok(
             {
@@ -1222,6 +1633,7 @@ def run_mark_test_gate(status: str, evidence_text: str | None = None, blocking_i
 
 def run_current_turn(text: str | None = None) -> dict[str, Any]:
     try:
+        require_project_inited()
         current_turn_main(text)
         return ok({"action": "current_turn", "text": (text or DEFAULT_TURN_TEXT).strip()})
     except AppServerError as exc:
@@ -1234,6 +1646,7 @@ def run_current_turn(text: str | None = None) -> dict[str, Any]:
 
 def run_summarize_current() -> dict[str, Any]:
     try:
+        require_project_inited()
         summarize_current_main()
         return ok({"action": "summarize_current"})
     except AppServerError as exc:
@@ -1242,10 +1655,19 @@ def run_summarize_current() -> dict[str, Any]:
 
 def run_refresh_baseline() -> dict[str, Any]:
     try:
+        require_project_inited()
         refresh_baseline_main()
         return ok({"action": "refresh_baseline"})
     except AppServerError as exc:
         return err(ERR_SESSION_BASE + 40, str(exc), {"action": "refresh_baseline"})
+
+
+def run_init_project(force_new: bool = False, manual_inputs: list[str] | None = None, manual_guides: list[str] | None = None) -> dict[str, Any]:
+    try:
+        payload = init_project_main(force_new=force_new, manual_inputs=manual_inputs, manual_guides=manual_guides)
+        return ok(payload)
+    except AppServerError as exc:
+        return err(ERR_CONFIG_BASE + 11, str(exc), {"action": "init_project"})
 
 
 #codex 中文：演示一个完整调用链：connect -> start_thread -> set_name -> start_turn -> list -> read -> fork -> compact -> close。
@@ -1290,7 +1712,14 @@ def demo() -> None:
 
 if __name__ == "__main__":
     logger = build_logger()
-    if len(sys.argv) > 1 and sys.argv[1] in {"--learnbaseline", "--learnbassline"}:
+    if len(sys.argv) > 1 and sys.argv[1] == "--init-project":
+        force_new, input_files, guide_files = parse_init_project_args(sys.argv[2:])
+        result = run_init_project(force_new=force_new, manual_inputs=input_files, manual_guides=guide_files)
+        print(json.dumps(result, ensure_ascii=False))
+        if int(result.get("err_code", 1)) != 0:
+            logger.error("APP_CLIENT_FAILED: %s", result.get("err_desc", "unknown error"))
+            sys.exit(1)
+    elif len(sys.argv) > 1 and sys.argv[1] in {"--learnbaseline", "--learnbassline"}:
         result = run_learnbaseline(force_new=(len(sys.argv) > 2 and sys.argv[2] == "-new"))
         print(json.dumps(result, ensure_ascii=False))
         if int(result.get("err_code", 1)) != 0:

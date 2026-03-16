@@ -138,6 +138,12 @@ INIT_DEFAULT_PROJECT_CONFIG_TEMPLATE_CONTENT = """{
     "remote_url": "https://github.com/your-org/your-project.git",
     "github_login": "your-github-login"
   },
+  "bootstrap_state": {
+    "is_inited": "N",
+    "initialized_at": "",
+    "initialized_by": "",
+    "bootstrap_source": ""
+  },
   "runtime_state": {
     "current_project_id": "your-project-id",
     "current_run_id": "",
@@ -287,6 +293,11 @@ def init_tools_14_ensure_project_config_bootstrap() -> None:
     required = config.setdefault("required", {})
     required["project_id"] = project_id
     required["project_root"] = str(project_root)
+    bootstrap_state = config.setdefault("bootstrap_state", {})
+    bootstrap_state["is_inited"] = "N"
+    bootstrap_state["initialized_at"] = ""
+    bootstrap_state["initialized_by"] = ""
+    bootstrap_state["bootstrap_source"] = ""
     runtime_state = config.setdefault("runtime_state", {})
     runtime_state["current_project_id"] = project_id
     runtime_state["current_run_id"] = ""

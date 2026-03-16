@@ -24,6 +24,7 @@
 | 文件 | 作用 | 什么时候优先看 |
 | --- | --- | --- |
 | `tools/project_config.json` | 项目最小配置数据源，含 required / git / runtime_state / session_registry；`current_summary` 也在这里落盘。 | 看项目接入最小字段、当前运行状态和 summary 回写时 |
+| `tools/project_config.json -> bootstrap_state` | 项目是否已完成首轮接入的硬门禁；只有 `is_inited=Y` 才允许 baseline 主线。 | 做新项目初始化或排查为什么 baseline 主线被拒绝时 |
 | `TASKS/QUEUE.json` | 当前 queue 的机器真相源。 | 选择下一个 active/open task 时 |
 | `TASKS/TASK-*.json` | 当前或历史 task 的机器真相源；现在也承载 `role_threads`、`test_gate` 和 task-level aggregate `task_summary`。 | 需要程序稳定读取 task 协作状态、test gate 或 task summary 时 |
 | `tools/project_config.template.json` | 其他项目接入时可复用的最小配置模板。 | 新项目接入时 |
@@ -38,7 +39,9 @@
 | --- | --- | --- |
 | `tools/init.py` | 环境准备、项目骨架补齐、Codex/Git 前置检查；缺失时会补最小标准协议骨架和 `project_config.json` bootstrap。 | 开工前环境准备或新项目首次接入时 |
 | `tools/appserverclient.py` | Codex app-server runtime 核心；负责 baseline / fork / fork-role / role-turn / summarize-role / mark-test-gate / current-turn / summarize-current / refresh-baseline，并显式打印当前 active task JSON 摘要；`refresh-baseline` 现优先消费 `run_summary.json`，`summarize-role` 会自动 merge role summaries 并刷新 task gap/escalation/resolution，`mark-test-gate` 会继续联动刷新。当前风险是它已经同时看见 runtime 与部分 task gate 规则，后续应继续保持“真实线程生命周期 + 必要写回”的边界，避免演化成总控脚本。 | 学习基线、当前 session 推进、role thread 绑定/执行/去噪、test gate 写回和 baseline 回灌时 |
+| `tools/appserverclient.py --init-project` | 未初始化项目的首轮接入入口；当前已固定 gate、`init_project_session`、默认输入规则，以及 `Phase 1 JSON / Phase 2 Markdown` 协议。当前最小实现已支持 README/docs intake、`light_repo_findings`、显式文件匹配、`must_read_next` 草案输出，以及本地 `init_project_session` 的 resume / `-new` 语义，但还未接 app-server init thread 和 owner-doc reverse-writing。 | 新项目还没完成 owner docs 初始化时 |
 | `tools/view.sh` | 稳定的分段文件读取工具；支持直接执行和 `python3 tools/view.sh ...`，兼容历史 `--lines START:END` 用法，并内置 repo 边界与 denylist 检查。 | 读取长文件、按范围查看、查找命中行或验证读取边界时 |
+| `tools/prompts/init_project_prompt.md` | `--init-project` 的固定提示词模板；当前定义了 `README -> raw docs -> explicit refs -> light repo findings -> must_read_next -> can_write_owner_docs` 的两阶段协议。 | 设计或调整未初始化项目的首轮接入流程时 |
 | `tools/prompts/summarize_role_prompt.md` | role thread 去噪总结模板；用于把单个角色线程总结成可写入 task 机器层的 role summary。 | 调用 `appserverclient --summarize-role` 时 |
 | `tools/taskclient.py` | task/queue 机器真相入口；负责 create/next、task summary 写回、role thread/role summary/test gate 更新，以及 `--merge-role-summaries` / `--refresh-task-gaps` / `--refresh-task-escalation` / `--refresh-run-main-resolution` 的 task-level 聚合、缺口刷新、升级判断和 run-main 确认闭环。当前还提供内部统一刷新入口 `refresh_task_coordination()`，以及 `update_role_summary_with_task_links()`、`update_test_gate_from_test_summary()` 这类 task-side 联动 helper，供 runtime 在不理解具体 task 规则细节的前提下完成 task 层联动。它是 task 级规则的优先归属层，后续新增 task policy 应优先落在这里，而不是回流到 runtime。 | 处理 task JSON truth、聚合 role summaries、刷新缺口/升级状态和绑定 active task 时 |
 | `tools/gitclient.py` | Git 底层；负责 commit、PR、merge、rollback、main 同步，并优先从 task JSON 读取当前任务上下文。当前保持独立性较好，后续应继续避免把 runtime 或 task/run 聚合逻辑重新耦合回这里。 | 收尾交付和回滚时 |
@@ -47,6 +50,10 @@
 - `init -> learnbaseline -> 明确 run 方向 -> fork-current -> （按需 fork-role/role-turn/summarize-role/mark-test-gate） -> summarize-current -> refresh-baseline -> gitclient`
 - 如果没有真实多角色需要，不要额外引入 role thread 步骤
 - 如果在 Codex TUI 内做真实 session/runtime 调试，`Default` 权限模式可能拦住 workspace 外的 `/root/.codex/sessions`；此时应临时切 `/permissions -> Full Access`，避免把外层权限问题误判为主线逻辑问题
+
+`--init-project` 当前还多了一层运行时约束：
+- `light_repo_findings` 是 Phase 1 的仓库事实摘要，不是完整代码阅读结果
+- `must_read_next` 是下一轮受控读取集合，当前只允许仓库内真实存在的 `py/md/txt/json/doc/docx` 文件，默认最多 8 个，且不能包含 owner docs 目标文件
 
 ## 5. Prompt / Learning Assets
 

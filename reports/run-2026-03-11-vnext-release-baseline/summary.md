@@ -897,3 +897,61 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 ## Commands / Outputs (init standard bootstrap skeleton)
 - `python3 -m py_compile tools/init.py tools/project_config.py` -> pass
 - `python3 tools/init.py` -> pass to final summary; current result is `needs_fix` only because worktree is dirty
+
+## Init-project gate and bootstrap state
+- 新建并完成 `task-init-project-gate-and-bootstrap-state`，把项目首轮接入门禁正式落到 `project_config` 和 `appserverclient`。
+- `tools/project_config.json` 与模板现在都带：
+  - `bootstrap_state.is_inited`
+  - `initialized_at`
+  - `initialized_by`
+  - `bootstrap_source`
+- 当前规则已经写死：
+  - 只有 `is_inited = Y` 才允许 baseline 主线
+  - 首轮接入入口统一命名为 `python3 tools/appserverclient.py --init-project`
+  - `--init-project` 只允许在 `is_inited` 不是 `Y` 且 owner docs 全为空时进入下一步
+  - 只要任一 owner doc 非空，就直接报错，避免误覆盖 `PROJECT_GUIDE` 等关键文件
+
+## Commands / Outputs (init-project gate and bootstrap state)
+- `python3 -m py_compile tools/project_config.py tools/appserverclient.py tools/init.py` -> pass
+- `python3 tools/appserverclient.py --init-project` -> pass as expected on initialized project; returns `project is already initialized`
+- 临时将 `bootstrap_state.is_inited` 设为 `N` 后执行 `python3 tools/appserverclient.py --init-project` -> pass as expected; returns `owner docs are not empty`
+- `python3 tools/appserverclient.py --learnbaseline` -> pass on current initialized project
+
+## Init-project phase protocol
+- 新建并完成 `task-formalize-init-project-phase-protocol`，把 `--init-project` 的两阶段协议正式写进 prompt 和 owner docs。
+- 现在的正式约定是：
+  - Phase 1: JSON-first 的 plan/gating，先输出 `project_understanding / explicit_refs / light_repo_findings / implementation_gaps / must_read_next / can_write_owner_docs / why_not_ready`
+  - Phase 2: Markdown-first 的 owner-doc writing，按目标文件分别生成 `AGENTS.md / PROJECT_GUIDE.md / WORKFLOW.md / ENTITIES.md / FILE_INDEX.md / TOOLS_METHOD_FLOW_MAP.md`
+- `session_registry.init_project_session` 现在被明确为初始化过程的独立 session 槽位；默认 `--init-project` 应续跑该 session，只有 `--init-project -new` 才允许重开。
+- 默认 intake 规则也已收紧为：先读项目根目录 `README.md`，再读 `docs/**/*.md|txt|doc|docx` 原始材料，同时排除 owner docs 目标文件，避免把反写目标再次当原始材料读回去。
+
+## Commands / Outputs (init-project phase protocol)
+- `python3 -m py_compile tools/project_config.py tools/appserverclient.py` -> pass
+- `python3 tools/project_config.py` -> pass; 当前 active task 绑定到 `task-formalize-init-project-phase-protocol`，并已收成 `completed`
+
+## Init-project phase-1 intake implementation
+- 新建并完成 `task-implement-init-project-phase-1-intake`，把 `--init-project` 从纯预检推进到了最小可运行的 Phase 1 intake。
+- 当前 `appserverclient --init-project` 已支持：
+  - 默认读取 `README.md` 与 `docs/**/*.md|txt|doc|docx`
+  - 排除 owner docs 目标文件
+  - 生成 `light_repo_findings`
+  - 通过文档显式文件名与真实文件清单做硬匹配
+  - 输出第一批 `must_read_next`
+- 当前实现仍然只停在 phase-1 gating：
+  - 还没有接入真实 `init_project_session` app-server thread
+  - 也还没有 owner-doc reverse-writing
+
+## Commands / Outputs (init-project phase-1 intake)
+- `python3 -m py_compile tools/appserverclient.py tools/project_config.py` -> pass
+- phase-1 smoke test with a temporary demo project root under the repository -> pass; payload now returns `explicit_refs`, `light_repo_findings`, `must_read_next`, and `can_write_owner_docs=false`
+
+## Init-project session resume semantics
+- 新建并完成 `task-wire-init-project-session-resume-semantics`，把 `init_project_session` 的最小续跑语义接到了 phase-1 intake。
+- 当前行为已经明确：
+  - 默认 `python3 tools/appserverclient.py --init-project` 会复用同一个本地 phase-1 session 记录
+  - `python3 tools/appserverclient.py --init-project -new` 会显式生成新的 session id
+- 同时，owner-doc emptiness 检查和 intake 扫描现在都基于当前 `project_config.required.project_root`，不再绑死 foundation repo 根目录。
+
+## Commands / Outputs (init-project session resume semantics)
+- `python3 -m py_compile tools/project_config.py tools/appserverclient.py` -> pass
+- local resume/new smoke test on a temporary demo project root -> pass; first and second calls reused the same `init_project_session.thread_id`, and `-new` produced a different id
