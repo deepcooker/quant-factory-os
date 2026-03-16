@@ -405,3 +405,9 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 - 正式 `docs/` 面不再继续保留旧阶段流程名作为当前主线说明。
 - 归档资产仍存在于 `chatlogs/backup/`，但不再进入正式流程文档和正式阅读索引。
 - 这一步只收正式文档口径，不重写 checkpoint、旧备份或历史 evidence。
+
+## Init standard bootstrap skeleton decision
+- `init` 应负责建立最小标准协议骨架，而不是只检查 `AGENTS.md` 和 `PROJECT_GUIDE.md` 是否存在。
+- 这些骨架文件先只放空内容或极小占位，不预写新项目业务内容；后续由原始材料、代码现状和 `PROJECT_GUIDE` 高质量追问反写。
+- `docs/TOOLS_METHOD_FLOW_MAP.md` 也纳入标准骨架，但缺失时只创建空文件，避免提前写死新项目流程。
+- `tools/project_config.json` 缺失时，由 `init` 从模板 bootstrap 最小配置；`init` 仍然只属于准备层，不替代 baseline 学习和 owner docs 同频过程。

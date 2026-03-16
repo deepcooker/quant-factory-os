@@ -869,3 +869,31 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 - `grep -RIn "\bready\b\|orient\|choose\|council\|arbiter\|slice_task\|run_main\|discussion artifacts\|execution contract\|orient_choice" docs/*.md | sort` -> 正式 docs 剩余命中只涉及当前对象名 `run_main_resolution`
 - `python3 -m py_compile tools/appserverclient.py tools/project_config.py tools/evidence.py tools/taskclient.py` -> pass
 - `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline` -> pass
+
+## Init standard bootstrap skeleton
+- 新建并完成 `task-init-standard-bootstrap-skeleton`，把 `init` 扩成最小标准协议骨架创建入口。
+- `init` 现在会自动创建最小目录骨架：
+  - `TASKS/`
+  - `reports/`
+  - `chatlogs/`
+  - `appserver_log/`
+- `init` 现在会自动创建最小协议文件：
+  - `AGENTS.md`
+  - `README.md`
+  - `todo.md`
+  - `docs/PROJECT_GUIDE.md`
+  - `docs/WORKFLOW.md`
+  - `docs/ENTITIES.md`
+  - `docs/FILE_INDEX.md`
+  - `docs/PROJECT_BOOTSTRAP_PROTOCOL.md`
+  - `docs/TOOLS_METHOD_FLOW_MAP.md`
+  - `TASKS/QUEUE.json`
+  - `TASKS/_SCHEMA.task.json`
+  - `TASKS/_SCHEMA.queue.json`
+  - `tools/project_config.template.json`
+- `tools/project_config.json` 缺失时，`init` 会先 bootstrap 一份最小配置，再继续预检。
+- `docs/TOOLS_METHOD_FLOW_MAP.md` 缺失时创建为空文件，不预写内容，等待后续由原始文档、代码现状和 `PROJECT_GUIDE` 反写。
+
+## Commands / Outputs (init standard bootstrap skeleton)
+- `python3 -m py_compile tools/init.py tools/project_config.py` -> pass
+- `python3 tools/init.py` -> pass to final summary; current result is `needs_fix` only because worktree is dirty

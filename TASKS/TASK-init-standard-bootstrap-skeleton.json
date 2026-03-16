@@ -1,0 +1,70 @@
+{
+  "task_id": "task-init-standard-bootstrap-skeleton",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "init standard bootstrap skeleton",
+  "goal": "把 init 扩成最小标准协议骨架创建入口，确保新项目缺少 owner docs 与最小目录时也能先建协议壳。",
+  "scope": [
+    "tools/init.py",
+    "docs/WORKFLOW.md",
+    "docs/FILE_INDEX.md",
+    "TASKS/QUEUE.json"
+  ],
+  "non_goals": [
+    "不预写新项目 owner docs 的业务内容",
+    "不改变 formal mainline 步骤",
+    "不替代 baseline 学习和 PROJECT_GUIDE 追问"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "init 自动创建最小标准协议骨架目录和文件",
+      "status": "completed"
+    },
+    {
+      "id": "check-2",
+      "text": "docs 明确 init 的 bootstrap 范围",
+      "status": "completed"
+    }
+  ],
+  "inputs": [
+    "AGENTS.md",
+    "docs/WORKFLOW.md",
+    "docs/PROJECT_BOOTSTRAP_PROTOCOL.md"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-init-standard-bootstrap-skeleton.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "init 现在会自动创建最小标准协议骨架目录，包括 TASKS、reports、chatlogs 和 appserver_log。",
+      "init 现在会自动创建最小协议文件，包括 AGENTS、README、todo、PROJECT_GUIDE、WORKFLOW、ENTITIES、FILE_INDEX、PROJECT_BOOTSTRAP_PROTOCOL、TOOLS_METHOD_FLOW_MAP、QUEUE.json 和 schema 文件。",
+      "如果 tools/project_config.json 缺失，init 会先从 project_config.template.json bootstrap 一份最小配置。"
+    ],
+    "decisions": [
+      "骨架文件只放空内容或极小占位，不预写新项目业务内容。",
+      "docs/TOOLS_METHOD_FLOW_MAP.md 缺失时创建为空文件，由后续学习和 owner 反写。"
+    ],
+    "risks": [
+      "当前默认 queue/schema 骨架仍是最小占位，后续新项目接入仍需要 baseline 和 PROJECT_GUIDE 去填实 owner docs。"
+    ],
+    "verification": [
+      "python3 -m py_compile tools/init.py tools/project_config.py",
+      "python3 tools/init.py"
+    ],
+    "next_steps": [
+      "继续让 init 只建协议壳，不扩成业务文档生成器。"
+    ],
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-16T12:32:00+00:00"
+  },
+  "updated_at": "2026-03-16T12:32:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}
