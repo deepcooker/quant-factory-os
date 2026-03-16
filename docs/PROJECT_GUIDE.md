@@ -40,7 +40,7 @@
 #### 为什么问这题
 这题用来判断 agent 是否知道“我们现在在哪”，避免拿未来形态要求当前实现，或者拿历史方案约束当前方向。
 #### 标准答案
-这个项目是分阶段推进的。当前可以概括为：先把项目级同频学习基线和 session 基建做稳，再围绕 run 级需求方向 fork 多角色 session 拆最小 task 执行，最后用 `gitclient` 完成交付和回滚闭环。现在仍处于 foundation 强化阶段，重点不是扩业务，而是让 `init` 作为准备层稳定、让 `appserverclient` 承担正式主流程、让 `gitclient` 承担正式收尾层，并把这三层口径彻底统一。已经有的成果包括：项目级 baseline 学习、current fork/session 推进、Git 提交/回滚闭环、owner docs 主线统一；旧 shell 兼容入口则已开始降级到 `tools/backup/`。当前研发期主要通过 Codex CLI 暴露流程问题、观察日志和接管排障；终态目标则不是长期停留在 CLI，而是让这套基座逐步沉淀成“普通窗口执行的 Python orchestrator + Codex app-server 运行时”。
+这个项目是分阶段推进的。当前可以概括为：先把项目级同频学习基线和 session 基建做稳，再围绕 run 级需求方向 fork 多角色 session 拆最小 task 执行，最后用 `gitclient` 完成交付和回滚闭环。现在仍处于 foundation 强化阶段，重点不是扩业务，而是让 `init` 作为准备层稳定、让 `appserverclient` 承担正式主流程、让 `gitclient` 承担正式收尾层，并把这三层口径彻底统一。已经有的成果包括：项目级 baseline 学习、current fork/session 推进、Git 提交/回滚闭环、owner docs 主线统一；旧 shell 兼容入口则已开始降级到 `chatlogs/backup/`。当前研发期主要通过 Codex CLI 暴露流程问题、观察日志和接管排障；终态目标则不是长期停留在 CLI，而是让这套基座逐步沉淀成“普通窗口执行的 Python orchestrator + Codex app-server 运行时”。
 #### 必查文件
 - docs/WORKFLOW.md
 - tools/project_config.json
@@ -76,12 +76,12 @@
 #### 为什么问这题
 这题负责定义脑和手的协作边界，不然模型会把战略、评审、实现、修复混成一层。
 #### 标准答案
-不同 AI 界面和运行时可以分成“决策端”和“执行端”，但必须保持同频。当前项目里，网页端更适合做方向讨论、方案反驳、角色博弈和收敛决策；本地执行端更适合做项目级 baseline 学习、session/fork 推进、代码修改、验证和证据回写。它们保持同频的方式不是靠聊天记忆，而是靠 `AGENTS.md`、`PROJECT_GUIDE.md`、`WORKFLOW.md`、`FILE_INDEX.md`、`TOOLS_METHOD_FLOW_MAP.md`、`project_config.runtime_state` 和 run 证据同步；真正发生漂移时，不应该继续闲聊，而应该回到 `PROJECT_GUIDE` 的问题体系里按题重答并重新绑定证据。
+不同 AI 界面和运行时可以分成“决策端”和“执行端”，但必须保持同频。当前项目里，网页端更适合做方向讨论、方案反驳、角色博弈和收敛决策；本地执行端更适合做项目级 baseline 学习、session/fork 推进、代码修改、验证和证据回写。它们保持同频的方式不是靠聊天记忆，而是靠 `AGENTS.md`、`PROJECT_GUIDE.md`、`WORKFLOW.md`、`FILE_INDEX.md`、`docs/TOOLS_METHOD_FLOW_MAP.md`、`project_config.runtime_state` 和 run 证据同步；真正发生漂移时，不应该继续闲聊，而应该回到 `PROJECT_GUIDE` 的问题体系里按题重答并重新绑定证据。
 #### 必查文件
 - AGENTS.md
 - docs/WORKFLOW.md
 - docs/FILE_INDEX.md
-- TOOLS_METHOD_FLOW_MAP.md
+- docs/TOOLS_METHOD_FLOW_MAP.md
 - tools/appserverclient.py
 - tools/gitclient.py
 - tools/project_config.json
@@ -129,7 +129,7 @@
 #### 为什么问这题
 这题要求 agent 具备“看当前局面”的能力，而不是只会泛泛复述项目介绍。
 #### 标准答案
-要看当前有没有未完成任务，先看 `tools/project_config.json -> runtime_state` 当前指针，再看 `TASKS/QUEUE.json` 队列真相源，再看当前 `RUN_ID` 下的 `summary.md` 和 `decision.md`。`TASKS/QUEUE.md` 现在只是迁移期的人类可读视图。当前项目最近讨论的重点，已经从旧的长流程门禁转向更轻的主线：用 `appserverclient` 建立和维护项目级 baseline 学习、副本 fork 和当前工作 session，再用 `gitclient` 做提交与回滚收尾，让整个自动化真正围绕项目、run、task 这三层推进。
+要看当前有没有未完成任务，先看 `tools/project_config.json -> runtime_state` 当前指针，再看 `TASKS/QUEUE.json` 队列真相源，再看当前 `RUN_ID` 下的 `summary.md` 和 `decision.md`。当前项目最近讨论的重点，已经从旧的长流程门禁转向更轻的主线：用 `appserverclient` 建立和维护项目级 baseline 学习、副本 fork 和当前工作 session，再用 `gitclient` 做提交与回滚收尾，让整个自动化真正围绕项目、run、task 这三层推进。
 #### 必查文件
 - tools/project_config.json
 - TASKS/QUEUE.json
@@ -345,7 +345,7 @@
 #### 为什么问这题
 这题是执行闭环问题，用来确认 agent 知道“写完代码不是结束”。
 #### 标准答案
-每次做完任务，必须做验证、更新证据、同步 owner docs（如果流程/规则/工具行为变了），再通过 `gitclient` 做提交、PR、合并或回滚。最少要更新 `reports/<RUN_ID>/summary.md`、`decision.md`、`meta.json`，把 Why / What / Verify / Risk 写清楚。如果流程规则变了，还必须同步 `AGENTS.md`、`docs/WORKFLOW.md`、`docs/PROJECT_GUIDE.md`、`docs/FILE_INDEX.md`、`TOOLS_METHOD_FLOW_MAP.md` 等主线文档。没有验证、证据和文档更新，就不算完成。
+每次做完任务，必须做验证、更新证据、同步 owner docs（如果流程/规则/工具行为变了），再通过 `gitclient` 做提交、PR、合并或回滚。最少要更新 `reports/<RUN_ID>/summary.md`、`decision.md`、`meta.json`，把 Why / What / Verify / Risk 写清楚。如果流程规则变了，还必须同步 `AGENTS.md`、`docs/WORKFLOW.md`、`docs/PROJECT_GUIDE.md`、`docs/FILE_INDEX.md`、`docs/TOOLS_METHOD_FLOW_MAP.md` 等主线文档。没有验证、证据和文档更新，就不算完成。
 #### 必查文件
 - AGENTS.md
 - docs/WORKFLOW.md

@@ -2,7 +2,7 @@
   "task_id": "task-task-queue-json-bootstrap",
   "run_id": "run-2026-03-11-vnext-release-baseline",
   "project_id": "quant-factory-os",
-  "status": "done",
+  "status": "completed",
   "priority": "P1",
   "title": "task queue json bootstrap",
   "goal": "为当前 run 建立最小可执行的 task.json / queue.json 机器真相源，并把运行时指针切到 JSON；同时只归档一个明确无人引用的旧 Python 入口。",
@@ -74,5 +74,5 @@
     "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
     "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
   },
-  "updated_at": "2026-03-11T17:10:00+00:00"
+  "updated_at": "2026-03-16T01:57:30+00:00"
 }

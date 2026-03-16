@@ -1,33 +1,27 @@
-# TASK: tool boundary decoupling review
+# TASK: run summary stale prose cleanup
 
 RUN_ID: run-2026-03-11-vnext-release-baseline
-TASK_ID: task-tool-boundary-decoupling-review
+TASK_ID: task-run-summary-stale-prose-cleanup
 PROJECT_ID: quant-factory-os
 STATUS: completed
 PRIORITY: P1
 
 ## Goal
-梳理四个主工具的职责边界、当前变厚点和下一轮解耦方向，并把 agent 配置化后置到 todo。
+clean outdated run_summary risk and next-step prose so run evidence matches current code and runtime truth
 
 ## Scope
+- `reports/`
 - `tools/`
 - `docs/`
-- `todo.md`
 
 ## Non-goals
-- 不扩新 runtime 能力
 
 ## Acceptance
-- [ ] owner docs 明确四工具边界和解耦方向；todo.md 记录 agent 配置化后置
+- [x] outdated run_summary prose removed
+- [x] baseline_ready_summary updated
+- [x] docs or evidence updated if wording contract changed
 
 ## Inputs
-- `tools/appserverclient.py`
-- `tools/taskclient.py`
-- `tools/evidence.py`
-- `tools/gitclient.py`
-- `docs/WORKFLOW.md`
-- `docs/ENTITIES.md`
-- `todo.md`
 
 ## Role Threads
 - `run-main`: status=planned, thread_id=(none)
@@ -59,20 +53,23 @@ PRIORITY: P1
 - Status: completed
 
 ### Key Updates
-- formal tool boundaries and current thick spots are now documented
+- normalize-run-summary now rewrites stale baseline-consumption prose to match the current run-summary-driven refresh path
+- baseline_ready_summary now describes run-level prose alignment as the remaining work instead of reconnecting baseline to run summary
 
 ### Decisions
-- agent role configuration is deferred until tool boundaries stabilize
+- stale run-summary prose cleanup stays in evidence.py normalization rules instead of ad hoc manual report edits
 
 ### Risks
-- appserverclient and evidence.py remain the current thick spots if new logic keeps accumulating there
+- other historical run-local phrases may still remain until they are explicitly covered by narrow normalization rules
 
 ### Verification
-- python3 -m py_compile tools/appserverclient.py tools/taskclient.py tools/evidence.py tools/gitclient.py
-- make evidence RUN_ID=run-2026-03-11-vnext-release-baseline
+- python3 -m py_compile tools/evidence.py
+- python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --normalize-run-summary
+- python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --compact-run-summary
+- python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline --run-summary
 
 ### Next Steps
-- keep new runtime logic out of gitclient and prefer taskclient/evidence boundary-first growth
+- continue tightening run-level prose with narrow deterministic rewrite rules only when stale wording is proven
 
 ### Conflict Policy
 - Priority order: run-main, test, arch, dev
@@ -101,7 +98,7 @@ PRIORITY: P1
 ### Run-Main Resolution
 - status: not_needed
 - close_escalation: true
-- note: documentation-only boundary review; no run-main escalation needed
+- note: run-summary stale prose cleanup is evidence-only maintenance and did not require run-main escalation
 
 ### Role Summary Evidence
 

@@ -335,3 +335,54 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
   - 不再为了理论纯度继续加中间步骤
   - 没有真实多角色需要时，不引入 role thread
   - 当前主线先以短、稳、好定位为第一优先级
+
+## Task / queue truth reconciliation cleanup decision
+- `TASKS/QUEUE.json` 继续作为唯一 queue 机器真相源，`TASKS/QUEUE.md` 降级为废弃兼容说明页，不再保留可被误读成真实 backlog 的历史文本。
+- 当前新增 `python3 tools/taskclient.py --reconcile-task-queue-truth` 作为最小维护入口，用来统一收口：
+  - `runtime_state`
+  - `TASKS/QUEUE.json`
+  - `TASKS/TASK-*.json`
+- 这一步选择放在 `taskclient`，而不是 `evidence.py` 或 `appserverclient`，因为它本质上属于 task/queue truth maintenance，不属于 runtime transport，也不属于 run evidence 聚合。
+
+## Run summary stale prose cleanup decision
+- 已确认 baseline refresh 现在默认消费 `run_summary`，所以继续保留“baseline still does not consume run summary yet”会直接误导后续 session。
+- 当前选择把这类修正继续放在 `tools/evidence.py --normalize-run-summary` 的窄规则里，而不是手工改 `run_summary.json` 或在别的层做补丁。
+- 原则保持不变：只对已被当前代码和真实运行明确证伪的旧句子做窄规则替换，不把 `normalize-run-summary` 扩成泛化改写器。
+
+## Run summary risk layering decision
+- run-level 风险不再只用一个列表承载全部含义；当前显式拆成：
+  - `cross_task_risks`：当前主线仍成立的运行风险
+  - `audit_risks`：历史清理、审计残留、兼容资产风险
+- `baseline_ready_summary` 只消费 `cross_task_risks`，避免把 audit/history 噪音继续带进 baseline refresh。
+- 这一步保持最小规则化分类，不引入新 client，也不把语义过滤责任继续推给 baseline 侧。
+
+## Tool surface and prompt asset cleanup decision
+- 正式 prompt 模板不再散落在 `tools/` 顶层，当前统一迁到 `tools/prompts/`。
+- 传统需求分析文档移到 `chatlogs/`，因为它属于学习/对话参考材料，不应继续占据正式工具目录。
+- `TOOLS_METHOD_FLOW_MAP.md` 迁到 `docs/`，与其他 owner docs 保持一致。
+- `tools/start.sh` 与 `tools/onboard.sh` 直接归档到 `chatlogs/backup/`；当前不保留新的 wrapper，因为正式入口已经是 `init/appserverclient/gitclient/taskclient/evidence`。
+- 历史 task、learn 产物中的旧路径不做批量重写，避免把一次目录清理扩大成历史 evidence 重写工程。
+
+## Unused top-level tool artifact cleanup decision
+- `tools/console.txt` 删除，因为它不在正式主线或当前工具引用链内。
+- 顶层 `tools/taskstore.py` 与 `tools/sync_exam.py` 归档到 `chatlogs/backup/`，因为它们不再属于正式工具面。
+- `tools/slice.py` 保留，因为它仍然是独立的 Python 工具入口，而不是因为 `Makefile`。
+
+## Unused shell helper and Make target cleanup decision
+- `Makefile` 已删除，因为 `make evidence / make verify / make slice` 只是 Python/pytest 的薄包装，不再值得保留为正式入口。
+- `tools/doctor.sh`、`tools/enter.sh`、`tools/smoke.sh` 不再属于正式主线，因此归档到 `chatlogs/backup/`。
+- 正式命令面已统一收成：
+  - `python3 tools/evidence.py --run-id <RUN_ID>`
+  - `pytest -q`
+  - `python3 tools/slice.py --run-id <RUN_ID> --day YYYY-MM-DD --symbols A,B --start HH:MM --end HH:MM`
+- `pytest` 当前在本 shell 中未安装，因此本轮 verify 结果记录为环境缺口，而不是回退保留 `Makefile` 的理由。
+
+## Relocate appserver logs and backup assets decision
+- app-server Python 调试日志不再散落在仓库根目录；默认统一落到 `appserver_log/`。
+- 历史兼容脚本与旧 Python 入口不再继续占据 `tools/` 命名空间；归档位置统一改为 `chatlogs/backup/`。
+- 这一步只改正式运行时默认路径和 owner docs，不重写历史 checkpoint/审计残留。
+
+## Cleanup stale tasks and reports artifacts decision
+- `TASKS/QUEUE.md` 已删除；queue 现在只保留 `TASKS/QUEUE.json` 作为机器真相源。
+- sample/demo task 和孤立旧 task md 已删除；真实历史 task 和 run evidence 保留。
+- reports 下只清理 checkpoint 垃圾，不删除有真实 run 价值的历史目录。

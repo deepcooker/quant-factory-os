@@ -1,33 +1,27 @@
-# TASK: tool boundary decoupling review
+# TASK: task queue truth reconciliation cleanup
 
 RUN_ID: run-2026-03-11-vnext-release-baseline
-TASK_ID: task-tool-boundary-decoupling-review
+TASK_ID: task-task-queue-truth-reconciliation-cleanup
 PROJECT_ID: quant-factory-os
 STATUS: completed
 PRIORITY: P1
 
 ## Goal
-梳理四个主工具的职责边界、当前变厚点和下一轮解耦方向，并把 agent 配置化后置到 todo。
+reconcile runtime_state, TASKS/QUEUE.json, and TASKS/TASK-*.json; demote QUEUE.md to deprecated compatibility layer
 
 ## Scope
-- `tools/`
+- `TASKS/`
 - `docs/`
-- `todo.md`
+- `tools/`
 
 ## Non-goals
-- 不扩新 runtime 能力
 
 ## Acceptance
-- [ ] owner docs 明确四工具边界和解耦方向；todo.md 记录 agent 配置化后置
+- [x] active task truth reconciled
+- [x] QUEUE.md documented as deprecated compatibility layer
+- [x] references to QUEUE.md audited
 
 ## Inputs
-- `tools/appserverclient.py`
-- `tools/taskclient.py`
-- `tools/evidence.py`
-- `tools/gitclient.py`
-- `docs/WORKFLOW.md`
-- `docs/ENTITIES.md`
-- `todo.md`
 
 ## Role Threads
 - `run-main`: status=planned, thread_id=(none)
@@ -59,20 +53,26 @@ PRIORITY: P1
 - Status: completed
 
 ### Key Updates
-- formal tool boundaries and current thick spots are now documented
+- taskclient now provides a single reconcile_task_queue_truth entry for runtime_state, task JSON, and queue JSON cleanup
+- historical task statuses using done or stale active states were normalized into completed or the current active task only
+- QUEUE.md is now reduced to a deprecated compatibility note instead of carrying stale backlog content
 
 ### Decisions
-- agent role configuration is deferred until tool boundaries stabilize
+- QUEUE.json remains the only queue machine truth and QUEUE.md no longer participates in automation
+- non-current active tasks are downgraded during reconcile unless their own task summary already proves completion
 
 ### Risks
-- appserverclient and evidence.py remain the current thick spots if new logic keeps accumulating there
+- project_all_files.txt and console history still preserve historical QUEUE.md references as audit artifacts
+- future queue drift will return if new commands mutate task or queue truth without reusing reconcile-task-queue-truth
 
 ### Verification
-- python3 -m py_compile tools/appserverclient.py tools/taskclient.py tools/evidence.py tools/gitclient.py
-- make evidence RUN_ID=run-2026-03-11-vnext-release-baseline
+- python3 -m py_compile tools/taskclient.py
+- python3 tools/taskclient.py --reconcile-task-queue-truth
+- python3 tools/project_config.py
 
 ### Next Steps
-- keep new runtime logic out of gitclient and prefer taskclient/evidence boundary-first growth
+- keep future queue maintenance on QUEUE.json only
+- continue run evidence cleanup so report prose matches the now-clean task and queue truth
 
 ### Conflict Policy
 - Priority order: run-main, test, arch, dev
@@ -101,7 +101,7 @@ PRIORITY: P1
 ### Run-Main Resolution
 - status: not_needed
 - close_escalation: true
-- note: documentation-only boundary review; no run-main escalation needed
+- note: truth reconciliation and queue deprecation cleanup did not require run-main escalation
 
 ### Role Summary Evidence
 

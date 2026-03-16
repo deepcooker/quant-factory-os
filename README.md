@@ -7,14 +7,11 @@ This file is an index only. It does not define workflow rules.
 ## Quick start
 
 ```bash
-./tools/start.sh
+python3 tools/init.py
 ```
 
 Proxy:
-
-```bash
-PROXY_URL=http://127.0.0.1:7890 ./tools/start.sh
-```
+- `tools/start.sh` 已归档到 `chatlogs/backup/start.sh`；当前正式入口是 `python3 tools/init.py`
 
 ## Single source map
 - Session entrypoint owner: `AGENTS.md` + `docs/PROJECT_GUIDE.md`
@@ -48,6 +45,6 @@ PROXY_URL=http://127.0.0.1:7890 ./tools/start.sh
 - `tests/`: guardrail tests
 
 ## Standard gates
-- `make evidence RUN_ID=<RUN_ID>`
-- `make verify`
-- `tools/task.sh`
+- `python3 tools/evidence.py --run-id <RUN_ID>`
+- `pytest -q`
+- `python3 tools/slice.py --run-id <RUN_ID> --day YYYY-MM-DD --symbols A,B --start HH:MM --end HH:MM`

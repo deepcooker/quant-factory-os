@@ -114,6 +114,7 @@
 - `key_updates`
 - `cross_task_decisions`
 - `cross_task_risks`
+- `audit_risks`
 - `verification_overview`
 - `next_run_or_next_tasks`
 
@@ -130,6 +131,7 @@
   - 多个角色的 `summary merged` 合并成一条 multi-role run-level 结论
   - `test gate=blocked/passed` 归并成更稳定的 gate 状态表达
 - 对 `cross_task_risks`，若同时存在通用 blocked-gate 句与更具体的 blocked-gate 解释句，则优先保留更具体的 run-level 风险表达；证据粒度仍保留在 `verification_overview`
+- `audit_risks` 用于承载历史清理、审计残留、兼容资产等非主线运行风险；它不进入 `baseline_ready_summary`
 
 ### 3.4 生命周期
 1. 新需求方向或新一轮迭代开始时创建
@@ -533,6 +535,7 @@ project
 - `session_registry.current_summary` 当前是 thread-level transitional summary，不应长期等同于最终 run summary
 - `reports/<RUN_ID>/run_summary.json` 当前是最小 machine truth 落点；`summary.md/decision.md` 继续承担 run 级 md 视图
 - `run_summary.json.baseline_ready_summary` 是给 baseline refresh 使用的压缩视图，不是新的独立对象；它只是 run-level machine truth 的一段更短表达
+- `run_summary.json.audit_risks` 是 run-level 审计/历史风险层；它用于保留清理真相，不应继续进入 baseline-facing 压缩表达
 - `run_summary.json.merge_policy` 是 task -> run 聚合规则的机器层声明；长期可以演进，但当前必须显式保留字段类别，不允许把所有 summary 字段继续当成统一 append 列表
 - `run_summary.json.legacy_cleanup_policy` 是 run-level 历史语义项的渐进清理声明；当前策略必须是 `explicit_maintenance_only`，不允许在普通 merge/reconcile 时静默重写全部旧条目
 - `run_summary.json.legacy_cleanup_last_applied_at` 只记录最近一次显式清理动作；它不是 run-level 业务状态

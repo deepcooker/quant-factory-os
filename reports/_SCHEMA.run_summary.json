@@ -41,6 +41,9 @@
   "cross_task_risks": [
     "Cross-task risk that still matters."
   ],
+  "audit_risks": [
+    "Audit/history cleanup risk that should not flow into baseline-ready compaction."
+  ],
   "verification_overview": [
     "High-level verification result."
   ],

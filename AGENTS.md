@@ -12,7 +12,7 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 ## 1) Entry Rule: Task + Run are mandatory
 - All implementation starts from `TASKS/TASK-*.json`.
 - If user did not give a task, pick next open item in `TASKS/QUEUE.json` and create/select a task first.
-- `TASKS/TASK-*.md` and `TASKS/QUEUE.md` are legacy human-readable views during transition, not machine truth.
+- `TASKS/TASK-*.md` are legacy human-readable views during transition, not machine truth.
 - Never edit code/docs without active `RUN_ID` in `tools/project_config.json -> runtime_state`; when current work has been sliced, bind the active `TASK_ID` and `TASK JSON file` there too.
 
 ## 2) Core onboarding principle (mainline anchor)
@@ -31,7 +31,7 @@ This repo is a quant-engineering OS. Follow deterministic workflow, not ad-hoc c
 - Project cognition / Q&A anchor: `docs/PROJECT_GUIDE.md`
 - Execution state machine: `docs/WORKFLOW.md`
 - Entity dictionary: `docs/ENTITIES.md`
-- Experimental flow map: `TOOLS_METHOD_FLOW_MAP.md`
+- Experimental flow map: `docs/TOOLS_METHOD_FLOW_MAP.md`
 - Experimental file index: `docs/FILE_INDEX.md`
 - Current active pointers: `tools/project_config.json -> runtime_state`
 - Queue intent: `TASKS/QUEUE.json`
@@ -55,7 +55,7 @@ Runtime note:
   - `python3 tools/appserverclient.py --refresh-baseline`
   - `python3 tools/gitclient.py --commit` or rollback
 - Historical Python-first commands such as `learn/ready/orient/choose/council/arbiter/slice_task` are archived compatibility assets, not the primary mainline contract.
-- Legacy shell entrypoints are archived under `tools/backup/` and no longer belong to the formal tool surface.
+- Legacy shell entrypoints are archived under `chatlogs/backup/` and no longer belong to the formal tool surface.
 
 `init` detailed step definitions, mode semantics (`-status` / `-main`), and output fields are owned by `docs/WORKFLOW.md` (`S0 Environment`). `AGENTS.md` keeps only gate-level contract.
 
@@ -74,7 +74,7 @@ Required visible progress:
   - transport is fixed internally: `app-server`
   - baseline learning mode is fixed internally: `plan`
   - default model constant: `gpt-5.4`
-  - baseline prompt is built from `tools/learnbaseline_prompt.md` plus dynamic project context
+  - baseline prompt is built from `tools/prompts/learnbaseline_prompt.md` plus dynamic project context
   - baseline creation must write `session_registry.learn_session_baseline`
   - current fork creation must write `session_registry.fork_current_session`
 - Daily work should not keep using `plan`:
@@ -92,7 +92,7 @@ No coding until this gate is complete.
 ## 5) Working mode: Plan -> Confirm -> Execute
 - Complex work must follow `Plan -> Confirm -> Execute`.
 - Codex interactive `/plan` is planning protocol, not execution.
-- Historical `legacy.sh` behavior is reference-only under `tools/backup/legacy.sh`; it does not open execute gate.
+- Historical `legacy.sh` behavior is reference-only under `chatlogs/backup/legacy.sh`; it does not open execute gate.
 - `/compact` is milestone-based, not a `learn` hard gate. Use after long exchanges or before switching milestones.
 
 ## 6) Workflow skeleton
@@ -153,14 +153,10 @@ Use only these unless task explicitly authorizes more:
 - `python3 tools/evidence.py --reconcile-run-summary --run-id <RUN_ID>`
 - `python3 tools/evidence.py --normalize-run-summary --run-id <RUN_ID>`
 - `python3 tools/evidence.py --compact-run-summary --run-id <RUN_ID>`
-- `tools/doctor.sh`
-- `tools/enter.sh`
-- `tools/smoke.sh`
 - `tools/view.sh`
-- `make evidence RUN_ID=...`
-- `make verify`
-- `make slice RUN_ID=... DAY=... SYMBOLS=... START=... END=...`
+- `python3 tools/evidence.py --run-id <RUN_ID>`
 - `pytest -q`
+- `python3 tools/slice.py --run-id <RUN_ID> --day YYYY-MM-DD --symbols A,B --start HH:MM --end HH:MM`
 
 ## 9) Reading policy (hard)
 - Long file reading must use `tools/view.sh` in chunks.
@@ -192,7 +188,7 @@ If process/rule/tool behavior changes in a run, update in the same run:
 - `docs/WORKFLOW.md`
 - `docs/PROJECT_GUIDE.md` (if learning/Q&A anchor changed)
 - `docs/FILE_INDEX.md` (if key file responsibilities or reading order changed)
-- `TOOLS_METHOD_FLOW_MAP.md` (if formal mainline methods or call paths changed)
+- `docs/TOOLS_METHOD_FLOW_MAP.md` (if formal mainline methods or call paths changed)
 - `tools/project_config.json` (if active pointers changed)
 - `TASKS/QUEUE.json` / `TASKS/TASK-*.json` (if task or queue truth changed)
 - `reports/<RUN_ID>/summary.md` and `reports/<RUN_ID>/decision.md`

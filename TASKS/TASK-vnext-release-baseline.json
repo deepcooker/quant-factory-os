@@ -2,7 +2,7 @@
   "task_id": "task-vnext-release-baseline",
   "run_id": "run-2026-03-11-vnext-release-baseline",
   "project_id": "quant-factory-os",
-  "status": "done",
+  "status": "completed",
   "priority": "P1",
   "title": "vnext release baseline",
   "goal": "扶正 run 为当前正式对象，移除 TASKS/STATE.md 这类过渡镜像，并让 tools/project_config.json -> runtime_state 成为唯一运行时真相源。",
@@ -68,5 +68,5 @@
     "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
     "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
   },
-  "updated_at": "2026-03-11T16:40:00+00:00"
+  "updated_at": "2026-03-16T01:57:30+00:00"
 }

@@ -2,7 +2,7 @@
   "task_id": "task-taskstore-bootstrap",
   "run_id": "run-2026-03-11-vnext-release-baseline",
   "project_id": "quant-factory-os",
-  "status": "done",
+  "status": "completed",
   "priority": "P1",
   "title": "taskstore bootstrap",
   "goal": "新增一个最小 tools/taskstore.py，统一读写 TASKS/QUEUE.json 与 TASKS/TASK-*.json，并先让 evidence.py 依赖这层读取运行态 task。",
@@ -61,5 +61,5 @@
     "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
     "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
   },
-  "updated_at": "2026-03-11T17:20:00+00:00"
+  "updated_at": "2026-03-16T01:57:30+00:00"
 }

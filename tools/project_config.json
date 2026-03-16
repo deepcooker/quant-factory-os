@@ -10,14 +10,14 @@
   "runtime_state": {
     "current_project_id": "quant-factory-os",
     "current_run_id": "run-2026-03-11-vnext-release-baseline",
-    "current_task_id": "task-codex-full-access-runtime-prerequisite",
-    "current_task_file": "TASKS/TASK-codex-full-access-runtime-prerequisite.md",
-    "current_task_json_file": "TASKS/TASK-codex-full-access-runtime-prerequisite.json",
+    "current_task_id": "task-cleanup-stale-tasks-and-reports-artifacts",
+    "current_task_file": "TASKS/TASK-cleanup-stale-tasks-and-reports-artifacts.md",
+    "current_task_json_file": "TASKS/TASK-cleanup-stale-tasks-and-reports-artifacts.json",
     "current_status": "completed",
-    "current_updated_at": "2026-03-13T15:00:57+00:00"
+    "current_updated_at": "2026-03-16T10:50:30+08:00"
   },
   "task_registry": {
-    "active_task_json_file": "TASKS/TASK-codex-full-access-runtime-prerequisite.json",
+    "active_task_json_file": "TASKS/TASK-cleanup-stale-tasks-and-reports-artifacts.json",
     "queue_json_file": "TASKS/QUEUE.json",
     "task_md_is_legacy_view": true,
     "queue_md_is_legacy_view": true
@@ -33,11 +33,11 @@
       "effort": "low"
     },
     "fork_current_session": {
-      "thread_id": "019ce7b4-c653-79c3-8482-eacc971679cf",
-      "thread_path": "/root/.codex/sessions/2026/03/13/rollout-2026-03-13T22-58-30-019ce7b4-c653-79c3-8482-eacc971679cf.jsonl",
+      "thread_id": "019cf45a-4782-7443-8796-c94e0eb7385a",
+      "thread_path": "/root/.codex/sessions/2026/03/16/rollout-2026-03-16T09-54-43-019cf45a-4782-7443-8796-c94e0eb7385a.jsonl",
       "status": "ready",
-      "updated_at": "2026-03-13T14:59:39.870713+00:00",
-      "source": "summarize_current_main",
+      "updated_at": "2026-03-16T01:54:43.352015+00:00",
+      "source": "fork_current_main",
       "forked_from_thread_id": "019cd913-0405-70c2-9690-983b199909ce",
       "model": "gpt-5.4",
       "effort": "low"

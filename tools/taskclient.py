@@ -55,6 +55,17 @@ def save_queue(payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def normalize_status(value: str, default: str = "pending") -> str:
+    raw = str(value).strip().lower()
+    if raw in {"completed", "complete", "done", "closed"}:
+        return "completed"
+    if raw in {"active", "in_progress", "in-progress", "working"}:
+        return "active"
+    if raw in {"draft", "pending", "open", ""}:
+        return default
+    return raw
+
+
 def slugify(value: str) -> str:
     text = re.sub(r"[^a-zA-Z0-9]+", "-", str(value).strip().lower()).strip("-")
     return text or "task"
@@ -120,6 +131,89 @@ def mark_queue_item_status(queue_id: str, status: str, picked_at: str | None = N
         save_queue(queue_payload)
         return dict(item)
     raise KeyError(f"queue_id not found: {queue_id}")
+
+
+def reconcile_task_queue_truth() -> dict[str, Any]:
+    runtime_state = get_runtime_state()
+    active_task_json_file = str(runtime_state.get("current_task_json_file", "")).strip()
+    active_task_id = str(runtime_state.get("current_task_id", "")).strip()
+    active_run_id = str(runtime_state.get("current_run_id", "")).strip()
+    normalized_tasks: list[str] = []
+    completed_tasks: list[str] = []
+    pending_tasks: list[str] = []
+
+    for path in sorted(TASKS_DIR.glob("TASK-*.json")):
+        task_json_file = str(path.relative_to(REPO_ROOT))
+        payload = load_task(task_json_file)
+        task_id = str(payload.get("task_id", "")).strip()
+        top_status = normalize_status(str(payload.get("status", "")).strip(), "pending")
+        summary_status = normalize_status(str((payload.get("task_summary", {}) or {}).get("status", "")).strip(), "")
+
+        next_status = top_status
+        if summary_status == "completed":
+            next_status = "completed"
+        elif task_json_file == active_task_json_file or task_id == active_task_id:
+            next_status = "active"
+        elif top_status == "active":
+            next_status = "pending"
+
+        if next_status != str(payload.get("status", "")).strip():
+            payload["status"] = next_status
+            payload["updated_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+            save_task(task_json_file, payload)
+            write_task_md(str(payload.get("artifacts", {}).get("task_md_file", "")).strip() or task_json_file.replace(".json", ".md"), payload)
+            normalized_tasks.append(task_id or task_json_file)
+
+        if next_status == "completed":
+            completed_tasks.append(task_id or task_json_file)
+        elif next_status == "pending":
+            pending_tasks.append(task_id or task_json_file)
+
+    queue_payload = load_queue()
+    normalized_queue_items: list[str] = []
+    for item in list(queue_payload.get("items", []) or []):
+        queue_id = str(item.get("queue_id", "")).strip()
+        task_json_file = str(item.get("task_json_file", "")).strip()
+        task_id = str(item.get("task_id", "")).strip()
+        task_status = "pending"
+        if task_json_file:
+            task_status = normalize_status(str(load_task(task_json_file).get("status", "")).strip(), "pending")
+
+        next_queue_status = normalize_status(str(item.get("status", "")).strip(), "pending")
+        if task_json_file == active_task_json_file or task_id == active_task_id:
+            next_queue_status = "active"
+        elif task_status == "completed":
+            next_queue_status = "completed"
+        else:
+            next_queue_status = "pending"
+
+        if next_queue_status != str(item.get("status", "")).strip():
+            item["status"] = next_queue_status
+            normalized_queue_items.append(queue_id or task_id or task_json_file)
+        if next_queue_status != "active":
+            item["picked_at"] = item.get("picked_at")
+    save_queue(queue_payload)
+
+    if active_task_json_file and active_task_id and active_run_id:
+        active_task = load_task(active_task_json_file)
+        active_task_md_file = str(active_task.get("artifacts", {}).get("task_md_file", "")).strip() or active_task_json_file.replace(".json", ".md")
+        set_active_task(
+            active_task_json_file,
+            active_task_id,
+            active_task_md_file,
+            active_run_id,
+            normalize_status(str(active_task.get("status", "")).strip(), "active"),
+        )
+
+    return {
+        "action": "reconcile_task_queue_truth",
+        "active_task_id": active_task_id,
+        "active_task_json_file": active_task_json_file,
+        "normalized_tasks": normalized_tasks,
+        "normalized_queue_items": normalized_queue_items,
+        "completed_tasks": completed_tasks,
+        "pending_tasks": pending_tasks,
+    }
 
 
 def append_queue_item(item: dict[str, Any]) -> dict[str, Any]:
@@ -213,7 +307,7 @@ def write_task_md(task_md_file: str, payload: dict[str, Any]) -> None:
         lines.append(f"- {str(item).strip()}")
     lines.extend(["", "## Acceptance"])
     for item in list(payload.get("acceptance", []) or []):
-        status = "x" if str(item.get("status", "")).strip() == "done" else " "
+        status = "x" if normalize_status(str(item.get("status", "")).strip(), "") == "completed" else " "
         lines.append(f"- [{status}] {str(item.get('text', '')).strip()}")
     lines.extend(["", "## Inputs"])
     for item in list(payload.get("inputs", []) or []):
@@ -1115,6 +1209,7 @@ def main() -> int:
     parser.add_argument("--set-role-summary", action="store_true")
     parser.add_argument("--test-gate", action="store_true")
     parser.add_argument("--set-test-gate", action="store_true")
+    parser.add_argument("--reconcile-task-queue-truth", action="store_true")
     parser.add_argument("--queue", action="store_true")
     parser.add_argument("--task-json-file")
     parser.add_argument("--run-id")
@@ -1240,6 +1335,8 @@ def main() -> int:
             list(args.gate_evidence),
             list(args.blocking_issue),
         )
+    elif args.reconcile_task_queue_truth:
+        result = reconcile_task_queue_truth()
     elif args.queue and not args.title:
         result = load_queue()
     elif args.task_json_file:
@@ -1248,7 +1345,7 @@ def main() -> int:
         result = {"run_id": args.run_id, "task_id": find_task_id_for_run(args.run_id)}
     else:
         parser.error(
-            "supported commands: --next, --create, --active-task, --task-summary, --set-task-summary, --merge-role-summaries, --refresh-task-gaps, --refresh-task-escalation, --run-main-resolution, --set-run-main-resolution, --refresh-run-main-resolution, --role-threads, --set-role-thread, --role-summaries, --set-role-summary, --test-gate, --set-test-gate, --queue, --task-json-file, or --run-id"
+            "supported commands: --next, --create, --active-task, --task-summary, --set-task-summary, --merge-role-summaries, --refresh-task-gaps, --refresh-task-escalation, --run-main-resolution, --set-run-main-resolution, --refresh-run-main-resolution, --role-threads, --set-role-thread, --role-summaries, --set-role-summary, --test-gate, --set-test-gate, --reconcile-task-queue-truth, --queue, --task-json-file, or --run-id"
         )
         return 2
 

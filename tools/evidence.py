@@ -89,6 +89,7 @@ def _ensure_run_summary(reports_dir: Path, run_id: str, task_id: str) -> Path:
         "key_updates": [],
         "cross_task_decisions": [],
         "cross_task_risks": [],
+        "audit_risks": [],
         "verification_overview": [],
         "next_run_or_next_tasks": [],
         "updated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
@@ -239,6 +240,10 @@ def _canonicalize_run_level_items(items: list[str]) -> list[str]:
             value = "test gate remains blocked"
         elif value == "test gate=passed":
             value = "test gate has passed"
+        elif value == "baseline still does not consume run summary yet":
+            value = "baseline refresh now consumes run summary by default; remaining work is to keep run-level prose aligned with current truth"
+        elif value == "connect baseline refresh to run summary after this stabilizes":
+            value = "continue tightening run-level prose so baseline-ready summaries stay aligned with current code and runtime truth"
         elif "all three real summaries are preserved" in value:
             value = "integrated multi-role runtime summaries are preserved and produce an explainable test gate state"
         result.append(value)
@@ -265,6 +270,37 @@ def _dedupe_run_level_risks(items: list[str]) -> list[str]:
             continue
         result.append(value)
     return result
+
+
+def _is_audit_risk(text: str) -> bool:
+    value = str(text).strip().lower()
+    return any(
+        marker in value
+        for marker in (
+            "legacy run summaries",
+            "historical task-prefixed",
+            "project_all_files.txt",
+            "console history",
+            "audit artifact",
+        )
+    )
+
+
+def _partition_risk_layers(payload: dict[str, Any]) -> dict[str, Any]:
+    combined = _append_dedup(
+        list(payload.get("audit_risks", []) or []),
+        list(payload.get("cross_task_risks", []) or []),
+    )
+    audit_risks: list[str] = []
+    mainline_risks: list[str] = []
+    for item in combined:
+        if _is_audit_risk(item):
+            audit_risks.append(item)
+        else:
+            mainline_risks.append(item)
+    payload["cross_task_risks"] = _dedupe_run_level_risks(mainline_risks)
+    payload["audit_risks"] = _append_dedup([], audit_risks)
+    return payload
 
 
 def _build_baseline_ready_summary(payload: dict[str, Any]) -> str:
@@ -311,6 +347,7 @@ def _normalize_legacy_run_summary_fields(payload: dict[str, Any]) -> dict[str, A
         )
         if field == "cross_task_risks":
             payload[field] = _dedupe_run_level_risks(list(payload.get(field, []) or []))
+    payload = _partition_risk_layers(payload)
     payload["legacy_cleanup_last_applied_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     return payload
 
@@ -458,6 +495,7 @@ def _compact_run_summary(repo: Path, run_id: str) -> dict[str, Any]:
     runtime_task_id = os.getenv("TASK_ID") or _runtime_task_for_run(run_id) or ""
     run_summary_path = _ensure_run_summary(reports_dir, run_id, runtime_task_id)
     payload = _load_run_summary(run_summary_path)
+    payload = _partition_risk_layers(payload)
     payload["baseline_ready_summary"] = _build_baseline_ready_summary(payload)
     _save_run_summary(run_summary_path, payload)
     return payload

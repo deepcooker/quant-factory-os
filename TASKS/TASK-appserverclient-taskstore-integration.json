@@ -2,7 +2,7 @@
   "task_id": "task-appserverclient-taskstore-integration",
   "run_id": "run-2026-03-11-vnext-release-baseline",
   "project_id": "quant-factory-os",
-  "status": "done",
+  "status": "completed",
   "priority": "P1",
   "title": "appserverclient taskstore integration",
   "goal": "让 tools/appserverclient.py 显式读取 active task JSON，并把当前 task 上下文打印进运行时日志，确保 runtime/session 主线与 taskstore 对齐。",
@@ -56,5 +56,5 @@
     "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
     "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
   },
-  "updated_at": "2026-03-11T17:35:00+00:00"
+  "updated_at": "2026-03-16T01:57:30+00:00"
 }
