@@ -49,12 +49,12 @@ Runtime note:
   - `python3 tools/appserverclient.py --learnbaseline`
   - determine run-level demand direction
   - role/session forks on top of baseline
-  - `python3 tools/appserverclient.py --fork-role <dev|test|arch>` when a task needs a real role thread
+  - `python3 tools/appserverclient.py --fork-role <run-main|dev|test|arch>` when a task needs a real role thread
   - minimal task execution inside forked sessions
   - `python3 tools/appserverclient.py --summarize-current`
   - `python3 tools/appserverclient.py --refresh-baseline`
   - `python3 tools/gitclient.py --commit` or rollback
-- Historical Python-first commands such as `learn/ready/orient/choose/council/arbiter/slice_task` are archived compatibility assets, not the primary mainline contract.
+- Historical Python-first commands such as `learn/ready/orient/choose/council/arbiter/slice_task` are archived compatibility assets, not the primary mainline contract or formal docs surface.
 - Legacy shell entrypoints are archived under `chatlogs/backup/` and no longer belong to the formal tool surface.
 
 `init` detailed step definitions, mode semantics (`-status` / `-main`), and output fields are owned by `docs/WORKFLOW.md` (`S0 Environment`). `AGENTS.md` keeps only gate-level contract.
@@ -132,7 +132,7 @@ Use only these unless task explicitly authorizes more:
 - `python3 tools/init.py`
 - `python3 tools/appserverclient.py --learnbaseline`
 - `python3 tools/appserverclient.py --fork-current`
-- `python3 tools/appserverclient.py --fork-role <dev|test|arch>`
+- `python3 tools/appserverclient.py --fork-role <run-main|dev|test|arch>`
 - `python3 tools/appserverclient.py --role-turn <run-main|dev|test|arch> [text...]`
 - `python3 tools/appserverclient.py --summarize-role <run-main|dev|test|arch>`
 - `python3 tools/appserverclient.py --current-turn`
@@ -160,6 +160,7 @@ Use only these unless task explicitly authorizes more:
 
 ## 9) Reading policy (hard)
 - Long file reading must use `tools/view.sh` in chunks.
+- `tools/view.sh` is the stable file reader and supports both direct execution and `python3 tools/view.sh ...`.
 - `rg` / `grep` are allowed only for locating text with short output (line hits/snippets), not for full-file reading.
 - Do not use `cat` / `sed` / `awk` to dump large files; use `tools/view.sh` chunked reading instead.
 

@@ -2,7 +2,7 @@
 
 对象模型先于流程模型。
 
-本文件定义 `project_id / run_id / task_id / thread summary / discussion artifacts / queue / evidence` 的边界、关系和生命周期。
+本文件定义 `project_id / run_id / task_id / thread summary / queue / evidence` 的边界、关系和生命周期。
 `docs/WORKFLOW.md` 必须以这里的定义为基础，不得另起一套名词系统。
 
 ## 1. 设计原则
@@ -13,7 +13,6 @@
 - `run` 管一轮方向到交付的周期。
 - `task` 管 run 内最小可执行切片。
 - `thread` 管 task 内单个角色或单次连续会话的局部结论。
-- `discussion artifacts` 管需求从模糊到收敛的中间产物。
 - `queue` 只是执行入口池，不是顶层对象。
 
 ### 1.2 因果顺序
@@ -141,7 +140,7 @@
 ### 3.5 关系
 - 一个 `run` 只属于一个 `project`
 - 一个 `run` 可以包含多个 `task`
-- 一个 `run` 可以包含多份 discussion artifacts
+- 一个 `run` 可以包含多条需求收敛记录与多个 task
 - 一个 `run` 的最终稳定结论应来自 task summaries 的聚合，而不是单个 thread
 - 一个 `run` 在 task 创建前，允许先存在一版 `Markdown intake draft`
 
@@ -197,8 +196,8 @@
 - `test_gate`
 
 ### 4.6 生命周期
-1. discussion 收敛成 execution contract 后创建
-2. 从 `slice_plan` 或 queue 中实体化
+1. run 方向与 task 边界收敛后创建
+2. 从 queue 中实体化
 3. 执行、验证、review、ship
 4. 完成后更新 run evidence 和 state
 
@@ -311,64 +310,7 @@
 
 ## 6. Discussion Artifacts
 
-discussion artifacts 是 run 内从模糊需求到执行合同的中间对象，不是 task。
-
-### 5.1 Direction
-定义：候选方向集合。
-
-职责：
-- 给出多个可选方向
-- 说明 each option 的 why / risk / priority / scope_hint
-
-典型文件：
-- `reports/<RUN_ID>/orient_choice.json`
-
-### 5.2 Selection
-定义：用户确认后的方向选择结果。
-
-职责：
-- 记录选了哪个方向
-- 说明选择理由
-- 固定后续 discussion 的目标方向
-
-典型文件：
-- `reports/<RUN_ID>/orient_choice.json`
-
-### 5.3 Council Review
-定义：多角色独立评审结果。
-
-职责：
-- 从产品 / 架构 / 研发 / 测试等视角独立产出意见
-- 暴露 blocker / warn / disagreement
-
-典型文件：
-- `reports/<RUN_ID>/execution_contract.json`
-
-### 5.4 Execution Contract
-定义：讨论收敛后的可执行合同。
-
-职责：
-- 固定目标
-- 固定非目标
-- 固定 scope
-- 固定 acceptance
-- 固定约束和风险
-
-典型文件：
-- `reports/<RUN_ID>/execution_contract.json`
-- `reports/<RUN_ID>/execution_contract.md`
-
-### 5.5 Slice Plan
-定义：把 execution contract 拆成最小执行切片的结果。
-
-职责：
-- 给出 task 拆分
-- 给出先后顺序
-- 给出每个 task 的 acceptance
-
-典型文件：
-- `reports/<RUN_ID>/slice_state.json`
-- `TASKS/QUEUE.json` 中的 queue items
+run 方向收敛记录属于 run 内过程材料，不是 task。
 
 ## 7. Queue
 
@@ -383,7 +325,7 @@ discussion artifacts 是 run 内从模糊需求到执行合同的中间对象，
 - `TASKS/QUEUE.json`
 
 ### 6.4 关系
-- queue item 来自某个 `run` 的 `slice_plan`
+- queue item 来自某个 `run` 下已经收敛好的 task 规划
 - queue item 最终会实体化为 `TASKS/TASK-*.json`
 
 ### 6.5 设计原则
@@ -434,27 +376,10 @@ session 是一次聊天/终端交互会话。
 - run 不能依赖 session 记忆存在
 
 ### 8.3 正确关系
-- session 通过 `learn` 和 run evidence 对齐到当前 `project/run/task`
+- session 通过 baseline 与 run evidence 对齐到当前 `project/run/task`
 - session 结束后，真相仍应留在仓库文件里
 
-## 10. Ready Contract
-
-### 9.1 定义
-`ready.json` 是当前 run/task 的开工许可，不是项目学习产物，也不是方向合同。
-
-### 9.2 职责
-- 检查 `learn` 是否通过
-- 确认当前 `project/run/task` 指针
-- 固定当前工作最小合同：
-  - `goal`
-  - `scope`
-  - `acceptance`
-  - `stop_condition`
-
-### 9.3 典型文件
-- `reports/<RUN_ID>/ready.json`
-
-## 11. PR
+## 10. PR
 
 ### 10.1 定义
 PR 是 task 的交付与审查单元。
@@ -475,11 +400,6 @@ PR 是 task 的交付与审查单元。
 project
   -> baseline
   -> run
-    -> direction
-    -> selection
-    -> council review
-    -> execution contract
-    -> slice plan
     -> queue items
     -> task-1
       -> thread-summary-a
@@ -497,7 +417,7 @@ project
   -> init
   -> baseline learn
   -> run
-  -> discussion
+  -> run direction
   -> task
   -> thread summary
   -> task summary
@@ -515,9 +435,8 @@ project
 - 把单个 `thread summary` 直接当成 `run summary`
 - 先批量建 task 再讨论需求
 - 把 queue 当顶层对象
-- 让 `ready` 负责学习
-- 让 `learn` 负责执行许可
-- 让 discussion artifacts 直接替代 task contract
+- 让 baseline 学习直接替代 task/run 真相源
+- 让 queue 直接替代 task contract
 
 ## 15. 本仓当前推荐结论
 
@@ -526,8 +445,7 @@ project
 - `run_id`：一轮工作周期容器
 - `task_id`：run 内最小执行切片
 - `thread summary`：task 内角色/会话级局部结论，当前过渡实现为 `session_registry.current_summary`
-- `direction/selection/council/execution_contract/slice_plan`：讨论层对象
-- `queue`：slice 后的待执行入口池
+- `queue`：run 内待执行入口池
 - `evidence`：仓库内长期记忆
 
 当前实现说明：

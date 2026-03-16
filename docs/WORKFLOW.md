@@ -17,6 +17,7 @@
 - 真正自动化主线以项目为中心，由 `appserverclient` 驱动学习基线、run 级方向推进、fork 多角色 session、去噪回灌 baseline，并由 `gitclient` 完成交付收尾。
 - 研发期主要通过 Codex CLI 调试和接管；长期正式运行应收敛到普通窗口中的 Python orchestrator + Codex app-server。
 - 如果目标项目尚未接入本仓 owner docs 与自动化主线，先按 [PROJECT_BOOTSTRAP_PROTOCOL.md](/root/quant-factory-os/docs/PROJECT_BOOTSTRAP_PROTOCOL.md) 完成首轮项目学习与文档补齐，再进入本状态机。
+- 长文件读取统一使用 `tools/view.sh`；当前正式支持 `tools/view.sh ...` 和 `python3 tools/view.sh ...`，并兼容历史 `--lines START:END`。
 
 ## 1. 设计原则
 
@@ -38,8 +39,7 @@
    - `--rollback-last`
    - `--rollback-commit`
 
-旧的 `learn -> ready -> orient -> choose -> council -> arbiter -> slice -> do -> review -> ship`
-链路现在视为研发期过渡流程和兼容材料，不再作为当前正式主线；对应旧 Python 与 shell 入口都已归档到 `chatlogs/backup/`，不再占据正式 `tools/` 入口位。
+对应旧 Python 与 shell 入口都已归档到 `chatlogs/backup/`，不再占据正式 `tools/` 入口位。
 
 ### 1.2 边界原则
 - `init` 只做环境准备、项目骨架补齐、Git/Codex 前置检查。
@@ -52,7 +52,7 @@
 - `project_id`：长期上下文
 - `run_id`：一轮周期容器
 - `task_id`：run 内最小执行切片
-- discussion artifacts：方向到合同的中间对象
+- run direction notes：run 方向收敛过程中的中间记录
 
 对象边界见：
 - [docs/ENTITIES.md](/root/quant-factory-os/docs/ENTITIES.md)
@@ -185,7 +185,7 @@ run 主线程在这一步至少要收敛出：
 - 第一版 `Markdown intake draft`：先把客户杂乱材料整理成 run 级讨论草稿，再继续收敛
 
 说明：
-- 这里强调的是新主线下的 run 方向收敛，不是回到旧的 `orient/choose/council/arbiter`
+- 这里强调的是新主线下的 run 方向收敛，不是回到任何旧阶段脚本
 - run 方向收敛后的稳定结论，才适合继续拆成 task 或沉淀到 run summary
 - `Markdown intake draft` 只是协议层草稿，不是 `run summary`，也不是机器真相源
 
@@ -414,30 +414,6 @@ run 主线程在这一步至少要收敛出：
 目标：
 - 回滚指定提交
 
-## 6. 历史兼容链路
-
-以下链路保留为研发期过渡材料或兼容实现，不再作为当前正式主线：
-- `learn`
-- `ready`
-- `orient`
-- `choose`
-- `council`
-- `arbiter`
-- `slice`
-- `do`
-- `verify`
-- `review`
-- archived shell entrypoints in `chatlogs/backup/`
-- `ship`
-
-条件：
-- 当前 run 下 task 全部完成
-- 或明确终止
-
-输出：
-- `tools/project_config.json -> runtime_state` 更新
-- `decision.md` 记录 stop reason
-
 ## 8. 正式主线
 
 当前正式主线已经收敛成三层：
@@ -477,7 +453,6 @@ run 主线程在这一步至少要收敛出：
 
 说明：
 - baseline 只负责项目级主认知，不直接承载日常噪音讨论。
-- 旧的 `learn / ready / orient / choose / council / arbiter / slice_task / run_main / ship.sh` 仍可作为 `chatlogs/backup/` 下的参考资产，但不再是默认正式主线。
 - `runtime_state` 允许“当前已有 run，但 task 尚未切出”的中间状态。
 
 ## 10. Pause / Resume
