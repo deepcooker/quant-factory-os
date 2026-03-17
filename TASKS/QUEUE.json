@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_id": "quant-factory-os",
-  "updated_at": "2026-03-16T14:16:42+00:00",
+  "updated_at": "2026-03-17T10:30:02+00:00",
   "items": [
     {
       "queue_id": "queue-init-project-gate-and-bootstrap-state",
@@ -377,6 +377,244 @@
           "id": "evidence",
           "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
           "status": "completed"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-implement-init-project-phase-2-writer",
+      "title": "Implement init-project phase-2 writer",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-implement-init-project-phase-2-writer",
+      "task_json_file": "TASKS/TASK-implement-init-project-phase-2-writer.json",
+      "task_md_file": "TASKS/TASK-implement-init-project-phase-2-writer.md",
+      "status": "completed",
+      "picked_at": null,
+      "goal": "Implement the minimal phase-2 write path for init-project: validate a structured payload, write six owner docs, and mark bootstrap_state.is_inited=Y only after all writes succeed.",
+      "scope": [
+        "Add a Python-first phase-2 writer path in appserverclient and the config helper it needs",
+        "without yet wiring model generation or full app-server init thread execution."
+      ],
+      "acceptance": [
+        {
+          "id": "verify",
+          "text": "python3 -m py_compile tools/appserverclient.py tools/project_config.py passes, and a temporary demo project phase-2 smoke test writes six owner docs then flips bootstrap_state.is_inited to Y",
+          "status": "completed"
+        },
+        {
+          "id": "evidence",
+          "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-refine-a9quant-strategy-entities-draft",
+      "title": "Refine a9quant strategy entities draft",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-refine-a9quant-strategy-entities-draft",
+      "task_json_file": "TASKS/TASK-refine-a9quant-strategy-entities-draft.json",
+      "task_md_file": "TASKS/TASK-refine-a9quant-strategy-entities-draft.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "Strengthen phase2 draft entities_md into a clearer entity dictionary",
+      "scope": [
+        "learn/a9quant-strategy_phase2_draft.json only"
+      ],
+      "acceptance": [
+        {
+          "id": "verify",
+          "text": "Command(s) pass: make verify",
+          "status": "pending"
+        },
+        {
+          "id": "evidence",
+          "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-write-a9quant-strategy-phase2-owner-docs",
+      "title": "Write a9quant strategy phase2 owner docs",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-write-a9quant-strategy-phase2-owner-docs",
+      "task_json_file": "TASKS/TASK-write-a9quant-strategy-phase2-owner-docs.json",
+      "task_md_file": "TASKS/TASK-write-a9quant-strategy-phase2-owner-docs.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "Execute init-project phase2 writer against /root/a9quant-strategy using the reviewed draft payload",
+      "scope": [
+        "Run phase2 writer with learn/a9quant-strategy_phase2_draft.json after confirming target owner docs are empty"
+      ],
+      "acceptance": [
+        {
+          "id": "verify",
+          "text": "Command(s) pass: make verify",
+          "status": "pending"
+        },
+        {
+          "id": "evidence",
+          "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-rewrite-a9quant-strategy-project-guide",
+      "title": "Rewrite a9quant strategy project guide",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-rewrite-a9quant-strategy-project-guide",
+      "task_json_file": "TASKS/TASK-rewrite-a9quant-strategy-project-guide.json",
+      "task_md_file": "TASKS/TASK-rewrite-a9quant-strategy-project-guide.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "Regenerate /root/a9quant-strategy/docs/PROJECT_GUIDE.md from the foundation PROJECT_GUIDE curriculum structure instead of summary prose",
+      "scope": [
+        "learn/a9quant-strategy_phase2_draft.json and /root/a9quant-strategy/docs/PROJECT_GUIDE.md"
+      ],
+      "acceptance": [
+        {
+          "id": "verify",
+          "text": "Command(s) pass: make verify",
+          "status": "pending"
+        },
+        {
+          "id": "evidence",
+          "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-rewrite-a9quant-project-guide-answers",
+      "title": "Rewrite a9quant project guide answers",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-rewrite-a9quant-project-guide-answers",
+      "task_json_file": "TASKS/TASK-rewrite-a9quant-project-guide-answers.json",
+      "task_md_file": "TASKS/TASK-rewrite-a9quant-project-guide-answers.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "Correct a9quant-strategy PROJECT_GUIDE standard answers from target-project evidence while preserving the curriculum question structure",
+      "scope": [
+        "learn/a9quant-strategy_phase2_draft.json and /root/a9quant-strategy/docs/PROJECT_GUIDE.md"
+      ],
+      "acceptance": [
+        {
+          "id": "verify",
+          "text": "Command(s) pass: make verify",
+          "status": "pending"
+        },
+        {
+          "id": "evidence",
+          "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-plan-level-a9quant-guide-understanding",
+      "title": "Plan-level a9quant guide understanding",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-plan-level-a9quant-guide-understanding",
+      "task_json_file": "TASKS/TASK-plan-level-a9quant-guide-understanding.json",
+      "task_md_file": "TASKS/TASK-plan-level-a9quant-guide-understanding.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "Produce a plan-grade Q1-Q17 understanding draft for /root/a9quant-strategy before any further PROJECT_GUIDE rewrites",
+      "scope": [
+        "learn/ plan-grade understanding draft only; do not overwrite target docs in this step"
+      ],
+      "acceptance": [
+        {
+          "id": "verify",
+          "text": "Command(s) pass: make verify",
+          "status": "pending"
+        },
+        {
+          "id": "evidence",
+          "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-translate-a9quant-plan-understanding-to-chinese",
+      "title": "Translate a9quant plan understanding to Chinese",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-translate-a9quant-plan-understanding-to-chinese",
+      "task_json_file": "TASKS/TASK-translate-a9quant-plan-understanding-to-chinese.json",
+      "task_md_file": "TASKS/TASK-translate-a9quant-plan-understanding-to-chinese.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "Convert learn/a9quant-strategy_project_guide_plan_understanding.md into Chinese while preserving the Q1-Q17 evidence-first structure",
+      "scope": [
+        "learn/a9quant-strategy_project_guide_plan_understanding.md only"
+      ],
+      "acceptance": [
+        {
+          "id": "verify",
+          "text": "Command(s) pass: make verify",
+          "status": "pending"
+        },
+        {
+          "id": "evidence",
+          "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-add-question-template-to-a9quant-understanding-draft",
+      "title": "Add question template to a9quant understanding draft",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-add-question-template-to-a9quant-understanding-draft",
+      "task_json_file": "TASKS/TASK-add-question-template-to-a9quant-understanding-draft.json",
+      "task_md_file": "TASKS/TASK-add-question-template-to-a9quant-understanding-draft.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "Upgrade the Chinese plan-understanding draft into a full question-template review draft with why/question/evidence/read-files/mainline sections",
+      "scope": [
+        "learn/a9quant-strategy_project_guide_plan_understanding.md only"
+      ],
+      "acceptance": [
+        {
+          "id": "verify",
+          "text": "Command(s) pass: make verify",
+          "status": "pending"
+        },
+        {
+          "id": "evidence",
+          "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-formalize-init-project-phase1-schema",
+      "title": "Formalize init-project phase1 schema",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-formalize-init-project-phase1-schema",
+      "task_json_file": "TASKS/TASK-formalize-init-project-phase1-schema.json",
+      "task_md_file": "TASKS/TASK-formalize-init-project-phase1-schema.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "Define the minimal phase1 JSON schema for init-project question-completion output and align prompt/docs",
+      "scope": [
+        "tools/prompts/init_project_prompt.md",
+        "docs/WORKFLOW.md",
+        "docs/ENTITIES.md",
+        "docs/FILE_INDEX.md"
+      ],
+      "acceptance": [
+        {
+          "id": "verify",
+          "text": "Command(s) pass: make verify",
+          "status": "pending"
+        },
+        {
+          "id": "evidence",
+          "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+          "status": "pending"
         }
       ]
     }

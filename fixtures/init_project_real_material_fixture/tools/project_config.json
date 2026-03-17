@@ -1,0 +1,56 @@
+{
+  "required": {
+    "project_id": "init-project-real-material-fixture",
+    "project_root": "/root/quant-factory-os/fixtures/init_project_real_material_fixture"
+  },
+  "git": {
+    "remote_url": "",
+    "github_login": ""
+  },
+  "bootstrap_state": {
+    "is_inited": "N",
+    "initialized_at": "",
+    "initialized_by": "",
+    "bootstrap_source": "",
+    "init_progress": "discovering"
+  },
+  "runtime_state": {
+    "current_project_id": "init-project-real-material-fixture",
+    "current_run_id": "",
+    "current_task_id": "",
+    "current_task_file": "",
+    "current_task_json_file": "",
+    "current_status": "",
+    "current_updated_at": ""
+  },
+  "task_registry": {
+    "active_task_json_file": "",
+    "queue_json_file": "TASKS/QUEUE.json",
+    "task_md_is_legacy_view": true,
+    "queue_md_is_legacy_view": true
+  },
+  "session_registry": {
+    "init_project_session": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "",
+      "updated_at": "",
+      "source": "",
+      "model": "",
+      "effort": "",
+      "phase": "",
+      "answered_questions": [],
+      "unclear_questions": [],
+      "customer_followups": [],
+      "document_priority_understanding": "",
+      "current_project_understanding": "",
+      "ready_for_doc_write": false
+    },
+    "learn_session_baseline": {},
+    "fork_current_session": {},
+    "current_summary": {
+      "baseline_refresh_input_type": "",
+      "baseline_refresh_input_ref": ""
+    }
+  }
+}

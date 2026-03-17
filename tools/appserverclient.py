@@ -29,6 +29,7 @@ try:
         load_unified_config,
         load_runtime_state,
         require_session_thread_id,
+        update_bootstrap_state,
         update_init_project_session,
         update_session_registry,
         update_current_summary,
@@ -56,6 +57,7 @@ except Exception:  # pragma: no cover
         load_unified_config,
         load_runtime_state,
         require_session_thread_id,
+        update_bootstrap_state,
         update_init_project_session,
         update_session_registry,
         update_current_summary,
@@ -122,6 +124,7 @@ INIT_PROJECT_MAX_TOP_LEVEL_FILES = 20
 INIT_PROJECT_MAX_MUST_READ = 8
 INIT_PROJECT_SCAN_EXCLUDED_DIRS = {
     ".git",
+    ".ipynb_checkpoints",
     ".venv",
     "venv",
     "__pycache__",
@@ -141,6 +144,120 @@ class AppServerError(RuntimeError):
 
 def read_bootstrap_state() -> dict[str, Any]:
     return get_bootstrap_state()
+
+
+def read_bootstrap_state_for_project(project_root: Path) -> dict[str, Any]:
+    config_path = project_root / "tools" / "project_config.json"
+    if not config_path.exists():
+        return {}
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return dict(config.get("bootstrap_state", {}) or {})
+
+
+def update_bootstrap_state_for_project(
+    project_root: Path,
+    is_inited: str,
+    initialized_by: str = "",
+    bootstrap_source: str = "",
+    initialized_at: str = "",
+) -> None:
+    config_path = project_root / "tools" / "project_config.json"
+    if not config_path.exists():
+        raise AppServerError(f"target project config missing: {config_path}")
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise AppServerError(f"failed to load target project config: {config_path}") from exc
+    state = config.setdefault("bootstrap_state", {})
+    normalized = str(is_inited).strip().upper()
+    state["is_inited"] = "Y" if normalized == "Y" else normalized
+    state["initialized_by"] = str(initialized_by).strip()
+    state["bootstrap_source"] = str(bootstrap_source).strip()
+    state["initialized_at"] = str(initialized_at).strip() or datetime.now(timezone.utc).isoformat()
+    config_path.write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def load_target_project_config(project_root: Path) -> dict[str, Any]:
+    config_path = project_root / "tools" / "project_config.json"
+    if not config_path.exists():
+        raise AppServerError(f"target project config missing: {config_path}")
+    try:
+        return json.loads(config_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise AppServerError(f"failed to load target project config: {config_path}") from exc
+
+
+def save_target_project_config(project_root: Path, config: dict[str, Any]) -> None:
+    config_path = project_root / "tools" / "project_config.json"
+    config_path.write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def get_init_project_session_for_project(project_root: Path) -> dict[str, Any]:
+    config = load_target_project_config(project_root)
+    registry = config.setdefault("session_registry", {})
+    return dict(registry.get("init_project_session", {}) or {})
+
+
+def clear_init_project_session_for_project(project_root: Path) -> None:
+    config = load_target_project_config(project_root)
+    registry = config.setdefault("session_registry", {})
+    record = registry.setdefault("init_project_session", {})
+    record["thread_id"] = ""
+    record["thread_path"] = ""
+    record["status"] = ""
+    record["updated_at"] = ""
+    record["source"] = ""
+    record["model"] = ""
+    record["effort"] = ""
+    record["phase"] = ""
+    record["session_execution_instruction"] = ""
+    record["operator_notes"] = ""
+    record["answered_questions"] = []
+    record["unclear_questions"] = []
+    record["customer_followups"] = []
+    record["document_priority_understanding"] = ""
+    record["current_project_understanding"] = ""
+    record["ready_for_doc_write"] = False
+    record["must_read_next"] = []
+    record["implementation_gaps"] = []
+    save_target_project_config(project_root, config)
+
+
+def update_init_project_session_for_project(
+    project_root: Path,
+    status: str,
+    source: str,
+    model: str,
+    effort: str,
+    payload: dict[str, Any] | None = None,
+) -> None:
+    config = load_target_project_config(project_root)
+    registry = config.setdefault("session_registry", {})
+    record = registry.setdefault("init_project_session", {})
+    if not str(record.get("thread_id", "")).strip():
+        record["thread_id"] = f"init-project-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')}"
+    record["thread_path"] = "phase1_local_runtime"
+    record["status"] = status
+    record["updated_at"] = datetime.now(timezone.utc).isoformat()
+    record["source"] = source
+    record["model"] = model
+    record["effort"] = effort
+    if payload is not None:
+        record["phase"] = str(payload.get("phase", "")).strip()
+        record["session_execution_instruction"] = str(payload.get("session_execution_instruction", "")).strip()
+        record["operator_notes"] = str(payload.get("operator_notes", "")).strip()
+        record["answered_questions"] = list(payload.get("answered_questions", []) or [])
+        record["unclear_questions"] = list(payload.get("unclear_questions", []) or [])
+        record["customer_followups"] = list(payload.get("customer_followups", []) or [])
+        record["document_priority_understanding"] = str(payload.get("document_priority_understanding", "")).strip()
+        record["current_project_understanding"] = str(payload.get("current_project_understanding", "")).strip()
+        record["ready_for_doc_write"] = bool(payload.get("ready_for_doc_write", False))
+        record["must_read_next"] = list(payload.get("must_read_next", []) or [])
+        record["implementation_gaps"] = list(payload.get("implementation_gaps", []) or [])
+    save_target_project_config(project_root, config)
 
 
 def require_project_inited(next_command: str = "python3 tools/appserverclient.py --init-project") -> None:
@@ -191,10 +308,11 @@ def read_text_safely(path: Path) -> str:
         return ""
 
 
-def parse_init_project_args(argv: list[str]) -> tuple[bool, list[str], list[str]]:
+def parse_init_project_args(argv: list[str]) -> tuple[bool, list[str], list[str], str]:
     force_new = False
     input_files: list[str] = []
     guide_files: list[str] = []
+    instruction_parts: list[str] = []
     idx = 0
     while idx < len(argv):
         token = str(argv[idx]).strip()
@@ -214,8 +332,27 @@ def parse_init_project_args(argv: list[str]) -> tuple[bool, list[str], list[str]
             guide_files.append(str(argv[idx + 1]).strip())
             idx += 2
             continue
+        if token == "--instruction-file":
+            if idx + 1 >= len(argv):
+                raise AppServerError("--instruction-file requires a path")
+            path = resolve_existing_file(str(argv[idx + 1]).strip())
+            text = read_text_safely(path)
+            if not text:
+                raise AppServerError("--instruction-file is empty")
+            instruction_parts.append(text)
+            idx += 2
+            continue
+        if token == "--instruction-text":
+            if idx + 1 >= len(argv):
+                raise AppServerError("--instruction-text requires text")
+            text = str(argv[idx + 1]).strip()
+            if not text:
+                raise AppServerError("--instruction-text cannot be empty")
+            instruction_parts.append(text)
+            idx += 2
+            continue
         raise AppServerError(f"unknown --init-project argument: {token}")
-    return force_new, input_files, guide_files
+    return force_new, input_files, guide_files, "\n\n".join(part for part in instruction_parts if part).strip()
 
 
 def resolve_project_file(raw_path: str, project_root: Path | None = None) -> Path:
@@ -228,6 +365,22 @@ def resolve_project_file(raw_path: str, project_root: Path | None = None) -> Pat
         candidate.relative_to(project_root.resolve())
     except Exception as exc:
         raise AppServerError(f"path is outside project_root: {raw_path}") from exc
+    if not candidate.exists():
+        raise AppServerError(f"path does not exist: {raw_path}")
+    if not candidate.is_file():
+        raise AppServerError(f"path is not a file: {raw_path}")
+    return candidate
+
+
+def resolve_existing_file(raw_path: str, project_root: Path | None = None) -> Path:
+    project_root = project_root or get_current_project_root()
+    candidate = Path(str(raw_path).strip())
+    if not candidate.is_absolute():
+        candidate = (Path.cwd() / candidate).resolve()
+        if not candidate.exists():
+            candidate = (project_root / str(raw_path).strip()).resolve()
+    else:
+        candidate = candidate.resolve()
     if not candidate.exists():
         raise AppServerError(f"path does not exist: {raw_path}")
     if not candidate.is_file():
@@ -249,6 +402,9 @@ def discover_docs_files(project_root: Path | None = None) -> list[Path]:
     results: list[Path] = []
     for path in sorted(docs_dir.rglob("*")):
         if not path.is_file():
+            continue
+        rel_parts = path.relative_to(project_root).parts
+        if any(part in INIT_PROJECT_SCAN_EXCLUDED_DIRS for part in rel_parts[:-1]):
             continue
         if path.suffix.lower() not in INIT_PROJECT_ALLOWED_SUFFIXES:
             continue
@@ -317,7 +473,23 @@ def extract_file_like_tokens(text: str) -> list[str]:
     if not text:
         return []
     pattern = re.compile(r"([A-Za-z0-9_./-]+\.(?:py|md|txt|json|doc|docx))")
-    return [match.group(1).strip() for match in pattern.finditer(text)]
+    results: list[str] = []
+    for match in pattern.finditer(text):
+        token = match.group(1).strip()
+        prefix = text[max(0, match.start() - 16) : match.start()].lower()
+        if any(
+            prefix.endswith(marker)
+            for marker in (
+                "python3 ",
+                "python ",
+                "bash ",
+                "sh ",
+                "cmd ",
+            )
+        ):
+            continue
+        results.append(token)
+    return results
 
 
 def collect_init_project_inputs(
@@ -420,73 +592,99 @@ def build_must_read_next(explicit_refs: dict[str, Any], light_repo_findings: dic
     return ordered[:INIT_PROJECT_MAX_MUST_READ]
 
 
-def build_init_project_phase1_payload(manual_inputs: list[str], manual_guides: list[str], project_root: Path | None = None) -> dict[str, Any]:
+def build_init_project_phase1_payload(
+    manual_inputs: list[str],
+    manual_guides: list[str],
+    session_instruction: str = "",
+    project_root: Path | None = None,
+) -> dict[str, Any]:
     project_root = project_root or get_current_project_root()
     guide_files, raw_docs, readme_refs = collect_init_project_inputs(manual_inputs, manual_guides, project_root)
     light_repo_findings = build_light_repo_findings(project_root, raw_docs, readme_refs)
     explicit_refs = build_explicit_refs(guide_files, raw_docs, project_root)
     must_read_next = build_must_read_next(explicit_refs, light_repo_findings, guide_files, raw_docs, project_root)
-    can_write_owner_docs = len(must_read_next) == 0
     implementation_gaps = []
     if must_read_next:
-        implementation_gaps.append("key implementation files still need to be read before owner-doc writing")
+        implementation_gaps.append("key implementation files still need to be read before initialization can move forward")
     if light_repo_findings.get("readme_refs_missing_in_repo"):
         implementation_gaps.append("some README file references do not currently resolve inside the repository")
-    why_not_ready = []
-    if not can_write_owner_docs:
-        why_not_ready.append("must_read_next is not empty")
+    answered_questions: list[str] = []
+    unclear_questions = [f"Q{i}: 等待 xhigh plan init session 基于通用模板与证据继续理解。" for i in range(1, 18)]
+    customer_followups: list[str] = []
+    if must_read_next:
+        customer_followups.append("请继续补读这些关键实现文件：" + ", ".join(must_read_next[:8]))
     if light_repo_findings.get("readme_refs_missing_in_repo"):
-        why_not_ready.append("README references missing files that need human review")
+        customer_followups.append(
+            "README 中提到但仓库未找到这些文件，请确认它们是未实现、已改名还是位于其他目录："
+            + ", ".join(light_repo_findings.get("readme_refs_missing_in_repo", [])[:8])
+        )
+    if not customer_followups:
+        customer_followups.append("请继续在同一 init-project session 上人工纠偏，直到 17 问基本成立。")
+    document_priority_understanding = (
+        f"README 作为 guide 优先阅读；当前已读取 {len(raw_docs)} 份 docs 原始材料，并已生成下一批受控补读线索。"
+    )
+    current_project_understanding = (
+        "当前只完成了初始化 intake；下一步应在同一 init-project session 中按通用模板继续理解 17 问，并逐步更新状态。"
+    )
+    session_instruction_text = str(session_instruction).strip()
+    if session_instruction_text:
+        customer_followups.insert(0, "请先按本轮补充执行指令校正文档优先级、阅读顺序和 owner 关注点。")
     return {
         "phase": "phase1_plan",
         "readme_guide": [normalize_relpath(path, project_root) for path in guide_files],
         "raw_docs_read": [normalize_relpath(path, project_root) for path in raw_docs],
-        "project_understanding": {
-            "project_root": str(project_root),
-            "guide_count": len(guide_files),
-            "raw_doc_count": len(raw_docs),
-        },
+        "session_execution_instruction": session_instruction_text,
+        "answered_questions": answered_questions,
+        "unclear_questions": unclear_questions,
+        "customer_followups": customer_followups,
+        "document_priority_understanding": document_priority_understanding,
+        "current_project_understanding": current_project_understanding,
+        "ready_for_doc_write": False,
         "explicit_refs": explicit_refs,
         "light_repo_findings": light_repo_findings,
         "implementation_gaps": implementation_gaps,
         "must_read_next": must_read_next,
-        "can_write_owner_docs": can_write_owner_docs,
-        "why_not_ready": why_not_ready,
     }
 
 
-def init_project_main(force_new: bool = False, manual_inputs: list[str] | None = None, manual_guides: list[str] | None = None) -> dict[str, Any]:
+def init_project_main(
+    force_new: bool = False,
+    manual_inputs: list[str] | None = None,
+    manual_guides: list[str] | None = None,
+    session_instruction: str = "",
+) -> dict[str, Any]:
     manual_inputs = manual_inputs or []
     manual_guides = manual_guides or []
     project_root = get_current_project_root()
     owner_docs = get_init_project_owner_docs(project_root)
-    state = read_bootstrap_state()
+    state = read_bootstrap_state_for_project(project_root)
     is_inited = str(state.get("is_inited", "N")).strip().upper() or "N"
     if is_inited == "Y":
         raise AppServerError('project is already initialized; --init-project only runs when bootstrap_state.is_inited is not "Y"')
-    non_empty_files = [normalize_relpath(path, project_root) for path in owner_docs if not file_is_effectively_empty(path)]
-    if non_empty_files:
-        raise AppServerError(
-            "owner docs are not empty; clear them manually before --init-project: " + ", ".join(non_empty_files)
-        )
     if force_new:
-        clear_session_registry("init_project_session")
-    existing_init_session = get_session_registry("init_project_session")
-    payload = build_init_project_phase1_payload(manual_inputs, manual_guides, project_root)
+        clear_init_project_session_for_project(project_root)
+    existing_init_session = get_init_project_session_for_project(project_root)
+    payload = build_init_project_phase1_payload(
+        manual_inputs,
+        manual_guides,
+        session_instruction=session_instruction,
+        project_root=project_root,
+    )
     payload["action"] = "init_project"
     payload["init_project_ready"] = True
     payload["init_project_owner_docs"] = [normalize_relpath(path, project_root) for path in owner_docs]
     payload["init_project_session_behavior"] = "reused_existing_session" if str(existing_init_session.get("thread_id", "")).strip() and not force_new else "created_or_refreshed_local_phase1_session"
     payload["init_project_recreate_flag"] = force_new
-    payload["init_project_next"] = "phase1_plan_only; reverse-writing is not implemented yet"
-    update_init_project_session(
+    payload["init_project_next"] = "start or resume the same xhigh init-project session, continue 17-question understanding, then update status manually"
+    update_init_project_session_for_project(
+        project_root,
         status="phase1_ready",
         source="init_project_main",
         model=DEFAULT_MODEL,
-        effort=DEFAULT_EFFORT,
+        effort="xhigh",
         payload=payload,
     )
-    current_init_session = get_session_registry("init_project_session")
+    current_init_session = get_init_project_session_for_project(project_root)
     payload["init_project_session"] = {
         "thread_id": str(current_init_session.get("thread_id", "")).strip(),
         "thread_path": str(current_init_session.get("thread_path", "")).strip(),
@@ -502,12 +700,115 @@ def init_project_main(force_new: bool = False, manual_inputs: list[str] | None =
     print(f"init_project_session_id={payload['init_project_session']['thread_id']}")
     print(f"init_project_session_status={payload['init_project_session']['status']}")
     print(f"init_project_phase={payload['phase']}")
-    print(f"init_project_can_write_owner_docs={str(payload['can_write_owner_docs']).lower()}")
+    print(f"init_project_ready_for_doc_write={str(payload['ready_for_doc_write']).lower()}")
+    print("init_project_answered_questions_start")
+    for item in payload["answered_questions"]:
+        print(item)
+    print("init_project_answered_questions_end")
+    print("init_project_unclear_questions_start")
+    for item in payload["unclear_questions"]:
+        print(item)
+    print("init_project_unclear_questions_end")
+    print("init_project_customer_followups_start")
+    for item in payload["customer_followups"]:
+        print(item)
+    print("init_project_customer_followups_end")
     print("init_project_must_read_next_start")
     for item in payload["must_read_next"]:
         print(item)
     print("init_project_must_read_next_end")
     return payload
+
+
+def load_init_project_update_payload(payload_path: str, project_root: Path) -> dict[str, Any]:
+    resolved = resolve_existing_file(payload_path, project_root)
+    if resolved.suffix.lower() != ".json":
+        raise AppServerError("--payload-json must point to a .json file")
+    try:
+        payload = json.loads(resolved.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise AppServerError(f"invalid init-project update json payload: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise AppServerError("init-project update payload must be a json object")
+    return payload
+
+
+def normalize_init_project_update_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "phase": "phase1_plan",
+        "session_execution_instruction": str(payload.get("session_execution_instruction", "")).strip(),
+        "operator_notes": str(payload.get("operator_notes", "")).strip(),
+        "answered_questions": [str(item).strip() for item in list(payload.get("answered_questions", []) or []) if str(item).strip()],
+        "unclear_questions": [str(item).strip() for item in list(payload.get("unclear_questions", []) or []) if str(item).strip()],
+        "customer_followups": [str(item).strip() for item in list(payload.get("customer_followups", []) or []) if str(item).strip()],
+        "document_priority_understanding": str(payload.get("document_priority_understanding", "")).strip(),
+        "current_project_understanding": str(payload.get("current_project_understanding", "")).strip(),
+        "ready_for_doc_write": bool(payload.get("ready_for_doc_write", False)),
+        "must_read_next": [str(item).strip() for item in list(payload.get("must_read_next", []) or []) if str(item).strip()],
+        "implementation_gaps": [str(item).strip() for item in list(payload.get("implementation_gaps", []) or []) if str(item).strip()],
+    }
+
+
+def update_init_project_main(payload_path: str) -> dict[str, Any]:
+    project_root = get_current_project_root()
+    state = read_bootstrap_state_for_project(project_root)
+    is_inited = str(state.get("is_inited", "")).strip().upper()
+    if is_inited == "Y":
+        raise AppServerError('project is already initialized; init-project update only runs when bootstrap_state.is_inited is not "Y"')
+    init_session = get_init_project_session_for_project(project_root)
+    if not str(init_session.get("thread_id", "")).strip():
+        raise AppServerError("init_project_session is missing; run --init-project first")
+    payload = normalize_init_project_update_payload(load_init_project_update_payload(payload_path, project_root))
+    update_init_project_session_for_project(
+        project_root,
+        status="phase1_updated",
+        source="update_init_project_main",
+        model=DEFAULT_MODEL,
+        effort="xhigh",
+        payload=payload,
+    )
+    print("init_project_update_status=ok")
+    print(f"init_project_ready_for_doc_write={str(payload['ready_for_doc_write']).lower()}")
+    return payload
+
+
+def complete_init_project_main() -> dict[str, Any]:
+    project_root = get_current_project_root()
+    state = read_bootstrap_state_for_project(project_root)
+    is_inited = str(state.get("is_inited", "")).strip().upper()
+    if is_inited == "Y":
+        raise AppServerError('project is already initialized; --complete-init-project only runs when bootstrap_state.is_inited is not "Y"')
+    init_session = get_init_project_session_for_project(project_root)
+    if not str(init_session.get("thread_id", "")).strip():
+        raise AppServerError("init_project_session is missing; run --init-project first")
+    update_bootstrap_state_for_project(
+        project_root,
+        "Y",
+        initialized_by="appserverclient --complete-init-project",
+        bootstrap_source="manual_init_project_completion",
+    )
+    update_init_project_session_for_project(
+        project_root,
+        status="completed",
+        source="complete_init_project_main",
+        model=DEFAULT_MODEL,
+        effort="xhigh",
+        payload={
+            "phase": "phase1_completed",
+            "session_execution_instruction": str(init_session.get("session_execution_instruction", "")).strip(),
+            "operator_notes": str(init_session.get("operator_notes", "")).strip(),
+            "answered_questions": list(init_session.get("answered_questions", []) or []),
+            "unclear_questions": list(init_session.get("unclear_questions", []) or []),
+            "customer_followups": [],
+            "document_priority_understanding": str(init_session.get("document_priority_understanding", "")).strip(),
+            "current_project_understanding": str(init_session.get("current_project_understanding", "")).strip(),
+            "ready_for_doc_write": True,
+            "must_read_next": [],
+            "implementation_gaps": [],
+        },
+    )
+    print("init_project_completion_status=completed")
+    return {"completed": True}
 
 
 #codex 中文：统一打印当前运行状态，保证 appserverclient 入口与 project_config 的状态口径一致。
@@ -1662,12 +1963,48 @@ def run_refresh_baseline() -> dict[str, Any]:
         return err(ERR_SESSION_BASE + 40, str(exc), {"action": "refresh_baseline"})
 
 
-def run_init_project(force_new: bool = False, manual_inputs: list[str] | None = None, manual_guides: list[str] | None = None) -> dict[str, Any]:
+def run_init_project(
+    force_new: bool = False,
+    manual_inputs: list[str] | None = None,
+    manual_guides: list[str] | None = None,
+    session_instruction: str = "",
+) -> dict[str, Any]:
     try:
-        payload = init_project_main(force_new=force_new, manual_inputs=manual_inputs, manual_guides=manual_guides)
-        return ok(payload)
+        payload = init_project_main(
+            force_new=force_new,
+            manual_inputs=manual_inputs,
+            manual_guides=manual_guides,
+            session_instruction=session_instruction,
+        )
+        return err(
+            ERR_CONFIG_BASE + 12,
+            "init-project phase1 requires xhigh plan continuation; continue the same session or update its status manually",
+            payload,
+        )
     except AppServerError as exc:
         return err(ERR_CONFIG_BASE + 11, str(exc), {"action": "init_project"})
+
+
+def run_update_init_project(payload_json: str) -> dict[str, Any]:
+    try:
+        payload = update_init_project_main(payload_json)
+        if not bool(payload.get("ready_for_doc_write", False)):
+            return err(
+                ERR_CONFIG_BASE + 12,
+                "init-project update accepted, but 17-question understanding is still not ready for completion",
+                payload,
+            )
+        return ok(payload)
+    except AppServerError as exc:
+        return err(ERR_CONFIG_BASE + 13, str(exc), {"action": "update_init_project"})
+
+
+def run_complete_init_project() -> dict[str, Any]:
+    try:
+        payload = complete_init_project_main()
+        return ok(payload)
+    except AppServerError as exc:
+        return err(ERR_CONFIG_BASE + 14, str(exc), {"action": "complete_init_project"})
 
 
 #codex 中文：演示一个完整调用链：connect -> start_thread -> set_name -> start_turn -> list -> read -> fork -> compact -> close。
@@ -1713,8 +2050,25 @@ def demo() -> None:
 if __name__ == "__main__":
     logger = build_logger()
     if len(sys.argv) > 1 and sys.argv[1] == "--init-project":
-        force_new, input_files, guide_files = parse_init_project_args(sys.argv[2:])
-        result = run_init_project(force_new=force_new, manual_inputs=input_files, manual_guides=guide_files)
+        force_new, input_files, guide_files, session_instruction = parse_init_project_args(sys.argv[2:])
+        result = run_init_project(
+            force_new=force_new,
+            manual_inputs=input_files,
+            manual_guides=guide_files,
+            session_instruction=session_instruction,
+        )
+        print(json.dumps(result, ensure_ascii=False))
+        if int(result.get("err_code", 1)) != 0:
+            logger.error("APP_CLIENT_FAILED: %s", result.get("err_desc", "unknown error"))
+            sys.exit(1)
+    elif len(sys.argv) > 2 and sys.argv[1] == "--update-init-project" and sys.argv[2] == "--payload-json":
+        result = run_update_init_project(sys.argv[3] if len(sys.argv) > 3 else "")
+        print(json.dumps(result, ensure_ascii=False))
+        if int(result.get("err_code", 1)) != 0:
+            logger.error("APP_CLIENT_FAILED: %s", result.get("err_desc", "unknown error"))
+            sys.exit(1)
+    elif len(sys.argv) > 1 and sys.argv[1] == "--complete-init-project":
+        result = run_complete_init_project()
         print(json.dumps(result, ensure_ascii=False))
         if int(result.get("err_code", 1)) != 0:
             logger.error("APP_CLIENT_FAILED: %s", result.get("err_desc", "unknown error"))

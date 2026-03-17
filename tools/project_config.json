@@ -16,14 +16,14 @@
   "runtime_state": {
     "current_project_id": "quant-factory-os",
     "current_run_id": "run-2026-03-11-vnext-release-baseline",
-    "current_task_id": "task-wire-init-project-session-resume-semantics",
-    "current_task_file": "TASKS/TASK-wire-init-project-session-resume-semantics.md",
-    "current_task_json_file": "TASKS/TASK-wire-init-project-session-resume-semantics.json",
+    "current_task_id": "task-validate-init-project-instruction-flow-on-uninitialized-fixture",
+    "current_task_file": "TASKS/TASK-validate-init-project-instruction-flow-on-uninitialized-fixture.md",
+    "current_task_json_file": "TASKS/TASK-validate-init-project-instruction-flow-on-uninitialized-fixture.json",
     "current_status": "completed",
-    "current_updated_at": "2026-03-16T22:19:30+00:00"
+    "current_updated_at": "2026-03-17T21:33:00+00:00"
   },
   "task_registry": {
-    "active_task_json_file": "TASKS/TASK-wire-init-project-session-resume-semantics.json",
+    "active_task_json_file": "TASKS/TASK-validate-init-project-instruction-flow-on-uninitialized-fixture.json",
     "queue_json_file": "TASKS/QUEUE.json",
     "task_md_is_legacy_view": true,
     "queue_md_is_legacy_view": true
@@ -62,6 +62,55 @@
       "baseline_refresh_turn_id": "019ce7b5-5686-7823-aca2-68b5758edfcf",
       "baseline_refresh_input_type": "run_summary",
       "baseline_refresh_input_ref": "run-2026-03-11-vnext-release-baseline"
+    },
+    "init_project_session": {
+      "thread_id": "init-project-20260317T133014127697Z",
+      "thread_path": "phase1_local_runtime",
+      "status": "phase1_ready",
+      "updated_at": "2026-03-17T13:30:14.127722+00:00",
+      "source": "init_project_main",
+      "model": "gpt-5.4",
+      "effort": "xhigh",
+      "phase": "phase1_plan",
+      "session_execution_instruction": "总纲优先，README 次之，中央银行设计是风控与现金流核心",
+      "operator_notes": "",
+      "answered_questions": [],
+      "unclear_questions": [
+        "Q1: 等待 xhigh plan init session 基于通用模板与证据继续理解。",
+        "Q2: 等待 xhigh plan init session 基于通用模板与证据继续理解。",
+        "Q3: 等待 xhigh plan init session 基于通用模板与证据继续理解。",
+        "Q4: 等待 xhigh plan init session 基于通用模板与证据继续理解。",
+        "Q5: 等待 xhigh plan init session 基于通用模板与证据继续理解。",
+        "Q6: 等待 xhigh plan init session 基于通用模板与证据继续理解。",
+        "Q7: 等待 xhigh plan init session 基于通用模板与证据继续理解。",
+        "Q8: 等待 xhigh plan init session 基于通用模板与证据继续理解。",
+        "Q9: 等待 xhigh plan init session 基于通用模板与证据继续理解。",
+        "Q10: 等待 xhigh plan init session 基于通用模板与证据继续理解。",
+        "Q11: 等待 xhigh plan init session 基于通用模板与证据继续理解。",
+        "Q12: 等待 xhigh plan init session 基于通用模板与证据继续理解。",
+        "Q13: 等待 xhigh plan init session 基于通用模板与证据继续理解。",
+        "Q14: 等待 xhigh plan init session 基于通用模板与证据继续理解。",
+        "Q15: 等待 xhigh plan init session 基于通用模板与证据继续理解。",
+        "Q16: 等待 xhigh plan init session 基于通用模板与证据继续理解。",
+        "Q17: 等待 xhigh plan init session 基于通用模板与证据继续理解。"
+      ],
+      "customer_followups": [
+        "请先按本轮补充执行指令校正文档优先级、阅读顺序和 owner 关注点。",
+        "请继续补读这些关键实现文件：main_controller.py, risk_gate.py, contracts.py, tools/project_config.json, tools/project_config.template.json"
+      ],
+      "document_priority_understanding": "README 作为 guide 优先阅读；当前已读取 3 份 docs 原始材料，并已生成下一批受控补读线索。",
+      "current_project_understanding": "当前只完成了初始化 intake；下一步应在同一 init-project session 中按通用模板继续理解 17 问，并逐步更新状态。",
+      "ready_for_doc_write": false,
+      "must_read_next": [
+        "main_controller.py",
+        "risk_gate.py",
+        "contracts.py",
+        "tools/project_config.json",
+        "tools/project_config.template.json"
+      ],
+      "implementation_gaps": [
+        "key implementation files still need to be read before initialization can move forward"
+      ]
     }
   }
 }

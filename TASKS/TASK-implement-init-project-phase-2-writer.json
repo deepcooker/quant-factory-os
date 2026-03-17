@@ -1,0 +1,175 @@
+{
+  "task_id": "task-implement-init-project-phase-2-writer",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "Implement init-project phase-2 writer",
+  "goal": "Implement the minimal phase-2 write path for init-project: validate a structured payload, write six owner docs, and mark bootstrap_state.is_inited=Y only after all writes succeed.",
+  "scope": [
+    "Add a Python-first phase-2 writer path in appserverclient and the config helper it needs",
+    "without yet wiring model generation or full app-server init thread execution."
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "verify",
+      "text": "python3 -m py_compile tools/appserverclient.py tools/project_config.py passes, and a temporary demo project phase-2 smoke test writes six owner docs then flips bootstrap_state.is_inited to Y",
+      "status": "completed"
+    },
+    {
+      "id": "evidence",
+      "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+      "status": "completed"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-implement-init-project-phase-2-writer.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "appserverclient now accepts --init-project --phase2-json <payload.json> and can write six owner docs from a structured phase-2 payload",
+      "phase2 writing now flips bootstrap_state.is_inited to Y only after all six target files are written successfully"
+    ],
+    "decisions": [
+      "Phase 2 remains Python-first and local for now; it validates a structured JSON payload and writes markdown targets without yet introducing an app-server init thread"
+    ],
+    "risks": [
+      "init-project still lacks a real app-server init thread; current phase-1 and phase-2 runtime semantics remain local"
+    ],
+    "verification": [
+      "python3 -m py_compile tools/appserverclient.py tools/project_config.py",
+      "temporary demo project smoke test: run_init_project(phase2_json=<payload>) wrote all six owner docs and set bootstrap_state.is_inited=Y"
+    ],
+    "next_steps": [
+      "decide whether init_project_session should be promoted from local runtime semantics to a real app-server thread"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": ""
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "pending_ack",
+      "close_escalation": false,
+      "notes": [],
+      "updated_at": ""
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-16T22:35:00+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-16T22:35:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

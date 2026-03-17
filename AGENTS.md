@@ -204,8 +204,10 @@ No doc update, no ship.
 - `tools/project_config.json -> bootstrap_state.is_inited` 是项目是否完成首轮接入的硬门禁。
 - 只有 `is_inited = Y` 才允许直接执行 baseline 主线命令；其他任何值都视为未初始化。
 - 首轮接入入口统一命名为 `python3 tools/appserverclient.py --init-project`。
-- `--init-project` 只允许在 `is_inited` 不是 `Y` 且 owner docs 全为空时进入下一步；只要 `AGENTS.md` 或 `docs/*.md` 中任一 owner doc 非空，就必须先手动清空，禁止自动覆盖。
 - `session_registry.init_project_session` 是初始化过程的独立 thread 槽位；默认 `--init-project` 应续跑该 session，只有显式 `-new` 才允许重开。
 - `--init-project` 的正式协议是：
-  - Phase 1：JSON-first 的 plan/gating，输出 `explicit_refs / implementation_gaps / must_read_next / can_write_owner_docs`
-  - Phase 2：Markdown-first 的 owner-doc writing，按目标文件分别产出详细草稿
+  - Phase 1：`xhigh` `plan` 优先的 17 问理解与补缺阶段，输出 `answered_questions / unclear_questions / customer_followups / document_priority_understanding / current_project_understanding / ready_for_doc_write`
+  - Phase 1 可保留内部辅助字段：`explicit_refs / light_repo_findings / implementation_gaps / must_read_next`
+  - 当前允许通过 `--instruction-text/--instruction-file` 给同一 init session 注入补充执行指令；该指令应写回 `session_execution_instruction`
+  - 手工续跑与状态推进通过 `python3 tools/appserverclient.py --update-init-project --payload-json <path>` 完成
+  - 初始化完成入口是 `python3 tools/appserverclient.py --complete-init-project`

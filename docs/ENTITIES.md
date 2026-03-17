@@ -407,16 +407,23 @@ evidence 是仓库内记忆，不依赖聊天上下文。
 - 读取 `README.md` 和原始 docs
 - 提取显式线索
 - 结合轻量仓库探测结果
-- 判断当前是否已具备反写 owner docs 的证据条件
+- 按 17 问判断当前理解已完成到哪一步
+- 把缺口翻译成客户可继续补充的问题，而不是只返回内部证据术语
 
 推荐输出字段：
-- `project_understanding`
+- `answered_questions`
+- `unclear_questions`
+- `customer_followups`
+- `document_priority_understanding`
+- `current_project_understanding`
+- `ready_for_doc_write`
+- `session_execution_instruction`
+
+允许保留的内部辅助字段：
 - `explicit_refs`
 - `light_repo_findings`
 - `implementation_gaps`
 - `must_read_next`
-- `can_write_owner_docs`
-- `why_not_ready`
 
 `light_repo_findings` 当前推荐最小字段：
 - `project_root`
@@ -438,28 +445,24 @@ evidence 是仓库内记忆，不依赖聊天上下文。
   - `*.doc`
   - `*.docx`
 - 默认最多 8 个
-- 为空时只能伴随 `can_write_owner_docs = true`
+- 为空时只能伴随“17 问已经基本成立”
 - 不允许指向 owner docs 目标文件
 
-### 9.2 Phase 2
-`--init-project` 第二阶段是 Markdown-first 的 owner-doc writing 阶段。
+### 9.2 手工推进与完成
+`--init-project` 当前不直接承载 owner-doc 自动写入。
 
 职责：
-- 在 `can_write_owner_docs = true` 后，按目标文件分别输出详细 owner docs 草稿
-- 不要求把所有详细内容再放进一个巨大 JSON
-
-目标文件：
-- `AGENTS.md`
-- `docs/PROJECT_GUIDE.md`
-- `docs/WORKFLOW.md`
-- `docs/ENTITIES.md`
-- `docs/FILE_INDEX.md`
-- `docs/TOOLS_METHOD_FLOW_MAP.md`
+- 在同一 `init_project_session` 上持续推进 17 问理解
+- 允许人工继续纠偏、补料和更新状态
+- 初始化完成后，再进入正式学习主线
 
 说明：
-- Phase 1 管门禁和补证据
-- Phase 2 管详细正文生成
-- 这套分层是为了兼顾机器 gate 稳定性和同频正文的详细表达
+- Phase 1 管初始化理解、补证据和状态更新
+- `ready_for_doc_write = true` 只表示“17 问已基本成立，可继续人工确认”，不等于必须立即写
+- 手工更新入口是 `--update-init-project`
+- 初始化完成入口是 `--complete-init-project`
+- `session_execution_instruction` 是本轮 session 的补充执行指令
+- `operator_notes` 是人工在同一 init session 上追加的纠偏备注
 
 ## 9. Session
 

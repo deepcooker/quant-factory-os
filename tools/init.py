@@ -76,10 +76,7 @@ class InitStepResult:
     status: dict[str, str]
 
 
-INIT_DEFAULT_AGENTS_CONTENT = """# AGENTS.md
-
-项目宪法文件由 owner 后续补充。
-"""
+INIT_DEFAULT_AGENTS_CONTENT = ""
 
 INIT_DEFAULT_README_CONTENT = """# README
 
@@ -91,30 +88,15 @@ INIT_DEFAULT_TODO_CONTENT = """# TODO
 后续待办由 owner 后续补充。
 """
 
-INIT_DEFAULT_PROJECT_GUIDE_CONTENT = """# PROJECT_GUIDE
+INIT_DEFAULT_PROJECT_GUIDE_CONTENT = ""
 
-项目学习锚点文件由 owner 后续补充。
-"""
+INIT_DEFAULT_WORKFLOW_CONTENT = ""
 
-INIT_DEFAULT_WORKFLOW_CONTENT = """# WORKFLOW
+INIT_DEFAULT_ENTITIES_CONTENT = ""
 
-项目工作流由 owner 后续补充。
-"""
+INIT_DEFAULT_FILE_INDEX_CONTENT = ""
 
-INIT_DEFAULT_ENTITIES_CONTENT = """# ENTITIES
-
-项目对象定义由 owner 后续补充。
-"""
-
-INIT_DEFAULT_FILE_INDEX_CONTENT = """# FILE_INDEX
-
-项目文件索引由 owner 后续补充。
-"""
-
-INIT_DEFAULT_PROJECT_BOOTSTRAP_PROTOCOL_CONTENT = """# PROJECT_BOOTSTRAP_PROTOCOL
-
-项目接入协议由 owner 后续补充。
-"""
+INIT_DEFAULT_PROJECT_BOOTSTRAP_PROTOCOL_CONTENT = ""
 
 INIT_DEFAULT_TOOLS_METHOD_FLOW_MAP_CONTENT = ""
 
@@ -162,6 +144,19 @@ INIT_DEFAULT_PROJECT_CONFIG_TEMPLATE_CONTENT = """{
   "session_registry": {
     "learn_session_baseline": {},
     "fork_current_session": {},
+    "init_project_session": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "",
+      "updated_at": "",
+      "source": "",
+      "model": "",
+      "effort": "",
+      "phase": "",
+      "can_write_owner_docs": false,
+      "must_read_next": [],
+      "why_not_ready": []
+    },
     "current_summary": {
       "baseline_refresh_input_type": "",
       "baseline_refresh_input_ref": ""
@@ -310,6 +305,36 @@ def init_tools_14_ensure_project_config_bootstrap() -> None:
     os.chmod(PROJECT_CONFIG_FILE, 0o644)
 
 
+def init_tools_15_ensure_target_project_config_bootstrap(project_root: Path) -> tuple[str, str]:
+    tools_dir = project_root / "tools"
+    template_path = tools_dir / "project_config.template.json"
+    template_status = init_tools_11_ensure_file(template_path, INIT_DEFAULT_PROJECT_CONFIG_TEMPLATE_CONTENT)
+    config_path = tools_dir / "project_config.json"
+    if config_path.exists():
+        return template_status, "ok"
+    project_id = project_root.name
+    config = json.loads(template_path.read_text(encoding="utf-8"))
+    required = config.setdefault("required", {})
+    required["project_id"] = project_id
+    required["project_root"] = str(project_root)
+    bootstrap_state = config.setdefault("bootstrap_state", {})
+    bootstrap_state["is_inited"] = "N"
+    bootstrap_state["initialized_at"] = ""
+    bootstrap_state["initialized_by"] = ""
+    bootstrap_state["bootstrap_source"] = ""
+    runtime_state = config.setdefault("runtime_state", {})
+    runtime_state["current_project_id"] = project_id
+    runtime_state["current_run_id"] = ""
+    runtime_state["current_task_id"] = ""
+    runtime_state["current_task_file"] = ""
+    runtime_state["current_task_json_file"] = ""
+    runtime_state["current_status"] = ""
+    runtime_state["current_updated_at"] = ""
+    config_path.write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    os.chmod(config_path, 0o644)
+    return template_status, "created"
+
+
 # 1001 中文：第一步，读取并校验项目配置文件。
 def init_step_01_load_context(logger: logging.Logger) -> InitContext:
     init_tools_09_log_step(logger, 1, 5, "读取配置文件", "调用 project_config.py 读取统一配置、校验必填字段，并打印完整配置JSON。")
@@ -326,7 +351,12 @@ def init_step_01_load_context(logger: logging.Logger) -> InitContext:
         current_status="",
         current_updated_at="",
     )
-    errors = list(dict.fromkeys(validate_required_json_fields(raw_config) + validate_project_config(cfg)))
+    errors = list(
+        dict.fromkeys(
+            validate_required_json_fields(raw_config)
+            + validate_project_config(cfg, allow_bootstrap_missing=True)
+        )
+    )
     run_id = runtime_state.current_run_id
     task_file = runtime_state.current_task_file
     task_status = runtime_state.current_status or "active"
@@ -421,11 +451,9 @@ def init_step_02_check_project_files(context: InitContext, logger: logging.Logge
             context.cfg.project_root / "TASKS/_SCHEMA.queue.json",
             INIT_DEFAULT_QUEUE_SCHEMA_CONTENT,
         )
-        status["PROJECT_CONFIG_TEMPLATE_FILE"] = init_tools_11_ensure_file(
-            PROJECT_CONFIG_FILE.with_name("project_config.template.json"),
-            INIT_DEFAULT_PROJECT_CONFIG_TEMPLATE_CONTENT,
-        )
-        status["PROJECT_CONFIG_FILE"] = "ok" if PROJECT_CONFIG_FILE.exists() else "missing"
+        template_status, config_status = init_tools_15_ensure_target_project_config_bootstrap(context.cfg.project_root)
+        status["PROJECT_CONFIG_TEMPLATE_FILE"] = template_status
+        status["PROJECT_CONFIG_FILE"] = config_status
 
     init_tools_08_log(logger, f"INIT_PROJECT_PATH_STATUS: {status['PROJECT_ROOT']}")
     init_tools_08_log(logger, f"INIT_TOOLS_DIR_STATUS: {status['TOOLS_DIR']}")

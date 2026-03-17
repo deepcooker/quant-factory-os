@@ -1,0 +1,2 @@
+class TradeIntent:
+    pass

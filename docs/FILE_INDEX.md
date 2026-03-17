@@ -39,9 +39,9 @@
 | --- | --- | --- |
 | `tools/init.py` | 环境准备、项目骨架补齐、Codex/Git 前置检查；缺失时会补最小标准协议骨架和 `project_config.json` bootstrap。 | 开工前环境准备或新项目首次接入时 |
 | `tools/appserverclient.py` | Codex app-server runtime 核心；负责 baseline / fork / fork-role / role-turn / summarize-role / mark-test-gate / current-turn / summarize-current / refresh-baseline，并显式打印当前 active task JSON 摘要；`refresh-baseline` 现优先消费 `run_summary.json`，`summarize-role` 会自动 merge role summaries 并刷新 task gap/escalation/resolution，`mark-test-gate` 会继续联动刷新。当前风险是它已经同时看见 runtime 与部分 task gate 规则，后续应继续保持“真实线程生命周期 + 必要写回”的边界，避免演化成总控脚本。 | 学习基线、当前 session 推进、role thread 绑定/执行/去噪、test gate 写回和 baseline 回灌时 |
-| `tools/appserverclient.py --init-project` | 未初始化项目的首轮接入入口；当前已固定 gate、`init_project_session`、默认输入规则，以及 `Phase 1 JSON / Phase 2 Markdown` 协议。当前最小实现已支持 README/docs intake、`light_repo_findings`、显式文件匹配、`must_read_next` 草案输出，以及本地 `init_project_session` 的 resume / `-new` 语义，但还未接 app-server init thread 和 owner-doc reverse-writing。 | 新项目还没完成 owner docs 初始化时 |
+| `tools/appserverclient.py --init-project` | 未初始化项目的首轮接入入口；当前围绕 `bootstrap_state + init_project_session` 工作，并采用 `xhigh plan` 的 17 问理解协议。当前最小实现已支持 README/docs intake、`light_repo_findings`、显式文件匹配、`must_read_next`、本地 `init_project_session` 的 resume / `-new` 语义，以及结构化返回 `session_execution_instruction / answered_questions / unclear_questions / customer_followups / document_priority_understanding / current_project_understanding / ready_for_doc_write`。它还支持通过 `--instruction-text/--instruction-file` 把“一句话补充执行指令”注入当前 init session。 | 新项目还没完成初始化理解时 |
 | `tools/view.sh` | 稳定的分段文件读取工具；支持直接执行和 `python3 tools/view.sh ...`，兼容历史 `--lines START:END` 用法，并内置 repo 边界与 denylist 检查。 | 读取长文件、按范围查看、查找命中行或验证读取边界时 |
-| `tools/prompts/init_project_prompt.md` | `--init-project` 的固定提示词模板；当前定义了 `README -> raw docs -> explicit refs -> light repo findings -> must_read_next -> can_write_owner_docs` 的两阶段协议。 | 设计或调整未初始化项目的首轮接入流程时 |
+| `tools/prompts/init_project_prompt.md` | `--init-project` 的固定提示词模板；当前定义了 `README -> raw docs -> 17问理解 -> customer followups -> ready_for_doc_write` 的初始化理解协议。 | 设计或调整未初始化项目的首轮接入流程时 |
 | `tools/prompts/summarize_role_prompt.md` | role thread 去噪总结模板；用于把单个角色线程总结成可写入 task 机器层的 role summary。 | 调用 `appserverclient --summarize-role` 时 |
 | `tools/taskclient.py` | task/queue 机器真相入口；负责 create/next、task summary 写回、role thread/role summary/test gate 更新，以及 `--merge-role-summaries` / `--refresh-task-gaps` / `--refresh-task-escalation` / `--refresh-run-main-resolution` 的 task-level 聚合、缺口刷新、升级判断和 run-main 确认闭环。当前还提供内部统一刷新入口 `refresh_task_coordination()`，以及 `update_role_summary_with_task_links()`、`update_test_gate_from_test_summary()` 这类 task-side 联动 helper，供 runtime 在不理解具体 task 规则细节的前提下完成 task 层联动。它是 task 级规则的优先归属层，后续新增 task policy 应优先落在这里，而不是回流到 runtime。 | 处理 task JSON truth、聚合 role summaries、刷新缺口/升级状态和绑定 active task 时 |
 | `tools/gitclient.py` | Git 底层；负责 commit、PR、merge、rollback、main 同步，并优先从 task JSON 读取当前任务上下文。当前保持独立性较好，后续应继续避免把 runtime 或 task/run 聚合逻辑重新耦合回这里。 | 收尾交付和回滚时 |
@@ -54,6 +54,8 @@
 `--init-project` 当前还多了一层运行时约束：
 - `light_repo_findings` 是 Phase 1 的仓库事实摘要，不是完整代码阅读结果
 - `must_read_next` 是下一轮受控读取集合，当前只允许仓库内真实存在的 `py/md/txt/json/doc/docx` 文件，默认最多 8 个，且不能包含 owner docs 目标文件
+- `ready_for_doc_write = true` 只表示“17 问已经基本成立，可继续人工纠偏后进入下一步”，不等于自动立刻写文件
+- `session_execution_instruction` 是你给当前 init session 的补充执行指令，适合承载“总纲优先、README 次之、中央银行设计是核心亮点”这类高质量一句话约束
 
 ## 5. Prompt / Learning Assets
 
