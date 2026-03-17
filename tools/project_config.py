@@ -125,6 +125,8 @@ def load_learnbaseline_prompt_preamble() -> str:
 # project_config 中文：从 PROJECT_GUIDE 解析学习问题清单与必查文件，供 baseline 学习 prompt 动态补全。
 def parse_project_guide_prompt_inputs(project_root: Path, project_id: str, current_run_id: str) -> tuple[list[dict[str, str]], list[str]]:
     guide_path = resolve_config_path(PROJECT_GUIDE_FILE_NAME, project_root)
+    if not guide_path.exists():
+        return [], list(OWNER_FILES)
     text = guide_path.read_text(encoding="utf-8")
     matches = list(GUIDE_QUESTION_RE.finditer(text))
     questions: list[dict[str, str]] = []
@@ -552,19 +554,19 @@ def describe_session_registry(registry: dict[str, Any]) -> list[str]:
 
 
 # project_config 中文：校验关键项目配置非空和路径存在性。
-def validate_project_config(cfg: ProjectConfig) -> list[str]:
+def validate_project_config(cfg: ProjectConfig, allow_bootstrap_missing: bool = False) -> list[str]:
     errors: list[str] = []
     if not cfg.project_id.strip():
         errors.append("必填字段为空-required.project_id")
     if not cfg.project_root.exists():
         errors.append(f"项目根目录不存在-required.project_root: {cfg.project_root}")
-    if not cfg.tools_dir.exists():
+    if not cfg.tools_dir.exists() and not allow_bootstrap_missing:
         errors.append(f"tools目录不存在-tools_dir: {cfg.tools_dir}")
-    if not cfg.docs_dir.exists():
+    if not cfg.docs_dir.exists() and not allow_bootstrap_missing:
         errors.append(f"docs目录不存在-docs_dir: {cfg.docs_dir}")
-    if not cfg.agents_file.is_file():
+    if not cfg.agents_file.is_file() and not allow_bootstrap_missing:
         errors.append(f"宪法文件不存在-agents_file: {cfg.agents_file}")
-    if not cfg.project_guide_file.is_file():
+    if not cfg.project_guide_file.is_file() and not allow_bootstrap_missing:
         errors.append(f"PROJECT_GUIDE不存在-project_guide_file: {cfg.project_guide_file}")
     if not cfg.codex_bin.strip():
         errors.append("Codex命令为空-codex_bin")
@@ -691,9 +693,32 @@ def update_init_project_session(
     record["effort"] = effort
     if payload is not None:
         record["phase"] = str(payload.get("phase", "")).strip()
-        record["can_write_owner_docs"] = bool(payload.get("can_write_owner_docs", False))
+        record["session_execution_instruction"] = str(payload.get("session_execution_instruction", "")).strip()
+        record["operator_notes"] = str(payload.get("operator_notes", "")).strip()
+        record["answered_questions"] = list(payload.get("answered_questions", []) or [])
+        record["unclear_questions"] = list(payload.get("unclear_questions", []) or [])
+        record["customer_followups"] = list(payload.get("customer_followups", []) or [])
+        record["document_priority_understanding"] = str(payload.get("document_priority_understanding", "")).strip()
+        record["current_project_understanding"] = str(payload.get("current_project_understanding", "")).strip()
+        record["ready_for_doc_write"] = bool(payload.get("ready_for_doc_write", False))
         record["must_read_next"] = list(payload.get("must_read_next", []) or [])
-        record["why_not_ready"] = list(payload.get("why_not_ready", []) or [])
+        record["implementation_gaps"] = list(payload.get("implementation_gaps", []) or [])
+    save_project_config_json(config)
+
+
+def update_bootstrap_state(
+    is_inited: str,
+    initialized_by: str = "",
+    bootstrap_source: str = "",
+    initialized_at: str = "",
+) -> None:
+    config = load_project_config_json()
+    state = config.setdefault("bootstrap_state", {})
+    normalized = str(is_inited).strip().upper()
+    state["is_inited"] = "Y" if normalized == "Y" else normalized
+    state["initialized_by"] = str(initialized_by).strip()
+    state["bootstrap_source"] = str(bootstrap_source).strip()
+    state["initialized_at"] = str(initialized_at).strip() or datetime.now(timezone.utc).isoformat()
     save_project_config_json(config)
 
 
@@ -757,12 +782,26 @@ def clear_session_registry(slot: str) -> None:
     record["effort"] = ""
     if "phase" in record:
         record["phase"] = ""
-    if "can_write_owner_docs" in record:
-        record["can_write_owner_docs"] = False
+    if "session_execution_instruction" in record:
+        record["session_execution_instruction"] = ""
+    if "operator_notes" in record:
+        record["operator_notes"] = ""
+    if "answered_questions" in record:
+        record["answered_questions"] = []
+    if "unclear_questions" in record:
+        record["unclear_questions"] = []
+    if "customer_followups" in record:
+        record["customer_followups"] = []
+    if "document_priority_understanding" in record:
+        record["document_priority_understanding"] = ""
+    if "current_project_understanding" in record:
+        record["current_project_understanding"] = ""
+    if "ready_for_doc_write" in record:
+        record["ready_for_doc_write"] = False
     if "must_read_next" in record:
         record["must_read_next"] = []
-    if "why_not_ready" in record:
-        record["why_not_ready"] = []
+    if "implementation_gaps" in record:
+        record["implementation_gaps"] = []
     if "forked_from_thread_id" in record:
         record["forked_from_thread_id"] = ""
     save_project_config_json(config)

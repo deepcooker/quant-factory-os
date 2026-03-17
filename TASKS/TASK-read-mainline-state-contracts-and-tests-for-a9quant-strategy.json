@@ -1,0 +1,195 @@
+{
+  "task_id": "task-read-mainline-state-contracts-and-tests-for-a9quant-strategy",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "Read mainline, state, contracts, and tests for a9quant-strategy",
+  "goal": "Read main_controller.py, account_state.py, contracts.py, and selected tests in /root/a9quant-strategy to confirm the real mainline, state ledger, contract layer, and verification surface before any phase-2 owner-doc writing.",
+  "scope": [
+    "Only inspect main_controller.py",
+    "account_state.py",
+    "contracts.py",
+    "test_integration.py",
+    "and test_regression.py",
+    "Do not run phase-2 and do not write files in the target project"
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "Evidence summary captures the actual entrypoint",
+      "status": "completed"
+    },
+    {
+      "id": "check-2",
+      "text": "state model",
+      "status": "completed"
+    },
+    {
+      "id": "check-3",
+      "text": "contracts",
+      "status": "completed"
+    },
+    {
+      "id": "check-4",
+      "text": "and test surface of /root/a9quant-strategy",
+      "status": "completed"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-read-mainline-state-contracts-and-tests-for-a9quant-strategy.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "main_controller.py confirms the real runtime mainline already exists: exchange adapter, synchronizer, account state, centralized risk manager, market hub, OMS, ws bridge, and dual engines are wired together under one async controller.",
+      "account_state.py and contracts.py confirm there is already a concrete typed state ledger and contract boundary between data sync, risk, strategy, and execution layers.",
+      "test_integration.py and test_regression.py confirm the project already tests live-trading gating, trace propagation, synchronizer-only state updates, OMS idempotency, ws reconnect calibration, replay-driven full-chain execution, and the rule that intents must pass risk gating."
+    ],
+    "decisions": [
+      "Phase-2 owner-doc reverse-writing can now describe a controller-centered implemented system instead of only a module collection.",
+      "Before phase-2 writing, one remaining evidence pass should still verify config and data_synchronizer details, but the mainline, state model, contract boundary, and test surface are already clear enough to anchor owner-doc structure."
+    ],
+    "risks": [
+      "data_synchronizer.py and config.json are still not fully audited in this pass, so some runtime dependency and environment assumptions may still be under-described.",
+      "The test suite is meaningful, but current evidence is still based on static reads rather than actually running the target project's tests."
+    ],
+    "verification": [
+      "Read main_controller.py and confirmed async main loop, policy evaluation, signal processing, OMS submission, reconciliations, and shutdown path.",
+      "Read account_state.py and confirmed state ledger updates are derived from DataSynchronizer snapshots and split into risk snapshots and strategy snapshots.",
+      "Read contracts.py and confirmed the project already uses typed dataclass contracts for risk, intent, market, snapshot, and account objects.",
+      "Read test_integration.py and test_regression.py and confirmed coverage for live gate, trace propagation, synchronizer-only state updates, OMS idempotency, reconnect calibration, replay-driven chain execution, and risk-gate enforcement."
+    ],
+    "next_steps": [
+      "Do one last evidence pass on data_synchronizer.py and config.json before phase-2 owner-doc writing.",
+      "Keep /root/a9quant-strategy in init-project phase-1 mode until that final dependency/config evidence is added."
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": "2026-03-16T15:18:40Z"
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": "2026-03-16T15:18:40Z"
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "pending_ack",
+      "close_escalation": false,
+      "notes": [],
+      "updated_at": "2026-03-16T15:18:40Z"
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-16T15:18:40Z"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-16T15:18:40Z",
+  "risks": "",
+  "rollback_plan": ""
+}

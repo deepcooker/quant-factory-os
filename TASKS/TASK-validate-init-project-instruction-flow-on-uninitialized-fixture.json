@@ -1,0 +1,181 @@
+{
+  "task_id": "task-validate-init-project-instruction-flow-on-uninitialized-fixture",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "validate init-project instruction flow on uninitialized fixture",
+  "goal": "Run init and init-project with --instruction-text against an uninitialized fixture project, verify session_execution_instruction and manual continuation state are persisted correctly.",
+  "scope": [
+    "fixtures/init_project_fixture",
+    "tools/appserverclient.py",
+    "tools/project_config.json",
+    "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "python3 tools/init.py and python3 tools/appserverclient.py --init-project --instruction-text ... run against the fixture project",
+      "status": "done"
+    },
+    {
+      "id": "check-2",
+      "text": "session_execution_instruction and continuation payload are visible in init_project_session",
+      "status": "done"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-validate-init-project-instruction-flow-on-uninitialized-fixture.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "validated init -> init-project --instruction-text on an uninitialized fixture project",
+      "confirmed session_execution_instruction and continuation payload are persisted in the target project's init_project_session"
+    ],
+    "decisions": [
+      "init-project session state must write to the target project's tools/project_config.json, not the foundation repo config",
+      "instruction-text should be treated as a first-class session constraint before xhigh plan continuation"
+    ],
+    "risks": [
+      "init-project still uses local session/state runtime instead of a real app-server init thread"
+    ],
+    "verification": [
+      "python3 tools/init.py",
+      "python3 tools/appserverclient.py --init-project -new --instruction-text \"总纲优先，README 次之，中央银行设计是风控与现金流核心\"",
+      "python3 tools/view.sh fixtures/init_project_fixture/tools/project_config.json --from 1 --to 160",
+      "python3 -m py_compile tools/appserverclient.py tools/project_config.py tools/init.py"
+    ],
+    "next_steps": [
+      "use the same init_project_session for manual continuation and state updates on real uninitialized projects"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": ""
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "pending_ack",
+      "close_escalation": false,
+      "notes": [],
+      "updated_at": ""
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-17T21:33:00+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-17T21:33:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

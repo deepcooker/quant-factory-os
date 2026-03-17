@@ -1,16 +1,17 @@
-init-project: 接下来请你对一个尚未接入基座的新项目执行首轮初始化反写规划。
+init-project: 接下来请你对一个尚未接入基座的新项目执行首轮初始化理解。
 
 目标：
-- 基于项目已有文档和现有实现，完成首轮 owner docs 反写规划
-- 先学习、再补证据、最后反写，不允许直接跳到写结论
-- 保护 PROJECT_GUIDE 等关键 owner docs，避免误覆盖
+- 基于项目已有文档和现有实现，完成首轮 17 问初始化理解
+- 先学习、再补证据、再更新状态，不允许直接跳到写结论
+- 当前阶段不要直接反写 owner docs
 
 硬规则：
 - 你面对的是“未初始化项目”，只有在首轮接入完成后，项目才允许进入 baseline 主线
 - 输入材料不是最终真相，必须结合现有实现确认项目已经做到哪里
 - 不允许把我们自己的 owner docs 当成原始输入材料
 - 如果证据不够，必须明确提出“下一批必读文件”，不能假装已经理解完整
-- 第一阶段默认是 plan/gating 阶段；在 `can_write_owner_docs = true` 之前，不允许输出 owner docs 正文
+- 当前阶段默认是 `xhigh` 的 plan/gating 阶段
+- 先产出 17 问完成度、缺口和下一步引导；不要直接产出 owner docs 正文
 
 默认读取顺序：
 1. 先读项目根目录的 `README.md`，把它当作 guide / 材料理解说明
@@ -29,8 +30,9 @@ init-project: 接下来请你对一个尚未接入基座的新项目执行首轮
    - 关键对象/状态
    - 已实现 / 未实现描述
 4. 结合程序提供的“轻量仓库探测结果”做第一轮判断
-5. 输出“下一批必读文件”
-6. 读取这些文件后，再判断是否允许反写 owner docs
+5. 如果本轮还有 session 级补充执行指令，必须先吸收它对文档优先级、阅读顺序、owner 关注点和阶段边界的修正
+6. 输出“下一批必读文件”
+7. 读取这些文件后，再判断 17 问目前能完成到哪一步
 
 对“轻量仓库探测结果”的理解：
 - 它只是仓库现状摘要，不等于代码已被完整阅读
@@ -52,7 +54,7 @@ init-project: 接下来请你对一个尚未接入基座的新项目执行首轮
   - `*.doc`
   - `*.docx`
 - 默认最多 8 个
-- 不能为空；如果为空，则只能在 `can_write_owner_docs = true` 时出现
+- 不能为空；如果为空，则只能在 17 问已经基本成立、允许继续进入写入前判断时出现
 - 不允许包含 owner docs 目标文件：
   - `AGENTS.md`
   - `docs/PROJECT_GUIDE.md`
@@ -68,47 +70,44 @@ init-project: 接下来请你对一个尚未接入基座的新项目执行首轮
   - 测试
   - 其他补充文件
 
-你必须分两阶段输出：
+你当前只需要输出第一阶段结果：
 
-第一阶段：学习与补证据规划（JSON）
-- 先不要反写 owner docs
-- 先判断当前证据是否足够
+第一阶段：17 问理解与补证据规划（JSON）
+- 先用 `README + docs + 轻量仓库探测 + 已补读文件` 去填充 17 问
+- 先判断当前证据是否足够让 17 问基本成立
 - 输出必须回答：
-  - 现在已经明确的项目定位
-  - 已知的核心模块 / 主流程 / 风险
-  - 文档与实现之间的主要缺口
-  - 下一批必读文件
-  - 当前是否允许进入 owner docs 反写
-- 第一阶段输出建议字段：
-  - `project_understanding`
+  - 17 问里已经答稳了哪些
+  - 哪些问题仍不清楚
+  - 需要客户继续补什么
+  - 你当前对文档优先级的理解是什么
+  - 你当前对整个项目的理解是什么
+  - 当前是否已经具备进入下一步的前提
+- 第一阶段最小输出字段：
+  - `session_execution_instruction`
+  - `answered_questions`
+  - `unclear_questions`
+  - `customer_followups`
+  - `document_priority_understanding`
+  - `current_project_understanding`
+  - `ready_for_doc_write`
+- 第一阶段允许同时携带内部辅助字段：
   - `explicit_refs`
   - `light_repo_findings`
   - `implementation_gaps`
   - `must_read_next`
-  - `can_write_owner_docs`
-  - `why_not_ready`
-
-第二阶段：只有在证据足够时，才允许反写 owner docs（Markdown 草稿）
-- 第二阶段不要求把所有详细内容再塞进一个大 JSON
-- 第二阶段的目标是按目标文件分别产出详细 markdown 草稿：
-  - `AGENTS.md`
-  - `docs/PROJECT_GUIDE.md`
-  - `docs/WORKFLOW.md`
-  - `docs/ENTITIES.md`
-  - `docs/FILE_INDEX.md`
-  - `docs/TOOLS_METHOD_FLOW_MAP.md`
-- 第二阶段输出建议字段：
-  - `agents_md`
-  - `project_guide_md`
-  - `workflow_md`
-  - `entities_md`
-  - `file_index_md`
-  - `tools_method_flow_map_md`
-  - `remaining_unknowns`
+- 字段含义：
+  - `session_execution_instruction`：本轮补充执行指令的标准化理解，用来约束当前 session 的阅读顺序与 owner 关注点
+  - `answered_questions`：当前已经基本答稳的问题编号与简要结论
+  - `unclear_questions`：当前仍缺证据、答不稳的问题编号与缺口说明
+  - `customer_followups`：需要客户继续补充的内容，必须翻译成客户能回答的话
+  - `document_priority_understanding`：当前对 `README/docs` 等材料角色和优先级的理解
+  - `current_project_understanding`：当前对项目定位、阶段、亮点、风险和下一步的高层理解
+  - `ready_for_doc_write`：当前是否已具备进入下一步的基本前提；即使为 `true`，也不代表必须立刻完成初始化
 
 输出要求：
 - 先给阶段一结果，禁止跳过
-- 如果证据不足，必须明确 `can_write_owner_docs = false`
-- 如果证据足够，才允许进入阶段二
+- 如果证据不足，必须明确 `ready_for_doc_write = false`
+- 如果证据足够，可以把 `ready_for_doc_write` 置为 `true`，但仍应允许继续在同一 session 上人工纠偏和补充
+- 如果用户给了额外的一句话执行指令，必须把它吸收到 `session_execution_instruction` 中，而不是忽略
 - 所有结论必须可追溯到文档或实现证据
 - 不要输出闲聊，不要复述用户问题

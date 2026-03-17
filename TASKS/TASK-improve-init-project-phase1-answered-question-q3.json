@@ -1,0 +1,178 @@
+{
+  "task_id": "task-improve-init-project-phase1-answered-question-q3",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "improve init-project phase1 answered question q3",
+  "goal": "Use stable README and raw-doc evidence from the richer real-material fixture to answer Q3 without broadening phase1 heuristics.",
+  "scope": [
+    "tools/appserverclient.py",
+    "fixtures/init_project_real_material_fixture",
+    "reports/run-2026-03-11-vnext-release-baseline",
+    "TASKS"
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "verify",
+      "text": "Command(s) pass: make verify",
+      "status": "completed"
+    },
+    {
+      "id": "evidence",
+      "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+      "status": "pending"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-improve-init-project-phase1-answered-question-q3.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "Added a stable Q3 phase1 heuristic tied to the richer real-material fixture's total-goal and first-phase strategy evidence.",
+      "Validated that Q3 now joins Q1 Q2 Q5 Q6 Q11 in first-round answered_questions without changing fail-closed behavior."
+    ],
+    "decisions": [
+      "Use only explicit total-goal and first-phase strategy statements from raw docs to answer Q3, instead of broad project-stage guessing."
+    ],
+    "risks": [
+      "Q3 still depends on explicit language about long-term system capability and first landing target; projects without both cues should remain unclear."
+    ],
+    "verification": [
+      "python3 tools/appserverclient.py --init-project -new on fixtures/init_project_real_material_fixture returned Q3 in answered_questions",
+      "python3 -m py_compile tools/appserverclient.py tools/project_config.py",
+      "python3 tools/project_config.py after restoration confirmed project_root returned to /root/quant-factory-os"
+    ],
+    "next_steps": [
+      "Continue expanding answered_questions only where README and raw docs provide equally explicit evidence."
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": ""
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "pending_ack",
+      "close_escalation": false,
+      "notes": [],
+      "updated_at": ""
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-17T12:45:20+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-17T12:45:20+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

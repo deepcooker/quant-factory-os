@@ -2,6 +2,44 @@
 
 RUN_ID: `run-2026-03-11-vnext-release-baseline`
 
+## Init-project real-material-derived validation decision
+- `--init-project` 的 question-level reasoning 已在 richer in-repo fixture 上得到验证，不再只依赖 tiny toy fixture。
+- 当前可稳定首轮答出的题目是：
+  - `Q1`
+  - `Q2`
+  - `Q5`
+  - `Q6`
+  - `Q11`
+- 继续保持 fail-closed 是刻意设计：
+  - 即使这 5 题已稳定，Phase 1 仍返回非零 `err_code`
+  - 只有在后续补读完成、`ready_for_doc_write=true` 后才允许继续到写入阶段
+- 下一步不应再盲目堆 heuristic，而应优先降低 `readme_refs_missing_in_repo` 对 README 命令路径的误报。
+- 这条误报现在已被处理：README 中的命令示例路径不再被当成仓库缺失文件引用。
+
+## Init-project Q3 decision
+- `Q3` 现在进入可稳定首轮回答集合。
+- 触发条件被刻意收窄为两类显式原始文档证据同时存在：
+  - 终局系统能力 / 三账本治理
+  - 第一期落地目标 / 趋势+鲨鱼策略
+- 这保证 `Q3` 不是靠泛化阶段猜测得出，而是靠明确文档表达得出。
+
+## Init-project phase1 schema decision
+- 不再把“owner docs 全为空”当成 `--init-project` 的通用项目硬门禁。
+- `--init-project` 现在正式按“17 问完成度 + xhigh plan + 同一 init session 可续跑 + 人工确认后再写”建模。
+- Phase 1 的正式对外输出收成：
+  - `answered_questions`
+  - `unclear_questions`
+  - `customer_followups`
+  - `document_priority_understanding`
+  - `current_project_understanding`
+  - `ready_for_doc_write`
+- `ready_for_doc_write` 只表示可继续走向写入，不表示立即自动写。
+- Phase 1 运行时也同步切到同一语义：
+  - 未 ready 时返回 `err_code!=0`
+  - 但把 Phase 1 payload 一起带回，供同一 `init_project_session` 继续补料和纠偏
+  - 仍然保留 `bootstrap_state.is_inited` 作为 baseline 主线硬门禁
+- 已用仓库内未初始化 fixture 做过一次真实验证；因此这条决策不再只是协议层约定，而是有实际 phase1 返回结果支撑。
+
 ## Why
 - 旧的 `TASKS/STATE.md` 已经与当前 run/task 设计冲突，继续保留会让 runtime 指针再次分叉。
 
@@ -445,3 +483,78 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 - `init_project_session` 当前先收成“本地 phase-1 session 记录”，而不是伪造一个已经存在的 app-server thread。
 - 默认 `--init-project` 必须复用这个本地 session 记录，只有显式 `--init-project -new` 才生成新的 session id。
 - 这样可以先把 session 续跑语义稳定下来，再决定是否真的需要把 init-project 提升成完整 app-server lifecycle。
+
+## Init-project phase-2 writer decision
+- `--init-project` 先继续走本地 phase-2 writer，而不是立刻接 app-server init thread。
+- 当前最小正确路径是：Phase 1 负责 gating，Phase 2 负责在 owner docs 全为空且 `can_write_owner_docs=true` 时，把 6 份 markdown 草稿分别写入目标文件。
+- `bootstrap_state.is_inited` 必须只在全部目标文件写入成功后才切到 `Y`；不能在 phase-1 通过时提前放行 baseline 主线。
+
+## Real a9quant-strategy phase-1 run decision
+- 当前 `init -> --init-project` 主线已经可以真实跑到外部项目 `/root/a9quant-strategy`，说明 bootstrap gate 和 phase-1 intake 不是只在 foundation repo 内自洽。
+- 为了让这条主线成立，`init` 必须把新项目 owner docs 骨架创建为空文件，而不是写占位文本；否则 `--init-project` 会被自己的空文件门禁挡住。
+- 下一步不该急着对 `/root/a9quant-strategy` 做 phase-2 反写，而应先收一刀 intake 噪音：排除 `docs/.ipynb_checkpoints` 这类非原始材料目录，避免 phase-1 被 checkpoint 文件污染。
+
+## Checkpoint noise cleanup decision
+- `--init-project` 的第一轮 intake 继续坚持“轻、硬、稳”，所以 checkpoint 目录应直接在程序扫描层排除，而不是留给模型自己忽略。
+- 这样 Phase 1 的 `raw_docs_read/docs_files` 会更贴近真正的原始材料，也更适合作为后续第二轮代码读取的计划输入。
+
+## a9quant-strategy second-round code reads decision
+- `/root/a9quant-strategy` 已被证实不是“只有文档、几乎没实现”的项目；当前 owner-doc 反写必须建立在“已有实现”而非“纯设计愿景”的前提上。
+- 当前决定是继续停在 Phase 1，不进入 Phase 2 owner-doc 写入。
+- 进入 Phase 2 前的最小补证据范围定为：
+  - `main_controller.py`
+  - `account_state.py`
+  - `contracts.py`
+  - selected tests
+- 额外记录一条真实风险：`ccxt_utils.py` 的 `__main__` 测试块仍包含硬编码 Bitget sandbox credentials；即使是模拟盘，也应在后续项目治理中优先清理。
+
+## a9quant-strategy mainline and test-surface decision
+- 现在 `/root/a9quant-strategy` 的真实主线已经足够清楚：主入口是 `main_controller.py`，状态账本是 `account_state.py`，对象契约边界在 `contracts.py`，并且已有真实测试面约束 live gate、risk gate、OMS 幂等、reconnect 校准和 replay 链路。
+- 因此，是否进入 Phase 2 的剩余判断不再取决于“项目有没有主线”，而只取决于最后一轮依赖/配置证据是否齐全。
+- 当前决定仍是不进入 Phase 2；Phase 1 再补：
+  - `data_synchronizer.py`
+  - `config.json`
+- 补完这两项后，再决定是否进行 owner-doc reverse-writing。
+
+## a9quant-strategy synchronizer and config decision
+- `data_synchronizer.py` 与 `config.json` 的证据现已补齐，因此 Phase 1 对 `/root/a9quant-strategy` 的主线理解已经基本闭合。
+- 当前决定可以进入“是否执行 Phase 2 owner-doc reverse-writing”的判断阶段。
+- 但如果进入 Phase 2，必须显式保留两类现实风险：
+  - sample config 中仍有 hard-coded sandbox credentials / proxy defaults
+  - synchronizer 仍带 exchange-specific 假设和简化的 `margin_ratio` 处理
+- 也就是说，Phase 2 现在可以考虑做，但不能把目标项目写成一个已经完全抽象化、完全清洁的运行时系统。
+
+## a9quant-strategy phase-2 draft payload decision
+- 当前先生成 phase-2 draft payload，而不直接执行写入目标项目。
+- 这样可以先审 payload 的 owner-doc 内容是否符合项目真实实现，再决定是否对 `/root/a9quant-strategy` 运行 `--init-project --phase2-json`。
+- 当前选择保留的关键边界是：
+  - draft is reviewable
+  - target project is not mutated yet
+  - real hygiene and coupling risks remain explicit in the draft
+
+## init-project session-first simplification decision
+- 当前决定正式移除 `--init-project` 的项目化 heuristics 和旧的 `--phase2-json` runtime 路径。
+- init-project 现在只保留：
+  - `bootstrap_state`
+  - `session_registry.init_project_session`
+  - `xhigh plan` 的 17 问初始化理解
+  - `--update-init-project --payload-json <path>`
+  - `--complete-init-project`
+- 当前不再把 owner-doc 自动写入当作 formal init-project runtime contract；初始化完成后，才允许进入后续 baseline 学习主线。
+- stop_reason: `task_done`
+
+## init-project session instruction decision
+- 当前决定把“一句话 owner 执行指令”正式纳入 `--init-project`，而不是继续靠代码里硬编码的项目语义。
+- 新增的正式做法是：
+  - `--instruction-text`
+  - `--instruction-file`
+- 这些补充指令现在写回 `init_project_session.session_execution_instruction`，人工纠偏备注写回 `operator_notes`。
+- 这样后续无论是手工模式还是 SaaS 页面化流程，都可以围绕同一个 init session 继续推进，再决定何时完成初始化。
+
+## init-project fixture validation decision
+- 当前已用仓库内未初始化 fixture 真实验证 `init -> --init-project --instruction-text`。
+- 这轮确认：
+  - instruction payload 会进入 `err_code=1012` 返回结果
+  - instruction 与 continuation state 会写回目标项目自己的 `init_project_session`
+  - foundation 仓的默认 `project_root` 已在验证后恢复，不会把 fixture 留成当前项目
+- 因此当前决定是：这条初始化 session 手工续跑链已经成立，可以继续迁移到真实未初始化项目上使用。

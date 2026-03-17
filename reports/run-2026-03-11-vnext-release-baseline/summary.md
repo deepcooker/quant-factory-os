@@ -2,6 +2,83 @@
 
 RUN_ID: `run-2026-03-11-vnext-release-baseline`
 
+## Init-project real-material-derived fixture validation
+- 新增了更接近真实项目材料层级的仓库内 fixture：
+  - `fixtures/init_project_real_material_fixture/README.md`
+  - `fixtures/init_project_real_material_fixture/docs/总纲清单（可复制）.md`
+  - `fixtures/init_project_real_material_fixture/docs/中央银行设计.md`
+  - `fixtures/init_project_real_material_fixture/docs/基于资管双向非对称对冲策略手册.md`
+  - `fixtures/init_project_real_material_fixture/docs/梦想中的交易资管财富系统想法.md`
+  - `fixtures/init_project_real_material_fixture/docs/资管双向原始想法.md`
+  - `fixtures/init_project_real_material_fixture/main_controller.py`
+  - `fixtures/init_project_real_material_fixture/data_synchronizer.py`
+  - `fixtures/init_project_real_material_fixture/advanced_risk.py`
+  - `fixtures/init_project_real_material_fixture/contracts.py`
+  - `fixtures/init_project_real_material_fixture/tiny_oms.py`
+- 用这个 richer fixture 真实执行 `python3 tools/appserverclient.py --init-project -new` 后，首轮 `answered_questions` 已稳定覆盖：
+  - `Q1`
+  - `Q2`
+  - `Q5`
+  - `Q6`
+  - `Q11`
+- 同时系统继续保持 fail-closed：
+  - `err_code=1012`
+  - `ready_for_doc_write=false`
+  - `customer_followups` 继续指向下一批补读文件
+- 这次也暴露出一个真实边界：README 中若出现 foundation 工具调用路径，例如 `tools/appserverclient.py`，当前仍可能被记录为 `readme_refs_missing_in_repo`。
+- 该误报随后已收掉：`extract_file_like_tokens()` 现在会忽略 `python3/bash/sh` 等命令上下文里的路径，因此同一 richer fixture 再次执行 `--init-project -new` 时，`readme_refs_missing_in_repo=[]`。
+
+## Init-project Q3 evidence expansion
+- 基于 richer real-material fixture 的总纲与一期策略手册，Phase 1 现在还能稳定答出 `Q3`：
+  - 长期系统能力：资管财富系统与三账本治理
+  - 第一落地目标：趋势 + 鲨鱼的一期策略落地
+- 这次没有扩大到模糊阶段推断，只使用了两类显式证据：
+  - 总纲里的终局/三账本表达
+  - 一期策略手册里的趋势+鲨鱼落地表达
+- 当前 richer fixture 的首轮 `answered_questions` 已稳定覆盖：
+  - `Q1`
+  - `Q2`
+  - `Q3`
+  - `Q5`
+  - `Q6`
+  - `Q11`
+
+## Init-project Phase1 schema refresh
+- 正式撤掉了 `--init-project` 的通用“owner docs 必须为空”强门禁口径；当前只保留 `bootstrap_state` 和 `init_project_session` 作为硬状态层。
+- `init-project` Phase 1 现在明确为 `xhigh` `plan` 的 17 问理解与补缺阶段；正式输出骨架统一为：
+  - `answered_questions`
+  - `unclear_questions`
+  - `customer_followups`
+  - `document_priority_understanding`
+  - `current_project_understanding`
+  - `ready_for_doc_write`
+- `ready_for_doc_write=true` 的语义也已收紧：只表示“17 问已基本成立，可继续在同一 session 上人工纠偏后进入写入”，不等于自动立刻写 owner docs。
+- `tools/prompts/init_project_prompt.md`、`docs/WORKFLOW.md`、`docs/ENTITIES.md`、`docs/FILE_INDEX.md`、`AGENTS.md`、`tools/project_config*.json` 已同步到这套新协议。
+- `tools/appserverclient.py` 的 Phase 1 运行时也已切到新方向：
+  - 移除了代码里的通用 owner-doc-empty 强门禁
+  - `init_project_session` 改写为记录 `answered_questions / unclear_questions / customer_followups / document_priority_understanding / current_project_understanding / ready_for_doc_write`
+  - 当 `ready_for_doc_write=false` 时，`--init-project` 现在返回非零 `err_code`，但会把当前 payload 一起带回，允许在同一 session 上继续补充和纠偏
+
+## Commands / Outputs (init-project phase1 schema refresh)
+- `python3 -m py_compile tools/appserverclient.py tools/project_config.py` -> pass
+- `python3 tools/evidence.py --run-id run-2026-03-11-vnext-release-baseline` -> pass
+- `python3 tools/appserverclient.py --init-project` -> expected nonzero in this repo because `bootstrap_state.is_inited=Y`; this confirms the gate is still state-driven
+
+## Init-project Phase1 fixture validation
+- 新增了仓库内 fixture：
+  - [README.md](/root/quant-factory-os/fixtures/init_project_fixture/README.md)
+  - [project_config.json](/root/quant-factory-os/fixtures/init_project_fixture/tools/project_config.json)
+- 临时把 foundation 的 `project_root` 指到这个未初始化 fixture，真实跑了一次 `python3 tools/appserverclient.py --init-project`，然后已切回 `/root/quant-factory-os`。
+- 这次真实结果符合新协议：
+  - 返回 `err_code=1012`
+  - 同时带回 `answered_questions / unclear_questions / customer_followups / document_priority_understanding / current_project_understanding / ready_for_doc_write`
+  - `customer_followups` 已能把缺口翻译成继续补读的具体文件
+  - `must_read_next` 也保持在受控小集合内
+- 当前已知边界也被如实暴露：
+  - 第一版 `answered_questions` 过于保守，随后已继续收紧 heuristic
+  - 现在同一 fixture 首轮已经能先答出 `Q1`、`Q2`、`Q5`、`Q6` 和 `Q11`
+  - 后续还要继续增强 question-level reasoning，不能只停在 intake/gating 层
+
 ## What changed
 - 绑定新的 active run/task，用于收敛 `run` 扶正与 `runtime_state` 唯一真相源。
 - 删除 `TASKS/STATE.md` 镜像口径，改为只认 `tools/project_config.json -> runtime_state`。
@@ -955,3 +1032,194 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 ## Commands / Outputs (init-project session resume semantics)
 - `python3 -m py_compile tools/project_config.py tools/appserverclient.py` -> pass
 - local resume/new smoke test on a temporary demo project root -> pass; first and second calls reused the same `init_project_session.thread_id`, and `-new` produced a different id
+
+## Init-project phase-2 writer
+- 新建并完成 `task-implement-init-project-phase-2-writer`，把 `--init-project` 的最小 Phase 2 本地写入链接到了 `appserverclient`。
+- 当前 `python3 tools/appserverclient.py --init-project --phase2-json <payload.json>` 已支持：
+  - 校验 `phase2_write_owner_docs` JSON payload
+  - 要求 `write_ready=true`
+  - 要求 6 份 owner docs markdown 字段全部非空
+  - 只在 owner docs 全为空、`init_project_session.can_write_owner_docs=true` 时写入
+  - 全部写入成功后，才把 `bootstrap_state.is_inited` 置为 `Y`
+- 当前实现仍然刻意保持最小：
+  - 还没有接 app-server init thread
+  - 还没有接模型生成 phase-2 payload
+  - 但本地 phase-2 write path 已经成立
+
+## Commands / Outputs (init-project phase-2 writer)
+- `python3 -m py_compile tools/appserverclient.py tools/project_config.py` -> pass
+- temporary demo project smoke test -> pass; `run_init_project(phase2_json=<payload>)` 写入了 `AGENTS.md / docs/PROJECT_GUIDE.md / docs/WORKFLOW.md / docs/ENTITIES.md / docs/FILE_INDEX.md / docs/TOOLS_METHOD_FLOW_MAP.md`，并把 `bootstrap_state.is_inited` 从非 `Y` 切到 `Y`
+
+## Real phase-1 run on a9quant-strategy
+- 新建并完成 `task-run-init-project-phase-1-on-a9quant-strategy`，把当前 `init -> --init-project` 主线真实跑到 `/root/a9quant-strategy` 上做验证。
+- 这轮先暴露并修掉了两个 bootstrap 问题：
+  - `project_config.py` 在目标项目缺少 `docs/PROJECT_GUIDE.md` 时不再直接崩
+  - `init` 在未初始化项目上创建的 owner docs 改为空文件，避免和 `--init-project` 的空文件门禁互相冲突
+- 修完后，`--init-project` Phase 1 对 `/root/a9quant-strategy` 已能稳定输出：
+  - `light_repo_findings`
+  - `explicit_refs`
+  - `must_read_next`
+  - `can_write_owner_docs=false`
+  - `why_not_ready=["must_read_next is not empty"]`
+- 当前第一批 `must_read_next` 为：
+  - `ccxt_utils.py`
+  - `advanced_risk.py`
+  - `trend_engine.py`
+  - `shark_engine.py`
+  - `base_bitget_ws.py`
+  - `bitget_ws_bridge.py`
+  - `market_data_hub.py`
+  - `tiny_oms.py`
+- 这说明第一轮“README + docs + 轻探测 + 硬匹配”的 intake 机制已经能在真实外部项目上工作，但也暴露出下一步该收的点：当前会把 `docs/.ipynb_checkpoints` 一起扫进去，存在明显噪音。
+
+## Checkpoint noise cleanup for init-project intake
+- 新建并完成 `task-exclude-checkpoint-noise-from-init-project-intake`，把 `docs/.ipynb_checkpoints` 纳入 `--init-project` 的扫描排除。
+- 现在 `discover_docs_files()` 与 Phase 1 的 `raw_docs_read/docs_files` 都不再包含 checkpoint 噪音目录。
+- 重新对 `/root/a9quant-strategy` 跑 Phase 1 后：
+  - `raw_docs_read` 已收成 5 份真实原始 docs
+  - `docs_files` 也只保留真实材料
+  - `must_read_next` 仍保持稳定，不受 checkpoint 噪音干扰
+
+## a9quant-strategy second-round code reads
+- 新建并完成 `task-second-round-code-reads-for-a9quant-strategy`，对 phase-1 选出的 8 个 `must_read_next` 文件补了第二轮实现证据读取。
+- `advanced_risk.py` 已确认不是占位文件，而是中心化风险层：实现了持久化锚定本金、水位线重置、系统模式状态机（`NORMAL/DEFENSIVE/FROZEN/REBUILD`）和统一 `approve_action` 闸门。
+- `ccxt_utils.py` 已确认是具体交易适配层：实现了 `ExchangeTrader` 的市场细节提取、配置校验、保证金/杠杆设置、持仓风控查询、Bitget 专属平仓路径和合约余额查询。
+- 结合前一轮已读的 `trend_engine.py`、`shark_engine.py`、`base_bitget_ws.py`、`bitget_ws_bridge.py`、`market_data_hub.py` 和 `tiny_oms.py`，`/root/a9quant-strategy` 当前更像“已有真实交易系统骨架”，而不是只停留在愿景和设计文档阶段。
+- 这一轮的结论是：还不能直接进 Phase 2 owner-doc reverse-writing；在反写前仍需补读 `main_controller.py`、`account_state.py`、`contracts.py` 和高价值测试文件，确认真实主入口、状态账本、契约层和验证面。
+
+## Commands / Outputs (a9quant-strategy second-round code reads)
+- `python3 tools/project_config.py` -> pass; active task confirmed as `task-second-round-code-reads-for-a9quant-strategy`
+- second-round evidence reads completed for:
+  - `/root/a9quant-strategy/advanced_risk.py`
+  - `/root/a9quant-strategy/ccxt_utils.py`
+- previous phase-1 follow-up evidence reused from already read files:
+  - `/root/a9quant-strategy/trend_engine.py`
+  - `/root/a9quant-strategy/shark_engine.py`
+  - `/root/a9quant-strategy/base_bitget_ws.py`
+  - `/root/a9quant-strategy/bitget_ws_bridge.py`
+  - `/root/a9quant-strategy/market_data_hub.py`
+  - `/root/a9quant-strategy/tiny_oms.py`
+
+## a9quant-strategy mainline and test-surface reads
+- 新建并完成 `task-read-mainline-state-contracts-and-tests-for-a9quant-strategy`，继续补读 `main_controller.py`、`account_state.py`、`contracts.py`、`test_integration.py` 和 `test_regression.py`。
+- `main_controller.py` 已确认真实主入口：`ExchangeTrader -> DataSynchronizer -> AccountState -> RiskManager -> MarketDataHub -> TinyOMS -> BitgetWSBridge -> TrendEngine/SharkEngine` 已在一个异步主控制器中完成编排。
+- `account_state.py` 已确认状态账本不是概念层，它把 `DataSynchronizer` 原始快照清洗成 `Position/Account`，再派生 `RiskSnapshot` 和 `StrategySnapshot` 给风控和策略层使用。
+- `contracts.py` 已确认项目已有清晰 dataclass 契约层，覆盖 `RiskRequest / TradeIntent / MarketData / StrategyContext / DataSnapshot / Position / Account`。
+- `test_integration.py` 与 `test_regression.py` 已确认验证面真实存在，覆盖 live gate、trace propagation、synchronizer-only state update、OMS idempotency、WS reconnect calibration、replay-driven chain 和 risk gate enforcement。
+- 这轮之后，`/root/a9quant-strategy` 的真实主线已经足够清楚：它不是只有模块散点，而是已有 controller-centered trading runtime；接下来真正还缺的是 `data_synchronizer.py` 与 `config.json` 的最后一轮依赖/配置证据。
+
+## Commands / Outputs (a9quant-strategy mainline and test-surface reads)
+- external code reads completed for:
+  - `/root/a9quant-strategy/main_controller.py`
+  - `/root/a9quant-strategy/account_state.py`
+  - `/root/a9quant-strategy/contracts.py`
+  - `/root/a9quant-strategy/test_integration.py`
+  - `/root/a9quant-strategy/test_regression.py`
+
+## a9quant-strategy synchronizer and config reads
+- 新建并完成 `task-read-synchronizer-and-config-for-a9quant-strategy`，补了最后一轮依赖和配置证据：`data_synchronizer.py` 与 `config.json`。
+- `data_synchronizer.py` 已确认同步层采用 `WS 推送为主、REST 定时/事件校准为辅` 的 source-of-truth 模式，已经实现：
+  - position/account 原始状态维护
+  - `position_uncertain`
+  - reconnect / heartbeat 健康信号
+  - `force_rest_sync`
+  - `get_consistency_score`
+  - `is_private_ready`
+  - execution-event evidence hooks
+- `config.json` 已确认当前运行假设是：
+  - Bitget
+  - sandbox=true
+  - proxy enabled
+  - swap
+  - `BTC/USDT:USDT`
+  - `initial_capital=200`
+- 到这一步，`/root/a9quant-strategy` 的 controller、同步层、状态账本、契约层、风控层、执行层、ws 桥接和测试面都已有证据，不再只是局部模块采样。
+- 当前剩余判断已经不是“证据够不够写 owner docs”，而是“是否现在就进入 Phase 2，以及如何在反写时显式保留 sample config 的 sandbox-credential hygiene 风险”。
+
+## Commands / Outputs (a9quant-strategy synchronizer and config reads)
+- external reads completed for:
+  - `/root/a9quant-strategy/data_synchronizer.py`
+  - `/root/a9quant-strategy/config.json`
+
+## a9quant-strategy phase-2 draft payload
+- 新建并完成 `task-prepare-a9quant-strategy-phase-2-draft-payload`，基于已完成的 phase-1 证据，生成了一版**只供审阅、不执行写入**的 phase-2 payload 草稿。
+- 草稿路径是：
+  - `learn/a9quant-strategy_phase2_draft.json`
+- 这版 payload 已包含：
+  - `phase = phase2_write_owner_docs`
+  - `write_ready = true`
+  - `agents_md`
+  - `project_guide_md`
+  - `workflow_md`
+  - `entities_md`
+  - `file_index_md`
+  - `tools_method_flow_map_md`
+  - `remaining_unknowns`
+- 当前策略仍保持克制：
+  - 已生成可执行格式的 payload
+  - 但尚未对 `/root/a9quant-strategy` 运行 `--init-project --phase2-json`
+- 草稿内容继续保留了真实风险，而不是把目标项目描述成已经完全清洁和完全抽象化的系统：
+  - sandbox credentials / proxy defaults
+  - Bitget-specific coupling
+  - static-inspection-only review boundary
+
+## Commands / Outputs (a9quant-strategy phase-2 draft payload)
+- generated:
+  - `learn/a9quant-strategy_phase2_draft.json`
+
+## init-project session-first simplification
+- 新建并完成 `task-simplify-init-project-to-session-first-flow`，把 `--init-project` 从“半程序推理 + phase2 写入”收回到通用的 session-first 初始化流程。
+- 这轮正式删掉了 `appserverclient.py` 里针对具体项目语义的 question heuristics，Phase 1 不再靠硬编码领域词去回答 `Q1/Q2/Q3/Q5/Q6/Q11`。
+- 这轮也删掉了旧的 `--phase2-json` 路径，正式面只保留：
+  - `python3 tools/appserverclient.py --init-project`
+  - `python3 tools/appserverclient.py --update-init-project --payload-json <path>`
+  - `python3 tools/appserverclient.py --complete-init-project`
+- 当前 `--init-project` 的正式职责已经收成：
+  - 保持 `bootstrap_state` 与 `init_project_session`
+  - 以 `xhigh plan` 和通用提示词模板推进 17 问理解
+  - 返回 `answered_questions / unclear_questions / customer_followups / document_priority_understanding / current_project_understanding / ready_for_doc_write`
+  - 在同一 session 上继续人工纠偏与状态推进
+- 这轮没有再扩新的 heuristic，也没有继续把 owner-doc 自动写入塞回 runtime。
+
+## Commands / Outputs (init-project simplification)
+- verified:
+  - `python3 -m py_compile tools/appserverclient.py tools/project_config.py tools/init.py`
+  - `python3 tools/project_config.py`
+
+## init-project session instruction and update schema
+- 新建并完成 `task-extend-init-project-session-instruction-and-update-schema`，把“一句话高质量执行指令”正式接进 `--init-project`。
+- 当前新增的正式入口是：
+  - `python3 tools/appserverclient.py --init-project --instruction-text "<一句补充执行指令>"`
+  - `python3 tools/appserverclient.py --init-project --instruction-file docs/xxx.md`
+- 当前 `init_project_session` 现在会持久化：
+  - `session_execution_instruction`
+  - `operator_notes`
+- 这意味着：
+  - 你可以先用一句高质量说明定义当前 init session 的阅读顺序、文档优先级和 owner 关注点
+  - 再在同一个 session 上继续手工纠偏
+  - 然后通过 `--update-init-project --payload-json <path>` 把最新理解和备注写回状态
+
+## Commands / Outputs (init-project session instruction)
+- verified:
+  - `python3 -m py_compile tools/appserverclient.py tools/project_config.py tools/init.py`
+  - `python3 tools/appserverclient.py --init-project --instruction-text "总纲优先，README 次之，中央银行设计是风控与现金流核心"`
+  - current repo correctly remained blocked by `is_inited = Y`, which confirms the new CLI path is wired into the formal gate
+
+## init-project instruction flow on uninitialized fixture
+- 新建并完成 `task-validate-init-project-instruction-flow-on-uninitialized-fixture`，对仓库内未初始化 fixture 真实跑通：
+  - `python3 tools/init.py`
+  - `python3 tools/appserverclient.py --init-project -new --instruction-text "总纲优先，README 次之，中央银行设计是风控与现金流核心"`
+- 这轮确认了两件真正关键的事：
+  - `session_execution_instruction` 已进入 `err_code=1012` 的返回 payload
+  - 更重要的是，它已真实落到目标项目自己的 `fixtures/init_project_fixture/tools/project_config.json -> session_registry.init_project_session`
+- 同时也确认：
+  - 当前 `--init-project` 仍保持 fail-closed
+  - `ready_for_doc_write=false`
+  - `customer_followups` 会先提示“按本轮补充执行指令校正文档优先级、阅读顺序和 owner 关注点”
+- 这说明当前 init-project 已经具备你要的最小手工续跑形态：先打一轮、再进同一 session 继续纠偏和补料、再 update/complete。
+
+## Commands / Outputs (fixture instruction flow)
+- verified:
+  - `python3 tools/init.py`
+  - `python3 tools/appserverclient.py --init-project -new --instruction-text "总纲优先，README 次之，中央银行设计是风控与现金流核心"`
+  - `python3 tools/view.sh fixtures/init_project_fixture/tools/project_config.json --from 1 --to 160`
