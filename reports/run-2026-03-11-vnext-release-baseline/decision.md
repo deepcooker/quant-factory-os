@@ -2,6 +2,131 @@
 
 RUN_ID: `run-2026-03-11-vnext-release-baseline`
 
+## a9quant-strategy init completion decision
+- `/root/a9quant-strategy` 现在已经正式完成首轮初始化。
+- 这意味着它不再卡在 `--init-project` 门禁上，可以进入下一阶段：
+  - 最小 tools 下沉
+  - `learn-baseline`
+  - 真实项目主线逐步调试
+- 这一步刻意只做初始化完成，不混入工具迁移，避免把“状态切换”和“能力迁移”混成一个动作。
+
+## a9quant-strategy owner docs rewrite decision
+- `/root/a9quant-strategy` 的 owner docs 现已按完成后的 init-project 理解重写，不再使用之前那版偏摘要化的草稿内容。
+- 当前最合理的顺序继续保持不变：
+  1. 先 owner docs
+  2. 再 complete-init
+  3. 再迁最小 tools
+  4. 再一步步调试真实项目主线
+- 这一步刻意没有自动执行 `--complete-init-project`，因为 owner docs 既然刚刚重写，应该先给 owner 一个确认窗口。
+- 一旦 owner 确认文档方向没问题，下一步就应该不是再改文档，而是：
+  - `--complete-init-project`
+  - 然后开始最小 tools 下沉和真实项目调试
+
+## a9quant-strategy foundation-parity decision
+- `/root/a9quant-strategy` 的 init-project 17 问理解现在已经闭合。
+- 通过“与 foundation 项目一致”的 owner 决策，原本剩余的：
+  - `Q7`
+  - `Q8`
+  - `Q12`
+  - `Q14`
+ 现在也可稳定回答。
+- 当前状态因此变成：
+  - `answered_questions = [Q1..Q17]`
+  - `unclear_questions = []`
+  - `must_read_next = []`
+- 但我仍然保持 `ready_for_doc_write=false`，因为你前面明确要求初始化阶段和文档反写阶段分开，且要由 owner 明确确认是否进入下一步。
+- 所以下一步不是继续 update-init-project，也不是继续读代码，而是由你明确一句：
+  - 是否进入 owner docs 反写阶段。
+
+## a9quant-strategy owner-rules decision
+- `/root/a9quant-strategy` 的初始化理解现在已经从“技术证据补读”进入“owner 规则收口”阶段。
+- 在 owner 给出项目阶段划分、基座/项目职责、协作主线和 gitclient 交付口径之后，当前可以稳定回答：
+  - `Q1`
+  - `Q2`
+  - `Q3`
+  - `Q4`
+  - `Q5`
+  - `Q6`
+  - `Q9`
+  - `Q10`
+  - `Q11`
+  - `Q13`
+  - `Q15`
+  - `Q16`
+  - `Q17`
+- 当前仍不能结束初始化，因为还缺 4 个 owner 规则面：
+  - `Q7` 当前任务/批次真相源如何定义
+  - `Q8` session 审计材料如何保留
+  - `Q12` 准备完成后从哪一步进入需求讨论
+  - `Q14` 任务完成后的固定收尾动作是否比基座默认流程更细
+- 所以下一步不该写 docs，也不该 complete init；只需要继续补这 4 个 owner 规则即可。
+
+## a9quant-strategy final technical update decision
+- `/root/a9quant-strategy` 的初始化理解现在已经基本走完“代码与配置证据补读”阶段。
+- 在最后一批配置与 replay 证据补齐之后，当前可以稳定上提到 `answered_questions` 的题目是：
+  - `Q1`
+  - `Q2`
+  - `Q3`
+  - `Q5`
+  - `Q6`
+  - `Q10`
+  - `Q11`
+  - `Q15`
+- `must_read_next` 已经清空，这表示后续不再优先扫代码；剩余缺口主要来自 owner 规则：
+  - AI 协作边界
+  - 需求讨论流程
+  - 分支/交付规则
+  - 任务完成收尾动作
+  - 当前主线优先级确认
+- 因此下一步正确动作不是继续读实现文件，也不是 `--complete-init-project`，而是让 owner 直接补这些规则，再继续同一个 `init_project_session` 更新。
+
+## a9quant-strategy second update decision
+- `/root/a9quant-strategy` 的初始化理解已经从“宪法/工作流/对象”扩展到“整体定位、阶段、终局与一期承接、实施流程”这一层。
+- 在第二批实现文件补读之后，当前可以稳定上提到 `answered_questions` 的题目是：
+  - `Q1`
+  - `Q2`
+  - `Q3`
+  - `Q5`
+  - `Q6`
+  - `Q10`
+  - `Q11`
+- 这里仍然刻意没有把 `Q4/Q7-Q9/Q12-Q17` 一起提上去，因为这些题还缺 owner 规则、配置卫生或 replay 证据，不应为了推进速度而过度推断。
+- 当前最正确的下一步不是 `--complete-init-project`，而是继续最后一批补读：
+  - `config.json`
+  - `replay_runner.py`
+- 在这之前，目标项目的 owner docs 继续保持不变；只允许推进 `/root/a9quant-strategy/tools/project_config.json` 中的 `init_project_session`。
+
+## a9quant-strategy first update decision
+- `/root/a9quant-strategy` 的初始化理解现在不再停留在纯 intake 状态。
+- 在第一批实现文件补读之后，当前可以稳定上提到 `answered_questions` 的题目是：
+  - `Q5`
+  - `Q6`
+  - `Q11`
+- 这里故意没有把 `Q1/Q2/Q3` 一起提上去，因为这些题还需要第二批主控、状态、契约和测试证据才能压实，不应为了推进速度而过度推断。
+- 当前最正确的下一步不是 `--complete-init-project`，而是继续第二批补读：
+  - `main_controller.py`
+  - `data_synchronizer.py`
+  - `account_state.py`
+  - `contracts.py`
+  - `test_integration.py`
+  - `test_regression.py`
+- 只要第二批证据补齐，就可以继续同一 `init_project_session` 再产出下一版 `--update-init-project` payload。
+
+## Real a9quant-strategy init-project decision
+- 真实 `/root/a9quant-strategy` 现在应按 session-first 初始化流继续，而不是再回到 phase2 writer 或本地 heuristic 方案。
+- 本轮已经确认：
+  - 目标项目可被重置为未初始化状态
+  - `--init-project -new --instruction-text ...` 能把 owner 的一句高质量阅读顺序指令写进目标项目自己的 `init_project_session`
+  - Phase 1 会 fail-closed 返回 `err_code=1012`，要求继续同一 init session，而不是假装初始化已经完成
+- 因此下一步正确动作不是 `--learnbaseline`，而是：
+  - 进入 `/root/a9quant-strategy` 的 `init_project_session`
+  - 先按 `must_read_next` 补读关键实现
+  - 然后产出一个 `--update-init-project --payload-json <path>` 的更新载荷
+  - 只有当 `ready_for_doc_write=true` 且 owner 确认后，才允许执行 `--complete-init-project`
+- 额外决策：
+  - foundation 仓的 `required.project_root` 不得长期指向外部项目；每次真实外部初始化运行结束后，都必须切回 `/root/quant-factory-os`
+  - `tools/init.py` 目前仍会在外部项目预检时混入 foundation bootstrap_state 元数据；这不是本轮阻塞项，但后续应收口
+
 ## Init-project real-material-derived validation decision
 - `--init-project` 的 question-level reasoning 已在 richer in-repo fixture 上得到验证，不再只依赖 tiny toy fixture。
 - 当前可稳定首轮答出的题目是：

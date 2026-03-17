@@ -16,14 +16,14 @@
   "runtime_state": {
     "current_project_id": "quant-factory-os",
     "current_run_id": "run-2026-03-11-vnext-release-baseline",
-    "current_task_id": "task-validate-init-project-instruction-flow-on-uninitialized-fixture",
-    "current_task_file": "TASKS/TASK-validate-init-project-instruction-flow-on-uninitialized-fixture.md",
-    "current_task_json_file": "TASKS/TASK-validate-init-project-instruction-flow-on-uninitialized-fixture.json",
-    "current_status": "completed",
-    "current_updated_at": "2026-03-17T21:33:00+00:00"
+    "current_task_id": "task-standardize-init-project-runtime-semantics-and-logs",
+    "current_task_file": "TASKS/TASK-standardize-init-project-runtime-semantics-and-logs.md",
+    "current_task_json_file": "TASKS/TASK-standardize-init-project-runtime-semantics-and-logs.json",
+    "current_status": "active",
+    "current_updated_at": "2026-03-17T15:54:24+00:00"
   },
   "task_registry": {
-    "active_task_json_file": "TASKS/TASK-validate-init-project-instruction-flow-on-uninitialized-fixture.json",
+    "active_task_json_file": "TASKS/TASK-standardize-init-project-runtime-semantics-and-logs.json",
     "queue_json_file": "TASKS/QUEUE.json",
     "task_md_is_legacy_view": true,
     "queue_md_is_legacy_view": true

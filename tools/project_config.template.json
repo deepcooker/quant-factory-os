@@ -4,8 +4,8 @@
     "project_root": "/abs/path/to/your-project"
   },
   "git": {
-    "remote_url": "https://github.com/your-org/your-project.git",
-    "github_login": "your-github-login"
+    "remote_url": "https://github.com/deepcooker/quant-factory-os.git",
+    "github_login": "deepcooker"
   },
   "bootstrap_state": {
     "is_inited": "N",

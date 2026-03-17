@@ -1,0 +1,46 @@
+{
+  "session_execution_instruction": "总纲优先，README 次之，中央银行设计是我们的亮点特色，也是风控和现金流核心；基于资管双向非对称对冲策略手册是第一期实现策略的具体内容；另外两份文档属于原始想法来源。先按17问理解，不要先写文档。",
+  "operator_notes": "本轮已补读第一批 must_read_next：ccxt_utils.py、advanced_risk.py、trend_engine.py、shark_engine.py、base_bitget_ws.py、bitget_ws_bridge.py、market_data_hub.py、tiny_oms.py。当前可以先把宪法、工作流、核心对象三类问题提升为稳定理解，其余问题继续保守。",
+  "answered_questions": [
+    "Q5",
+    "Q6",
+    "Q11"
+  ],
+  "unclear_questions": [
+    "Q1: 已有总纲、README 和实现证据，但仍需把项目终局、一期落地和当前代码壳之间的关系再压实。",
+    "Q2: 阶段划分已有文档依据，但还需结合 main_controller.py 与 data_synchronizer.py 确认当前真实完成边界。",
+    "Q3: 总纲和策略手册已说明终局能力与一期目标，但仍需结合主控与状态层确认承接路径。",
+    "Q4: 当前项目文档里没有把不同 AI 决策端/执行端的职责写成稳定规则，仍需 owner 或后续 owner docs 固化。",
+    "Q7: 需要结合目标项目自己的 task/queue 或 owner 指令确认“当前未完成任务”如何定义，不能直接套 foundation 仓。",
+    "Q8: 还没有目标项目自己的稳定 session 审计材料，当前只能依赖本轮 init session。",
+    "Q9: 需求讨论流程仍需从 PROJECT_GUIDE/后续 owner docs 中反写，当前实现证据不足以直接定稿。",
+    "Q10: 实施流程与角色协作可见雏形，但还需要主控、测试和回放链证据来确认完整交付路径。",
+    "Q12: 需要在 workflow 与 project guide 固化后，才能稳定定义“准备完成后从哪一步进入需求讨论”。",
+    "Q13: 目标项目的分支与交付规则尚无足够文档证据。",
+    "Q14: 目标项目每次完成任务后的固定收尾动作尚无足够文档证据。",
+    "Q15: 优先优化项仍需在主控、同步层与测试链读完后再判断，不宜只凭第一批实现文件下结论。",
+    "Q16: AI/工具系统的正确打开方式还需要 owner 进一步确认，当前只能确认这是一个可被基座接入的交易系统。",
+    "Q17: 主线判断仍需结合当前 owner 最重要目标与第二批实现证据确认。"
+  ],
+  "customer_followups": [
+    "请继续补读主控、状态账本、契约层和测试链：main_controller.py, data_synchronizer.py, account_state.py, contracts.py, test_integration.py, test_regression.py。",
+    "如果你认为当前项目最重要的目标不是‘先完成一期交易系统 owner docs 初始化’，请直接补充一句优先级指令，用于纠偏 Q1/Q2/Q17。"
+  ],
+  "document_priority_understanding": "当前优先级仍保持不变：总纲清单定义终局与三账本宪法；README 定入口与阅读导航；中央银行设计定义风控、现金流与系统模式；第一期策略手册定义趋势+鲨鱼的一期落地；其余原始想法文档只补背景。",
+  "current_project_understanding": "当前已确认 /root/a9quant-strategy 不是概念仓库，而是已经实现了交易所适配、中央银行风控、双引擎、WS 桥接、市场数据与 OMS 执行边界的交易系统壳。一期核心仍围绕趋势+鲨鱼策略在 Bitget 上的落地，但要把它放在总纲、中央银行设计和三账本终局下理解，而不能仅当成单一策略脚本项目。",
+  "ready_for_doc_write": false,
+  "must_read_next": [
+    "main_controller.py",
+    "data_synchronizer.py",
+    "account_state.py",
+    "contracts.py",
+    "test_integration.py",
+    "test_regression.py"
+  ],
+  "implementation_gaps": [
+    "尚未确认 main_controller.py 如何把同步、状态、风控、双引擎和执行链编排成真实主循环。",
+    "尚未确认 data_synchronizer.py 和 account_state.py 如何共同定义系统状态真相源与策略快照。",
+    "尚未确认 contracts.py 如何稳定承载 RiskRequest、TradeIntent、StrategyContext 等统一契约。",
+    "尚未确认 test_integration.py 与 test_regression.py 覆盖了哪些强门和回放验证链。"
+  ]
+}

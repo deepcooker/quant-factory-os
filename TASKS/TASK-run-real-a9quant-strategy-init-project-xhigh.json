@@ -1,0 +1,183 @@
+{
+  "task_id": "task-run-real-a9quant-strategy-init-project-xhigh",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "run real a9quant strategy init-project xhigh",
+  "goal": "Use the generic init-project xhigh flow against /root/a9quant-strategy, persist init_project_session state, and validate the manual continuation contract on the real target project.",
+  "scope": [
+    "tools/appserverclient.py",
+    "tools/project_config.json",
+    "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "verify",
+      "text": "Command(s) pass: make verify",
+      "status": "completed"
+    },
+    {
+      "id": "evidence",
+      "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+      "status": "completed"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-run-real-a9quant-strategy-init-project-xhigh.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "reset /root/a9quant-strategy bootstrap_state.is_inited to a non-Y value and cleared its init_project_session before running a real xhigh init-project pass",
+      "ran python3 tools/init.py with foundation project_root temporarily pointed at /root/a9quant-strategy to validate external-project preflight behavior",
+      "ran python3 tools/appserverclient.py --init-project -new with the owner instruction that prioritizes 总纲清单, README, 中央银行设计, and the first-phase strategy handbook",
+      "confirmed the target project's own tools/project_config.json now holds session_execution_instruction, must_read_next, customer_followups, and ready_for_doc_write=false"
+    ],
+    "decisions": [
+      "the real /root/a9quant-strategy init-project flow should stay session-first and fail-closed with err_code=1012 until the init session is manually continued or updated",
+      "foundation runtime pointers must be restored to /root/quant-factory-os immediately after the external-project init run to avoid polluting the default project root"
+    ],
+    "risks": [
+      "tools/init.py still reads foundation bootstrap_state while project_root points at the external repo, so its unified config printout can mix foundation bootstrap metadata with target project paths",
+      "the current init-project implementation still returns a local phase1 placeholder session instead of a true app-server init thread"
+    ],
+    "verification": [
+      "python3 tools/init.py",
+      "python3 tools/appserverclient.py --init-project -new --instruction-text \"总纲优先，README 次之，中央银行设计是我们的亮点特色，也是风控和现金流核心；基于资管双向非对称对冲策略手册是第一期实现策略的具体内容；另外两份文档属于原始想法来源。先按17问理解，不要先写文档。\"",
+      "grep -nE 'is_inited|thread_id|status|session_execution_instruction|ready_for_doc_write|customer_followups|must_read_next' /root/a9quant-strategy/tools/project_config.json",
+      "python3 tools/project_config.py"
+    ],
+    "next_steps": [
+      "continue in the /root/a9quant-strategy init_project_session by reading the listed must_read_next files and then write an --update-init-project payload"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": ""
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "pending_ack",
+      "close_escalation": false,
+      "notes": [],
+      "updated_at": ""
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": ""
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-17T14:20:34+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

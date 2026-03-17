@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_id": "quant-factory-os",
-  "updated_at": "2026-03-17T10:30:02+00:00",
+  "updated_at": "2026-03-17T14:31:47+00:00",
   "items": [
     {
       "queue_id": "queue-init-project-gate-and-bootstrap-state",
@@ -414,8 +414,8 @@
       "task_id": "task-refine-a9quant-strategy-entities-draft",
       "task_json_file": "TASKS/TASK-refine-a9quant-strategy-entities-draft.json",
       "task_md_file": "TASKS/TASK-refine-a9quant-strategy-entities-draft.md",
-      "status": "pending",
-      "picked_at": null,
+      "status": "active",
+      "picked_at": "2026-03-17T14:17:25+00:00",
       "goal": "Strengthen phase2 draft entities_md into a clearer entity dictionary",
       "scope": [
         "learn/a9quant-strategy_phase2_draft.json only"
@@ -440,8 +440,8 @@
       "task_id": "task-write-a9quant-strategy-phase2-owner-docs",
       "task_json_file": "TASKS/TASK-write-a9quant-strategy-phase2-owner-docs.json",
       "task_md_file": "TASKS/TASK-write-a9quant-strategy-phase2-owner-docs.md",
-      "status": "pending",
-      "picked_at": null,
+      "status": "completed",
+      "picked_at": "2026-03-17T14:17:52+00:00",
       "goal": "Execute init-project phase2 writer against /root/a9quant-strategy using the reviewed draft payload",
       "scope": [
         "Run phase2 writer with learn/a9quant-strategy_phase2_draft.json after confirming target owner docs are empty"
@@ -450,12 +450,12 @@
         {
           "id": "verify",
           "text": "Command(s) pass: make verify",
-          "status": "pending"
+          "status": "completed"
         },
         {
           "id": "evidence",
           "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
-          "status": "pending"
+          "status": "completed"
         }
       ]
     },
@@ -615,6 +615,93 @@
           "id": "evidence",
           "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
           "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-run-real-a9quant-strategy-init-project-xhigh",
+      "title": "run real a9quant strategy init-project xhigh",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-run-real-a9quant-strategy-init-project-xhigh",
+      "task_json_file": "TASKS/TASK-run-real-a9quant-strategy-init-project-xhigh.json",
+      "task_md_file": "TASKS/TASK-run-real-a9quant-strategy-init-project-xhigh.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "Use the generic init-project xhigh flow against /root/a9quant-strategy, persist init_project_session state, and validate the manual continuation contract on the real target project.",
+      "scope": [
+        "tools/appserverclient.py",
+        "tools/project_config.json",
+        "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+        "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+      ],
+      "acceptance": [
+        {
+          "id": "verify",
+          "text": "Command(s) pass: make verify",
+          "status": "pending"
+        },
+        {
+          "id": "evidence",
+          "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-prepare-a9quant-init-project-update-payload",
+      "title": "prepare a9quant init-project update payload",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-prepare-a9quant-init-project-update-payload",
+      "task_json_file": "TASKS/TASK-prepare-a9quant-init-project-update-payload.json",
+      "task_md_file": "TASKS/TASK-prepare-a9quant-init-project-update-payload.md",
+      "status": "pending",
+      "picked_at": null,
+      "goal": "Read the current must_read_next files from /root/a9quant-strategy init_project_session and draft the next --update-init-project payload for the same session.",
+      "scope": [
+        "learn/a9quant-strategy_init_project_update_payload.json",
+        "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+        "reports/run-2026-03-11-vnext-release-baseline/decision.md",
+        "tools/project_config.json"
+      ],
+      "acceptance": [
+        {
+          "id": "verify",
+          "text": "Command(s) pass: make verify",
+          "status": "pending"
+        },
+        {
+          "id": "evidence",
+          "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "queue_id": "queue-read-second-a9quant-init-project-batch",
+      "title": "read second a9quant init-project batch",
+      "run_id": "run-2026-03-11-vnext-release-baseline",
+      "task_id": "task-read-second-a9quant-init-project-batch",
+      "task_json_file": "TASKS/TASK-read-second-a9quant-init-project-batch.json",
+      "task_md_file": "TASKS/TASK-read-second-a9quant-init-project-batch.md",
+      "status": "completed",
+      "picked_at": "2026-03-17T14:31:47+00:00",
+      "goal": "Read the current second must_read_next batch from /root/a9quant-strategy and continue the same init_project_session without writing owner docs.",
+      "scope": [
+        "learn/a9quant-strategy_init_project_update_payload_round2.json",
+        "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+        "reports/run-2026-03-11-vnext-release-baseline/decision.md",
+        "tools/project_config.json"
+      ],
+      "acceptance": [
+        {
+          "id": "verify",
+          "text": "Command(s) pass: make verify",
+          "status": "completed"
+        },
+        {
+          "id": "evidence",
+          "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+          "status": "completed"
         }
       ]
     }
