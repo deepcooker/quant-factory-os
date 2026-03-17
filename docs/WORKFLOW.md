@@ -183,6 +183,7 @@ project
 - `python3 tools/appserverclient.py --init-project`
 - `python3 tools/appserverclient.py --init-project -new`
 - `python3 tools/appserverclient.py --init-project --instruction-text "<一句补充执行指令>"`
+- `python3 tools/appserverclient.py --init-project -t "<一句补充执行指令>"`
 - `python3 tools/appserverclient.py --init-project --instruction-file docs/xxx.md`
 
 目标：
@@ -197,6 +198,8 @@ session 语义：
 - `session_registry.init_project_session` 是初始化过程的 thread 指针
 - `python3 tools/appserverclient.py --init-project` 默认应 `resume` 既有 init-project session
 - `python3 tools/appserverclient.py --init-project -new` 才允许显式重开新的 init-project session
+- 如果当前 `init_project_session` 没有 `thread_id/thread_path`，那么即使不带 `-new`，`--init-project` 也应创建新的初始化 session
+- `--init-project` / `--update-init-project` 在“流程继续、但尚未完成”时也应返回 `err_code = 0`；是否继续由 `status` 与 `next_action` 表达，而不是把正常流程状态编码成错误
 - `bootstrap_state.is_inited` 管项目是否已完成首轮接入；`init_project_session` 管初始化过程本身，二者不是同一概念
 
 默认输入规则：
@@ -264,7 +267,7 @@ session 语义：
 - `init_project_session` 当前还保存两类手工续跑信息：
   - `session_execution_instruction`
   - `operator_notes`
-- 当前 repo 里仍未接 app-server init thread；`--init-project` 目前仍是本地 session/state runtime
+- 当前 repo 里仍未接 app-server init thread；`--init-project` 目前仍是本地 session/state runtime，`effort=xhigh` 只是状态协议，不等于已经生成可 `/resume` 的真实线程
 
 ### 4.2 确定需求方向（run 级）
 

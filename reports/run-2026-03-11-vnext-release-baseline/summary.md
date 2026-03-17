@@ -2,6 +2,182 @@
 
 RUN_ID: `run-2026-03-11-vnext-release-baseline`
 
+## a9quant-strategy init completion
+- 在 owner docs 反写完成后，已为 `/root/a9quant-strategy` 执行：
+  - `python3 tools/appserverclient.py --complete-init-project`
+- 真实结果：
+  - `init_project_completion_status=completed`
+  - `/root/a9quant-strategy/tools/project_config.json -> bootstrap_state.is_inited = "Y"`
+  - `initialized_by = "appserverclient --complete-init-project"`
+- 这一步没有开始 tools 迁移，也没有继续改目标项目代码；它只负责把初始化状态从未完成切到已完成。
+- 现在 `/root/a9quant-strategy` 已经具备进入 `learn-baseline` 和后续主线调试的资格。
+
+## a9quant-strategy owner docs rewrite
+- 已将 `/root/a9quant-strategy` 的 6 份 owner docs 按当前正确理解重写：
+  - `AGENTS.md`
+  - `docs/PROJECT_GUIDE.md`
+  - `docs/WORKFLOW.md`
+  - `docs/ENTITIES.md`
+  - `docs/FILE_INDEX.md`
+  - `docs/TOOLS_METHOD_FLOW_MAP.md`
+- 这次不再沿用之前偏摘要化、偏 runtime-only 的旧版本，而是按当前完成的 init-project 理解重写：
+  - 文档优先级改为：总纲 -> README -> 中央银行设计 -> 一期策略手册 -> 原始想法
+  - 项目阶段明确改成：研发阶段 / 上线后运维数据与持续迭代阶段
+  - 协作主线明确与 foundation 对齐：learn-baseline -> 主线程 -> 角色线程 -> thread->task->run 去噪总结
+  - 当前技术主线、中央银行式风险闸门、三账本终局和一期趋势+鲨鱼落地都已进入正式 owner docs
+- 当前仍未执行 `--complete-init-project`，因此目标项目自己的 `bootstrap_state.is_inited` 仍保持 `N`，后续是否进入 learn-baseline 还等 owner 最后确认。
+
+## a9quant-strategy foundation-parity owner-rules update
+- 本轮把最后一组 owner 规则直接对齐到 foundation 项目本身，而不是继续补技术证据。
+- 对齐内容包括：
+  - 剩余初始化约定与基建项目一致
+  - task/run/session 机器真相源思路与 session 审计材料保留方式与 foundation 一致
+  - 准备完成后从 foundation 同款主线进入需求讨论
+  - 任务完成后的收尾动作与 foundation 的 evidence + gitclient 收尾一致
+- 基于这批规则，起草并回写了：
+  - [learn/a9quant-strategy_init_project_update_payload_foundation_parity.json](/root/quant-factory-os/learn/a9quant-strategy_init_project_update_payload_foundation_parity.json)
+- 实际执行了：
+  - `python3 tools/appserverclient.py --update-init-project --payload-json learn/a9quant-strategy_init_project_update_payload_foundation_parity.json`
+- 结果仍保持 fail-closed：
+  - `err_code=1012`
+  - `ready_for_doc_write=false`
+- 但目标项目的 init session 现已推进为：
+  - `answered_questions = [Q1..Q17]`
+  - `unclear_questions = []`
+  - `must_read_next = []`
+- 到这一步，初始化理解层已经闭合；剩下的只是 owner 是否确认进入 owner docs 反写。
+
+## a9quant-strategy owner-rules init-project update
+- 本轮没有继续扫代码，而是把 owner 直接给出的规则推进到 `/root/a9quant-strategy` 的同一个 `init_project_session`。
+- 规则核心包括：
+  - tools 下的功能最终要下沉到目标项目自身
+  - 项目分两个阶段：研发阶段；上线后的运维数据/数据分析运营/持续研发迭代阶段
+  - 需求讨论与协作主线沿用基座：`learn-baseline -> 主线程 -> 角色线程 -> thread->task->run 去噪总结 -> 自循环学习`
+  - 分支与交付沿用 `gitclient` 命令面
+- 基于这批 owner 规则，起草并回写了：
+  - [learn/a9quant-strategy_init_project_update_payload_owner_rules.json](/root/quant-factory-os/learn/a9quant-strategy_init_project_update_payload_owner_rules.json)
+- 实际执行了：
+  - `python3 tools/appserverclient.py --update-init-project --payload-json learn/a9quant-strategy_init_project_update_payload_owner_rules.json`
+- 真实结果仍然是预期的 fail-closed：
+  - `err_code=1012`
+  - `ready_for_doc_write=false`
+- 但目标项目的 init session 已明显推进：
+  - `answered_questions = ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q9", "Q10", "Q11", "Q13", "Q15", "Q16", "Q17"]`
+  - 仍未闭合的只剩：
+    - `Q7`
+    - `Q8`
+    - `Q12`
+    - `Q14`
+- 到这一步，后续需要的已不再是更多代码证据，而是更细的 owner 规则说明。
+
+## a9quant-strategy init-project final technical update payload
+- 继续沿 `/root/a9quant-strategy` 的同一个 `init_project_session` 推进，仍未触碰目标项目 `docs/*.md`。
+- 本轮补读了最后一批 `must_read_next`：
+  - `config.json`
+  - `replay_runner.py`
+- 这批证据已经足够确认：
+  - 当前配置层仍然是 sample/sandbox 导向，显式保留了 `dry_run=true`、`live_trading=false`、sandbox/proxy defaults 等运行假设
+  - `replay_runner.py` 已能把历史事件推进到主控制器的双引擎、risk approval 和执行链
+- 基于这批证据，起草并回写了：
+  - [learn/a9quant-strategy_init_project_update_payload_round3.json](/root/quant-factory-os/learn/a9quant-strategy_init_project_update_payload_round3.json)
+- 实际执行了：
+  - `python3 tools/appserverclient.py --update-init-project --payload-json learn/a9quant-strategy_init_project_update_payload_round3.json`
+- 真实更新结果继续保持 fail-closed：
+  - `err_code=1012`
+  - `ready_for_doc_write=false`
+  - `/root/a9quant-strategy/tools/project_config.json` 现已推进为：
+    - `answered_questions = ["Q1", "Q2", "Q3", "Q5", "Q6", "Q10", "Q11", "Q15"]`
+    - `must_read_next = []`
+    - `ready_for_doc_write = false`
+- 到这一步，技术补读层已基本闭合；剩余未完成项主要是 owner 规则和协作口径，而不是核心实现证据不足。
+
+## a9quant-strategy init-project second update payload
+- 继续沿 `/root/a9quant-strategy` 的同一个 `init_project_session` 推进，没有触碰目标项目 `docs/*.md`。
+- 本轮补读了第二批 `must_read_next`：
+  - `main_controller.py`
+  - `data_synchronizer.py`
+  - `account_state.py`
+  - `contracts.py`
+  - `test_integration.py`
+  - `test_regression.py`
+- 这批证据已经足够确认：
+  - `main_controller.py` 是真实主控与组合根，不是占位入口
+  - `data_synchronizer.py` 是状态真相源层，`account_state.py` 是建立在其上的业务账本
+  - `contracts.py` 已稳定定义 `RiskRequest / TradeIntent / StrategyContext / Snapshot` 契约
+  - 集成/回归测试已覆盖 live gate、trace、同步校准、OMS 幂等和 replay-driven full chain
+- 基于这批证据，起草并回写了：
+  - [learn/a9quant-strategy_init_project_update_payload_round2.json](/root/quant-factory-os/learn/a9quant-strategy_init_project_update_payload_round2.json)
+- 实际执行了：
+  - `python3 tools/appserverclient.py --update-init-project --payload-json learn/a9quant-strategy_init_project_update_payload_round2.json`
+- 真实更新结果继续保持 fail-closed：
+  - `err_code=1012`
+  - `ready_for_doc_write=false`
+  - `/root/a9quant-strategy/tools/project_config.json` 现已推进为：
+    - `answered_questions = ["Q1", "Q2", "Q3", "Q5", "Q6", "Q10", "Q11"]`
+    - `must_read_next = ["config.json", "replay_runner.py"]`
+    - `ready_for_doc_write = false`
+
+## a9quant-strategy init-project first update payload
+- 继续沿 `/root/a9quant-strategy` 的同一个 `init_project_session` 推进，没有重跑首轮。
+- 先补读了第一批 `must_read_next`：
+  - `ccxt_utils.py`
+  - `advanced_risk.py`
+  - `trend_engine.py`
+  - `shark_engine.py`
+  - `base_bitget_ws.py`
+  - `bitget_ws_bridge.py`
+  - `market_data_hub.py`
+  - `tiny_oms.py`
+- 这批证据已经足够确认三件事：
+  - `advanced_risk.py` 是中央银行式风控/系统模式核心，不是普通 util
+  - `main workflow` 的中段已经存在：行情 -> 双引擎 intent -> RiskRequest / RiskManager -> TinyOMS -> Bitget 执行/回报
+  - 核心对象边界已经能初步成立：交易所适配、风控、策略引擎、WS bridge、行情中心、OMS
+- 基于这批证据，起草并回写了：
+  - [learn/a9quant-strategy_init_project_update_payload.json](/root/quant-factory-os/learn/a9quant-strategy_init_project_update_payload.json)
+- 实际执行了：
+  - `python3 tools/appserverclient.py --update-init-project --payload-json learn/a9quant-strategy_init_project_update_payload.json`
+- 真实更新结果符合预期：
+  - `err_code=1012`
+  - `ready_for_doc_write=false`
+  - `/root/a9quant-strategy/tools/project_config.json` 已更新为：
+    - `answered_questions = ["Q5", "Q6", "Q11"]`
+    - 新的 `unclear_questions`
+    - 新的 `customer_followups`
+    - 第二批 `must_read_next = main_controller.py, data_synchronizer.py, account_state.py, contracts.py, test_integration.py, test_regression.py`
+
+## Real a9quant-strategy init-project xhigh run
+- 用真实目标项目 `/root/a9quant-strategy` 跑通了一次 session-first 初始化链，而不是继续停留在 fixture。
+- 先把目标项目自己的 `tools/project_config.json` 重置为未初始化：
+  - `bootstrap_state.is_inited = "N"`
+  - 清空 `session_registry.init_project_session`
+- 临时把 foundation 的 `tools/project_config.json -> required.project_root` 指到 `/root/a9quant-strategy`，随后执行：
+  - `python3 tools/init.py`
+  - `python3 tools/appserverclient.py --init-project -new --instruction-text "总纲优先，README 次之，中央银行设计是我们的亮点特色，也是风控和现金流核心；基于资管双向非对称对冲策略手册是第一期实现策略的具体内容；另外两份文档属于原始想法来源。先按17问理解，不要先写文档。"`
+- 当前真实返回符合手工续跑语义：
+  - `err_code=1012`
+  - `ready_for_doc_write=false`
+  - `answered_questions=[]`
+  - `unclear_questions=Q1..Q17`
+  - `customer_followups` 明确先按本轮指令校正文档优先级，再继续补读关键实现文件
+  - `must_read_next` 为：
+    - `ccxt_utils.py`
+    - `advanced_risk.py`
+    - `trend_engine.py`
+    - `shark_engine.py`
+    - `base_bitget_ws.py`
+    - `bitget_ws_bridge.py`
+    - `market_data_hub.py`
+    - `tiny_oms.py`
+- 更关键的是，目标项目自己的 `/root/a9quant-strategy/tools/project_config.json` 已真实写入：
+  - `bootstrap_state.is_inited = "N"`
+  - `session_registry.init_project_session.thread_id = init-project-20260317T142024708597Z`
+  - `status = phase1_ready`
+  - `effort = xhigh`
+  - `session_execution_instruction` 为本轮 owner 指令
+  - `customer_followups / must_read_next / ready_for_doc_write=false`
+- 运行完成后，foundation 指针已恢复回 `/root/quant-factory-os`，没有把默认 `project_root` 留在外部项目上。
+- 这轮也暴露了一个真实边界：`python3 tools/init.py` 在临时指向外部项目时，统一配置打印仍混入 foundation 的 bootstrap 元数据；说明 `init` 对“外部 project_root 的 bootstrap_state 归属”还没完全收干净。
+
 ## Init-project real-material-derived fixture validation
 - 新增了更接近真实项目材料层级的仓库内 fixture：
   - `fixtures/init_project_real_material_fixture/README.md`

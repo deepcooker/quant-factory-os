@@ -1,0 +1,34 @@
+{
+  "session_execution_instruction": "总纲优先，README 次之，中央银行设计是我们的亮点特色，也是风控和现金流核心；基于资管双向非对称对冲策略手册是第一期实现策略的具体内容；另外两份文档属于原始想法来源。先按17问理解，不要先写文档。",
+  "operator_notes": "owner 已明确剩余初始化规则与基建项目一致。也就是说，目标项目继续沿用 foundation 的 task/run/session 机器真相源思路、session 审计材料保留方式、准备完成后从基建同款主线进入需求讨论，以及任务完成后的 evidence + gitclient 收尾动作。",
+  "answered_questions": [
+    "Q1",
+    "Q2",
+    "Q3",
+    "Q4",
+    "Q5",
+    "Q6",
+    "Q7",
+    "Q8",
+    "Q9",
+    "Q10",
+    "Q11",
+    "Q12",
+    "Q13",
+    "Q14",
+    "Q15",
+    "Q16",
+    "Q17"
+  ],
+  "unclear_questions": [],
+  "customer_followups": [
+    "17 问已基本闭合。下一步如果要继续，就不是再补理解规则，而是确认是否进入 owner docs 反写。"
+  ],
+  "document_priority_understanding": "当前优先级保持不变：总纲清单定义终局、三账本、中央银行与阶段路线；README 提供入口和阅读导航；中央银行设计定义风控、现金流与制度核心；第一期策略手册定义趋势+鲨鱼的一期落地；其余原始想法文档只补背景和演化来源。",
+  "current_project_understanding": "当前已确认 /root/a9quant-strategy 的长期方向是把基座自动学习/自动迭代能力下沉到项目自身 tools 组件里。项目沿用 foundation 的初始化与协作方式：研发阶段由基座承担自动化同频学习、自我迭代和研发自动化；上线后进入运维数据、数据分析运营与持续研发迭代阶段。需求讨论、session 延续、task/run 去噪、交付收尾与 gitclient 命令面均与 foundation 项目一致。",
+  "ready_for_doc_write": false,
+  "must_read_next": [],
+  "implementation_gaps": [
+    "17 问理解层已基本闭合。剩余动作不是继续补问，而是由 owner 确认是否进入 owner docs 反写阶段。"
+  ]
+}

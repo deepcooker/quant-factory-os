@@ -209,5 +209,8 @@ No doc update, no ship.
   - Phase 1：`xhigh` `plan` 优先的 17 问理解与补缺阶段，输出 `answered_questions / unclear_questions / customer_followups / document_priority_understanding / current_project_understanding / ready_for_doc_write`
   - Phase 1 可保留内部辅助字段：`explicit_refs / light_repo_findings / implementation_gaps / must_read_next`
   - 当前允许通过 `--instruction-text/--instruction-file` 给同一 init session 注入补充执行指令；该指令应写回 `session_execution_instruction`
+  - `-t` 是 `--instruction-text` 的短别名
   - 手工续跑与状态推进通过 `python3 tools/appserverclient.py --update-init-project --payload-json <path>` 完成
   - 初始化完成入口是 `python3 tools/appserverclient.py --complete-init-project`
+- `--init-project` / `--update-init-project` 在“需要继续推进但并未出错”时必须返回 `err_code = 0`，并通过 `status / next_action` 指出下一步；只有真正异常才允许 `err_code <> 0`
+- 如果当前 `init_project_session` 没有 `thread_id/thread_path`，则不带 `-new` 的 `--init-project` 也必须创建新的初始化 session；`-new` 只用于显式推翻重来

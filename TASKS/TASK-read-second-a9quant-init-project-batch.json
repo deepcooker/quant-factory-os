@@ -1,0 +1,183 @@
+{
+  "task_id": "task-read-second-a9quant-init-project-batch",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "completed",
+  "priority": "P1",
+  "title": "read second a9quant init-project batch",
+  "goal": "Read the current second must_read_next batch from /root/a9quant-strategy and continue the same init_project_session without writing owner docs.",
+  "scope": [
+    "learn/a9quant-strategy_init_project_update_payload_round2.json",
+    "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "reports/run-2026-03-11-vnext-release-baseline/decision.md",
+    "tools/project_config.json"
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "verify",
+      "text": "Command(s) pass: make verify",
+      "status": "completed"
+    },
+    {
+      "id": "evidence",
+      "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+      "status": "completed"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-read-second-a9quant-init-project-batch.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "Read the second a9quant init-project must_read_next batch: main_controller.py, data_synchronizer.py, account_state.py, contracts.py, test_integration.py, test_regression.py.",
+      "Confirmed the target project already has a real controller-centered runtime with synchronizer, account ledger, central-bank-style risk gate, dual engines, OMS, bridge, and integration/regression validation chain.",
+      "Prepared and applied learn/a9quant-strategy_init_project_update_payload_round2.json to the same init_project_session without touching target owner docs."
+    ],
+    "decisions": [
+      "Promote answered_questions to Q1, Q2, Q3, Q5, Q6, Q10, and Q11 based on second-batch implementation evidence.",
+      "Keep ready_for_doc_write=false and continue fail-closed; the next evidence batch is limited to config.json and replay_runner.py.",
+      "Do not update /root/a9quant-strategy/docs/*.md in this round; only advance /root/a9quant-strategy/tools/project_config.json init_project_session."
+    ],
+    "risks": [
+      "Q4, Q7-Q9, Q12-Q17 still lack enough explicit owner guidance or project-native workflow evidence.",
+      "Q15 still depends on config.json and replay_runner.py; promoting it now would overfit implementation evidence without closing configuration and replay concerns."
+    ],
+    "verification": [
+      "python3 tools/appserverclient.py --update-init-project --payload-json learn/a9quant-strategy_init_project_update_payload_round2.json",
+      "python3 tools/project_config.py",
+      "Verified /root/a9quant-strategy/tools/project_config.json now carries answered_questions=[Q1,Q2,Q3,Q5,Q6,Q10,Q11], must_read_next=[config.json,replay_runner.py], ready_for_doc_write=false."
+    ],
+    "next_steps": [
+      "Read /root/a9quant-strategy/config.json and /root/a9quant-strategy/replay_runner.py.",
+      "Prepare the next update-init-project payload to validate Q15 and decide whether any remaining questions can move to answered_questions."
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": ""
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "pending_ack",
+      "close_escalation": false,
+      "notes": [],
+      "updated_at": ""
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-17T22:35:00+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-17T22:35:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}
