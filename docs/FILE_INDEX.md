@@ -30,6 +30,7 @@
 | `TASKS/TASK-*.json` | 当前或历史 task 的机器真相源；现在也承载 `role_threads`、`test_gate` 和 task-level aggregate `task_summary`。 | 需要程序稳定读取 task 协作状态、test gate 或 task summary 时 |
 | `tools/project_config.template.json` | 其他项目接入时可复用的最小配置模板。 | 新项目接入时 |
 | `tools/project_config.py` | 统一配置出口；把 JSON 最小数据、系统常量和运行时状态拼成统一大配置视图。 | 任何脚本取配置时 |
+| `tools/sync_tools.py` | foundation -> 业务项目的固定清单同步入口；按约束路径同步 `tools/` 与 `prompts/`，不碰目标项目自己的 `project_config.json`。 | foundation 代码已更新，需要把最小 tools 下沉到真实业务项目时 |
 | `tools/taskclient.py` | Python-first 的统一 task 入口；当前同时承担 task/queue JSON 读写、queue 选择、runtime 绑定、task bootstrap、`role_threads`、`test_gate`、`task_summary` 与 `run_main_resolution` 更新。 | 需要从 `QUEUE.json` 选择 task、读取 active task、新建 task 或更新 task 协作状态时 |
 | `tools/evidence.py` | run evidence 的最小生成与维护入口；当前也提供 `run_summary.json` 的最小读写、带 `merge_policy` 的 `task summary -> run summary` 聚合、少量高频模式的 run-level 规则化归并、`cross_task_risks` 的近义 blocked-gate 风险去重、按同一 run 下 task JSON 真相源重算 `active/completed/source tasks`、显式 `normalize-run-summary` 渐进清理，以及生成供 baseline refresh 使用的 `baseline_ready_summary`。 | 补 `meta/summary/decision`、读取/更新 run summary、按字段类别聚合稳定 task summary、提升 run-level 表达质量、对齐 run/task 真相、做显式历史清理，或压缩 baseline refresh 输入时 |
 | `tools/result_schema.py` | 可组合流程方法统一返回协议：`err_code / err_desc / data`。 | 新增流程入口时 |
@@ -38,9 +39,9 @@
 
 | 文件 | 作用 | 什么时候优先看 |
 | --- | --- | --- |
-| `tools/init.py` | 环境准备、项目骨架补齐、Codex/Git 前置检查；缺失时会补最小标准协议骨架和 `project_config.json` bootstrap。 | 开工前环境准备或新项目首次接入时 |
+| `tools/init.py` | 环境准备、项目骨架补齐、Codex/Git 前置检查；缺失时会补最小标准协议骨架和 `project_config.json` bootstrap。对外部业务项目，应先由 foundation 侧执行 `sync_tools.py` 下沉最小 tools，再在目标项目里运行 `init.py`。 | 开工前环境准备或新项目首次接入时 |
 | `tools/appserverclient.py` | Codex app-server runtime 核心；负责 baseline / fork / fork-role / role-turn / summarize-role / mark-test-gate / current-turn / summarize-current / refresh-baseline，并显式打印当前 active task JSON 摘要；`refresh-baseline` 现优先消费 `run_summary.json`，`summarize-role` 会自动 merge role summaries 并刷新 task gap/escalation/resolution，`mark-test-gate` 会继续联动刷新。当前风险是它已经同时看见 runtime 与部分 task gate 规则，后续应继续保持“真实线程生命周期 + 必要写回”的边界，避免演化成总控脚本。 | 学习基线、当前 session 推进、role thread 绑定/执行/去噪、test gate 写回和 baseline 回灌时 |
-| `tools/appserverclient.py --init-project` | 未初始化项目的首轮接入入口；当前围绕 `bootstrap_state + init_project_session` 工作，并采用 `xhigh plan` 的 17 问理解协议。它现在会生成最终 prompt、启动或续跑真实 app-server init thread、把真实 `thread_id/thread_path/last_turn_id` 写回 `init_project_session`，并返回结构化状态 `session_execution_instruction / answered_questions / unclear_questions / customer_followups / document_priority_understanding / current_project_understanding / ready_for_doc_write / status / next_action`。`-t` 是聊天/补充指令入口；只有显式 `-p` 才会强制再走一次完整 prompt；`-new` 只负责显式推翻重来，不再隐式等于 prompt 模式。 | 新项目还没完成初始化理解时 |
+| `tools/appserverclient.py --init-project` | 未初始化项目的首轮接入入口；当前围绕 `bootstrap_state + init_project_session` 工作，并采用 `plan` 模式的 17 问理解协议，默认 effort 为 `low`，可用 `-e` 覆盖。它现在会生成最终 prompt、启动或续跑真实 app-server init thread、把真实 `thread_id/thread_path/last_turn_id` 写回 `init_project_session`，并返回结构化状态 `session_execution_instruction / answered_questions / unclear_questions / customer_followups / document_priority_understanding / current_project_understanding / ready_for_doc_write / status / next_action`。`-t` 是聊天/补充指令入口；只有显式 `-p` 才会强制再走一次完整 prompt；`-new` 只负责显式推翻重来，不再隐式等于 prompt 模式。 | 新项目还没完成初始化理解时 |
 | `tools/init_project.final_prompt.md` | `--init-project` 每轮生成的最终 prompt 文本；由固定模板、本轮补充执行指令、动态项目上下文和输出约束拼接而成。它现在既是人工审计文件，也是当前真实 init thread 的实际 turn 输入源。 | 调试 init-project prompt、核对 instruction 是否生效、排查 init thread 输入和续跑行为时 |
 | `tools/view.sh` | 稳定的分段文件读取工具；支持直接执行和 `python3 tools/view.sh ...`，兼容历史 `--lines START:END` 用法，并内置 repo 边界与 denylist 检查。 | 读取长文件、按范围查看、查找命中行或验证读取边界时 |
 | `tools/prompts/init_project_prompt.md` | `--init-project` 的固定提示词模板；当前定义了 `README -> raw docs -> 17问理解 -> customer followups -> ready_for_doc_write` 的初始化理解协议。 | 设计或调整未初始化项目的首轮接入流程时 |

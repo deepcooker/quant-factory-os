@@ -2,6 +2,36 @@
 
 RUN_ID: `run-2026-03-11-vnext-release-baseline`
 
+## learnbaseline / init-project effort and sandbox decision
+- 当前正式决定：
+  - `--learnbaseline` 默认 effort 保持 `low`
+  - `--init-project` 默认 effort 也保持 `low`
+  - 两者都通过 `-e/--effort <low|medium|high|xhigh>` 显式覆盖
+- 这样处理的原因是：
+  - 日常同频和首轮初始化不应默认拉高 token / 时间成本
+  - heavier pass 应由操作者显式决定，而不是写死在主流程里
+- 当前不再接受“learnbaseline 可调、init-project 不可调”的分裂状态；两条主线命令面已统一。
+- 同时保留的运行时决策是：
+  - app-server thread/turn 统一使用 `approvalPolicy = never`
+  - `sandboxPolicy = externalSandbox`
+  - 把隔离委托给外部容器 / appservice 环境，而不是继续强依赖内部 Linux sandbox
+- 原因已经由真实环境证明：
+  - 旧的 `readOnly/workspaceWrite + 内部沙箱` 路径会在当前容器里触发 `bwrap / namespace` 兼容问题
+  - 新配置至少已把请求层和执行层带离这条冲突路径
+- 当前残余边界：
+  - `/root/a9quant-strategy` 上的 `--learnbaseline -new -e xhigh` 已确认请求层生效，但这轮真实 xhigh 学习尚未完全收口回写
+  - 因此这轮把“参数和请求层已正确生效”视为已验证事实；最终 `project_config.json` 的 xhigh 回写可在下一次同类运行完成时继续确认
+- 同时固定另外两条基础设施决策：
+  - 复杂 `plan` 轮次统一按 1 小时超时预算处理，避免真实 learn/init 轮次在 20 分钟级别被过早截断
+  - foundation -> 业务项目的 tools 下沉不再依赖临时 `cp`，而是统一走 `python3 tools/sync_tools.py -p <project_root>`
+- `sync_tools.py` 的边界也固定：
+  - 只同步固定清单里的 `tools/` 与 `tools/prompts/`
+  - 不同步目标项目自己的 `tools/project_config.json`
+  - 不触碰业务 owner docs
+- `init` 的骨架协议也同步更新：
+  - 新项目默认补齐 `docs/FOUNDATION_BRIDGE.md`
+  - 避免目标项目接入时还要事后补 foundation 工程桥接说明
+
 ## a9quant-strategy PROJECT_GUIDE repair decision
 - `/root/a9quant-strategy/docs/PROJECT_GUIDE.md` 的主问题不是答案偏差，而是题库本体曾被业务化改写。
 - 当前正式决定：
