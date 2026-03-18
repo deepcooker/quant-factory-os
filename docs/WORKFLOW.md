@@ -16,6 +16,7 @@
 - `init` 只属于开工前准备层，不属于主业务流程。
 - 真正自动化主线以项目为中心，由 `appserverclient` 驱动学习基线、run 级方向推进、fork 多角色 session、去噪回灌 baseline，并由 `gitclient` 完成交付收尾。
 - 研发期主要通过 Codex CLI 调试和接管；长期正式运行应收敛到普通窗口中的 Python orchestrator + Codex app-server。
+- 当前阶段已经开始把这套基座嵌入外部业务项目做真实 learnbaseline / owner-doc 同频验证，因此本仓主线文档必须保持业务无关、流程干净。
 - 如果目标项目尚未接入本仓 owner docs 与自动化主线，先按 [PROJECT_BOOTSTRAP_PROTOCOL.md](/root/quant-factory-os/docs/PROJECT_BOOTSTRAP_PROTOCOL.md) 完成首轮项目学习与文档补齐，再进入本状态机。
 - 长文件读取统一使用 `tools/view.sh`；当前正式支持 `tools/view.sh ...` 和 `python3 tools/view.sh ...`，并兼容历史 `--lines START:END`。
 
@@ -176,6 +177,8 @@ project
 - 以项目为中心完成一次重型 `plan` 同频
 - 把主线、课程、问题、材料锚定进 baseline session
 - baseline 已存在时直接复用；`-new` 时重建
+- `PROJECT_GUIDE.md` 中每题 `必查文件` 现在按“真实 repo 内文件路径”提取；说明性条目（如“同上”“foundation 仓 …”“本项目 7 份 owner docs”）只保留课程语义，不再混入动态 baseline prompt 的文件清单
+- `learnbaseline` 的 `turn/start` 当前使用 `sandboxPolicy = workspaceWrite`，不再在 runtime 层把 baseline turn 强制压回 `readOnly`
 
 ### 4.1A `appserverclient --init-project`
 
@@ -200,7 +203,22 @@ session 语义：
 - `python3 tools/appserverclient.py --init-project -new` 才允许显式重开新的 init-project session
 - 如果当前 `init_project_session` 没有 `thread_id/thread_path`，那么即使不带 `-new`，`--init-project` 也应创建新的初始化 session
 - `--init-project` / `--update-init-project` 在“流程继续、但尚未完成”时也应返回 `err_code = 0`；是否继续由 `status` 与 `next_action` 表达，而不是把正常流程状态编码成错误
+- `--init-project` 当前必须生成并刷新目标项目的 `tools/init_project.final_prompt.md`；该文件是“固定模板 + 本轮补充执行指令 + 动态项目上下文 + 输出约束”的最终可审计 prompt 文本，也是当前真实 init thread 的实际 turn 输入源
+- `session_registry.init_project_session` 需要保留 `prompt_file / prompt_updated_at / prompt_stage`，用于手工检查和后续接入真实 app-server init thread
 - `bootstrap_state.is_inited` 管项目是否已完成首轮接入；`init_project_session` 管初始化过程本身，二者不是同一概念
+- 当前真实 init thread 语义为：
+  - 不带 `-new` 且当前没有 thread 时：创建真实 init thread
+  - 不带 `-new` 且当前已有 thread 时：默认续跑
+  - `-new`：显式推翻重来；它本身不再隐式等于 prompt 模式
+  - `-p`：显式强制再走一次完整 prompt
+  - 有 thread 且仅补一句 `-t` 时：默认是沿同一线程继续聊天微调，不重新喂完整 prompt
+  - 无 thread 且仅给一句 `-t` 时：创建真实 thread，但只发送聊天文本，不自动重喂完整 prompt
+- 当前产品级重复点击保护为：
+  - 如果已有 init thread 仍在进行中，重复执行 `--init-project` 不应生成第二个线程
+  - 这时返回 `err_code = 0`
+  - `status = needs_update`
+  - `next_action` 指向继续同一线程
+  - 当前允许通过 `existing_thread_busy` / `rollout_pending` 暴露“线程已存在但 rollout 尚未稳定可 resume”的忙态边界
 
 默认输入规则：
 1. 先读项目根目录的 `README.md` 作为 guide
@@ -235,7 +253,8 @@ session 语义：
     - `implementation_gaps`
     - `must_read_next`
   - 当前证据不足时，必须返回：
-    - `err_code != 0`
+    - `err_code = 0`
+    - `status = needs_update`
     - `ready_for_doc_write = false`
     - 面向客户的 `customer_followups`
   - `light_repo_findings` 只负责仓库现状摘要，不替代真正读代码；当前推荐最小字段：
@@ -263,11 +282,14 @@ session 语义：
 说明：
 - 当前 `--init-project` 正式门禁、状态机和 prompt 协议已确定
 - 当前 repo 里已落最小 Phase 1 intake：默认可收集 `README + docs` 输入、生成 `light_repo_findings`、提取显式文件引用并给出第一批 `must_read_next`
-- 当前 repo 里已落最小 `init_project_session` 续跑语义：默认 `--init-project` 会复用同一个本地 phase-1 session 记录，`--init-project -new` 会显式生成新的 session id
+- 当前 repo 里已落真实 init thread：`--init-project` 会先落盘最终 prompt，再用这份 prompt 启动或续跑真实 app-server thread，并把真实 `thread_id/thread_path/last_turn_id` 写回 `init_project_session`
 - `init_project_session` 当前还保存两类手工续跑信息：
   - `session_execution_instruction`
   - `operator_notes`
-- 当前 repo 里仍未接 app-server init thread；`--init-project` 目前仍是本地 session/state runtime，`effort=xhigh` 只是状态协议，不等于已经生成可 `/resume` 的真实线程
+- 当前残余边界不是“没有真实 thread”，而是：
+  - app-server 返回的 rollout 文件有时不会立刻落盘
+  - 所以创建完真实 init thread 后，立刻重复点击可能先看到 `existing_thread_busy` / `rollout_pending`
+  - 这属于可接受的忙态保护，而不是流程错误
 
 ### 4.2 确定需求方向（run 级）
 

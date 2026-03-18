@@ -2,6 +2,80 @@
 
 RUN_ID: `run-2026-03-11-vnext-release-baseline`
 
+## a9quant-strategy PROJECT_GUIDE fixed question bank repair
+- 本轮只修 `/root/a9quant-strategy/docs/PROJECT_GUIDE.md`，不再扩散到自动化逻辑或 runtime。
+- 真实问题已经定位清楚：a9 的 `PROJECT_GUIDE` 题目标题与顺序曾被业务化改写，偏离了 foundation 固定题库；这违反了“题库结构固定、只允许项目化答案层”的规则。
+- 已完成修复：
+  - 保留 a9 项目的项目化开头与固定阅读顺序
+  - 将 `Q1-Q17` 题面与顺序全部恢复为与 foundation 完全一致
+  - 每题继续保留 `为什么问这题 / 标准答案 / 必查文件 / 查找线索 / 主线意义` 五段结构
+  - 所有标准答案重新落在 a9 的业务语义上：三账本、中央银行、一期趋势/鲨鱼、当前实现边界、与 foundation 的承接方式
+- 结构校验已通过：
+  - 对比 foundation 与 a9 的 `Q1-Q17` 标题列表，结果完全一致
+- 当前判断：
+  - `a9quant-strategy/AGENTS.md`
+  - `a9quant-strategy/docs/WORKFLOW.md`
+  - `a9quant-strategy/docs/FILE_INDEX.md`
+  与新的 `PROJECT_GUIDE` 没有明显直接冲突，因此本轮不扩大修改面。
+- 随后又继续收紧了答案层，而不是继续改题库：
+  - 重点修了 `Q1/Q2/Q5/Q6/Q10/Q11/Q17`
+  - 这些题现在更明确地体现：
+    - 终局是 `Treasury / Growth / Gamble` 三账本财富系统
+    - `中央银行` 是制度化闸门/预算/权限/冻结机制，不是普通风控模块
+    - 一期只能落地 B 类：趋势 + 鲨鱼
+    - foundation 只承接自动化研发 OS，不覆盖业务制度本体
+    - 当前主线仍是先把 owner docs 稳定成同频核心，再继续自动化与实现优化
+- 在 owner 最新纠偏后，又继续重写了关键题答案，把阶段边界写清：
+  - 一期不是先做完整 AI 自我迭代工厂
+  - 一期主线是：中央银行总控 + 确定性策略试点 + 模拟盘/实盘接通 + 数据分析与执行数据反哺优化
+  - 二期才补：`AI策略创作 -> backtesting/极限电池 -> replay仿真一致性` 这组更偏 lab 的实验室能力
+  - 受这轮修正影响的重点题为：
+    - `Q1`
+    - `Q2`
+    - `Q3`
+    - `Q5`
+    - `Q6`
+    - `Q10`
+    - `Q15`
+    - `Q17`
+
+## init-project real appserver thread
+- 这一轮把 `init-project` 从本地 phase1 runtime 提升成了真实 app-server init thread。
+- `python3 tools/appserverclient.py --init-project` 现在的最小产品级语义是：
+  - 没有 `init_project_session` 时，不带 `-new` 也会创建新的真实 init thread
+  - 已有 `init_project_session` 时，不带 `-new` 默认续跑
+  - 只有显式 `-new` 才表示推翻重来
+  - `-p` 是强制再走一次完整 prompt
+  - 已有线程时，仅补一句 `-t` 默认是沿同一线程聊天微调，不重喂完整 prompt
+- `-t` 已成为 `--instruction-text` 的短别名，并已同步到 foundation repo 与 `/root/a9quant-strategy` 最小 tools。
+- `init-project` / `update-init-project` 在“需要继续推进但没有真实异常”时，现在统一返回：
+  - `err_code = 0`
+  - `status = needs_update`
+  - `next_action = ...`
+- 目标项目内的最终 prompt 仍固定落盘为：
+  - `/root/a9quant-strategy/tools/init_project.final_prompt.md`
+- 这份文件现在不只是审计副本，而是当前真实 init thread 的实际 turn 输入源。
+- 真实验证已经通过：
+  - `/root/a9quant-strategy/tools/project_config.json -> session_registry.init_project_session.thread_id` 写入了真实 app-server thread id
+  - `thread_path` 写入了真实 rollout 路径
+  - `last_turn_id`、`prompt_file`、`prompt_stage` 也会一起写回
+- 产品级重复点击现在也有保护：
+  - 如果同一 init thread 仍在进行中，重复执行 `--init-project` 不会生成第二个线程
+  - 当前会返回 `err_code = 0`
+  - `init_project_session_behavior = existing_thread_busy`
+  - `inprogress_turn_ids = ["rollout_pending"]`
+- 当前真实边界也被保留为显式事实，而不是被隐藏：
+  - app-server 返回的 rollout 文件有时不会立刻落盘
+  - 所以刚创建线程后立刻再次点击，可能先看到 `existing_thread_busy / rollout_pending`
+  - 这属于可接受的忙态保护，不是流程错误
+- 随后又补了一刀真正的 learnbaseline 对齐：
+  - `init-project` 不再只起 thread/turn 就返回
+  - 现在会像 `learnbaseline` 一样等待 turn 收口、等待 rollout 落盘、再读 thread 并提取最后一条 agent JSON
+  - 也就是说，`init-project` 当前已经开始消费真实 plan 结果，而不是只依赖本地 phase1 payload 壳
+- 同一轮还更新了 [docs/PROJECT_GUIDE.md](/root/quant-factory-os/docs/PROJECT_GUIDE.md)：
+  - `Q12` 现在明确区分“未初始化项目先走 --init-project，再进入 --learnbaseline”
+  - `Q16` 现在明确 `appserverclient` 有两类 thread：`init-project` init thread 和已初始化项目的 baseline/run/session 主线
+
 ## a9quant-strategy init completion
 - 在 owner docs 反写完成后，已为 `/root/a9quant-strategy` 执行：
   - `python3 tools/appserverclient.py --complete-init-project`
@@ -1399,3 +1473,104 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
   - `python3 tools/init.py`
   - `python3 tools/appserverclient.py --init-project -new --instruction-text "总纲优先，README 次之，中央银行设计是风控与现金流核心"`
   - `python3 tools/view.sh fixtures/init_project_fixture/tools/project_config.json --from 1 --to 160`
+
+## init-project p-only prompt semantics
+- 新建并完成 `task-init-project-p-only-prompt-semantics`，把 `--init-project` 的 CLI 语义再收紧一层：
+  - `-p` 现在是唯一的完整 prompt 开关
+  - `-new` 只负责重开 init thread，不再隐式等于 prompt 模式
+  - 无 init thread 时，`--init-project -t "..."` 会新建真实 thread，但只发送聊天文本，不自动重喂完整 prompt
+- 这次改动的目的不是扩功能，而是把 `init-project` 的参数行为收成产品直觉：线程创建和完整 prompt 注入是两件不同的事，不再绑定。
+
+## Commands / Outputs (p-only prompt semantics)
+- verified:
+  - `python3 -m py_compile tools/appserverclient.py tools/project_config.py`
+  - `python3 -m py_compile /root/a9quant-strategy/tools/appserverclient.py /root/a9quant-strategy/tools/project_config.py`
+  - lightweight monkeypatch branch check:
+    - `force_new + -t` -> `created_real_init_thread_chat_turn`
+    - `force_new + -p + -t` -> `created_real_init_thread`
+
+## fix init-project chat turn plan xhigh
+- 新建并完成 `task-fix-init-project-chat-turn-plan-xhigh`，修复了非 prompt 的 init-project chat turn 掉回 `default + low` 的问题。
+- 现在即使只执行 `--init-project -new -t "你好"`，底层也会沿 init-thread 的运行时壳走：
+  - `mode = plan`
+  - `effort = xhigh`
+- 这次没有再改输出 payload 形状，只修正运行时壳，避免继续把问题面扩大。
+
+## Commands / Outputs (chat turn plan+xhigh fix)
+- verified:
+  - `python3 -m py_compile tools/appserverclient.py tools/project_config.py`
+  - `python3 -m py_compile /root/a9quant-strategy/tools/appserverclient.py /root/a9quant-strategy/tools/project_config.py`
+  - monkeypatch runtime check:
+    - `continue_init_project_chat_turn(..., create_new_thread=True)` now constructs `CodexAppClient(mode='plan', effort='xhigh')`
+## 2026-03-18 - manual rewrite a9quant owner docs from source hierarchy
+
+- 这轮不走 init-project 自动化，不看 phase1 JSON，直接以 `/root/a9quant-strategy` 的原始文档和关键实现为依据，手工重写 7 份 owner docs。
+- 固定优先级已落到目标项目文档：
+  - `docs/总纲清单（可复制）.md`
+  - `README.md`
+  - `docs/中央银行设计.md`
+  - `docs/基于资管双向非对称对冲策略手册.md`
+  - `docs/梦想中的交易资管财富系统想法.md`
+  - `docs/资管双向原始想法.md`
+- `/root/a9quant-strategy/docs/PROJECT_GUIDE.md` 已重写为 17 问课程文档，不再是摘要页；当前把“三账本财富系统、中央银行闸门、一期开局 B 类、先文档后代码”收成了明确标准答案。
+- 同步重写的还有：
+  - `/root/a9quant-strategy/AGENTS.md`
+  - `/root/a9quant-strategy/docs/WORKFLOW.md`
+  - `/root/a9quant-strategy/docs/ENTITIES.md`
+  - `/root/a9quant-strategy/docs/FILE_INDEX.md`
+  - `/root/a9quant-strategy/docs/TOOLS_METHOD_FLOW_MAP.md`
+  - `/root/a9quant-strategy/docs/PROJECT_BOOTSTRAP_PROTOCOL.md`
+- 最小校验已完成：上述 7 个文件均已从 0 字节变为非空，`PROJECT_GUIDE.md` 首段显式写出固定阅读顺序。
+
+## 2026-03-18 - debug a9quant learnbaseline PROJECT_GUIDE parsing compatibility
+
+- 真实执行 `/root/a9quant-strategy` 的 `python3 tools/appserverclient.py --learnbaseline -new` 后，定位到问题不在 a9 的 `PROJECT_GUIDE.md`，而在 foundation 侧 `learnbaseline` 对 `必查文件` 的旧解析假设。
+- foundation 与 `/root/a9quant-strategy` 的 `tools/project_config.py` 已同步修复：`parse_project_guide_prompt_inputs()` 现在只提取真实 repo 内文件路径，自动忽略 `同上`、`foundation 仓 ...`、`本项目 7 份 owner docs` 等说明性条目。
+- 直接构建 `/root/a9quant-strategy` 的 baseline prompt 后，`Additional required files to read with tools/view.sh` 已收敛为真实文件列表，不再混入说明性 bullet。
+- 继续沿真实 rollout 排查后，又定位到 `tools/appserverclient.py` 的 `start_turn()` 把 `sandboxPolicy` 写死成了 `readOnly`；这会覆盖 thread/start 的 `workspaceWrite` 能力，放大 app-server 里的 `bwrap/namespace` 问题。
+- foundation 与 `/root/a9quant-strategy` 的 `tools/appserverclient.py` 已同步修复：`turn/start` 现在显式发送 `sandboxPolicy = workspaceWrite`。
+
+## a9quant-strategy business-first sync docs refinement
+- 本轮没有再碰 runtime 或自动化，只继续收 a9 的同频文档。
+- 已新增 `/root/a9quant-strategy/docs/FOUNDATION_BRIDGE.md`，把 foundation 收口成单独的工程承接说明：
+  - 它是什么
+  - 它有什么用
+  - 为什么与 Codex 并用
+  - 它和项目的关系
+  - 常用命令与两阶段开发模式
+- 已更新 `/root/a9quant-strategy/docs/PROJECT_GUIDE.md`：
+  - 新增“与 foundation 的关系”短节
+  - foundation 不再作为业务逻辑主要解释源
+  - 核心题继续以业务为中心，只在需要工程承接时引到 `docs/FOUNDATION_BRIDGE.md`
+- 已更新 `/root/a9quant-strategy/docs/总纲清单（可复制）.md`：
+  - 在不可变研发闭环后新增一期/二期分期澄清
+  - 明确二期 lab 更偏 `AI策略创作 -> backtesting/极限电池 -> replay仿真一致性`
+  - 明确一期现实主线是中央银行总控下的确定性策略试点、模拟盘/实盘接通、问题分析与执行数据反哺优化
+- 已最小更新 `/root/a9quant-strategy/docs/PROJECT_BOOTSTRAP_PROTOCOL.md` 与 `/root/a9quant-strategy/docs/FILE_INDEX.md`，把 `docs/FOUNDATION_BRIDGE.md` 纳入工程承接说明，但不放进首轮业务阅读顺序。
+- 当前同频口径已收成：
+  - 业务真相以总纲、README、中央银行设计、策略手册为主
+  - foundation 只是一份工程桥接说明，不再压过业务主线
+
+## foundation embedding + queue denoise
+- 当前基座已经开始把代码与同频流程嵌入外部业务项目中验证，这说明主线不再只是仓内自转，而是已经进入真实项目接入阶段。
+- 为避免新 session 继续被旧的 a9 文档修复上下文污染，本轮已把 active task 切到新的 cleanup task。
+- `TASKS/QUEUE.json` 已去掉 completed 项，只保留 active/pending/open 队列项，让当前主线视图回到干净状态。
+- `docs/WORKFLOW.md` 和 `docs/PROJECT_GUIDE.md` 只做了最小口径更新：明确 foundation 已开始嵌入外部业务项目验证，因此本仓主线文档要继续保持业务无关、流程优先。
+
+## task files hard cleanup
+- 本轮按要求直接删除了 `TASKS/` 下除当前 cleanup task 之外的旧 task 文件。
+- 共清理 237 个历史 task JSON/MD 文件；当前 `TASKS/` 只保留：
+  - `TASK-session-denoise-and-mainline-cleanup.json`
+  - `TASK-session-denoise-and-mainline-cleanup.md`
+- 这样新 session 不会再被旧 task 噪音污染，当前主线只剩一个 task 指针和一个 queue 项。
+
+## old reports cleanup
+- 本轮继续清理 `reports/` 噪音，删除了两个旧的非当前 run 目录：
+  - `run-2026-03-08-remove-templates-pivot`
+  - `run-2026-03-08-tools-orchestrator-entry`
+- 当前 `reports/` 只保留：
+  - 当前主线 run `run-2026-03-11-vnext-release-baseline`
+  - `projects/`
+  - `_SCHEMA.run_summary.json`
+  - `.gitkeep`
+
