@@ -20,6 +20,7 @@
 - 这类外部项目试点已经证明基座可嵌入，但也说明当前主线自动化尚未完全闭合；现阶段仍然是 `Codex 手工调试 + foundation（角色名）自动化` 一起推进。
 - 如果目标项目尚未接入本仓 owner docs 与自动化主线，先按 [PROJECT_BOOTSTRAP_PROTOCOL.md](/root/quant-factory-os/docs/PROJECT_BOOTSTRAP_PROTOCOL.md) 完成首轮项目学习与文档补齐，再进入本状态机。
 - 长文件读取统一使用 `tools/view.sh`；当前正式支持 `tools/view.sh ...` 和 `python3 tools/view.sh ...`，并兼容历史 `--lines START:END`。
+- 复杂 `plan` 轮次当前统一按 1 小时超时预算处理，避免真实 learn/init 在 20 分钟级别被过早截断。
 
 ## 1. 设计原则
 
@@ -123,7 +124,7 @@ project
 - 检查关键 owner docs 是否齐备
 - 缺失时自动创建最小标准协议骨架：
   - 根目录：`AGENTS.md`、`README.md`、`todo.md`
-  - `docs/`：`PROJECT_GUIDE.md`、`WORKFLOW.md`、`ENTITIES.md`、`FILE_INDEX.md`、`PROJECT_BOOTSTRAP_PROTOCOL.md`、`TOOLS_METHOD_FLOW_MAP.md`
+  - `docs/`：`PROJECT_GUIDE.md`、`WORKFLOW.md`、`ENTITIES.md`、`FILE_INDEX.md`、`FOUNDATION_BRIDGE.md`、`PROJECT_BOOTSTRAP_PROTOCOL.md`、`TOOLS_METHOD_FLOW_MAP.md`
   - 目录：`TASKS/`、`reports/`、`chatlogs/`、`appserver_log/`
   - `TASKS/`：`QUEUE.json`、`_SCHEMA.task.json`、`_SCHEMA.queue.json`
   - `tools/`：`project_config.template.json`
@@ -153,6 +154,7 @@ project
 命令：
 - `python3 tools/appserverclient.py --learnbaseline`
 - `python3 tools/appserverclient.py --learnbaseline -new`
+- `python3 tools/appserverclient.py --learnbaseline [-new] -e <low|medium|high|xhigh>`
 
 目标：
 - 建立或重建项目级 baseline 学习 session
@@ -178,21 +180,23 @@ project
 - 以项目为中心完成一次重型 `plan` 同频
 - 把主线、课程、问题、材料锚定进 baseline session
 - baseline 已存在时直接复用；`-new` 时重建
+- 默认 effort 为 `low`；需要更重的学习轮次时，使用 `-e <low|medium|high|xhigh>` 覆盖
 - `PROJECT_GUIDE.md` 中每题 `必查文件` 现在按“真实 repo 内文件路径”提取；说明性条目（如“同上”“foundation 仓 …”“本项目 7 份 owner docs”）只保留课程语义，不再混入动态 baseline prompt 的文件清单
-- `learnbaseline` 的 `turn/start` 当前使用 `sandboxPolicy = workspaceWrite`，不再在 runtime 层把 baseline turn 强制压回 `readOnly`
+- `learnbaseline` / `init-project` 的 app-server turn 当前默认使用 `approvalPolicy = never` + `sandboxPolicy = externalSandbox`，把隔离委托给外部容器 / appservice 环境，不再在 runtime 层强制套内部 Linux sandbox
 
 ### 4.1A `appserverclient --init-project`
 
 命令：
 - `python3 tools/appserverclient.py --init-project`
 - `python3 tools/appserverclient.py --init-project -new`
+- `python3 tools/appserverclient.py --init-project [-new] [-p] [-e <low|medium|high|xhigh>]`
 - `python3 tools/appserverclient.py --init-project --instruction-text "<一句补充执行指令>"`
 - `python3 tools/appserverclient.py --init-project -t "<一句补充执行指令>"`
 - `python3 tools/appserverclient.py --init-project --instruction-file docs/xxx.md`
 
 目标：
 - 作为未初始化项目进入正式主线前的首轮接入入口
-- 先以 `xhigh` `plan` 模式完成学习、补证据和 17 问完成度判断，再由人工继续纠偏和确认
+- 先以 `plan` 模式完成学习、补证据和 17 问完成度判断，再由人工继续纠偏和确认
 
 前置条件：
 - `tools/project_config.json -> bootstrap_state.is_inited` 不是 `Y`
@@ -211,6 +215,7 @@ session 语义：
   - 不带 `-new` 且当前没有 thread 时：创建真实 init thread
   - 不带 `-new` 且当前已有 thread 时：默认续跑
   - `-new`：显式推翻重来；它本身不再隐式等于 prompt 模式
+  - 默认 effort 为 `low`；需要更重的初始化理解轮次时，使用 `-e <low|medium|high|xhigh>` 覆盖
   - `-p`：显式强制再走一次完整 prompt
   - 有 thread 且仅补一句 `-t` 时：默认是沿同一线程继续聊天微调，不重新喂完整 prompt
   - 无 thread 且仅给一句 `-t` 时：创建真实 thread，但只发送聊天文本，不自动重喂完整 prompt

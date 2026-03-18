@@ -74,6 +74,7 @@ Required visible progress:
   - transport is fixed internally: `app-server`
   - baseline learning mode is fixed internally: `plan`
   - default model constant: `gpt-5.4`
+  - default effort is `low`; use `-e <low|medium|high|xhigh>` to override when a heavier learning pass is needed
   - baseline prompt is built from `tools/prompts/learnbaseline_prompt.md` plus dynamic project context
   - baseline creation must write `session_registry.learn_session_baseline`
   - current fork creation must write `session_registry.fork_current_session`
@@ -206,7 +207,7 @@ No doc update, no ship.
 - 首轮接入入口统一命名为 `python3 tools/appserverclient.py --init-project`。
 - `session_registry.init_project_session` 是初始化过程的独立 thread 槽位；默认 `--init-project` 应续跑该 session，只有显式 `-new` 才允许重开。
 - `--init-project` 的正式协议是：
-  - Phase 1：`xhigh` `plan` 优先的 17 问理解与补缺阶段，输出 `answered_questions / unclear_questions / customer_followups / document_priority_understanding / current_project_understanding / ready_for_doc_write`
+  - Phase 1：`plan` 模式下的 17 问理解与补缺阶段，默认 effort 为 `low`，可通过 `-e <low|medium|high|xhigh>` 覆盖；输出 `answered_questions / unclear_questions / customer_followups / document_priority_understanding / current_project_understanding / ready_for_doc_write`
   - Phase 1 可保留内部辅助字段：`explicit_refs / light_repo_findings / implementation_gaps / must_read_next`
   - 当前允许通过 `--instruction-text/--instruction-file` 给同一 init session 注入补充执行指令；该指令应写回 `session_execution_instruction`
   - `--init-project` 当前必须先生成目标项目的 `tools/init_project.final_prompt.md`，再把这份最终 prompt 作为真实 init thread 的实际 turn 输入源；其内容顺序固定为：模板 -> 补充执行指令 -> 动态项目上下文 -> 输出约束

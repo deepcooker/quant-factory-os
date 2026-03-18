@@ -96,6 +96,8 @@ INIT_DEFAULT_ENTITIES_CONTENT = ""
 
 INIT_DEFAULT_FILE_INDEX_CONTENT = ""
 
+INIT_DEFAULT_FOUNDATION_BRIDGE_CONTENT = ""
+
 INIT_DEFAULT_PROJECT_BOOTSTRAP_PROTOCOL_CONTENT = ""
 
 INIT_DEFAULT_TOOLS_METHOD_FLOW_MAP_CONTENT = ""
@@ -431,6 +433,10 @@ def init_step_02_check_project_files(context: InitContext, logger: logging.Logge
             context.cfg.project_root / "docs/FILE_INDEX.md",
             INIT_DEFAULT_FILE_INDEX_CONTENT,
         )
+        status["FOUNDATION_BRIDGE_FILE"] = init_tools_11_ensure_file(
+            context.cfg.project_root / "docs/FOUNDATION_BRIDGE.md",
+            INIT_DEFAULT_FOUNDATION_BRIDGE_CONTENT,
+        )
         status["PROJECT_BOOTSTRAP_PROTOCOL_FILE"] = init_tools_11_ensure_file(
             context.cfg.project_root / "docs/PROJECT_BOOTSTRAP_PROTOCOL.md",
             INIT_DEFAULT_PROJECT_BOOTSTRAP_PROTOCOL_CONTENT,
@@ -469,6 +475,7 @@ def init_step_02_check_project_files(context: InitContext, logger: logging.Logge
     init_tools_08_log(logger, f"INIT_WORKFLOW_STATUS: {status['WORKFLOW_FILE']}")
     init_tools_08_log(logger, f"INIT_ENTITIES_STATUS: {status['ENTITIES_FILE']}")
     init_tools_08_log(logger, f"INIT_FILE_INDEX_STATUS: {status['FILE_INDEX_FILE']}")
+    init_tools_08_log(logger, f"INIT_FOUNDATION_BRIDGE_STATUS: {status['FOUNDATION_BRIDGE_FILE']}")
     init_tools_08_log(logger, f"INIT_PROJECT_BOOTSTRAP_PROTOCOL_STATUS: {status['PROJECT_BOOTSTRAP_PROTOCOL_FILE']}")
     init_tools_08_log(logger, f"INIT_TOOLS_METHOD_FLOW_MAP_STATUS: {status['TOOLS_METHOD_FLOW_MAP_FILE']}")
     init_tools_08_log(logger, f"INIT_QUEUE_JSON_STATUS: {status['QUEUE_JSON_FILE']}")

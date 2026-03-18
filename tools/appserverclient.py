@@ -347,12 +347,43 @@ def read_text_safely(path: Path) -> str:
         return ""
 
 
-def parse_init_project_args(argv: list[str]) -> tuple[bool, bool, list[str], list[str], str]:
+VALID_EFFORTS = {"low", "medium", "high", "xhigh"}
+
+
+def parse_effort_token(token: str) -> str:
+    value = str(token).strip().lower()
+    if value not in VALID_EFFORTS:
+        raise AppServerError(f"invalid effort: {token}; expected one of {', '.join(sorted(VALID_EFFORTS))}")
+    return value
+
+
+def parse_learnbaseline_args(argv: list[str]) -> tuple[bool, str]:
+    force_new = False
+    effort_override = ""
+    idx = 0
+    while idx < len(argv):
+        token = str(argv[idx]).strip()
+        if token == "-new":
+            force_new = True
+            idx += 1
+            continue
+        if token in {"-e", "--effort"}:
+            if idx + 1 >= len(argv):
+                raise AppServerError(f"{token} requires a value")
+            effort_override = parse_effort_token(str(argv[idx + 1]))
+            idx += 2
+            continue
+        raise AppServerError(f"unknown --learnbaseline argument: {token}")
+    return force_new, effort_override
+
+
+def parse_init_project_args(argv: list[str]) -> tuple[bool, bool, list[str], list[str], str, str]:
     force_new = False
     force_prompt = False
     input_files: list[str] = []
     guide_files: list[str] = []
     instruction_parts: list[str] = []
+    effort_override = ""
     idx = 0
     while idx < len(argv):
         token = str(argv[idx]).strip()
@@ -395,8 +426,21 @@ def parse_init_project_args(argv: list[str]) -> tuple[bool, bool, list[str], lis
             instruction_parts.append(text)
             idx += 2
             continue
+        if token in {"-e", "--effort"}:
+            if idx + 1 >= len(argv):
+                raise AppServerError(f"{token} requires a value")
+            effort_override = parse_effort_token(str(argv[idx + 1]))
+            idx += 2
+            continue
         raise AppServerError(f"unknown --init-project argument: {token}")
-    return force_new, force_prompt, input_files, guide_files, "\n\n".join(part for part in instruction_parts if part).strip()
+    return (
+        force_new,
+        force_prompt,
+        input_files,
+        guide_files,
+        "\n\n".join(part for part in instruction_parts if part).strip(),
+        effort_override,
+    )
 
 
 def resolve_project_file(raw_path: str, project_root: Path | None = None) -> Path:
@@ -819,11 +863,12 @@ def run_init_project_prompt_turn(
     prompt_text: str,
     current_session: dict[str, Any],
     create_new_thread: bool,
+    effort: str,
 ) -> tuple[str, str, str, list[str], str]:
     client = CodexAppClient(
         project_root=project_root,
         mode="plan",
-        effort="xhigh",
+        effort=effort,
         timeout_sec=PLAN_TIMEOUT_SEC,
         events_file=INIT_PROJECT_EVENTS_FILE,
         stderr_file=INIT_PROJECT_STDERR_FILE,
@@ -877,6 +922,7 @@ def continue_init_project_chat_turn(
     project_root: Path,
     current_session: dict[str, Any],
     turn_text: str,
+    effort: str,
     create_new_thread: bool = False,
 ) -> tuple[str, str, str, list[str], str]:
     thread_id = str(current_session.get("thread_id", "")).strip()
@@ -884,7 +930,7 @@ def continue_init_project_chat_turn(
     client = CodexAppClient(
         project_root=project_root,
         mode="plan",
-        effort="xhigh",
+        effort=effort,
         timeout_sec=PLAN_TIMEOUT_SEC,
         events_file=INIT_PROJECT_EVENTS_FILE,
         stderr_file=INIT_PROJECT_STDERR_FILE,
@@ -931,6 +977,7 @@ def init_project_main(
     manual_inputs: list[str] | None = None,
     manual_guides: list[str] | None = None,
     session_instruction: str = "",
+    effort_override: str = "",
 ) -> dict[str, Any]:
     manual_inputs = manual_inputs or []
     manual_guides = manual_guides or []
@@ -944,6 +991,7 @@ def init_project_main(
         clear_init_project_session_for_project(project_root)
     existing_init_session = get_init_project_session_for_project(project_root)
     has_existing_session = has_live_init_project_session(project_root)
+    effective_effort = effort_override or DEFAULT_EFFORT
     base_payload = build_init_project_phase1_payload(
         manual_inputs,
         manual_guides,
@@ -965,6 +1013,7 @@ def init_project_main(
             prompt_text,
             existing_init_session,
             create_new_thread=create_new_thread,
+            effort=effective_effort,
         )
         payload = dict(base_payload)
         payload["operator_notes"] = ""
@@ -988,6 +1037,7 @@ def init_project_main(
             project_root,
             existing_init_session,
             session_instruction.strip(),
+            effort=effective_effort,
             create_new_thread=create_new_thread,
         )
         payload["operator_notes"] = session_instruction.strip()
@@ -1011,6 +1061,7 @@ def init_project_main(
             project_root,
             existing_init_session,
             DEFAULT_TURN_TEXT,
+            effort=effective_effort,
             create_new_thread=True,
         )
         payload["operator_notes"] = ""
@@ -1035,12 +1086,13 @@ def init_project_main(
     payload["prompt_file"] = normalize_relpath(prompt_file, project_root)
     payload["prompt_updated_at"] = datetime.now(timezone.utc).isoformat()
     payload["prompt_stage"] = "phase1_plan"
+    payload["effort"] = effective_effort
     update_init_project_session_for_project(
         project_root,
         status=session_status,
         source="init_project_main",
         model=DEFAULT_MODEL,
-        effort="xhigh",
+        effort=effective_effort,
         payload=payload,
         thread_id=thread_id,
         thread_path=thread_path,
@@ -1617,7 +1669,15 @@ class CodexAppClient:
     #codex 中文：创建新的 thread，可选设置名称，并把返回的 thread_id 设为当前 thread。
     def start_thread(self, name: str | None = None) -> dict[str, Any]:
         transport = self._require_transport()
-        params = {"model": self.model, "cwd": str(self.project_root)}
+        params = {
+            "model": self.model,
+            "cwd": str(self.project_root),
+            "approvalPolicy": "never",
+            "sandboxPolicy": {
+                "type": "externalSandbox",
+                "networkAccess": "enabled",
+            },
+        }
         if name:
             params["name"] = name
         request_json = {"method": "thread/start", "params": params}
@@ -1707,6 +1767,7 @@ class CodexAppClient:
             "threadId": self.current_thread_id,
             "cwd": str(self.project_root),
             "input": [{"type": "text", "text": text}],
+            "approvalPolicy": "never",
             "collaborationMode": {
                 "mode": self.mode,
                 "settings": {
@@ -1715,7 +1776,10 @@ class CodexAppClient:
                     "developer_instructions": None,
                 },
             },
-            "sandboxPolicy": {"type": "workspaceWrite"},
+            "sandboxPolicy": {
+                "type": "externalSandbox",
+                "networkAccess": "enabled",
+            },
             "effort": self.effort,
         }
         request_json = {"method": "turn/start", "params": params}
@@ -1836,7 +1900,7 @@ def build_logger() -> logging.Logger:
 
 
 #codex 中文：专项验证 learn 的 Codex 交互链：initialize -> collaborationMode/list -> thread/start -> turn/start。
-def init_main(force_new: bool = False) -> None:
+def init_main(force_new: bool = False, effort_override: str = "") -> None:
     log_runtime_state()
     baseline_thread_id = get_session_thread_id("learn_session_baseline")
     if baseline_thread_id and not force_new:
@@ -1845,9 +1909,10 @@ def init_main(force_new: bool = False) -> None:
         return
     if force_new:
         clear_session_registry("learn_session_baseline")
+    effective_effort = effort_override or LEARN_INIT_EFFORT
     client = CodexAppClient(
         mode="plan",
-        effort=LEARN_INIT_EFFORT,
+        effort=effective_effort,
         timeout_sec=PLAN_TIMEOUT_SEC,
         events_file=LEARN_INIT_EVENTS_FILE,
         stderr_file=LEARN_INIT_STDERR_FILE,
@@ -2235,13 +2300,19 @@ def refresh_baseline_main() -> None:
     print("baseline_refresh_text_end")
 
 
-def run_learnbaseline(force_new: bool = False) -> dict[str, Any]:
+def run_learnbaseline(force_new: bool = False, effort_override: str = "") -> dict[str, Any]:
     try:
         require_project_inited()
-        init_main(force_new=force_new)
-        return ok({"action": "learnbaseline", "force_new": force_new})
+        init_main(force_new=force_new, effort_override=effort_override)
+        data = {"action": "learnbaseline", "force_new": force_new}
+        if effort_override:
+            data["effort_override"] = effort_override
+        return ok(data)
     except AppServerError as exc:
-        return err(ERR_CONFIG_BASE + 10, str(exc), {"action": "learnbaseline", "force_new": force_new})
+        data = {"action": "learnbaseline", "force_new": force_new}
+        if effort_override:
+            data["effort_override"] = effort_override
+        return err(ERR_CONFIG_BASE + 10, str(exc), data)
 
 
 def run_fork_current() -> dict[str, Any]:
@@ -2348,6 +2419,7 @@ def run_init_project(
     manual_inputs: list[str] | None = None,
     manual_guides: list[str] | None = None,
     session_instruction: str = "",
+    effort_override: str = "",
 ) -> dict[str, Any]:
     try:
         payload = init_project_main(
@@ -2356,6 +2428,7 @@ def run_init_project(
             manual_inputs=manual_inputs,
             manual_guides=manual_guides,
             session_instruction=session_instruction,
+            effort_override=effort_override,
         )
         payload["status"] = "needs_update"
         payload["next_action"] = payload.get(
@@ -2434,13 +2507,14 @@ def demo() -> None:
 if __name__ == "__main__":
     logger = build_logger()
     if len(sys.argv) > 1 and sys.argv[1] == "--init-project":
-        force_new, force_prompt, input_files, guide_files, session_instruction = parse_init_project_args(sys.argv[2:])
+        force_new, force_prompt, input_files, guide_files, session_instruction, effort_override = parse_init_project_args(sys.argv[2:])
         result = run_init_project(
             force_new=force_new,
             force_prompt=force_prompt,
             manual_inputs=input_files,
             manual_guides=guide_files,
             session_instruction=session_instruction,
+            effort_override=effort_override,
         )
         print(json.dumps(result, ensure_ascii=False))
         if int(result.get("err_code", 1)) != 0:
@@ -2459,7 +2533,8 @@ if __name__ == "__main__":
             logger.error("APP_CLIENT_FAILED: %s", result.get("err_desc", "unknown error"))
             sys.exit(1)
     elif len(sys.argv) > 1 and sys.argv[1] in {"--learnbaseline", "--learnbassline"}:
-        result = run_learnbaseline(force_new=(len(sys.argv) > 2 and sys.argv[2] == "-new"))
+        force_new, effort_override = parse_learnbaseline_args(sys.argv[2:])
+        result = run_learnbaseline(force_new=force_new, effort_override=effort_override)
         print(json.dumps(result, ensure_ascii=False))
         if int(result.get("err_code", 1)) != 0:
             logger.error("APP_CLIENT_FAILED: %s", result.get("err_desc", "unknown error"))

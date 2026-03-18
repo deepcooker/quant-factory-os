@@ -44,7 +44,11 @@
       "已补一条最小主线口径：foundation 已开始嵌入外部业务项目做真实 learnbaseline / owner-doc 同频验证，因此本仓文档继续保持业务无关和流程优先。",
       "已删除 reports/ 下两个旧的非当前 run 目录，只保留当前主线 run 证据与基础 schema/项目目录。",
       "已将 docs/FOUNDATION_BRIDGE.md 固化为 foundation 对外接入模板，并在 PROJECT_GUIDE / WORKFLOW / FILE_INDEX 中补上最小入口说明。",
-      "已明确写死：`quant-factory-os` 是仓库名，`foundation` 是对外角色名，避免业务项目接入时语义混淆。"
+      "已明确写死：`quant-factory-os` 是仓库名，`foundation` 是对外角色名，避免业务项目接入时语义混淆。",
+      "已为 `--learnbaseline` 和 `--init-project` 增加 `-e/--effort`，默认保持 `low`，可按需切换为 `medium/high/xhigh`。",
+      "已将 app-server thread/turn 请求切到 `approvalPolicy=never + sandboxPolicy=externalSandbox`，减少容器内 bwrap/namespace 冲突。",
+      "已将复杂 plan 轮次超时预算提升到 1 小时，并新增 `tools/sync_tools.py` 作为 foundation -> 业务项目的固定清单同步入口。",
+      "已让 `init` 在新项目骨架中补齐 `docs/FOUNDATION_BRIDGE.md`，避免后续项目接入少一份工程桥接说明。"
     ],
     "decisions": [
       "当前只保留 cleanup task 作为唯一活动 task，旧历史 task 文件已按本轮要求直接删除。",
@@ -59,7 +63,10 @@
       "TASKS/ 目录当前只保留 TASK-session-denoise-and-mainline-cleanup.json/.md 两个 task 文件。",
       "docs/WORKFLOW.md 与 docs/PROJECT_GUIDE.md 已补最小主线说明，明确基座已开始嵌入外部业务项目验证。",
       "docs/FOUNDATION_BRIDGE.md 已作为 foundation 对外接入模板存在，docs/FILE_INDEX.md 已加入入口。",
-      "reports/ 当前已删除 run-2026-03-08-remove-templates-pivot 与 run-2026-03-08-tools-orchestrator-entry。"
+      "reports/ 当前已删除 run-2026-03-08-remove-templates-pivot 与 run-2026-03-08-tools-orchestrator-entry。",
+      "`quant-factory-os/tools/appserverclient.py` 与 `/root/a9quant-strategy/tools/appserverclient.py` 当前保持完全一致。",
+      "`/root/a9quant-strategy` 上的 `python3 tools/appserverclient.py --learnbaseline -new -e xhigh` 已确认请求层带上 `reasoning_effort=xhigh` 与 `externalSandbox`。",
+      "`python3 tools/sync_tools.py -p /root/a9quant-strategy` 已完成一轮真实同步，a9 侧最新 tools 已对齐并编译通过。"
     ],
     "next_steps": [
       "下一轮可以直接从更干净的 queue 和新 session 继续主线，而不是再围绕旧的 a9 文档修复 task。",

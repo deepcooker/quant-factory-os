@@ -2,6 +2,50 @@
 
 RUN_ID: `run-2026-03-11-vnext-release-baseline`
 
+## learnbaseline / init-project effort override and sandbox cleanup
+- foundation 与 `/root/a9quant-strategy` 的 `tools/appserverclient.py` 当前已保持完全一致。
+- 本轮给两条主线都补了最小参数面：
+  - `python3 tools/appserverclient.py --learnbaseline [-new] -e <low|medium|high|xhigh>`
+  - `python3 tools/appserverclient.py --init-project ... -e <low|medium|high|xhigh>`
+- 默认不变：
+  - `--learnbaseline` 默认仍是 `low`
+  - `--init-project` 默认也改为 `low`
+  - 只有显式 `-e` 时才覆盖
+- 真实代码层现在已完成：
+  - CLI 参数解析
+  - `CodexAppClient(...)` effort 传递
+  - `learn_session_baseline` / `init_project_session` 的 effort 回写
+- 这轮还顺手收掉了 app-server 沙箱兼容问题：
+  - `thread/start`
+  - `turn/start`
+  现在统一发送：
+  - `approvalPolicy = "never"`
+  - `sandboxPolicy = { "type": "externalSandbox", "networkAccess": "enabled" }`
+- 目的不是改审批策略语义，而是把隔离委托给外部容器 / appservice 环境，避免容器内 `bwrap` / `namespace` 冲突。
+- 实测：
+  - `/root/a9quant-strategy` 上的 `python3 tools/appserverclient.py --learnbaseline -new -e xhigh`
+  - 请求日志里已经明确带上：
+    - `collaborationMode.mode = "plan"`
+    - `reasoning_effort = "xhigh"`
+    - `sandboxPolicy = externalSandbox`
+- 当前这轮 `xhigh` baseline 仍在长时间执行中，因此 `project_config.json` 尚未完成最终回写；但请求层和事件流已证明参数已正确生效。
+- 本轮再继续补了两项主线基础设施：
+  - `tools/project_config.py` 的 `PLAN_TIMEOUT_SEC` 从 `1200` 提升到 `3600`
+  - `tools/init.py` 现在会在新项目骨架中补齐 `docs/FOUNDATION_BRIDGE.md`
+- 同时新增：
+  - [sync_tools.py](/root/quant-factory-os/tools/sync_tools.py)
+  作用是按固定清单把 foundation 的 `tools/` 与 `tools/prompts/` 同步到目标业务项目，不碰目标项目自己的 `tools/project_config.json`
+- 已做一轮真实同步：
+  - `python3 tools/sync_tools.py -p /root/a9quant-strategy`
+  - a9 侧收到：
+    - `docs/FOUNDATION_BRIDGE.md`
+    - `appserverclient.py`
+    - `project_config.py`
+    - `init.py`
+    - `sync_tools.py`
+    - prompts 等固定清单文件
+  - foundation 与 a9 两边对应 Python 文件均已编译通过
+
 ## a9quant-strategy PROJECT_GUIDE fixed question bank repair
 - 本轮只修 `/root/a9quant-strategy/docs/PROJECT_GUIDE.md`，不再扩散到自动化逻辑或 runtime。
 - 真实问题已经定位清楚：a9 的 `PROJECT_GUIDE` 题目标题与顺序曾被业务化改写，偏离了 foundation 固定题库；这违反了“题库结构固定、只允许项目化答案层”的规则。
