@@ -2,6 +2,57 @@
 
 RUN_ID: `run-2026-03-11-vnext-release-baseline`
 
+## a9quant-strategy PROJECT_GUIDE repair decision
+- `/root/a9quant-strategy/docs/PROJECT_GUIDE.md` 的主问题不是答案偏差，而是题库本体曾被业务化改写。
+- 当前正式决定：
+  - foundation 的 `PROJECT_GUIDE` 题库结构是固定课程资产
+  - 目标项目只能项目化答案层，不能替换 `Q1-Q17` 的标题、顺序和结构
+- 因此本轮采用的修法是：
+  - 只重写 `/root/a9quant-strategy/docs/PROJECT_GUIDE.md`
+  - 把 `Q1-Q17` 题面恢复成与 foundation 完全一致
+  - 继续保留 a9 的业务答案、证据锚点与阅读顺序
+- 当前不扩大修改 `a9` 的 `AGENTS/WORKFLOW/FILE_INDEX`，因为探索结果表明它们与新 `PROJECT_GUIDE` 没有明显直接冲突。
+- 进一步决策：
+  - 题库恢复之后，优先继续收答案层，不再重新讨论题面
+  - 当前最该优先收紧的题是 `Q1/Q2/Q3/Q5/Q6/Q10/Q15/Q17`
+  - 这些题必须始终先服务于：
+    - 三账本终局
+    - 中央银行制度
+    - 一期趋势/鲨鱼落地
+    - foundation 与业务仓的正确分工
+- owner 最新纠偏后再追加一条硬决策：
+  - 一期主线不是先做完整 AI lab
+  - 一期先做：中央银行总控下的确定性策略试点、模拟盘/实盘接通、数据分析与策略反哺
+  - `AI策略创作 -> backtesting/极限电池 -> replay仿真一致性` 属于二期实验室能力，不能在文档里冒充成一期主线
+
+## init-project real thread decision
+- `init-project` 的正式运行时现在已经不是本地 phase1 payload 生成器，而是真实 app-server init thread。
+- 当前决定固定为：
+  - `--init-project` 无 thread 时创建真实 init thread
+  - `--init-project` 有 thread 时默认续跑
+  - `--init-project -new` 才是显式推翻重来
+  - `--init-project -p` 才是强制再走一次完整 prompt
+  - 仅补一句 `-t` 时，已有 thread 默认进入聊天微调，而不是重复喂完整 prompt
+- `tools/init_project.final_prompt.md` 现在继续保留，但角色已明确：
+  - 既给 owner 审核
+  - 也作为真实 init thread 的实际 turn 输入源
+- 继续保留的产品级规则：
+  - continuation 不是错误，所以 `err_code = 0`
+  - 继续推进依靠 `status / next_action`
+  - 重复点击不应起第二个线程
+- 当前唯一需要显式保留的真实边界是：
+  - rollout 文件在 thread 创建后可能延迟落盘
+  - 因此立即重复点击时会先看到 `existing_thread_busy / rollout_pending`
+  - 这是忙态保护，不是逻辑失败
+- 所以下一步不该再补 heuristic，也不该回退到本地 phase1 runtime；当前最合理的是接受这个忙态边界，并在后续需要时继续加强 resume 稳定性。
+- 另外，这轮补充决策是：
+  - `init-project` 的运行时壳应直接向 `learnbaseline` 对齐
+  - 差异只保留在 prompt、输出 schema 和状态落盘字段
+  - 不再允许 `init-project` 停留在“只起真实 thread 但不等待完成、不读取模型 JSON”的半成品状态
+- 因此当前接受的实现边界是：
+  - `init-project` 会等待 turn 完成、等待 rollout、读取 thread、消费最后一条 agent JSON
+  - `/resume` 的人工发现体验如果仍有问题，应视为 transport/产品层残余边界，而不是继续在 `init-project` 里堆本地 heuristic
+
 ## a9quant-strategy init completion decision
 - `/root/a9quant-strategy` 现在已经正式完成首轮初始化。
 - 这意味着它不再卡在 `--init-project` 门禁上，可以进入下一阶段：
@@ -510,6 +561,16 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 
 ## Task / queue truth reconciliation cleanup decision
 - `TASKS/QUEUE.json` 继续作为唯一 queue 机器真相源，`TASKS/QUEUE.md` 降级为废弃兼容说明页，不再保留可被误读成真实 backlog 的历史文本。
+
+## a9 learnbaseline PROJECT_GUIDE parsing compatibility decision
+- `/root/a9quant-strategy/docs/PROJECT_GUIDE.md` 保持作为通用问题课程资产，不为了 foundation 的旧解析器回退成“纯路径 bullet”写法。
+- 真正需要修的是 foundation 侧 `learnbaseline` prompt 组装器：`必查文件` 只提取真实 repo 内文件路径，说明性条目只保留课程语义，不再混入动态 baseline prompt。
+- 同步把同样修复下沉到 `/root/a9quant-strategy/tools/project_config.py`，保证业务项目本地工具行为与 foundation 一致。
+
+## learnbaseline turn sandbox policy decision
+- `tools/appserverclient.py` 的 `start_turn()` 不再把 baseline turn 的 `sandboxPolicy` 写死成 `readOnly`。
+- 当前改为显式使用 `workspaceWrite`，避免 thread/start 已给出的工作区写权限在 turn/start 被 runtime 自己覆盖掉。
+- 该修复同时下沉到 `/root/a9quant-strategy/tools/appserverclient.py`，保持目标项目本地工具与 foundation 一致。
 - 当前新增 `python3 tools/taskclient.py --reconcile-task-queue-truth` 作为最小维护入口，用来统一收口：
   - `runtime_state`
   - `TASKS/QUEUE.json`
@@ -683,3 +744,64 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
   - instruction 与 continuation state 会写回目标项目自己的 `init_project_session`
   - foundation 仓的默认 `project_root` 已在验证后恢复，不会把 fixture 留成当前项目
 - 因此当前决定是：这条初始化 session 手工续跑链已经成立，可以继续迁移到真实未初始化项目上使用。
+
+## init-project p-only prompt semantics decision
+- 当前决定把 `init-project` 的参数语义进一步收紧到产品直觉：
+  - `-p` 才是唯一的完整 prompt 开关
+  - `-new` 只负责显式推翻并重开 thread
+  - 无 thread 时，单独 `-t` 也可以创建真实 init thread，但这轮只发送聊天文本
+- 这样线程生命周期与 prompt 注入职责就被拆开了，不会再出现“只是想重开 thread，却被默认塞进完整 prompt”的意外行为。
+- 当前这轮只做低成本编译校验，不再重复消耗高 token 的真实初始化跑法；真实 retest 留给用户在 `/root/a9quant-strategy` 普通窗口里继续验证。
+
+## init-project chat turn plan+xhigh decision
+- 当前决定把非 prompt 的 init-project chat turn 运行时壳纠正回 init-thread 正轨：
+  - 即使只发送聊天文本，也必须继续使用 `plan + xhigh`
+  - 不能因为不走完整 prompt，就退回 `default + low`
+- 这轮只修运行时壳，不动 payload 输出协议；`/resume` 可见性与 turn completion timeout 仍作为后续 transport 边界单独处理。
+## 2026-03-18 - manual rewrite a9quant owner docs from source hierarchy
+
+- decision: `task_done`
+- reason:
+  - 用户明确要求先停掉自动化思路，先把 `/root/a9quant-strategy` 的最终 owner docs 写准，尤其是 `docs/PROJECT_GUIDE.md`。
+  - 本轮据此选择手工重写 7 份 owner docs，而不是继续围绕 `init_project.final_prompt.md` 或 phase1 JSON 做自动化。
+- key conclusion:
+  - `PROJECT_GUIDE` 必须作为同频核心课程存在，固定文档优先级为：总纲清单 -> README -> 中央银行设计 -> 策略手册 -> 两份原始想法。
+  - 代码只用来确认“当前做到哪里”，不能反过来定义项目终局。
+  - 只有在 owner 先审过这 7 份文档并确认理解准确后，后续自动化才有意义。
+
+## a9quant-strategy business-first docs decision
+- foundation 在 a9 文档里不应反复出现，更不应充当业务逻辑来源。
+- 当前正式决策是：
+  - foundation 只保留为一份单独的工程承接说明文档 `docs/FOUNDATION_BRIDGE.md`
+  - `PROJECT_GUIDE` 继续作为同频核心，但答案层必须以业务为中心
+  - `总纲清单（可复制）.md` 继续保留不可变研发闭环，同时补清一期/二期分期说明
+- 因此当前接受的业务口径是：
+  - 一期主线：中央银行总控下的确定性策略试点、模拟盘/实盘接通、问题分析与执行数据反哺优化
+  - 二期 lab：`AI策略创作 -> backtesting/极限电池 -> replay仿真一致性`
+- 下一轮不再优先改文档结构，而是可以直接在 a9 项目上执行 `--learnbaseline`，让 AI 按这套修正后的同频文档先学习，再根据真实学习结果继续微调。
+
+## foundation embedding cleanup decision
+- 当前正式判断是：基座已经开始嵌入外部业务项目做真实同频与学习接入验证，因此主线视图必须优先去噪。
+- 本轮采取的最小动作是：
+  - 切换 active task，摆脱旧的 a9 文档修复上下文
+  - 清理 `TASKS/QUEUE.json` 中的 completed 噪音项
+  - 只给 `WORKFLOW/PROJECT_GUIDE` 补最小主线口径，不扩大文档重写
+- 当前不删除历史 TASK 文件；历史任务继续作为证据保留，主线干净则通过 queue 和 runtime_state 来保证。
+
+## task files deletion decision
+- 用户明确要求删除没有用的 task。
+- 当前执行策略是：
+  - 保留当前 cleanup task 作为唯一活动 task
+  - 删除其余历史 task JSON/MD 文件
+  - 保持 queue 与 runtime_state 只指向当前 cleanup 主线
+- 这次选择直接删除，而不是归档，因为当前目标是让新 session 的主线视图尽可能干净。
+
+## reports cleanup decision
+- 用户继续要求删除无用噪音后，本轮对 `reports/` 采取最小删除策略：只删除明确不是当前主线 run 的旧 run 目录。
+- 保留项固定为：
+  - 当前 run 证据目录
+  - `projects/`
+  - `_SCHEMA.run_summary.json`
+  - `.gitkeep`
+- 这样做的目的是让新 session 只面对当前主线 run 的证据面，而不是继续混读旧 run 历史。
+

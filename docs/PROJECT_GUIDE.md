@@ -41,7 +41,7 @@
 #### 为什么问这题
 这题用来判断 agent 是否知道“我们现在在哪”，避免拿未来形态要求当前实现，或者拿历史方案约束当前方向。
 #### 标准答案
-这个项目是分阶段推进的。当前可以概括为：先把项目级同频学习基线和 session 基建做稳，再围绕 run 级需求方向 fork 多角色 session 拆最小 task 执行，最后用 `gitclient` 完成交付和回滚闭环。现在仍处于 foundation 强化阶段，重点不是扩业务，而是让 `init` 作为准备层稳定、让 `appserverclient` 承担正式主流程、让 `gitclient` 承担正式收尾层，并把这三层口径彻底统一。已经有的成果包括：项目级 baseline 学习、current fork/session 推进、Git 提交/回滚闭环、owner docs 主线统一；旧 shell 兼容入口则已开始降级到 `chatlogs/backup/`。当前研发期主要通过 Codex CLI 暴露流程问题、观察日志和接管排障；终态目标则不是长期停留在 CLI，而是让这套基座逐步沉淀成“普通窗口执行的 Python orchestrator + Codex app-server 运行时”。
+这个项目是分阶段推进的。当前可以概括为：先把项目级同频学习基线和 session 基建做稳，再围绕 run 级需求方向 fork 多角色 session 拆最小 task 执行，最后用 `gitclient` 完成交付和回滚闭环。现在仍处于 foundation 强化阶段，重点不是扩业务，而是让 `init` 作为准备层稳定、让 `appserverclient` 承担正式主流程、让 `gitclient` 承担正式收尾层，并把这三层口径彻底统一。同时，基座已经开始嵌入外部业务项目做真实同频与学习接入验证，所以当前主线必须继续保持最小、稳定、可迁移。已经有的成果包括：项目级 baseline 学习、current fork/session 推进、Git 提交/回滚闭环、owner docs 主线统一；旧 shell 兼容入口则已开始降级到 `chatlogs/backup/`。当前研发期主要通过 Codex CLI 暴露流程问题、观察日志和接管排障；终态目标则不是长期停留在 CLI，而是让这套基座逐步沉淀成“普通窗口执行的 Python orchestrator + Codex app-server 运行时”。
 #### 必查文件
 - docs/WORKFLOW.md
 - tools/project_config.json
@@ -245,7 +245,7 @@
 #### 为什么问这题
 这题确认“准备完成后做什么”，避免准备完成后还直接跳到写代码。
 #### 标准答案
-准备工作完成后，应该进入 `run(appserverclient)`，而不是直接写代码。先确认或建立 `--learnbaseline`，再在 run 级别先做一轮需求收敛，至少明确背景目标、范围边界、不做项、影响模块、异常流、非功能和验收方式，然后再从 baseline fork 当前工作 session 和角色 session，把方向拆成最小 task 逐个推进。也就是说，准备工作之后的第一步就是进入项目级 baseline/session 主线中的 run 方向收敛。
+准备工作完成后，分两种情况。若目标项目已经完成首轮接入，则进入 `run(appserverclient)`，先确认或建立 `--learnbaseline`，再在 run 级别先做一轮需求收敛，至少明确背景目标、范围边界、不做项、影响模块、异常流、非功能和验收方式，然后再从 baseline fork 当前工作 session 和角色 session，把方向拆成最小 task 逐个推进。若目标项目尚未完成首轮接入，则第一步不是 `--learnbaseline`，而是 `python3 tools/appserverclient.py --init-project`：先以真实 init thread 的 `plan + xhigh` 模式启动 17 问理解、补证据和状态推进，确认初始化完成后才允许进入 baseline 主线。
 #### 必查文件
 - docs/WORKFLOW.md
 - AGENTS.md
@@ -382,7 +382,7 @@
 #### 为什么问这题
 这题是技能题，确认 agent 不是只知道项目流程，还知道 Codex CLI 这个执行器该怎么正确使用。
 #### 标准答案
-会。当前项目中，AI/工具系统的正确打开方式已经收敛成三层：`init` 是准备层，只做配置、结构、Codex/Git 前提和现场诊断；`appserverclient` 是主流程层，负责项目级 `--learnbaseline`、run/session、fork、current-turn 和 baseline 回灌；`gitclient` 是收尾层，负责提交、回滚、PR、合并和本地同步。关键不是背全部子命令，而是知道什么问题该交给哪一层解决，以及 baseline 用 `plan`、日常 session 用 `default` 的模式切换原则。
+会。当前项目中，AI/工具系统的正确打开方式已经收敛成三层：`init` 是准备层，只做配置、结构、Codex/Git 前提和现场诊断；`appserverclient` 是主流程层，负责两类 thread：一类是未初始化项目的 `--init-project` init thread，先用 `plan + xhigh` 跑 17 问理解，再通过 `--update-init-project / --complete-init-project` 推进状态；其中只有显式 `-p` 才会重喂完整 prompt，`-new` 只负责重开 thread，单独的 `-t` 默认是同一 thread 的聊天微调；另一类是已初始化项目的 baseline/run/session 主线，包括 `--learnbaseline`、`--fork-current`、`--current-turn` 和 baseline 回灌；`gitclient` 是收尾层，负责提交、回滚、PR、合并和本地同步。关键不是背全部子命令，而是知道什么问题该交给哪一层解决，以及只有初始化理解和 baseline 这种重型同频才用 `plan`，日常 session 继续用 `default`。
 #### 必查文件
 - AGENTS.md
 - docs/WORKFLOW.md

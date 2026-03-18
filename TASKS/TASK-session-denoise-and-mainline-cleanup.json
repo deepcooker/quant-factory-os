@@ -1,13 +1,18 @@
 {
-  "task_id": "task-translate-a9quant-plan-understanding-to-chinese",
+  "task_id": "task-session-denoise-and-mainline-cleanup",
   "run_id": "run-2026-03-11-vnext-release-baseline",
   "project_id": "quant-factory-os",
   "status": "active",
   "priority": "P1",
-  "title": "Translate a9quant plan understanding to Chinese",
-  "goal": "Convert learn/a9quant-strategy_project_guide_plan_understanding.md into Chinese while preserving the Q1-Q17 evidence-first structure",
+  "title": "session denoise and mainline cleanup",
+  "goal": "总结 foundation 已开始嵌入外部项目的当前状态，清理已完成 queue 噪音，并对主线文档做最小收口。",
   "scope": [
-    "learn/a9quant-strategy_project_guide_plan_understanding.md only"
+    "TASKS/QUEUE.json",
+    "tools/project_config.json",
+    "docs/WORKFLOW.md",
+    "docs/PROJECT_GUIDE.md",
+    "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "reports/run-2026-03-11-vnext-release-baseline/decision.md"
   ],
   "non_goals": [],
   "acceptance": [
@@ -24,24 +29,35 @@
   ],
   "inputs": [],
   "artifacts": {
-    "task_md_file": "TASKS/TASK-translate-a9quant-plan-understanding-to-chinese.md",
+    "task_md_file": "TASKS/TASK-session-denoise-and-mainline-cleanup.md",
     "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
     "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
   },
   "task_summary": {
     "status": "completed",
     "key_updates": [
-      "Translated the a9quant strategy PROJECT_GUIDE understanding draft into Chinese."
+      "已将当前 active task 从旧的 a9 文档修复 task 切到新的 cleanup task，避免 runtime_state 继续挂在历史修文上下文上。",
+      "已清理 TASKS/QUEUE.json 中的 completed 噪音项，只保留当前 cleanup 主线项。",
+      "已删除 TASKS/ 下除当前 cleanup task 之外的旧 task 文件，共清理 237 个历史 task JSON/MD 文件。",
+      "已补一条最小主线口径：foundation 已开始嵌入外部业务项目做真实 learnbaseline / owner-doc 同频验证，因此本仓文档继续保持业务无关和流程优先。",
+      "已删除 reports/ 下两个旧的非当前 run 目录，只保留当前主线 run 证据与基础 schema/项目目录。"
     ],
     "decisions": [
-      "Keep the plan-understanding draft in Chinese so owner review can focus on interpretation quality instead of translation."
+      "当前只保留 cleanup task 作为唯一活动 task，旧历史 task 文件已按本轮要求直接删除。",
+      "主线文档只做最小修改，不再继续扩写 foundation 与业务项目关系。"
     ],
-    "risks": [],
-    "verification": [],
+    "risks": [
+      "这次是硬删除，不再保留旧 task 文件级证据；历史 run 证据现在主要依赖 reports/ 与 git 历史。"
+    ],
+    "verification": [
+      "runtime_state 当前 task 已切到 task-session-denoise-and-mainline-cleanup。",
+      "TASKS/QUEUE.json 当前只保留 cleanup 主线项。",
+      "TASKS/ 目录当前只保留 TASK-session-denoise-and-mainline-cleanup.json/.md 两个 task 文件。",
+      "docs/WORKFLOW.md 与 docs/PROJECT_GUIDE.md 已补最小主线说明，明确基座已开始嵌入外部业务项目验证。",
+      "reports/ 当前已删除 run-2026-03-08-remove-templates-pivot 与 run-2026-03-08-tools-orchestrator-entry。"
+    ],
     "next_steps": [
-      "Review the Chinese understanding draft and mark which Q answers are correct",
-      "wrong",
-      "or shallow before rewriting target PROJECT_GUIDE answers."
+      "下一轮可以直接从更干净的 queue 和新 session 继续主线，而不是再围绕旧的 a9 文档修复 task。"
     ],
     "conflict_policy": {
       "priority_order": [
@@ -93,7 +109,7 @@
     },
     "role_summary_evidence": [],
     "source_threads": [],
-    "updated_at": "2026-03-17T07:20:24+00:00"
+    "updated_at": ""
   },
   "role_threads": {
     "run-main": {
@@ -164,7 +180,7 @@
     "blocking_issues": [],
     "updated_at": ""
   },
-  "updated_at": "2026-03-17T07:20:24+00:00",
+  "updated_at": "2026-03-18T10:27:06+00:00",
   "risks": "",
   "rollback_plan": ""
 }

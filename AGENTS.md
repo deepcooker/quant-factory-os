@@ -209,8 +209,12 @@ No doc update, no ship.
   - Phase 1：`xhigh` `plan` 优先的 17 问理解与补缺阶段，输出 `answered_questions / unclear_questions / customer_followups / document_priority_understanding / current_project_understanding / ready_for_doc_write`
   - Phase 1 可保留内部辅助字段：`explicit_refs / light_repo_findings / implementation_gaps / must_read_next`
   - 当前允许通过 `--instruction-text/--instruction-file` 给同一 init session 注入补充执行指令；该指令应写回 `session_execution_instruction`
-  - `-t` 是 `--instruction-text` 的短别名
+  - `--init-project` 当前必须先生成目标项目的 `tools/init_project.final_prompt.md`，再把这份最终 prompt 作为真实 init thread 的实际 turn 输入源；其内容顺序固定为：模板 -> 补充执行指令 -> 动态项目上下文 -> 输出约束
+  - `-t` 是 `--instruction-text` 的短别名；`-p` 表示显式强制再走一次完整 prompt；`-new` 只负责重开 thread，不再隐式等于 prompt 模式
+  - 如果当前已有真实 init thread，则不带 `-p` 的 `--init-project -t "..."` 默认是沿同一线程继续聊天微调，而不是重喂完整 prompt
+  - 如果当前没有 init thread，则不带 `-p` 的 `--init-project -t "..."` 也必须创建新的真实 init thread，但只发送聊天文本，不重喂完整 prompt
+  - 如果同一 init thread 仍有未闭合 turn，重复执行 `--init-project` 必须返回 `err_code = 0` + `status / next_action`，而不是生成重复线程；当前允许出现 `existing_thread_busy` / `rollout_pending` 作为忙态提示
   - 手工续跑与状态推进通过 `python3 tools/appserverclient.py --update-init-project --payload-json <path>` 完成
   - 初始化完成入口是 `python3 tools/appserverclient.py --complete-init-project`
 - `--init-project` / `--update-init-project` 在“需要继续推进但并未出错”时必须返回 `err_code = 0`，并通过 `status / next_action` 指出下一步；只有真正异常才允许 `err_code <> 0`
-- 如果当前 `init_project_session` 没有 `thread_id/thread_path`，则不带 `-new` 的 `--init-project` 也必须创建新的初始化 session；`-new` 只用于显式推翻重来
+- 如果当前 `init_project_session` 没有 `thread_id/thread_path`，则不带 `-new` 的 `--init-project` 也必须创建新的真实 init thread；`-new` 只用于显式推翻重来
