@@ -358,6 +358,26 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 
 ## Requirement-analysis learning decision
 - 传统需求分析文档对本项目有价值，但不整份照搬到 AI 主线。
+
+
+## foundation bridge decision
+- foundation 与业务项目的关系不再散落写在多个主线文档里，而是统一收口到：
+  - `docs/FOUNDATION_BRIDGE.md`
+- 当前正式定位保持为：
+  - foundation 是 AI 研发团队 / 自动化研发执行基座
+  - 它负责研发执行与交付工具链
+  - 它不负责定义业务项目的业务逻辑、目标函数、策略制度或生存逻辑
+- 当前也明确接受一个现实边界：
+  - foundation 已开始在真实业务项目中做试点接入
+  - 但主线自动化还没有完全闭合
+  - 因此现阶段仍然是 `Codex 手工调试 + foundation 自动化` 一起推进
+- 文档策略因此收成：
+  - `docs/PROJECT_GUIDE.md` 和 `docs/WORKFLOW.md` 只补最小一句现实说明
+  - 对外解释 foundation 与业务项目关系时，统一引用 `docs/FOUNDATION_BRIDGE.md`
+- 同时补一条命名决策：
+  - `quant-factory-os` 只表示仓库名
+  - `foundation` 只表示这个仓库在业务项目里的角色
+  - 后续所有对外文档都按这个口径写，避免仓库名和角色名混用
 - 当前选择是：只迁移其中适合 AI/Codex 的需求收敛原则，优先增强 `PROJECT_GUIDE` 的高质量提问与自我学习能力，再把稳定规则沉淀到 `WORKFLOW` 和 `ENTITIES`。
 - 不回迁旧 `orient/choose/council/arbiter` 为正式主流程；相关方法仅作为新主线下 `run 主线程 -> task` 的需求收敛规则。
 
@@ -804,4 +824,3 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
   - `_SCHEMA.run_summary.json`
   - `.gitkeep`
 - 这样做的目的是让新 session 只面对当前主线 run 的证据面，而不是继续混读旧 run 历史。
-

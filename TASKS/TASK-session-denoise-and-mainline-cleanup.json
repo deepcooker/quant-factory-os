@@ -11,6 +11,8 @@
     "tools/project_config.json",
     "docs/WORKFLOW.md",
     "docs/PROJECT_GUIDE.md",
+    "docs/FOUNDATION_BRIDGE.md",
+    "docs/FILE_INDEX.md",
     "reports/run-2026-03-11-vnext-release-baseline/summary.md",
     "reports/run-2026-03-11-vnext-release-baseline/decision.md"
   ],
@@ -40,11 +42,13 @@
       "已清理 TASKS/QUEUE.json 中的 completed 噪音项，只保留当前 cleanup 主线项。",
       "已删除 TASKS/ 下除当前 cleanup task 之外的旧 task 文件，共清理 237 个历史 task JSON/MD 文件。",
       "已补一条最小主线口径：foundation 已开始嵌入外部业务项目做真实 learnbaseline / owner-doc 同频验证，因此本仓文档继续保持业务无关和流程优先。",
-      "已删除 reports/ 下两个旧的非当前 run 目录，只保留当前主线 run 证据与基础 schema/项目目录。"
+      "已删除 reports/ 下两个旧的非当前 run 目录，只保留当前主线 run 证据与基础 schema/项目目录。",
+      "已将 docs/FOUNDATION_BRIDGE.md 固化为 foundation 对外接入模板，并在 PROJECT_GUIDE / WORKFLOW / FILE_INDEX 中补上最小入口说明。",
+      "已明确写死：`quant-factory-os` 是仓库名，`foundation` 是对外角色名，避免业务项目接入时语义混淆。"
     ],
     "decisions": [
       "当前只保留 cleanup task 作为唯一活动 task，旧历史 task 文件已按本轮要求直接删除。",
-      "主线文档只做最小修改，不再继续扩写 foundation 与业务项目关系。"
+      "主线文档只做最小修改，不再把 foundation 与业务项目关系散落在各处，而是统一收口到 docs/FOUNDATION_BRIDGE.md。"
     ],
     "risks": [
       "这次是硬删除，不再保留旧 task 文件级证据；历史 run 证据现在主要依赖 reports/ 与 git 历史。"
@@ -54,10 +58,12 @@
       "TASKS/QUEUE.json 当前只保留 cleanup 主线项。",
       "TASKS/ 目录当前只保留 TASK-session-denoise-and-mainline-cleanup.json/.md 两个 task 文件。",
       "docs/WORKFLOW.md 与 docs/PROJECT_GUIDE.md 已补最小主线说明，明确基座已开始嵌入外部业务项目验证。",
+      "docs/FOUNDATION_BRIDGE.md 已作为 foundation 对外接入模板存在，docs/FILE_INDEX.md 已加入入口。",
       "reports/ 当前已删除 run-2026-03-08-remove-templates-pivot 与 run-2026-03-08-tools-orchestrator-entry。"
     ],
     "next_steps": [
-      "下一轮可以直接从更干净的 queue 和新 session 继续主线，而不是再围绕旧的 a9 文档修复 task。"
+      "下一轮可以直接从更干净的 queue 和新 session 继续主线，而不是再围绕旧的 a9 文档修复 task。",
+      "真实项目接入时，foundation 与业务项目的关系统一引用 docs/FOUNDATION_BRIDGE.md。"
     ],
     "conflict_policy": {
       "priority_order": [

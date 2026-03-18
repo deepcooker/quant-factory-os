@@ -41,7 +41,7 @@
 #### 为什么问这题
 这题用来判断 agent 是否知道“我们现在在哪”，避免拿未来形态要求当前实现，或者拿历史方案约束当前方向。
 #### 标准答案
-这个项目是分阶段推进的。当前可以概括为：先把项目级同频学习基线和 session 基建做稳，再围绕 run 级需求方向 fork 多角色 session 拆最小 task 执行，最后用 `gitclient` 完成交付和回滚闭环。现在仍处于 foundation 强化阶段，重点不是扩业务，而是让 `init` 作为准备层稳定、让 `appserverclient` 承担正式主流程、让 `gitclient` 承担正式收尾层，并把这三层口径彻底统一。同时，基座已经开始嵌入外部业务项目做真实同频与学习接入验证，所以当前主线必须继续保持最小、稳定、可迁移。已经有的成果包括：项目级 baseline 学习、current fork/session 推进、Git 提交/回滚闭环、owner docs 主线统一；旧 shell 兼容入口则已开始降级到 `chatlogs/backup/`。当前研发期主要通过 Codex CLI 暴露流程问题、观察日志和接管排障；终态目标则不是长期停留在 CLI，而是让这套基座逐步沉淀成“普通窗口执行的 Python orchestrator + Codex app-server 运行时”。
+这个项目是分阶段推进的。当前可以概括为：先把项目级同频学习基线和 session 基建做稳，再围绕 run 级需求方向 fork 多角色 session 拆最小 task 执行，最后用 `gitclient` 完成交付和回滚闭环。现在仍处于 `quant-factory-os` 仓强化阶段，重点不是扩业务，而是让 `init` 作为准备层稳定、让 `appserverclient` 承担正式主流程、让 `gitclient` 承担正式收尾层，并把这三层口径彻底统一。同时，基座已经开始嵌入外部业务项目做真实同频与学习接入验证，所以当前主线必须继续保持最小、稳定、可迁移。这里要明确：真实项目试点已经开始，但主线自动化还没有完全闭合，现阶段仍然是 `Codex 手工调试 + foundation（角色名）自动化` 一起推进，而不是已经进入全自动运行。已经有的成果包括：项目级 baseline 学习、current fork/session 推进、Git 提交/回滚闭环、owner docs 主线统一；旧 shell 兼容入口则已开始降级到 `chatlogs/backup/`。当前研发期主要通过 Codex CLI 暴露流程问题、观察日志和接管排障；终态目标则不是长期停留在 CLI，而是让这套基座逐步沉淀成“普通窗口执行的 Python orchestrator + Codex app-server 运行时”。如果要对外解释 foundation 与业务项目的关系，应单独参考 `docs/FOUNDATION_BRIDGE.md`，而不是把业务逻辑写回本仓主线文档。
 #### 必查文件
 - docs/WORKFLOW.md
 - tools/project_config.json
@@ -60,7 +60,7 @@
 #### 为什么问这题
 这题是把“基座仓”与“业务仓”分开，防止把所有问题都堆在一个仓里，造成基建和业务互相污染。
 #### 标准答案
-基建项目做完后，它应作为 foundation repo，负责流程、门禁、同频和执行治理。它当前首先要产出的不是业务项目模板，而是一套更稳定的 `tools` 自动化 AI 研发团队运行层。研发期用 Codex CLI 来定义 agent 行为、检验 `PROJECT_GUIDE / ENTITIES / WORKFLOW / AGENTS` 是否足以约束研发流程，并通过日志暴露问题；成熟后，日常运行应主要在普通窗口通过 Python 总入口执行，而与 Codex 的程序化交互统一落在 app-server。原因是：当前最难的不是复用分发，而是正确理解需求、对齐主线、保证流程稳定。如果过早把未稳定流程包装成接口或模板，会放大耦合和返工。更合理的做法是：基座仓继续稳定 baseline/session 主线、task/run 机器真相和 owner docs 状态机；我的承接方式应该是先跑同频，再确认当前 run、任务和方向，然后才进入讨论和执行。
+基建项目做完后，`quant-factory-os` 这个仓会以 `foundation` 角色对外提供流程、门禁、同频和执行治理能力。它当前首先要产出的不是业务项目模板，而是一套更稳定的 `tools` 自动化 AI 研发团队运行层。研发期用 Codex CLI 来定义 agent 行为、检验 `PROJECT_GUIDE / ENTITIES / WORKFLOW / AGENTS` 是否足以约束研发流程，并通过日志暴露问题；成熟后，日常运行应主要在普通窗口通过 Python 总入口执行，而与 Codex 的程序化交互统一落在 app-server。原因是：当前最难的不是复用分发，而是正确理解需求、对齐主线、保证流程稳定。如果过早把未稳定流程包装成接口或模板，会放大耦合和返工。更合理的做法是：基座仓继续稳定 baseline/session 主线、task/run 机器真相和 owner docs 状态机；我的承接方式应该是先跑同频，再确认当前 run、任务和方向，然后才进入讨论和执行。
 #### 必查文件
 - docs/WORKFLOW.md
 - docs/ENTITIES.md

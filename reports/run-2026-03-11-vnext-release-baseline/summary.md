@@ -358,6 +358,30 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
 ## Commands / Outputs (view tool stabilization)
 - `python3 -m py_compile tools/view.sh` -> pass
 - `tools/view.sh AGENTS.md --from 1 --to 3` -> pass
+
+## foundation bridge template + mainline denoise
+- 当前主线已经确认：foundation 已开始在真实业务项目中做试点接入，但自动化主线还没有完全闭合。
+- 当前更准确的工程现实是：
+  - `Codex` 负责更强的手工调试和即时接管
+  - foundation 负责更强的自动化研发执行与交付沉淀
+  - 两者仍然需要并用，而不是假装已经进入全自动阶段
+- 为了避免 foundation 与业务项目关系散落在多个主线文档里，本轮将这部分解释统一收口为：
+  - `docs/FOUNDATION_BRIDGE.md`
+- 这份模板当前固定回答：
+  - foundation 是什么
+  - foundation 有什么用
+  - 为什么使用它
+  - foundation 和业务项目的关系
+  - foundation 包含哪些文档、命令和运行产物
+  - 我们当前的开发模式是什么
+- 同时对主线文档只做了最小改动：
+  - `docs/PROJECT_GUIDE.md` 的 `Q2` 补清“已试点接入，但自动化未完全闭合”
+  - `docs/WORKFLOW.md` 补清“当前仍是 Codex 手工调试 + foundation 自动化一起推进”
+  - `docs/FILE_INDEX.md` 将 `docs/FOUNDATION_BRIDGE.md` 纳入 owner docs 入口
+- 随后又把 `docs/FOUNDATION_BRIDGE.md` 重写得更短更硬，并明确写死：
+  - `quant-factory-os` 是仓库名
+  - `foundation` 是这个仓库对外提供的角色名
+  - 这样业务项目接入时不会再把仓库名和角色名混成一个概念
 - `python3 tools/view.sh AGENTS.md --from 1 --to 3` -> pass
 - `python3 tools/view.sh AGENTS.md --lines 1:3` -> pass
 - `tools/view.sh AGENTS.md --find '^## 0' --context 1` -> pass
@@ -1573,4 +1597,3 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
   - `projects/`
   - `_SCHEMA.run_summary.json`
   - `.gitkeep`
-

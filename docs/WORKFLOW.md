@@ -11,12 +11,13 @@
 对象定义以 `docs/ENTITIES.md` 为准，硬规则以 `AGENTS.md` 为准。
 
 补充定位：
-- 本文件描述的是 foundation repo 当前主流程。
+- 本文件描述的是 `quant-factory-os` 这个仓库当前主流程；当它对外嵌入业务项目时，承担的角色名叫 `foundation`。
 - 当前主线不是业务项目模板，而是本仓 `tools` 自动化研发系统本身。
 - `init` 只属于开工前准备层，不属于主业务流程。
 - 真正自动化主线以项目为中心，由 `appserverclient` 驱动学习基线、run 级方向推进、fork 多角色 session、去噪回灌 baseline，并由 `gitclient` 完成交付收尾。
 - 研发期主要通过 Codex CLI 调试和接管；长期正式运行应收敛到普通窗口中的 Python orchestrator + Codex app-server。
 - 当前阶段已经开始把这套基座嵌入外部业务项目做真实 learnbaseline / owner-doc 同频验证，因此本仓主线文档必须保持业务无关、流程干净。
+- 这类外部项目试点已经证明基座可嵌入，但也说明当前主线自动化尚未完全闭合；现阶段仍然是 `Codex 手工调试 + foundation（角色名）自动化` 一起推进。
 - 如果目标项目尚未接入本仓 owner docs 与自动化主线，先按 [PROJECT_BOOTSTRAP_PROTOCOL.md](/root/quant-factory-os/docs/PROJECT_BOOTSTRAP_PROTOCOL.md) 完成首轮项目学习与文档补齐，再进入本状态机。
 - 长文件读取统一使用 `tools/view.sh`；当前正式支持 `tools/view.sh ...` 和 `python3 tools/view.sh ...`，并兼容历史 `--lines START:END`。
 
