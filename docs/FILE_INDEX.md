@@ -14,6 +14,7 @@
 | --- | --- | --- |
 | `AGENTS.md` | 宪法与硬规则，定义门禁、允许命令、文档新鲜度和 PR 纪律。 | 每次 session 开始时 |
 | `docs/PROJECT_GUIDE.md` | 学习课程、问题库、标准答案、主线回拉锚点。 | baseline 学习和主线漂移时 |
+| `docs/FOUNDATION_BRIDGE.md` | foundation 与业务项目之间的工程承接说明模板。 | 对外解释 foundation 角色、接入方案或嵌入式使用边界时 |
 | `docs/PROJECT_BOOTSTRAP_PROTOCOL.md` | 陌生项目尚未接入基座时的最小学习与 owner docs 补齐协议。 | 承接新项目、只有杂乱文档和半截代码时 |
 | `docs/WORKFLOW.md` | 状态机、阶段定义、主流程说明。 | 理解流程和阶段边界时 |
 | `docs/ENTITIES.md` | 核心对象、状态和交付单元的词典。 | 理解 task/run/project/pr 等名词时 |
