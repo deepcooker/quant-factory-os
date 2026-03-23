@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RoleWorkerBaseResult",
+  "type": "object",
+  "required": ["task_id", "role", "status", "summary"],
+  "properties": {
+    "task_id": { "type": "string" },
+    "role": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["done", "blocked", "partial"]
+    },
+    "summary": { "type": "string" }
+  },
+  "additionalProperties": true
+}

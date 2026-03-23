@@ -14,11 +14,9 @@ from typing import Any
 try:
     from tools.project_config import load_unified_config
     from tools.result_schema import ERR_CONFIG_BASE, ERR_RUNTIME_BASE, err, ok
-    from tools.taskclient import load_active_task
 except Exception:  # pragma: no cover
     from project_config import load_unified_config  # type: ignore
     from result_schema import ERR_CONFIG_BASE, ERR_RUNTIME_BASE, err, ok  # type: ignore
-    from taskclient import load_active_task  # type: ignore
 
 
 LOGGER_NAME = "qf.gitclient"
@@ -68,42 +66,67 @@ def load_git_context() -> dict[str, Any]:
     }
 
 
-# gitclient 中文：解析提交说明；优先用 --commit，其次 active task JSON 的 title/task_id，再回退到 runtime_state 与时间戳。
-def resolve_active_task_message() -> str:
+def load_experimental_project_config(repo_path: Path) -> dict[str, Any]:
+    config_path = repo_path / "tools" / "project_config.json"
+    if not config_path.exists():
+        return {}
     try:
-        task = load_active_task()
+        return json.loads(config_path.read_text(encoding="utf-8"))
     except Exception:
+        return {}
+
+
+def load_experimental_registry(repo_path: Path) -> dict[str, Any]:
+    registry_path = repo_path / "state" / "registry.json"
+    if not registry_path.exists():
+        return {}
+    try:
+        return json.loads(registry_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def resolve_runtime_task_message(repo_path: Path) -> str:
+    project_config = load_experimental_project_config(repo_path)
+    runtime_state = dict(project_config.get("runtime_state", {}) or {})
+
+    current_task_id = str(runtime_state.get("current_task_id", "")).strip()
+    current_task_goal = str(runtime_state.get("current_task_goal", "")).strip()
+    if current_task_id and current_task_goal:
+        return f"{current_task_id}: {current_task_goal}"
+    if current_task_goal:
+        return current_task_goal
+    if not current_task_id:
         return ""
-    title = str(task.get("title", "")).strip()
-    task_id = str(task.get("task_id", "")).strip()
-    if title and task_id:
-        return f"{task_id}: {title}"
-    if title:
-        return title
-    if task_id:
-        return task_id
-    return ""
+
+    current_job_id = str(runtime_state.get("current_job_id", "")).strip()
+    registry = load_experimental_registry(repo_path)
+    jobs = dict(registry.get("jobs", {}) or {})
+    if not current_job_id or current_job_id not in jobs:
+        return current_task_id
+
+    job = dict(jobs.get(current_job_id, {}) or {})
+    task_plan = dict(job.get("task_plan", {}) or {})
+    for task in list(task_plan.get("tasks", []) or []):
+        task_id = str(task.get("task_id", "")).strip()
+        if task_id != current_task_id:
+            continue
+        goal = str(task.get("goal", "")).strip()
+        if goal:
+            return f"{current_task_id}: {goal}"
+        return current_task_id
+    return current_task_id
 
 
 def resolve_commit_message(raw_message: str | None) -> str:
     if raw_message is not None and str(raw_message).strip():
         return str(raw_message).strip()
-    active_task_message = resolve_active_task_message()
-    if active_task_message:
-        return active_task_message
-    unified = load_unified_config()
-    runtime_state = dict(unified.get("runtime_state", {}))
-    current_task_id = str(runtime_state.get("current_task_id", "")).strip()
-    current_task_file = str(runtime_state.get("current_task_file", "")).strip()
-    if current_task_file:
-        return current_task_file
-    if current_task_id:
-        return current_task_id
-    current_run_id = str(runtime_state.get("current_run_id", "")).strip()
-    if current_run_id:
-        return current_run_id
+    ctx = load_git_context()
+    runtime_task_message = resolve_runtime_task_message(Path(ctx["repo_path"]))
+    if runtime_task_message:
+        return runtime_task_message
     ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    return f"手动提交{ts}"
+    return f"auto_commit:{ts}"
 
 
 # gitclient 中文：执行 git 或 gh 命令，并返回原始执行结果。

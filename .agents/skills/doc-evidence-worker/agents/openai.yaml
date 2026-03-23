@@ -1,0 +1,4 @@
+interface:
+  display_name: "文档证据工"
+  short_description: "从文档中为 claims 收集支持证据和反证。"
+  default_prompt: "用这个 skill 只做文档证据收集，不做最终判断。"

@@ -1,0 +1,133 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EvidencePack",
+  "type": "object",
+  "required": [
+    "claim_id",
+    "doc_evidence",
+    "code_evidence",
+    "runtime_evidence",
+    "contradiction_check",
+    "final_status",
+    "summary"
+  ],
+  "properties": {
+    "claim_id": {
+      "type": "string"
+    },
+    "doc_evidence": {
+      "$ref": "#/definitions/evidenceResult"
+    },
+    "code_evidence": {
+      "$ref": "#/definitions/evidenceResult"
+    },
+    "runtime_evidence": {
+      "$ref": "#/definitions/evidenceResult"
+    },
+    "contradiction_check": {
+      "$ref": "#/definitions/contradictionResult"
+    },
+    "final_status": {
+      "type": "string",
+      "enum": [
+        "confirmed",
+        "partially_confirmed",
+        "rejected",
+        "needs_more_evidence"
+      ]
+    },
+    "summary": {
+      "type": "string"
+    }
+  },
+  "definitions": {
+    "evidenceResult": {
+      "type": "object",
+      "required": [
+        "supported",
+        "support_level",
+        "support_refs",
+        "conflict_refs",
+        "gaps",
+        "summary"
+      ],
+      "properties": {
+        "supported": { "type": "boolean" },
+        "support_level": {
+          "type": "string",
+          "enum": [
+            "fully_supported",
+            "partially_supported",
+            "contradicted",
+            "not_found"
+          ]
+        },
+        "support_refs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "conflict_refs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "gaps": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "contradictionResult": {
+      "type": "object",
+      "required": [
+        "has_conflict",
+        "conflict_type",
+        "conflict_strength",
+        "conflict_points",
+        "stronger_side",
+        "unresolved",
+        "recommendation",
+        "summary"
+      ],
+      "properties": {
+        "has_conflict": { "type": "boolean" },
+        "conflict_type": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "conflict_strength": {
+          "type": "string",
+          "enum": ["none", "weak", "medium", "hard"]
+        },
+        "conflict_points": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "stronger_side": {
+          "type": "string"
+        },
+        "unresolved": {
+          "type": "boolean"
+        },
+        "recommendation": {
+          "type": "string",
+          "enum": [
+            "no_conflict",
+            "acceptable_difference",
+            "needs_more_evidence",
+            "block_baseline_update",
+            "escalate_to_run_manager"
+          ]
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

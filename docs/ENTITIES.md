@@ -2,562 +2,332 @@
 
 对象模型先于流程模型。
 
-本文件定义 `project_id / run_id / task_id / thread summary / queue / evidence` 的边界、关系和生命周期。
-`docs/WORKFLOW.md` 必须以这里的定义为基础，不得另起一套名词系统。
+本文件定义当前**实验线**的核心对象、边界、真相源与生命周期。
+`WORKFLOW.md` 必须以这里的对象系统为基础，不再回到旧 `tools/` 对象系统解释当前主线。
 
-## 1. 设计原则
+## 1. 对象总原则
 
-### 1.1 分层原则
-- `project` 管长期上下文。
-- `baseline` 管项目长期学习基线。
-- `run` 管一轮方向到交付的周期。
-- `task` 管 run 内最小可执行切片。
-- `thread` 管 task 内单个角色或单次连续会话的局部结论。
-- `queue` 只是执行入口池，不是顶层对象。
+### 1.1 分层
+- `project`：长期命名空间
+- `baseline_snapshot`：长期学习真相
+- `job`：一次进入系统的工作单
+- `claim`：待验证判断
+- `evidence_pack`：围绕 claim 的证据包
+- `corrected_job`：经校正后可进入规划的工作单
+- `task_plan`：从 corrected_job 拆出的执行计划
+- `thread`：角色执行单元
+- `defect_triage`：质量分流决策
+- `merge_result`：项目级收敛结果
+- `state/events/checkpoints`：运行保障层
 
-### 1.2 因果顺序
-- 先有 `project`
-- 再有 `baseline`
-- 再有 `run`
-- run 内先讨论
-- 讨论收敛后才切 `task`
-- task 内再产生一个或多个 `thread`
-- thread 先总结，task 再聚合
-- task 执行完成后更新 run evidence
+### 1.2 当前真相源
+- 配置真相源：
+  - `tools/project_config.json`
+- 运行真相源：
+  - `state/registry.json`
+- 审计真相源：
+  - `state/events.jsonl`
+- 阶段恢复真相源：
+  - `state/checkpoints/`
+- 学习锚点：
+  - `docs/PROJECT_GUIDE.md`
+- 宪法：
+  - `AGENTS.md`
+- 状态机：
+  - `docs/WORKFLOW.md`
 
-禁止倒因果：
-- 不允许先批量建 task 再反推需求。
-- 不允许把 queue 当项目主线。
-- 不允许把 session 等同于 run。
-- 不允许把单个 thread summary 直接当成最终 run summary。
-
-### 1.3 单一真相源
-- 当前活动指针真相源：`tools/project_config.json -> runtime_state`
-- 初始化门禁真相源：`tools/project_config.json -> bootstrap_state`
-- 当前 task 合同真相源：`TASKS/TASK-*.json`
-- 当前 run 证据真相源：`reports/<RUN_ID>/`
-- 项目长期认知真相源：`docs/PROJECT_GUIDE.md`
-- 硬规则真相源：`AGENTS.md`
-- 流程状态机真相源：`docs/WORKFLOW.md`
-
-### 1.4 运行时边界
-- `tools` 是本仓自动化研发体系的执行层。
-- Codex CLI 是研发期的人机调试/接管界面，不是长期产品入口。
-- Codex app-server 是程序化运行时接口；长期应由 Python orchestrator 通过它驱动智能交互。
+### 1.3 历史兼容对象
+以下对象仍可保留作对照，但不再是当前主线的解释中心：
+- `tools/project_config.json -> runtime_state`
+- `bootstrap_state`
+- `init_project_session`
+- 旧 `session_registry.*`
 
 ## 2. Project
 
 ### 2.1 定义
-`project_id` 是项目长期命名空间，承载该项目的知识、规则、历史和默认同频作用域。
+`project` 是长期项目命名空间。
 
 ### 2.2 职责
 - 标识这是哪个项目
 - 承载长期 owner docs
-- 作为 `learn` 的默认学习作用域
-- 容纳多个 `run`
+- 承载默认 skills / policy / gate 配置
+- 容纳多个 jobs 和长期 baseline
 
 ### 2.3 真相源
-- `tools/project_config.json -> project_id`
-- 当前状态指针：`tools/project_config.json -> runtime_state.current_project_id`
-- 初始化状态：`tools/project_config.json -> bootstrap_state.is_inited`
-- 缺省值：`quant-factory-os`
-
-### 2.3A Bootstrap State
-`bootstrap_state` 用于表达项目是否已完成首轮接入。
-
-最小字段：
-- `is_inited`
-- `initialized_at`
-- `initialized_by`
-- `bootstrap_source`
-
-约束：
-- 只有 `is_inited = Y` 才允许进入 baseline 主线
-- `is_inited = Y` 后，才允许 `--learnbaseline / --fork-current / --summarize-current / --refresh-baseline`
-
-### 2.3B Init Project Session
-`session_registry.init_project_session` 用于表达首轮接入过程本身的 thread/session 指针。
-
-最小字段：
-- `thread_id`
-- `thread_path`
-- `status`
-- `updated_at`
-- `source`
-- `model`
-- `effort`
-
-约束：
-- `bootstrap_state.is_inited` 管项目是否已完成首轮接入
-- `session_registry.init_project_session` 管初始化过程在哪个 thread 上继续
-- 默认 `--init-project` 应续跑同一个 `init_project_session`
-- 只有显式 `--init-project -new` 才允许重开新的初始化 session
+- `tools/project_config.json`
 
 ### 2.4 生命周期
-- 创建时机：项目建立时
-- 关闭时机：通常不关闭，除非项目废弃
+- 创建于项目建立时
+- 一般不关闭
 
-### 2.5 关系
-- 一个 `project` 可以有多个 `run`
-- 一个 `run` 只属于一个 `project`
-
-## 3. Run
+## 3. Baseline Snapshot
 
 ### 3.1 定义
-`run_id` 是一轮方向讨论到交付的周期容器。
-
-它不是：
-- session
-- 单个 task
-- 单条命令
-- 单个方向标题
-
-它是：
-- 当前这轮工作的证据命名空间
-- 讨论、收敛、执行、复盘的聚合容器
+`baseline_snapshot` 是项目长期真相快照。
 
 ### 3.2 职责
-- 承载本轮讨论产物
-- 承载本轮执行合同
-- 承载本轮 task 的上下文与聚合结果
-- 承载本轮 summary / decision / review / ship 证据
-- 在多 task 场景下，成为 task summaries 的聚合层
+- 记录稳定 truth
+- 为新 job 提供长期认知背景
+- 吸收 merge 后的稳定结论
 
 ### 3.3 真相源
-- `tools/project_config.json -> runtime_state.current_run_id`
-- run 证据目录：`reports/<RUN_ID>/`
-
-当前最小实现：
-- 机器真相源：`reports/<RUN_ID>/run_summary.json`
-- 人类视图：`reports/<RUN_ID>/summary.md` 和 `reports/<RUN_ID>/decision.md`
-- 当前最小写回入口：`python3 tools/evidence.py --set-run-summary --run-id <RUN_ID> ...`
-
-当前最小字段建议：
-- `status`
-- `run_goal`
-- `scope`
-- `non_goals`
-- `impacted_modules`
-- `non_functional_constraints`
-- `acceptance`
-- `active_tasks`
-- `completed_tasks`
-- `source_tasks`
-- `key_updates`
-- `cross_task_decisions`
-- `cross_task_risks`
-- `audit_risks`
-- `verification_overview`
-- `next_run_or_next_tasks`
-
-当前 machine merge 规则：
-- `active_tasks` / `completed_tasks`: `reconcile_only`
-- `source_tasks` / `verification_overview`: `append_dedup`
-- `key_updates` / `cross_task_decisions` / `cross_task_risks` / `next_run_or_next_tasks`: `merge_rewrite`
-
-说明：
-- `reconcile_only` 表示该字段应由 task 真相源重算，不从单个 task summary 直接追加
-- `append_dedup` 表示保留 task 级证据粒度，允许带 task 前缀追加后去重
-- `merge_rewrite` 表示 task-level 文本在进入 run summary 前应先做最小 run-level 归并；当前实现只做规则化轻改写，不做模型推理
-- 当前 `merge_rewrite` 允许少量明确的高频模式归并，例如：
-  - 多个角色的 `summary merged` 合并成一条 multi-role run-level 结论
-  - `test gate=blocked/passed` 归并成更稳定的 gate 状态表达
-- 对 `cross_task_risks`，若同时存在通用 blocked-gate 句与更具体的 blocked-gate 解释句，则优先保留更具体的 run-level 风险表达；证据粒度仍保留在 `verification_overview`
-- `audit_risks` 用于承载历史清理、审计残留、兼容资产等非主线运行风险；它不进入 `baseline_ready_summary`
+- `state/registry.json -> baseline_snapshot`
 
 ### 3.4 生命周期
-1. 新需求方向或新一轮迭代开始时创建
-2. 在该 run 内完成 discussion -> contract -> slice -> task execution
-3. 所有相关 task 完成，或明确终止时关闭
+- 初始化时创建
+- merge 后刷新
+- 中断恢复时继续复用
 
-### 3.5 关系
-- 一个 `run` 只属于一个 `project`
-- 一个 `run` 可以包含多个 `task`
-- 一个 `run` 可以包含多条需求收敛记录与多个 task
-- 一个 `run` 的最终稳定结论应来自 task summaries 的聚合，而不是单个 thread
-- 一个 `run` 在 task 创建前，允许先存在一版 `Markdown intake draft`
-
-补充说明：
-- `Markdown intake draft` 用于把客户杂乱材料先整理成 run 级讨论输入
-- 它属于协议层草稿，不等于 `run summary`
-- 它不是机器真相源，不直接替代 `tools/project_config.json`、`TASKS/*.json` 或 `reports/<RUN_ID>/run_summary.json`
-
-## 4. Task
+## 4. Job
 
 ### 4.1 定义
-`task_id` 是 run 内最小可执行、可验证、可交付的切片。
+`job` 是一次进入系统的工作单。
 
 ### 4.2 职责
-- 表达一次明确的小变更
-- 固定 scope / acceptance / evidence
-- 成为一次实现与 review 的最小单位
-- 聚合该 task 下多个角色 thread 的有效结论
+- 承载 `raw_request`
+- 串联 coach、verification、correction、planning、execution、merge、refresh
+- 形成整轮执行状态
 
-### 4.3 Task Summary
-`task summary` 是 task 层的稳定聚合结果，位于多个 thread summaries 之上、run summary 之下。
-
-当前最小字段建议：
+### 4.3 当前关键字段
+- `job_id`
+- `raw_request`
+- `clarified_job_v1`
+- `evidence_packs`
+- `clarified_job_v2`
+- `corrected_job`
+- `task_plan`
+- `defect_triage`
+- `final_summary`
 - `status`
-- `key_updates`
-- `decisions`
-- `risks`
-- `verification`
-- `next_steps`
-- `source_threads`
+- `defect_status`
+- `repair_cycle_count`
+- `replan_cycle_count`
+- `discussion_cycle_count`
 
 ### 4.4 真相源
-- `TASKS/TASK-*.json`
-- 当前绑定指针（可为空）：`tools/project_config.json -> runtime_state.current_task_id/current_task_json_file/current_task_file`
+- `state/registry.json -> jobs`
 
-说明：
-- 当前最小实现把 `task_summary` 直接放在 `TASKS/TASK-*.json` 内，不额外拆独立文件
+### 4.5 生命周期
+- `NEW`
+- `COACHED`
+- `VERIFIED`
+- `CORRECTED`
+- `PLANNED`
+- `EXECUTING`
+- `MERGED`
+- `DONE`
+- 各类 blocked / defect 状态
 
-### 4.5 必要字段
-- `RUN_ID`
-- `Goal`
-- `Scope`
-- `Acceptance`
-
-建议补充的需求边界字段：
-- `NonGoal`
-- `ImpactedModules`
-- `Dependencies`
-- `Risks`
-- `AbnormalFlows`
-- `NonFunctionalConstraints`
-- `role_threads`
-- `test_gate`
-
-### 4.6 生命周期
-1. run 方向与 task 边界收敛后创建
-2. 从 queue 中实体化
-3. 执行、验证、review、ship
-4. 完成后更新 run evidence 和 state
-
-### 4.7 关系
-- 一个 `task` 只属于一个 `run`
-- 一个 `run` 可拆成多个 `task`
-- 一个 task 对应一次最小交付
-- 一个 `task` 可以包含多个 `thread`
-- 一个 `task summary` 聚合该 task 下多个 `thread summaries`
-
-### 4.8 Role Threads
-`role_threads` 是 task 内最小角色协作真相源，当前最小建议固定为：
-- `run-main`
-- `dev`
-- `test`
-- `arch`（按需）
-
-最小字段建议：
-- `thread_id`
-- `thread_path`
-- `status`
-
-说明：
-- `run-main` 负责收敛与确认
-- `dev` 负责实现与自证
-- `test` 负责独立验证
-- `arch` 仅在复杂任务时启用
-- 当前 runtime 最小入口是 `appserverclient --fork-role <role>`，它负责把真实 role thread 绑定回当前 task
-- 已绑定 role thread 的执行入口是 `appserverclient --role-turn <role> [text...]`
-- 已绑定 role thread 的去噪入口是 `appserverclient --summarize-role <role>`
-- 当前 `run-main` 也属于正式 role，可通过真实 role thread 路径参与 task 升级处理
-- task 机器层现在同时承载 `role_threads`、`role_summaries` 和 `task_summary.role_summary_evidence`
-- `taskclient --merge-role-summaries` 是当前 task-level 最小聚合入口：它不做复杂推理，只按去重规则把已有 role summaries 的来源和引用证据并入 `task_summary`
-- `taskclient.refresh_task_coordination()` 是当前 task-level 的统一刷新入口：它负责按需 merge role summaries，并继续刷新 `gap_summary / escalation_summary / run_main_resolution`
-- `appserverclient --summarize-role <role>` 现在会在写回单个 `role_summaries.<role>` 后调用该统一刷新入口
-- `taskclient.update_role_summary_with_task_links()` 现在统一承接 `role_summaries.<role>` 与 `task_summary.role_summary_evidence/source_threads` 的联动写回，避免 runtime 直接改 task aggregate 字段
-- `task_summary.conflict_policy` 是当前 task 层的最小优先级约定，当前默认顺序是：`run-main -> test -> arch -> dev`
-- `task_summary.gap_summary` 是当前 task 层的最小缺口汇总，当前至少记录：
-  - `missing_roles`
-  - `open_gaps`
-- `taskclient --refresh-task-gaps` 会基于现有 `role_summaries` 和 `test_gate` 刷新这两块
-- `task_summary.escalation_policy` 是当前 task 层“哪些情况必须升级给 run-main”的最小规则
-- `task_summary.escalation_summary` 是当前 task 层“这次是否需要升级”的最小结果
-- `taskclient --refresh-task-escalation` 会基于现有 `gap_summary` 与 `test_gate` 刷新这两块
-- `task_summary.run_main_resolution_policy` 是当前 task 层“升级给 run-main 后，什么条件下必须确认、什么条件下可以关闭升级项”的最小规则
-- `task_summary.run_main_resolution` 是当前 task 层“run-main 已否确认、是否可以关闭升级项”的最小结果
-- `taskclient --refresh-run-main-resolution` 会基于现有 `escalation_summary`、`role_summaries.run-main` 与 `test_gate` 刷新这两块
-- `appserverclient --mark-test-gate <status>` 是当前最小 test runtime 写回入口：其 test thread/turn 证据拼接现由 `taskclient.update_test_gate_from_test_summary()` 统一承接，并继续调用统一刷新入口
-
-### 4.9 Test Gate
-`test_gate` 是 task 内独立验证门，不等于开发自测结果。
-
-当前最小字段建议：
-- `status`
-- `owner_role`
-- `required_axes`
-- `evidence`
-- `blocking_issues`
-- `updated_at`
-
-说明：
-- task 不应只因 `dev` 完成实现就直接视为完成
-- `test_gate` 应作为 task summary 与 run summary 之间的重要质量门
-
-### 4.10 Tool Boundaries
-当前正式主工具边界固定为：
-- `appserverclient`: runtime / session / role thread
-- `taskclient`: task machine truth / task gates / task escalation
-- `evidence.py`: run evidence / run summary / run-level normalization
-- `gitclient`: git delivery / rollback / commit message fallback
-
-当前推荐边界：
-- `appserverclient` 只负责真实 thread 生命周期与必要写回，不继续承载更多 task/run 聚合规则
-- `taskclient` 只负责 `TASKS/TASK-*.json` 的结构化真相源，不接管 runtime transport
-- `evidence.py` 只负责 `reports/<RUN_ID>/` 下的 run-level truth 与压缩视图，不接管 task 机器层
-- `gitclient` 保持独立，不回灌 runtime / task / run 规则
-
-当前已观察到的变厚点：
-- `appserverclient` 已开始了解 `test_gate / gap_summary / escalation_summary / run_main_resolution`
-- `evidence.py` 已同时承担 run summary 写回、聚合、压缩和历史清理
-
-下一轮解耦方向：
-- 把更多 task 规则继续留在 `taskclient`
-- 让 `appserverclient` 只调用 task/run 层的显式入口，而不是继续内嵌规则
-- 保持 `gitclient` 不被重新耦合回 runtime 主线
-
-## 5. Thread Summary
+## 5. Claim
 
 ### 5.1 定义
-`thread summary` 是 task 内单个角色或一次连续工作会话的最小总结单元，通常对应某个 fork session 的局部结论。
+`claim` 是待验证判断，不是最终结论。
 
 ### 5.2 职责
-- 承接某个角色 thread 的局部进展、风险和下一步
-- 作为 task summary 的输入，而不是直接替代 task 或 run summary
+- 把“猜测”拆成可核证对象
+- 为 evidence workers 提供检索目标
+- 支撑 correction 和 contradiction 检查
 
-推荐角色：
-- `run-main`: run 主线程，负责需求收敛、task 拆分和最终确认
-- `dev`: 实现、debug、单元/最小集成自证
-- `test`: 独立验证、功能/流程/数据/非功能检查
-- `arch`: 复杂任务下的结构边界与约束评估
+### 5.3 当前关键字段
+- `claim_id`
+- `claim`
+- `type`
+- `confidence`
+- `evidence_level`
+- `verification_required`
+- `status`
+- `doc_support`
+- `code_support`
+- `runtime_support`
+- `contradictions`
 
-### 5.3 真相源
-- 当前过渡实现：`tools/project_config.json -> session_registry.current_summary`
-- 长期应扩展到 task 内多个 role/session summaries
+### 5.4 真相源
+- `state/registry.json -> claims`
 
-### 5.4 关系
-- 一个 `thread summary` 只属于一个 `task`
-- 一个 `task` 可以聚合多个 `thread summaries`
-- `baseline` 不应长期直接消费原始 thread summary
-
-## 6. Discussion Artifacts
-
-run 方向收敛记录属于 run 内过程材料，不是 task。
-
-## 7. Queue
+## 6. Evidence Pack
 
 ### 6.1 定义
-`queue` 是待执行 task 的入口池，不是项目主线，也不是讨论真相源。
+`evidence_pack` 是围绕单个或一组 claims 的证据集合。
 
 ### 6.2 职责
-- 承接 slice 后产生的待办切片
-- 作为后续 Python-first task picker 的选择入口
+- 汇总 doc / code / runtime / contradiction 结果
+- 为 coach v2 和 correction 提供基础
 
-### 6.3 真相源
-- `TASKS/QUEUE.json`
+### 6.3 主要来源
+- `doc-evidence-worker`
+- `code-evidence-worker`
+- `runtime-evidence-worker`
+- `contradiction-checker`
 
-### 6.4 关系
-- queue item 来自某个 `run` 下已经收敛好的 task 规划
-- queue item 最终会实体化为 `TASKS/TASK-*.json`
+### 6.4 真相落点
+- 当前以 `job.evidence_packs` 为主
+- 运行时审计可回看 `state/events.jsonl`
 
-### 6.5 设计原则
-- queue 在 discussion 之后
-- queue 不定义需求，只承接已收敛合同
-- queue 不是 project/run 的替代物
-
-## 8. Evidence
+## 7. Corrected Job
 
 ### 7.1 定义
-evidence 是仓库内记忆，不依赖聊天上下文。
+`corrected_job` 是经 coach + verification + correction 之后，可进入 planning 的工作单。
 
-### 8.2 Run 级 evidence
-位置：
-- `reports/<RUN_ID>/`
+### 7.2 职责
+- 收敛需求边界
+- 清理伪需求、错目标、错路径
+- 形成后续 task planning 的正式输入
 
-最低要求：
-- `meta.json`
-- `summary.md`
-- `decision.md`
+### 7.3 真相落点
+- `state/registry.json -> jobs[*].corrected_job`
 
-说明：
-- 当前阶段 `summary.md` 和 `decision.md` 仍以 active task evidence 为主，路径属于 run 容器，但内容粒度通常更接近 task-focused run evidence
-- `run_summary.json` 是当前新增的 run-level machine truth，后续应逐步承接 task summaries 的聚合结果
-- 多 task 成熟后，run evidence 应进一步承担 task summaries 的聚合表达
-
-### 8.3 Learn 级 evidence
-位置：
-- `learn/<project_id>.json`
-- `learn/<project_id>.md`
-- `learn/<project_id>.stdout.log`
-- `learn/<project_id>.model.*`
-
-### 8.4 职责
-- 记录本轮做了什么
-- 记录为什么这么做
-- 记录验证和风险
-- 记录模型同频结果
-
-## 9. Init-Project Phase Protocol
-
-### 9.1 Phase 1
-`--init-project` 第一阶段是 JSON-first 的 plan/gating 阶段。
-
-职责：
-- 读取 `README.md` 和原始 docs
-- 提取显式线索
-- 结合轻量仓库探测结果
-- 按 17 问判断当前理解已完成到哪一步
-- 把缺口翻译成客户可继续补充的问题，而不是只返回内部证据术语
-
-推荐输出字段：
-- `answered_questions`
-- `unclear_questions`
-- `customer_followups`
-- `document_priority_understanding`
-- `current_project_understanding`
-- `ready_for_doc_write`
-- `session_execution_instruction`
-
-允许保留的内部辅助字段：
-- `explicit_refs`
-- `light_repo_findings`
-- `implementation_gaps`
-- `must_read_next`
-
-`light_repo_findings` 当前推荐最小字段：
-- `project_root`
-- `top_level_files`
-- `docs_files`
-- `entry_candidates`
-- `test_candidates`
-- `config_candidates`
-- `state_or_contract_candidates`
-- `readme_refs_missing_in_repo`
-
-`must_read_next` 当前推荐最小约束：
-- 相对 `project_root` 的路径列表
-- 只允许仓库内真实存在的：
-  - `*.py`
-  - `*.md`
-  - `*.txt`
-  - `*.json`
-  - `*.doc`
-  - `*.docx`
-- 默认最多 8 个
-- 为空时只能伴随“17 问已经基本成立”
-- 不允许指向 owner docs 目标文件
-
-### 9.2 手工推进与完成
-`--init-project` 当前不直接承载 owner-doc 自动写入。
-
-职责：
-- 在同一 `init_project_session` 上持续推进 17 问理解
-- 允许人工继续纠偏、补料和更新状态
-- 初始化完成后，再进入正式学习主线
-
-说明：
-- Phase 1 管初始化理解、补证据和状态更新
-- `ready_for_doc_write = true` 只表示“17 问已基本成立，可继续人工确认”，不等于必须立即写
-- 手工更新入口是 `--update-init-project`
-- 初始化完成入口是 `--complete-init-project`
-- `session_execution_instruction` 是本轮 session 的补充执行指令
-- `operator_notes` 是人工在同一 init session 上追加的纠偏备注
-
-## 9. Session
+## 8. Task Plan
 
 ### 8.1 定义
-session 是一次聊天/终端交互会话。
+`task_plan` 是从 corrected_job 拆出的执行计划。
 
-### 8.2 原则
-- session 不是 run
-- session 可以服务 run
-- run 不能依赖 session 记忆存在
+### 8.2 职责
+- 定义最小执行切片
+- 决定 role 分工
+- 决定是否需要 repair / replan / discussion 的后续处理
 
-### 8.3 正确关系
-- session 通过 baseline 与 run evidence 对齐到当前 `project/run/task`
-- session 结束后，真相仍应留在仓库文件里
+### 8.3 真相落点
+- `state/registry.json -> jobs[*].task_plan`
 
-## 10. PR
+说明：
+- 当前实验线主真相在 `state/registry.json`
+- `TASKS/QUEUE.json` 仍可作为更高层任务池存在，但不是当前 job 状态机的唯一真相源
+
+## 9. Thread
+
+### 9.1 定义
+`thread` 是角色执行单元。
+
+### 9.2 当前角色
+- `run_manager`
+- `project_coach`
+- `dev_worker`
+- `test_worker`
+- `arch_reviewer`
+- `defect_triage`
+- 各 evidence workers
+
+### 9.3 当前关键字段
+- `thread_id`
+- `role`
+- `status`
+- `parent_thread_id`
+- `job_id`
+- `task_id`
+- `result`
+
+### 9.4 真相落点
+- `state/registry.json -> threads`
+
+## 10. Active Results
 
 ### 10.1 定义
-PR 是 task 的交付与审查单元。
+`active results` 是当前有效结果集，不是历史全集。
 
-### 10.2 原则
-- one task -> one branch -> one PR
+### 10.2 职责
+- 避免旧结果污染当前 triage / merge / replan
+- 让 repair / re-check 只消费最新结果
 
-### 10.3 必备内容
-- Why
-- What
-- Verify
-- Evidence paths
-- RUN_ID
+### 10.3 当前实现锚点
+- `collect_active_child_results()`
 
-## 12. 对象关系总图
+## 11. Defect Triage
 
-```text
-project
-  -> baseline
-  -> run
-    -> queue items
-    -> task-1
-      -> thread-summary-a
-      -> thread-summary-b
-    -> task-2
-    -> task-3
-    -> run evidence
-  -> baseline refresh input
-```
+### 11.1 定义
+`defect_triage` 是测试后的质量分流决策。
 
-## 13. 生命周期顺序
+### 11.2 职责
+- 判断：
+  - `send_back_to_dev`
+  - `send_to_run_manager`
+  - `start_discussion_round`
+  - `proceed_merge`
+- 记录目标 task 和缺陷级别
 
-```text
-project
-  -> init
-  -> baseline learn
-  -> run
-  -> run direction
-  -> task
-  -> thread summary
-  -> task summary
-  -> run evidence
-  -> baseline refresh
-  -> run close
-```
+### 11.3 真相落点
+- `state/registry.json -> jobs[*].defect_triage`
 
-## 14. 反模式
+### 11.4 缺陷状态
+当前统一使用：
+- `DEFECT_REPAIRING`
+- `DEFECT_REPLANNING`
+- `DEFECT_DISCUSSING`
+- `DEFECT_BLOCKED`
+- `READY_TO_MERGE`
 
-以下都是错误设计：
+## 12. Merge Result
 
-- 把 `run_id` 当成 `task_id`
-- 把 `session` 当成 `run`
-- 把单个 `thread summary` 直接当成 `run summary`
-- 先批量建 task 再讨论需求
-- 把 queue 当顶层对象
-- 让 baseline 学习直接替代 task/run 真相源
-- 让 queue 直接替代 task contract
+### 12.1 定义
+`merge_result` 是 run / job 级收敛结果。
 
-## 15. 本仓当前推荐结论
+### 12.2 职责
+- 汇总有效角色结果
+- 形成最终项目级结论
+- 为 baseline refresh 提供输入
 
-- `project_id`：长期上下文
-- `baseline`：项目长期学习基线
-- `run_id`：一轮工作周期容器
-- `task_id`：run 内最小执行切片
-- `thread summary`：task 内角色/会话级局部结论，当前过渡实现为 `session_registry.current_summary`
-- `queue`：run 内待执行入口池
-- `evidence`：仓库内长期记忆
+### 12.3 真相落点
+- `state/registry.json -> jobs[*].final_summary`
 
-当前实现说明：
-- `reports/<RUN_ID>/summary.md` 和 `decision.md` 目前仍以 active task evidence 为主，属于 run 容器下的过渡态表达
-- `session_registry.current_summary` 当前是 thread-level transitional summary，不应长期等同于最终 run summary
-- `reports/<RUN_ID>/run_summary.json` 当前是最小 machine truth 落点；`summary.md/decision.md` 继续承担 run 级 md 视图
-- `run_summary.json.baseline_ready_summary` 是给 baseline refresh 使用的压缩视图，不是新的独立对象；它只是 run-level machine truth 的一段更短表达
-- `run_summary.json.audit_risks` 是 run-level 审计/历史风险层；它用于保留清理真相，不应继续进入 baseline-facing 压缩表达
-- `run_summary.json.merge_policy` 是 task -> run 聚合规则的机器层声明；长期可以演进，但当前必须显式保留字段类别，不允许把所有 summary 字段继续当成统一 append 列表
-- `run_summary.json.legacy_cleanup_policy` 是 run-level 历史语义项的渐进清理声明；当前策略必须是 `explicit_maintenance_only`，不允许在普通 merge/reconcile 时静默重写全部旧条目
-- `run_summary.json.legacy_cleanup_last_applied_at` 只记录最近一次显式清理动作；它不是 run-level 业务状态
-- `run_summary.json.active_tasks/completed_tasks/source_tasks` 当前应优先通过 task JSON 真相源重算；如果 task 真相源本身保留历史 `active` 项，run summary 也应如实暴露，而不是在 run 层静默抹平
-- baseline 当前已优先消费 `run_summary`，仅在缺失时回退 `current_summary`；长期仍应以 run summary 为主，必要时再吸收经过筛选的 task summary
-- `session_registry.current_summary` 当前还承担 baseline refresh 的回写槽位，并记录 `baseline_refresh_input_type / baseline_refresh_input_ref`，用于说明本次 baseline refresh 的真实输入源
+## 13. Events
 
-后续如果 `docs/WORKFLOW.md` 与这里冲突，以本文件为准，并同步修正 workflow。
+### 13.1 定义
+`events` 是运行过程的审计流，不是业务结果本身。
+
+### 13.2 职责
+- 记录阶段推进
+- 记录决策和状态变化
+- 支持复盘与恢复
+
+### 13.3 真相源
+- `state/events.jsonl`
+
+## 14. Checkpoints
+
+### 14.1 定义
+`checkpoints` 是阶段快照。
+
+### 14.2 职责
+- 支持 resume / recover
+- 支持回看关键阶段产物
+
+### 14.3 真相源
+- `state/checkpoints/job_<id>/`
+
+## 15. Smoke / Gate
+
+### 15.1 定义
+这不是单次 job 对象，而是实验线质量保障对象。
+
+### 15.2 关键入口
+- `tests/run_smoke_suite.py`
+- `tests/run_gate.py`
+
+### 15.3 关键产物
+- `state/test_reports/smoke_summary.json`
+- `state/test_reports/gate_summary.json`
+- `state/test_reports/gate_summary.md`
+
+## 16. Bootstrap Manifest
+
+### 16.1 定义
+`bootstrap_manifest.json` 是新项目接入时的产物，不属于单次 job 主流程对象。
+
+### 16.2 职责
+- 记录来源仓库
+- 记录 bootstrap mode
+- 记录复制的 skills / runtime / schemas
+- 支持后续升级与迁移
+
+## 17. Supplementary Overviews
+
+以下文档是补充总览，不是正式入口：
+- `docs/archive/总纲.md`
+  - 流程总纲摘要
+- `docs/archive/a.md`
+  - 完成度矩阵 / 汇报稿
+
+它们可用于总览和复盘，但不替代：
+- `AGENTS.md`
+- `docs/PROJECT_GUIDE.md`
+- `docs/WORKFLOW.md`

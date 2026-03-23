@@ -1,2 +1,0 @@
-class RiskGate:
-    pass

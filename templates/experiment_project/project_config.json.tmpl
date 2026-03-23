@@ -1,0 +1,59 @@
+{
+  "project_id": "__PROJECT_ID__",
+  "project_name": "__PROJECT_NAME__",
+  "project_root": "__PROJECT_ROOT__",
+  "environment": {
+    "mode": "dev",
+    "log_level": "info",
+    "timezone": "UTC"
+  },
+  "docs": {
+    "project_guide": "docs/PROJECT_GUIDE.md",
+    "workflow": "docs/WORKFLOW.md",
+    "agents": "AGENTS.md",
+    "extra_docs": []
+  },
+  "skills": {},
+  "paths": {
+    "state_dir": "state",
+    "reports_dir": "reports",
+    "artifacts_dir": "artifacts",
+    "logs_dir": "logs"
+  },
+  "baseline": {
+    "auto_init": true,
+    "auto_refresh": true,
+    "refresh_only_from_run_final_summary": true,
+    "allow_candidate_truths": true
+  },
+  "job_sources": {
+    "allow_manual": true,
+    "allow_queue_file": false,
+    "queue_file": "TASKS/QUEUE.json",
+    "allow_derived_jobs": true,
+    "allow_event_jobs": false
+  },
+  "thread_policy": {
+    "max_role_threads_per_job": 6,
+    "allow_subagents": true,
+    "subagents_only_for_small_parallelism": true,
+    "default_needs_thread_roles": ["dev", "test", "arch_review"]
+  },
+  "verification_policy": {
+    "enable_doc_verification": true,
+    "enable_code_verification": true,
+    "enable_runtime_verification": false,
+    "enable_contradiction_check": true,
+    "minimum_evidence_for_run_planning": "documented_or_code_verified"
+  },
+  "state_policy": {
+    "auto_save": true,
+    "idempotent_resume": true,
+    "max_retries": 2,
+    "timeout_sec": 600
+  },
+  "human_gates": {
+    "require_approval_before_baseline_update": false,
+    "require_approval_for_high_risk_jobs": false
+  }
+}

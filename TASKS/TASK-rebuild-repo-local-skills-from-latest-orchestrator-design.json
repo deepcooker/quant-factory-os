@@ -1,0 +1,206 @@
+{
+  "task_id": "task-rebuild-repo-local-skills-from-latest-orchestrator-design",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "active",
+  "priority": "P1",
+  "title": "rebuild repo-local skills from latest orchestrator design",
+  "goal": "remove the current repo-local skill set and rebuild the .agents/skills skeletons so they match the latest experimental orchestrator design captured in the root-level project_config.json and skillguide.md",
+  "scope": [
+    ".agents/skills",
+    "skills",
+    "tools/project_config.json",
+    "TASKS/QUEUE.json",
+    "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  ],
+  "non_goals": [
+    "do not modify tools/appserverclient.py",
+    "do not integrate the new skills into the formal mainline yet",
+    "do not deep-write final skill methodology content yet",
+    "do not change root-level main.py or root-level project_config.json in this step"
+  ],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "The old repo-local skills are removed and replaced by new skeleton directories that match the latest root-level orchestrator skill names.",
+      "status": "completed"
+    },
+    {
+      "id": "check-2",
+      "text": "Each rebuilt skill contains a valid SKILL.md and agents/openai.yaml skeleton.",
+      "status": "completed"
+    },
+    {
+      "id": "check-3",
+      "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated.",
+      "status": "completed"
+    }
+  ],
+  "inputs": [
+    "skillguide.md",
+    "project_config.json"
+  ],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-rebuild-repo-local-skills-from-latest-orchestrator-design.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "已删除旧的 repo-local skill 文件内容，并按最新实验 orchestrator 设计重建 13 个新 skill 骨架。",
+      "新 skill 集已同时写入 `.agents/skills/` 正式目录与 `skills/` 可视化镜像目录。",
+      "旧 skill 目录中的残留空目录也已清理，只保留新名字集合。",
+      "已根据 `skill_step1.md` 将 project-coach、run-manager、doc-evidence-worker 从镜像目录同步到正式 `.agents/skills/`。",
+      "已根据 `skill_step2.md` 同步 code-evidence-worker，并确认根目录 project_config.json 与 step2 设计一致。",
+      "已根据 `skill_step3.md` 同步 runtime-evidence-worker、demand-critic、solution-designer；随后也完成了 risk-reviewer 同步。",
+      "已根据 `skill_step4.md` 同步 contradiction-checker，并确认 `schemas/` 当前承载的是 schema 模板，不是运行结果。"
+    ],
+    "decisions": [
+      "这轮先不碰 formal mainline，只重建新的实验性 skill 框子。",
+      "以根目录 `skillguide.md` 与根目录 `project_config.json` 的新设计为准，旧的 `baseline-learn/fork-identity/session-coach/...` 技能集整体下线。"
+    ],
+    "risks": [
+      "当前新 skill 仍然只是骨架，尚未补充可执行的方法论内容。",
+      "旧名字已下线，依赖旧 skill 名的实验脚本或手工调用方式会暂时失效。"
+    ],
+    "verification": [
+      "13 个新 `.agents/skills/<name>/` 均存在 `SKILL.md` 与 `agents/openai.yaml`。",
+      "13 个新 skill 全量通过官方 `quick_validate.py`。",
+      "`skill_step1.md` 与 `skills/project-coach`、`skills/run-manager`、`skills/doc-evidence-worker` 对照后语义一致。",
+      "`skill_step2.md` 与 `skills/code-evidence-worker` 对照后语义一致。",
+      "根目录 `project_config.json` 与 step2 提供的字段设计一致；`state/registry.json` 当前尚未落地。",
+      "`skill_step3.md` 与 `skills/runtime-evidence-worker`、`skills/demand-critic`、`skills/solution-designer`、`skills/risk-reviewer` 对照后语义一致。",
+      "`skill_step4.md` 与 `skills/contradiction-checker` 对照后语义一致；镜像与正式 skill 的 `SKILL.md` / `openai.yaml` 已对齐，并通过官方 validator。",
+      "`schemas/arch_reviewer_result.schema.json`、`schemas/dev_worker_result.schema.json`、`schemas/test_worker_result.schema.json`、`schemas/role_worker_base.schema.json` 当前与 `skill_step4.md` 中给出的结构一致，属于 schema 模板层而非运行结果。"
+    ],
+    "next_steps": [
+      "按 owner 的 10 余步实验顺序，逐个往新 skill 骨架里补真实协议和脚本资源。",
+      "在后续步骤里再决定 `appserverskillclient` 与这些新 skill 的结构化参数接口。"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": ""
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "pending_ack",
+      "close_escalation": false,
+      "notes": [],
+      "updated_at": ""
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-20T02:00:00+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-20T02:00:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

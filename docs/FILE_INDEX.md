@@ -1,96 +1,143 @@
 # FILE_INDEX.md
 
 ## 一句话定位
-这是实验性的全量文件职责索引，用来帮助新 agent 在最短时间内定位“先看什么、为什么看、文件各自负责什么”。
+这是当前实验线的快速索引。它回答的是：
+- 新 agent 先看什么
+- 当前正式主线文件在哪
+- 哪些只是补充总览
+- 哪些已经降级为历史兼容资产
 
-## 使用方式
-- 先看 owner docs 索引，再看 tools 索引，最后看 task / reports 索引。
-- 这个文件不是流程文档，也不是设计白皮书；它只负责快速定位。
-- 文件职责变化时，应同步更新这里的一句话说明。
+## 1. 第一阅读顺序
 
-## 1. Owner Docs
-
-| 文件 | 作用 | 什么时候优先看 |
-| --- | --- | --- |
-| `AGENTS.md` | 宪法与硬规则，定义门禁、允许命令、文档新鲜度和 PR 纪律。 | 每次 session 开始时 |
-| `docs/PROJECT_GUIDE.md` | 学习课程、问题库、标准答案、主线回拉锚点。 | baseline 学习和主线漂移时 |
-| `docs/FOUNDATION_BRIDGE.md` | foundation 与业务项目之间的工程承接说明模板。 | 对外解释 foundation 角色、接入方案或嵌入式使用边界时 |
-| `docs/PROJECT_BOOTSTRAP_PROTOCOL.md` | 陌生项目尚未接入基座时的最小学习与 owner docs 补齐协议。 | 承接新项目、只有杂乱文档和半截代码时 |
-| `docs/WORKFLOW.md` | 状态机、阶段定义、主流程说明。 | 理解流程和阶段边界时 |
-| `docs/ENTITIES.md` | 核心对象、状态和交付单元的词典。 | 理解 task/run/project/pr 等名词时 |
-| `docs/TOOLS_METHOD_FLOW_MAP.md` | 实验性主流程方法索引与调用图。 | 看主流程入口和方法调用时 |
-
-## 2. Runtime / Config
-
-| 文件 | 作用 | 什么时候优先看 |
-| --- | --- | --- |
-| `tools/project_config.json` | 项目最小配置数据源，含 required / git / runtime_state / session_registry；`current_summary` 也在这里落盘。 | 看项目接入最小字段、当前运行状态和 summary 回写时 |
-| `tools/project_config.json -> bootstrap_state` | 项目是否已完成首轮接入的硬门禁；只有 `is_inited=Y` 才允许 baseline 主线。 | 做新项目初始化或排查为什么 baseline 主线被拒绝时 |
-| `TASKS/QUEUE.json` | 当前 queue 的机器真相源。 | 选择下一个 active/open task 时 |
-| `TASKS/TASK-*.json` | 当前或历史 task 的机器真相源；现在也承载 `role_threads`、`test_gate` 和 task-level aggregate `task_summary`。 | 需要程序稳定读取 task 协作状态、test gate 或 task summary 时 |
-| `tools/project_config.template.json` | 其他项目接入时可复用的最小配置模板。 | 新项目接入时 |
-| `tools/project_config.py` | 统一配置出口；把 JSON 最小数据、系统常量和运行时状态拼成统一大配置视图。 | 任何脚本取配置时 |
-| `tools/sync_tools.py` | foundation -> 业务项目的固定清单同步入口；按约束路径同步 `tools/` 与 `prompts/`，不碰目标项目自己的 `project_config.json`。 | foundation 代码已更新，需要把最小 tools 下沉到真实业务项目时 |
-| `tools/taskclient.py` | Python-first 的统一 task 入口；当前同时承担 task/queue JSON 读写、queue 选择、runtime 绑定、task bootstrap、`role_threads`、`test_gate`、`task_summary` 与 `run_main_resolution` 更新。 | 需要从 `QUEUE.json` 选择 task、读取 active task、新建 task 或更新 task 协作状态时 |
-| `tools/evidence.py` | run evidence 的最小生成与维护入口；当前也提供 `run_summary.json` 的最小读写、带 `merge_policy` 的 `task summary -> run summary` 聚合、少量高频模式的 run-level 规则化归并、`cross_task_risks` 的近义 blocked-gate 风险去重、按同一 run 下 task JSON 真相源重算 `active/completed/source tasks`、显式 `normalize-run-summary` 渐进清理，以及生成供 baseline refresh 使用的 `baseline_ready_summary`。 | 补 `meta/summary/decision`、读取/更新 run summary、按字段类别聚合稳定 task summary、提升 run-level 表达质量、对齐 run/task 真相、做显式历史清理，或压缩 baseline refresh 输入时 |
-| `tools/result_schema.py` | 可组合流程方法统一返回协议：`err_code / err_desc / data`。 | 新增流程入口时 |
-
-## 3. Prepare / Runtime / Git
-
-| 文件 | 作用 | 什么时候优先看 |
-| --- | --- | --- |
-| `tools/init.py` | 环境准备、项目骨架补齐、Codex/Git 前置检查；缺失时会补最小标准协议骨架和 `project_config.json` bootstrap。对外部业务项目，应先由 foundation 侧执行 `sync_tools.py` 下沉最小 tools，再在目标项目里运行 `init.py`。 | 开工前环境准备或新项目首次接入时 |
-| `tools/appserverclient.py` | Codex app-server runtime 核心；负责 baseline / fork / fork-role / role-turn / summarize-role / mark-test-gate / current-turn / summarize-current / refresh-baseline，并显式打印当前 active task JSON 摘要；`refresh-baseline` 现优先消费 `run_summary.json`，`summarize-role` 会自动 merge role summaries 并刷新 task gap/escalation/resolution，`mark-test-gate` 会继续联动刷新。当前风险是它已经同时看见 runtime 与部分 task gate 规则，后续应继续保持“真实线程生命周期 + 必要写回”的边界，避免演化成总控脚本。 | 学习基线、当前 session 推进、role thread 绑定/执行/去噪、test gate 写回和 baseline 回灌时 |
-| `tools/appserverclient.py --init-project` | 未初始化项目的首轮接入入口；当前围绕 `bootstrap_state + init_project_session` 工作，并采用 `plan` 模式的 17 问理解协议，默认 effort 为 `low`，可用 `-e` 覆盖。它现在会生成最终 prompt、启动或续跑真实 app-server init thread、把真实 `thread_id/thread_path/last_turn_id` 写回 `init_project_session`，并返回结构化状态 `session_execution_instruction / answered_questions / unclear_questions / customer_followups / document_priority_understanding / current_project_understanding / ready_for_doc_write / status / next_action`。`-t` 是聊天/补充指令入口；只有显式 `-p` 才会强制再走一次完整 prompt；`-new` 只负责显式推翻重来，不再隐式等于 prompt 模式。 | 新项目还没完成初始化理解时 |
-| `tools/init_project.final_prompt.md` | `--init-project` 每轮生成的最终 prompt 文本；由固定模板、本轮补充执行指令、动态项目上下文和输出约束拼接而成。它现在既是人工审计文件，也是当前真实 init thread 的实际 turn 输入源。 | 调试 init-project prompt、核对 instruction 是否生效、排查 init thread 输入和续跑行为时 |
-| `tools/view.sh` | 稳定的分段文件读取工具；支持直接执行和 `python3 tools/view.sh ...`，兼容历史 `--lines START:END` 用法，并内置 repo 边界与 denylist 检查。 | 读取长文件、按范围查看、查找命中行或验证读取边界时 |
-| `tools/prompts/init_project_prompt.md` | `--init-project` 的固定提示词模板；当前定义了 `README -> raw docs -> 17问理解 -> customer followups -> ready_for_doc_write` 的初始化理解协议。 | 设计或调整未初始化项目的首轮接入流程时 |
-| `tools/prompts/summarize_role_prompt.md` | role thread 去噪总结模板；用于把单个角色线程总结成可写入 task 机器层的 role summary。 | 调用 `appserverclient --summarize-role` 时 |
-| `tools/taskclient.py` | task/queue 机器真相入口；负责 create/next、task summary 写回、role thread/role summary/test gate 更新，以及 `--merge-role-summaries` / `--refresh-task-gaps` / `--refresh-task-escalation` / `--refresh-run-main-resolution` 的 task-level 聚合、缺口刷新、升级判断和 run-main 确认闭环。当前还提供内部统一刷新入口 `refresh_task_coordination()`，以及 `update_role_summary_with_task_links()`、`update_test_gate_from_test_summary()` 这类 task-side 联动 helper，供 runtime 在不理解具体 task 规则细节的前提下完成 task 层联动。它是 task 级规则的优先归属层，后续新增 task policy 应优先落在这里，而不是回流到 runtime。 | 处理 task JSON truth、聚合 role summaries、刷新缺口/升级状态和绑定 active task 时 |
-| `tools/gitclient.py` | Git 底层；负责 commit、PR、merge、rollback、main 同步，并优先从 task JSON 读取当前任务上下文。当前保持独立性较好，后续应继续避免把 runtime 或 task/run 聚合逻辑重新耦合回这里。 | 收尾交付和回滚时 |
-
-当前最短稳定操作面：
-- `init -> learnbaseline -> 明确 run 方向 -> fork-current -> （按需 fork-role/role-turn/summarize-role/mark-test-gate） -> summarize-current -> refresh-baseline -> gitclient`
-- 如果没有真实多角色需要，不要额外引入 role thread 步骤
-- 如果在 Codex TUI 内做真实 session/runtime 调试，`Default` 权限模式可能拦住 workspace 外的 `/root/.codex/sessions`；此时应临时切 `/permissions -> Full Access`，避免把外层权限问题误判为主线逻辑问题
-
-`--init-project` 当前还多了一层运行时约束：
-- `light_repo_findings` 是 Phase 1 的仓库事实摘要，不是完整代码阅读结果
-- `must_read_next` 是下一轮受控读取集合，当前只允许仓库内真实存在的 `py/md/txt/json/doc/docx` 文件，默认最多 8 个，且不能包含 owner docs 目标文件
-- `ready_for_doc_write = true` 只表示“17 问已经基本成立，可继续人工纠偏后进入下一步”，不等于自动立刻写文件
-- `session_execution_instruction` 是你给当前 init session 的补充执行指令，适合承载“总纲优先、README 次之、中央银行设计是核心亮点”这类高质量一句话约束
-- 如果当前没有 init thread，则 `--init-project -t "..."` 会新建真实 thread 并只发送聊天文本；只有显式 `-p` 才会重喂完整 prompt
-- 如果同一 init thread 还在进行中，重复执行 `--init-project` 当前会返回忙态而不是起第二个线程；当前可见标记包括 `existing_thread_busy` 与 `rollout_pending`
-
-## 5. Prompt / Learning Assets
-
-| 文件 | 作用 | 什么时候优先看 |
-| --- | --- | --- |
-| `tools/prompts/learnbaseline_prompt.md` | baseline 学习固定前言 prompt 文件。 | 调整 baseline 学习提示词时 |
-| `tools/prompts/summarize_current_prompt.md` | current fork 去噪总结提示词。 | 调整 `--summarize-current` 时 |
-| `tools/prompts/refresh_baseline_prompt.md` | baseline 增量回灌提示词；当前要求优先消费 `run_summary`，缺失时再回退 `current_summary`。 | 调整 `--refresh-baseline` 时 |
-| `appserver_log/test_app*.jsonl/.log` | app-server Python 调试日志输出目录；默认承载 runtime 事件流和 stderr 记录。 | 排查 baseline / fork / role runtime 问题时 |
-| `chatlogs/需求管理及分析工作指南.doc` | 传统需求分析参考材料，当前主要服务 run-main 的需求收敛方法提炼。 | 回看需求分析原则来源时 |
-| `chatlogs/learn_prompt_compare.md` | `learn.py` 与 `appserverclient` baseline prompt 对比说明。 | 做提示词迁移时 |
-
-## 6. Task / State / Evidence
-
-| 文件 | 作用 | 什么时候优先看 |
-| --- | --- | --- |
-| `TASKS/QUEUE.json` | queue 的唯一机器真相源。 | 读取、绑定或收口 task/queue 状态时 |
-| `TASKS/TASK-*.md` | task 的遗留可读视图；迁移期保留。 | 需要人工快速浏览任务说明时 |
-| `reports/_SCHEMA.run_summary.json` | run summary 的机器真相源 schema 模板；当前也声明 `merge_policy`、`legacy_cleanup_policy` 和 `audit_risks`，用于区分运行时归并规则、历史前缀渐进清理规则以及不应进入 baseline-ready compaction 的审计风险层。 | 设计或扩展 run-level aggregate summary 时 |
-| `reports/<RUN_ID>/run_summary.json` | 当前 run 的机器真相源摘要。 | 需要程序稳定读取 run-level aggregate summary 时 |
-| `reports/<RUN_ID>/summary.md` | 当前 run 的总结证据。 | 看最近做了什么时 |
-| `reports/<RUN_ID>/decision.md` | 当前 run 的决策证据。 | 看为什么这么做时 |
-
-## 7. 当前建议阅读顺序
+新 agent 当前建议阅读顺序：
 
 1. `AGENTS.md`
 2. `docs/PROJECT_GUIDE.md`
 3. `docs/WORKFLOW.md`
-4. `docs/ENTITIES.md`
-5. `docs/TOOLS_METHOD_FLOW_MAP.md`
-6. `tools/project_config.py`
-7. `tools/appserverclient.py`
-8. `tools/gitclient.py`
+4. `tools/project_config.json`
+5. `state/registry.json`
+6. `tools/main.py`
+7. `docs/ENTITIES.md`
+8. `tests/run_gate.py`
+
+## 2. 正式入口文档
+
+| 文件 | 作用 | 什么时候先看 |
+| --- | --- | --- |
+| `AGENTS.md` | 宪法、硬规则、执行边界。 | 每次 session 开始 |
+| `docs/PROJECT_GUIDE.md` | 学习课程、问题库、主线回拉锚点。 | baseline 学习、主线漂移 |
+| `docs/WORKFLOW.md` | 当前实验线状态机。 | 理解阶段与下一跳 |
+| `docs/ENTITIES.md` | 当前实验线对象系统。 | 分清 project/job/claim/thread/triage 等对象 |
+
+## 3. 当前运行真相
+
+| 文件 | 作用 | 什么时候先看 |
+| --- | --- | --- |
+| `tools/project_config.json` | 当前实验线配置源；承载 skills、thread policy、verification policy、human gates。 | 看当前主线配置 |
+| `state/registry.json` | 根目录实验线运行真相源；承载 jobs、threads、claims、baseline_snapshot。 | 看当前状态和恢复点 |
+| `state/events.jsonl` | 审计日志。 | 回放最近阶段推进 |
+| `state/checkpoints/` | 阶段快照。 | 看 resume / recover 依据 |
+| `reports/<RUN_ID>/summary.md` | 当前 run 的人类总结证据。 | 看最近做了什么 |
+| `reports/<RUN_ID>/decision.md` | 当前 run 的决策证据。 | 看为什么这么做 |
+
+## 4. 当前正式实验线代码
+
+| 文件 | 作用 | 什么时候先看 |
+| --- | --- | --- |
+| `tools/main.py` | 当前实验线主入口；承载 baseline、coach、verification、correction、planning、role execution、triage、merge、refresh、resume。 | 理解主状态机 |
+| `tools/app.py` | 当前正式 app-server client 核心；承载 thread lifecycle、turn、plan/default、skill 挂载、`run_business_turn(...)`。 | 看运行时交互与统一业务入口 |
+| `tools/init.py` | 当前实验线准备层入口；补齐并校验 runtime 骨架、配置模板、Codex/app-server、git 工作区。 | 开新 session 或检查仓状态 |
+| `tools/sync_tools.py` | 当前实验线同步层入口；向目标项目同步 docs、schemas、skills 和 runtime bundle。 | 向第二个项目下沉新 runtime |
+| `tools/project_config.template.json` | 新实验线最小配置模板。 | 看 init / sync / bootstrap 期望的配置骨架 |
+| `core/schema_utils.py` | schema 校验工具。 | 看输出校验 |
+| `schemas/*.json` | 实验线所有结构化结果模板。 | 看对象和 skill 输出契约 |
+
+## 5. Skills
+
+| 文件 | 作用 | 什么时候先看 |
+| --- | --- | --- |
+| `.agents/skills/` | 正式 repo-local skills 目录。 | 看当前真正生效的 skills |
+| `skills/` | `.agents/skills/` 的可视化镜像。 | 页面浏览或人工查看 |
+| `.agents/skills/learn-baseline/SKILL.md` | baseline 学习协议。 | 看长期真相如何建立 |
+| `.agents/skills/project-coach/SKILL.md` | 需求澄清协议。 | 看 raw_request 如何进入系统 |
+| `.agents/skills/run-manager/SKILL.md` | planning / merge / run 汇总协议。 | 看 run 级收敛 |
+| `.agents/skills/doc-evidence-worker/SKILL.md` | 文档证据收集。 | 看 verification |
+| `.agents/skills/code-evidence-worker/SKILL.md` | 代码证据收集。 | 看 verification |
+| `.agents/skills/runtime-evidence-worker/SKILL.md` | 运行时证据收集。 | 看 verification |
+| `.agents/skills/contradiction-checker/SKILL.md` | 冲突检查。 | 看 verification |
+| `.agents/skills/demand-critic/SKILL.md` | 需求批判。 | 看 correction |
+| `.agents/skills/solution-designer/SKILL.md` | 方案设计。 | 看 correction |
+| `.agents/skills/risk-reviewer/SKILL.md` | 风险审查。 | 看 correction |
+| `.agents/skills/dev-worker/SKILL.md` | 开发角色协议。 | 看 role execution |
+| `.agents/skills/test-worker/SKILL.md` | 测试角色协议。 | 看 role execution |
+| `.agents/skills/arch-reviewer/SKILL.md` | 架构评审协议。 | 看 role execution |
+| `.agents/skills/defect-triage/SKILL.md` | 缺陷分流协议。 | 看 triage / repair / replan / discussion |
+
+## 6. 验证与发布
+
+| 文件 | 作用 | 什么时候先看 |
+| --- | --- | --- |
+| `tests/run_smoke_suite.py` | 一键 smoke 入口。 | 做开发级回归 |
+| `tests/run_gate.py` | 一键 gate 入口。 | 做发布级验证 |
+| `tests/integration_real_app_smoke.py` | 最小真实 app-server 烟测。 | 看真实 runtime 最小集成 |
+
+## 7. 新项目接入
+
+| 文件 | 作用 | 什么时候先看 |
+| --- | --- | --- |
+| `scripts/bootstrap_experiment_project.py` | 新项目 bootstrap 入口。 | 给第二个项目生成骨架 |
+| `templates/experiment_project/` | 新项目模板目录。 | 看接入时会生成哪些最小文件 |
+
+## 8. 补充总览文档
+
+| 文件 | 作用 | 什么时候先看 |
+| --- | --- | --- |
+| `docs/archive/总纲.md` | 当前实验线流程总纲摘要。 | 先快速看一页总流程 |
+| `docs/archive/a.md` | 完成度矩阵 / 汇报稿。 | 需要看“做到哪了”的总表 |
+| `docs/archive/EXPERIMENT_LINE_GATE.md` | 旧 gate 说明文档；核心内容已并入 `docs/WORKFLOW.md`。 | 需要回看历史独立 gate 文档时 |
+| `docs/archive/PROJECT_BOOTSTRAP.md` | 旧 bootstrap 说明文档；当前接入方式仍属实验性，已从主目录降级归档。 | 需要回看历史独立 bootstrap 说明时 |
+
+说明：
+- 这两份有用
+- 但它们不是正式入口
+- 它们用于总览、复盘、汇报，不替代主线文档
+
+## 9. 历史兼容资产
+
+以下内容现在不再是当前正式主线解释中心，只保留为：
+- 历史对照
+- 兼容资产
+- 迁移参考
+
+| 文件 | 作用 |
+| --- | --- |
+| `docs/archive/project_guide_backup.md` | 旧版 `PROJECT_GUIDE` 备份 |
+| `tools/backup/legacy_runtime/` | 旧 `tools/` runtime 备份目录 |
+| `tools/backup/runtime_demo_archive/appserver_demo.py` | 已归档的 app-server 协议验证稿 |
+| `tools/gitclient.py` | 当前保留的 git / PR / rollback 交付层 |
+| `tools/view.sh` | 当前保留的稳定阅读器 |
+
+## 10. 当前最短操作面
+
+当前实验线最短稳定操作面：
+
+```text
+baseline
+-> coach
+-> verification
+-> correction
+-> planning
+-> role execution
+-> defect triage
+-> merge
+-> baseline refresh
+-> smoke / gate
+```
+
+如果是新项目接入：
+
+```text
+bootstrap_experiment_project.py
+-> skeleton / runnable / runtime-bundle
+-> 再进入主运行流程
+```

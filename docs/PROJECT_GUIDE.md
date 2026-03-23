@@ -1,269 +1,469 @@
 # PROJECT_GUIDE.md
 
 ## 一句话北极星
+
 自动化 -> 自我迭代 -> 涌现智能。
 
 ## 使用方式
-- 这是 `learn` 的主课程、问题库、标准答案和主线锚点。
-- 题目本身与整体结构是 owner 精心挑选后的固定课程资产，不应被随意改写、重排或替换。
-- 正常允许变化的是：项目变动后同步更新标准答案，或为保持同频质量做最小必要微调。
-- `learn` 必须先阅读本文件，再按每题的 `必查文件` 与 `查找线索` 去读取证据。
-- 文件阅读统一走 `tools/view.sh`；当前正式支持 `tools/view.sh ...` 和 `python3 tools/view.sh ...`，并兼容历史 `--lines START:END`。
-- 如果目标项目尚未接入这套基座、缺少 owner docs，先参考 [PROJECT_BOOTSTRAP_PROTOCOL.md](/root/quant-factory-os/docs/PROJECT_BOOTSTRAP_PROTOCOL.md) 做首轮项目学习与文档补齐，再继续使用本题库。
-- 这些题的目的不是“考试打分”，而是用高质量提问反向逼模型去读全量 owner docs、run evidence、session continuity 线索，并把主线固化成可复用的证据。
-- 如果输出偏到具体细节、工具琐事或单一 bug，而没有回到项目目标、门禁、工作流、当前阶段，就说明已经偏离主线。
-- 一旦漂移，不是继续闲聊，而是回到 `PROJECT_GUIDE` 的问题体系里重答，并重新引用证据把模型拉回主线。
+
+* 这是 `learn` 的主课程、问题库、标准答案和主线锚点。
+* 题目本身与整体结构是 owner 精心挑选后的固定课程资产，不应被随意改写、重排或替换。
+* 正常允许变化的是：项目变动后同步更新标准答案，或为保持同频质量做最小必要微调。
+* `learn` 必须先阅读本文件，再按每题的 `必查文件` 与 `查找线索` 去读取证据。
+* 文件阅读统一走 `tools/view.sh`；当前正式支持 `tools/view.sh ...` 和 `python3 tools/view.sh ...`，并兼容历史 `--lines START:END`。
+* 如果目标项目尚未接入这套基座、缺少 owner docs，先参考 `scripts/bootstrap_experiment_project.py` 与 `templates/experiment_project/` 做首轮项目学习与文档补齐，再继续使用本题库。
+* 这些题的目的不是“考试打分”，而是用高质量提问反向逼模型去读全量 owner docs、run evidence、session continuity 线索，并把主线固化成可复用的证据。
+* 如果输出偏到具体细节、工具琐事或单一 bug，而没有回到项目目标、门禁、工作流、当前阶段，就说明已经偏离主线。
+* 一旦漂移，不是继续闲聊，而是回到 `PROJECT_GUIDE` 的问题体系里重答，并重新引用证据把模型拉回主线。
 
 ### 建议入口顺序
-- 新 agent 首轮同频，优先按 `Q1 -> Q2 -> Q5 -> Q6 -> Q7 -> Q8 -> Q17` 作答。
-- 这组题的作用分别是：项目定位、当前阶段、宪法、工作流、当前局面、session continuity、最终主线回拉。
-- 这组题答稳之后，再继续 `Q3/Q4/Q9...Q16`，避免一开始就陷进局部实现细节。
+
+* 新 agent 首轮同频，优先按 `Q1 -> Q2 -> Q5 -> Q6 -> Q7 -> Q8 -> Q17` 作答。
+* 这组题的作用分别是：项目定位、当前阶段、宪法、工作流、当前局面、session continuity、最终主线回拉。
+* 这组题答稳之后，再继续 `Q3/Q4/Q9...Q16`，避免一开始就陷进局部实现细节。
+
+---
 
 ### Q1. 整个项目是做什么的，背景，目标是什么，我最终要什么，我是用什么开发方式来完成这个项目的？
+
 #### 为什么问这题
+
 这题决定 agent 是否理解项目的根目标。如果连项目定位都没对齐，后续所有流程都会变成“会跑命令，但不知道为什么要跑”。
+
 #### 标准答案
-`quant-factory-os` 是一个基建型执行与治理系统，目标是把 AI 协作从“依赖聊天记忆”改造成“依赖仓库内证据、门禁和工作流”的工程化闭环。它当前不是业务项目仓，而是在把 `tools` 自动化 AI 研发体系本身做稳。背景是多窗口、多会话、多 agent 协作时非常容易丢上下文、偏离主线、重复试错，所以需要把任务、决策、验证、错误和状态都沉淀到仓库里。你最终要的是：新 agent 上岗后能快速同频、知道项目主线、按规则执行、持续更新文档与证据，并最终让这套能力沉淀成普通窗口可执行的 Python 总入口，而 Codex 通过 app-server 在背后提供运行时智能能力。开发方式不是随手改代码，而是 `Task + Gate + Evidence + Verify + Ship` 的方式：先绑定任务和范围，再同频和规划，再执行最小改动，再验证，再更新证据与文档。`PROJECT_GUIDE` 在这里不是说明书，而是反向提问课程：它通过问题体系逼模型去读宪法、工作流、实体、证据和 session 线索，再把主线答出来。
+
+`quant-factory-os` 是一个基建型执行与治理系统，目标是把 AI 协作从“依赖聊天记忆”改造成“依赖仓库内证据、状态、门禁和工作流”的工程化闭环。它当前不是业务项目仓，而是在把自动化 AI 研发体系本身做稳，并逐步沉淀成普通窗口可调用的 Python orchestrator / runtime 基座，Codex 通过 app-server 在背后提供运行时智能能力。这个项目的背景是：多窗口、多会话、多 agent 协作时极易丢上下文、偏离主线、重复试错，导致任务、决策、验证、错误和状态散落在聊天里，无法复用，也无法恢复。因此项目要把这些关键内容沉淀进仓库，让新 agent 上岗后能快速同频、知道主线、按规则执行、持续更新文档与证据，并在漂移时被拉回主线。
+
+你最终要的，不是一个“会跑命令的自动化脚本”，而是一套 **AI 研发基座**：它能够围绕主线稳定完成需求澄清、证据核验、任务规划、角色执行、质量治理、缺陷分流、返工 / 重规划 / 讨论、结果汇总、学习回流、恢复续跑、回归验证和新项目接入。开发方式也不是随手改代码，而是沿着正式主线推进：先初始化 baseline，再通过 coach 和问题体系澄清需求，再做 verification 收集证据，再进入需求博弈和校正，再拆 task，再进行多角色执行，再通过 defect triage 做质量治理，再做 merge 和 baseline refresh，最后把 state、evidence、checkpoints、events 和 gate 结果沉淀下来。`PROJECT_GUIDE` 在这里不是说明书，而是反向提问课程：它通过问题体系逼模型去读宪法、工作流、实体、证据和 session 线索，再把主线答出来。
+
 #### 必查文件
-- AGENTS.md
-- docs/WORKFLOW.md
-- docs/ENTITIES.md
+
+* `AGENTS.md`
+* `docs/WORKFLOW.md`
+* `docs/ENTITIES.md`
+* `tools/project_config.json`
+
 #### 查找线索
-- 先看 README 的项目定位。
-- 再看 AGENTS 的硬规则和门禁要求。
-- 再看 WORKFLOW 的状态机，确认这不是普通代码仓，而是流程仓。
-- 最后用 ENTITIES 理清 task/run/project/evidence 这些名词。
+
+* 先看项目入口说明，确认项目不是普通业务仓，而是基建/治理仓。
+* 再看 `AGENTS.md` 的硬规则和门禁要求。
+* 再看 `WORKFLOW` 的状态机，确认这不是普通代码仓，而是流程仓。
+* 最后用 `ENTITIES` 理清 `task / run / project / evidence / claim / baseline` 这些名词，并用 `tools/project_config.json` 看当前运行骨架。
+
 #### 主线意义
-- 这题是总开关，回答错了，后面所有题都会偏。
-- 最常见漂移是把项目理解成“一个脚本工具集”或“一个普通自动化仓库”，忽略治理与同频。
+
+* 这题是总开关，回答错了，后面所有题都会偏。
+* 最常见漂移是把项目理解成“一个脚本工具集”或“一个普通自动化仓库”，忽略治理、同频、证据和恢复。
+* 另一种常见漂移是只看到代码与工具，不看到问题方法论和主线校正机制。
+
+---
 
 ### Q2. 项目有几个阶段性目标，现在完成到哪个阶段，每个阶段都完成了什么？
+
 #### 为什么问这题
-这题用来判断 agent 是否知道“我们现在在哪”，避免拿未来形态要求当前实现，或者拿历史方案约束当前方向。
+
+这题用来强制区分 5 个层次：项目愿景、当前阶段、已经验证的能力、正在试点验证中的能力、以及尚未闭合的能力。若这 5 层混在一起，agent 就会把“未来蓝图”误答成“当前已实现”，或者把“试点中”误答成“已稳定可复用”。
+
 #### 标准答案
-这个项目是分阶段推进的。当前可以概括为：先把项目级同频学习基线和 session 基建做稳，再围绕 run 级需求方向 fork 多角色 session 拆最小 task 执行，最后用 `gitclient` 完成交付和回滚闭环。现在仍处于 `quant-factory-os` 仓强化阶段，重点不是扩业务，而是让 `init` 作为准备层稳定、让 `appserverclient` 承担正式主流程、让 `gitclient` 承担正式收尾层，并把这三层口径彻底统一。同时，基座已经开始嵌入外部业务项目做真实同频与学习接入验证，所以当前主线必须继续保持最小、稳定、可迁移。这里要明确：真实项目试点已经开始，但主线自动化还没有完全闭合，现阶段仍然是 `Codex 手工调试 + foundation（角色名）自动化` 一起推进，而不是已经进入全自动运行。已经有的成果包括：项目级 baseline 学习、current fork/session 推进、Git 提交/回滚闭环、owner docs 主线统一；旧 shell 兼容入口则已开始降级到 `chatlogs/backup/`。当前研发期主要通过 Codex CLI 暴露流程问题、观察日志和接管排障；终态目标则不是长期停留在 CLI，而是让这套基座逐步沉淀成“普通窗口执行的 Python orchestrator + Codex app-server 运行时”。如果要对外解释 foundation 与业务项目的关系，应单独参考 `docs/FOUNDATION_BRIDGE.md`，而不是把业务逻辑写回本仓主线文档。
+
+这个项目当前必须按“愿景 / 当前阶段 / 已验证 / 试点中 / 未闭合”五层来回答。愿景上，它最终要沉淀成普通窗口可执行的 Python orchestrator + app runtime 基座。当前阶段上，它已经从单纯的流程设计推进到**实验线状态机阶段**：需求澄清、verification、correction、planning、角色执行、defect triage、repair / replan / discussion、merge、baseline refresh、resume、events、checkpoints、smoke、gate、bootstrap 都已经在根目录实验线中成形。已验证的能力上，当前已经通过 fake smoke 和 gate 验证了：happy path、major defect -> replan -> targeted rerun、merged -> resume、send_back_to_dev repair、critical discussion block、cycle limit block，以及最小 app runtime contract。试点中的能力上，bootstrap 已经能生成最小可运行接入骨架，并进入 runtime-bundle 模式验证。尚未闭合的能力上，真实 app-server 下整条主链的长期稳定实跑、subagents 真执行、queue/event source、human gates、独立 implementation-critic / review-mediator 仍未完全闭合。因此不能把“实验线已经形成完整状态机样机”误说成“整条正式主线已经在真实环境下长期稳定全自动运行”。
+
 #### 必查文件
-- docs/WORKFLOW.md
-- tools/project_config.json
-- TASKS/QUEUE.json
-- reports/<RUN_ID>/summary.md
+
+* `docs/WORKFLOW.md`
+* `tools/project_config.json`
+* `TASKS/QUEUE.json`
+* `reports/<RUN_ID>/summary.md`
+* `tests/run_gate.py`
+* `scripts/bootstrap_experiment_project.py`
+* `templates/experiment_project/`
+
 #### 查找线索
-- 先看 WORKFLOW 的状态机和当前推荐路径。
-- 再看 `tools/project_config.json -> runtime_state` 当前 run 和 task。
-- 再看 QUEUE 判断还有哪些未完事项。
-- 最后看当前 run summary，确认最近落地了什么。
+
+* 先看 `WORKFLOW.md`，确认 formal mainline 与边界。
+* 再看 `tools/project_config.json`，确认当前 skills、thread policy、verification policy、human gates 等配置。
+* 再看 `TASKS/QUEUE.json` 和当前 `reports/<RUN_ID>/summary.md`，确认最近一批工作实际推进到了哪。
+* 最后看 `tests/run_gate.py`、`scripts/bootstrap_experiment_project.py` 和 `templates/experiment_project/`，确认哪些能力已经进入可验证、可接入阶段。
+
 #### 主线意义
-- 这题负责时间定位。
-- 最常见漂移是把“最终自动化蓝图”误当作“当前已经实现的能力”。
+
+* 这题负责时间定位。
+* 最常见漂移是把“最终自动化蓝图”误答成“当前已经实现的能力”，或者把“实验线已证明”误答成“真实环境已长期闭合”。
+
+---
 
 ### Q3. 这个项目完成后会形成什么基座能力，接下来第一个落地项目会是什么，你准备怎么承接和落地？
+
 #### 为什么问这题
+
 这题是把“基座仓”与“业务仓”分开，防止把所有问题都堆在一个仓里，造成基建和业务互相污染。
+
 #### 标准答案
-基建项目做完后，`quant-factory-os` 这个仓会以 `foundation` 角色对外提供流程、门禁、同频和执行治理能力。它当前首先要产出的不是业务项目模板，而是一套更稳定的 `tools` 自动化 AI 研发团队运行层。研发期用 Codex CLI 来定义 agent 行为、检验 `PROJECT_GUIDE / ENTITIES / WORKFLOW / AGENTS` 是否足以约束研发流程，并通过日志暴露问题；成熟后，日常运行应主要在普通窗口通过 Python 总入口执行，而与 Codex 的程序化交互统一落在 app-server。原因是：当前最难的不是复用分发，而是正确理解需求、对齐主线、保证流程稳定。如果过早把未稳定流程包装成接口或模板，会放大耦合和返工。更合理的做法是：基座仓继续稳定 baseline/session 主线、task/run 机器真相和 owner docs 状态机；我的承接方式应该是先跑同频，再确认当前 run、任务和方向，然后才进入讨论和执行。
+
+基建项目做完后，`quant-factory-os` 这个仓会以 **AI 研发基座** 的形式对外提供：项目级 baseline 学习、需求澄清与证据核验、任务规划、多角色执行、质量治理、恢复续跑、回归 gate 和 bootstrap 接入能力。它当前首先要产出的不是某个具体业务模板，而是一套更稳定的执行与治理运行层，让第二个项目不必重新发明 owner docs、状态机、gate 和 bootstrap。接下来的第一个落地项目，不应理解成“直接把业务逻辑搬进本仓”，而应理解成：**让第二个 coding 项目接入这套基座骨架**，先通过 bootstrap 生成 skeleton / runnable / runtime-bundle，再补项目自己的 owner docs 和业务真相，然后沿基座主线执行。我的承接方式应该是：先确认目标项目是否已接入这套骨架；未接入则先 bootstrap 和补文档；已接入则先同频、确认当前 run 与方向，再进入讨论、规划和执行。
+
 #### 必查文件
-- docs/WORKFLOW.md
-- docs/ENTITIES.md
-- reports/<RUN_ID>/decision.md
+
+* `docs/WORKFLOW.md`
+* `docs/ENTITIES.md`
+* `scripts/bootstrap_experiment_project.py`
+* `templates/experiment_project/`
+* `reports/<RUN_ID>/decision.md`
+
 #### 查找线索
-- 看 WORKFLOW，确认基座提供的是流程骨架，不是业务实现。
-- 看 ENTITIES，区分 project/run/task 的层级。
-- 看当前 decision，确认近期对“基座 vs 业务”的判断。
+
+* 看 `WORKFLOW`，确认基座提供的是流程骨架，不是业务实现。
+* 看 `ENTITIES`，区分 `project / run / task / evidence` 的层级。
+* 看 `bootstrap_experiment_project.py` 和 `templates/experiment_project/`，确认新项目是怎么接入这套基座的。
+* 看当前 `decision`，确认近期对“基座 vs 业务”的判断。
+
 #### 主线意义
-- 这题防止把基建仓做成“所有事都往里塞”的大杂烩。
-- 常见漂移是太早做插件化，忽视当前流程还没稳定。
+
+* 这题防止把基建仓做成“所有事都往里塞”的大杂烩。
+* 常见漂移是太早业务化，忽视当前更重要的是把接入方式、主线和 gate 做稳。
+
+---
 
 ### Q4. 如果把不同 AI 界面或运行时分别作为决策端和执行端，它们应如何保持同频，各自承担什么职责？
+
 #### 为什么问这题
+
 这题负责定义脑和手的协作边界，不然模型会把战略、评审、实现、修复混成一层。
+
 #### 标准答案
-不同 AI 界面和运行时可以分成“决策端”和“执行端”，但必须保持同频。当前项目里，网页端更适合做方向讨论、方案反驳、角色博弈和收敛决策；本地执行端更适合做项目级 baseline 学习、session/fork 推进、代码修改、验证和证据回写。它们保持同频的方式不是靠聊天记忆，而是靠 `AGENTS.md`、`PROJECT_GUIDE.md`、`WORKFLOW.md`、`FILE_INDEX.md`、`docs/TOOLS_METHOD_FLOW_MAP.md`、`project_config.runtime_state` 和 run 证据同步；真正发生漂移时，不应该继续闲聊，而应该回到 `PROJECT_GUIDE` 的问题体系里按题重答并重新绑定证据。
+
+不同 AI 界面和运行时可以分成“决策端”和“执行端”，但必须保持同频。当前项目里，网页端更适合做方向讨论、方案反驳、角色博弈和收敛决策；本地执行端更适合做项目级 baseline 学习、session / fork 推进、代码修改、验证和证据回写。它们保持同频的方式不是靠聊天记忆，而是靠 `AGENTS.md`、`PROJECT_GUIDE.md`、`WORKFLOW.md`、`ENTITIES.md`、`tools/project_config.json`、run evidence、events 和 checkpoints 来同步；真正发生漂移时，不应该继续闲聊，而应该回到 `PROJECT_GUIDE` 的问题体系里按题重答并重新绑定证据。
+
 #### 必查文件
-- AGENTS.md
-- docs/WORKFLOW.md
-- docs/FILE_INDEX.md
-- docs/TOOLS_METHOD_FLOW_MAP.md
-- tools/appserverclient.py
-- tools/gitclient.py
-- tools/project_config.json
+
+* `AGENTS.md`
+* `docs/WORKFLOW.md`
+* `docs/ENTITIES.md`
+* `tools/project_config.json`
+* `tools/main.py`
+
 #### 查找线索
-- 看 AGENTS 的 session gate 和主流程分层。
-- 看 WORKFLOW 的 state machine 和主线定义。
-- 看 FILE_INDEX / TOOLS_METHOD_FLOW_MAP，确认学习、执行、收尾三层分别由哪些文件承担。
-- 看 `tools/project_config.json -> runtime_state`，确认当前 run 和 task 指针。
+
+* 看 `AGENTS` 的 session gate 和主流程分层。
+* 看 `WORKFLOW` 的 state machine 和主线定义。
+* 看 `tools/project_config.json` 的 policy 和 skills。
+* 看 `tools/main.py` 里 `resume_job()`、events、checkpoints 如何维持同频。
+
 #### 主线意义
-- 这题直接决定“同频”是不是靠证据完成。
-- 常见漂移是把网页端和 CLI 当成同一个东西，或者指望它们天然共享上下文。
-- 真正的回拉动作不是补充闲聊，而是回到题库和证据重新答题。
+
+* 这题直接决定“同频”是不是靠证据完成。
+* 常见漂移是把网页端和 CLI 当成天然共享上下文，或者指望“聊一聊”就能自动对齐。
+
+---
 
 ### Q5. 这个项目当前的宪法是什么样的？
+
 #### 为什么问这题
+
 这题判断 agent 是否知道谁是硬规则，谁只是说明文档。
+
 #### 标准答案
-当前项目的宪法是 `AGENTS.md`。它定义了任务入口、同频门禁、允许命令、执行流程、失败协议、文档新鲜度和 PR/ship 纪律。它不是可选参考，而是 agent 的硬契约。`docs/WORKFLOW.md` 负责补状态机和步骤细节，`PROJECT_GUIDE.md` 负责学习与主线锚点，但一切执行边界最终以 `AGENTS.md` 为准。
+
+当前项目的宪法是 `AGENTS.md`。它定义了任务入口、同频门禁、执行边界、失败协议、文档新鲜度和交付纪律。它不是可选参考，而是 agent 的硬契约。`docs/WORKFLOW.md` 负责补状态机和步骤细节，`PROJECT_GUIDE.md` 负责学习与主线锚点，`docs/ENTITIES.md` 负责名词系统和对象边界，但一切执行边界最终以 `AGENTS.md` 为准。
+
 #### 必查文件
-- AGENTS.md
-- docs/WORKFLOW.md
+
+* `AGENTS.md`
+* `docs/WORKFLOW.md`
+* `docs/ENTITIES.md`
+
 #### 查找线索
-- 看 AGENTS 里 task/run、learn、ship、docs freshness 的硬要求。
-- 再看 WORKFLOW 理解哪些是流程细节，哪些是宪法。
+
+* 看 `AGENTS` 里对 learn、run、docs freshness、gate 的硬要求。
+* 再看 `WORKFLOW` 理解哪些是流程细节，哪些是宪法。
+* 用 `ENTITIES` 确认对象层级和状态边界。
+
 #### 主线意义
-- 这题负责分清“规则层”和“说明层”。
-- 常见漂移是把任何文档都当宪法，或者只看流程图不看硬门禁。
+
+* 这题负责分清“规则层”和“说明层”。
+* 常见漂移是把任何文档都当宪法，或者只看流程图不看硬门禁。
+
+---
 
 ### Q6. 这个项目当前工作流是什么样的？
+
 #### 为什么问这题
+
 这题用于确认 agent 是否知道从哪一步开始、什么时候停、什么时候不能直接改代码。
+
 #### 标准答案
-当前工作流已经收敛成三层。第一层是环境准备层：`init`，它只负责配置、项目骨架、Codex/Git 前提和现场诊断，不属于主业务流程。第二层是真正自动化主线：`run(appserverclient)`，先做项目级 `--learnbaseline` 同频学习，再确定本轮需求方向，然后从 baseline `fork` 多个角色 session，把需求拆成最小 task 逐个推进，并在阶段结束后把去噪结果回灌 baseline。第三层是 Git 收尾层：`gitclient` 负责提交、PR、合并、回滚和本地同步 main。复杂需求仍然遵守 `Plan -> Confirm -> Execute`，但主线不再是旧的长链，而是“准备层 -> 学习/执行层 -> Git 收尾层”。
+
+当前工作流已经收敛成一条正式主线：
+**baseline 初始化 / 刷新 -> coach 澄清 -> verification -> correction -> planning -> role execution -> active results -> defect triage -> repair / replan / discussion -> merge -> baseline refresh -> state / events / checkpoints -> smoke / gate / bootstrap（配套层）**。
+其中，运行主线负责从需求到学习回流；events / checkpoints / resume 是运行保障层；smoke / gate / bootstrap 是配套验证与接入层。复杂需求仍然遵守“先澄清、先证据、再执行”的原则，不能从准备工作直接跳到写代码。真正的主线不是旧的长流程口号，而是**问题驱动学习 + 证据核验 + 状态机执行 + 质量治理 + 学习回流**。
+
 #### 必查文件
-- docs/WORKFLOW.md
-- AGENTS.md
+
+* `docs/WORKFLOW.md`
+* `AGENTS.md`
+* `tools/main.py`
+
 #### 查找线索
-- 先看 WORKFLOW 的 session lifecycle state machine。
-- 再用 AGENTS 核对哪些步骤是硬门禁，哪些是推荐路径。
+
+* 先看 `WORKFLOW` 里的状态机和主阶段。
+* 再看 `AGENTS` 里哪些步骤是硬门禁。
+* 最后看 `tools/main.py` 的 `run_job()` / `resume_job()`，确认实验线当前实际怎么跑。
+
 #### 主线意义
-- 这题负责把 agent 拉回流程，而不是细节。
-- 常见漂移是把 `/plan`、`legacy plan`、`do`、`ship` 混在一起理解。
+
+* 这题负责把 agent 拉回流程，而不是局部实现细节。
+* 常见漂移是还停留在旧流程叙述，或者把验证与接入层误当成每次 job 的主运行层。
+
+---
 
 ### Q7. 我们现在的项目有没有未完成的任务呢，最新的批次在讨论什么问题，你是怎么查的？
+
 #### 为什么问这题
+
 这题要求 agent 具备“看当前局面”的能力，而不是只会泛泛复述项目介绍。
+
 #### 标准答案
-要看当前有没有未完成任务，先看 `tools/project_config.json -> runtime_state` 当前指针，再看 `TASKS/QUEUE.json` 队列真相源，再看当前 `RUN_ID` 下的 `summary.md` 和 `decision.md`。当前项目最近讨论的重点，已经从旧的长流程门禁转向更轻的主线：用 `appserverclient` 建立和维护项目级 baseline 学习、副本 fork 和当前工作 session，再用 `gitclient` 做提交与回滚收尾，让整个自动化真正围绕项目、run、task 这三层推进。
+
+要看当前有没有未完成任务，先看 `tools/project_config.json` 的运行配置与当前约束，再看 `TASKS/QUEUE.json` 或当前 run 下的 `summary.md / decision.md / events / checkpoints`，最后再结合 gate 和 bootstrap 的最新验证结果。当前最近一批工作的重点，已经从“只讨论流程设计”推进到了“把实验线做成可恢复状态机样机”：主流程、defect triage、repair / replan / discussion、resume、smoke、gate、bootstrap 都已经接上。现在仍未完全闭合的重点主要是：真实 app-server 下的整条主链长期实跑、subagents 真执行、queue / event job source、human gates、以及更独立的 discussion 角色能力。也就是说，当前批次讨论的核心，不再是“要不要有这套主线”，而是“怎么把这套主线从实验线进一步做稳、做实、做成可复制基座”。
+
 #### 必查文件
-- tools/project_config.json
-- TASKS/QUEUE.json
-- reports/<RUN_ID>/summary.md
-- reports/<RUN_ID>/decision.md
+
+* `tools/project_config.json`
+* `TASKS/QUEUE.json`
+* `reports/<RUN_ID>/summary.md`
+* `reports/<RUN_ID>/decision.md`
+* `state/events.jsonl`
+* `state/test_reports/gate_summary.json`
+
 #### 查找线索
-- 先看 `tools/project_config.json -> runtime_state` 的当前 run/task。
-- 再看 QUEUE 有哪些未勾选项。
-- 最后看当前 run 的 summary/decision 判断最近批次在推进什么。
+
+* 先看当前 run/task 指针和 queue。
+* 再看 `summary / decision` 确认最近一批工作的方向。
+* 再看 `events` 和 `gate_summary`，确认哪些已经真实过 gate，哪些还只是设计。
+
 #### 主线意义
-- 这题把学习拉回“当前在做什么”。
-- 常见漂移是只会讲历史和蓝图，不知道当前迭代目标。
+
+* 这题把学习拉回“当前在做什么”。
+* 常见漂移是只会讲历史和蓝图，不知道当前批次到底在收什么口。
+
+---
 
 ### Q8. 你查了最近的 session 说了什么，你是从哪里查的？
+
 #### 为什么问这题
+
 这题要求 agent 具备 session continuity，不然一换会话就会忘掉当前主线。
+
 #### 标准答案
-最近 session 的内容应该从仓库证据里查，不应该靠聊天记忆猜。最重要的来源是 `tools/project_config.json -> runtime_state`、当前 `RUN_ID` 下的 `reports/<RUN_ID>/summary.md` 和 `decision.md`，必要时再看 `conversation.md`。根据当前证据，最近 session 的主线已经明确为：`init` 只是准备层，真正主流程由 `appserverclient` 承担，用 `--learnbaseline` 建项目级同频基线，再 fork 多角色 session 做最小 task 处理，最后通过 `gitclient` 完成提交、PR、合并、回滚和主线同步。
+
+最近 session 的内容应该从仓库证据里查，不应该靠聊天记忆猜。最重要的来源是当前 `RUN_ID` 下的 `summary.md`、`decision.md`、`events`、`checkpoints`，必要时再看相关 `conversation` 沉淀。根据当前证据，最近 session 的主线已经明确为：实验线已经形成可恢复状态机，重点是继续把这条主线和接入方式做稳，而不是重新发明新流程。当前最近连续几轮已经把：需求澄清、verification、correction、planning、角色执行、defect triage、repair / replan / discussion、merge、baseline refresh、resume、smoke、gate、bootstrap 一路收上来了；接下来更像是在补剩余边界，而不是从零开始定义方法论。
+
 #### 必查文件
-- tools/project_config.json
-- reports/<RUN_ID>/summary.md
-- reports/<RUN_ID>/decision.md
+
+* `reports/<RUN_ID>/summary.md`
+* `reports/<RUN_ID>/decision.md`
+* `state/events.jsonl`
+* `state/checkpoints/`
+
 #### 查找线索
-- 先看 `tools/project_config.json -> runtime_state` 决定去哪个 run 读证据。
-- 优先看 summary 和 decision，而不是盲读全量聊天记录。
-- 如果对总结存疑，再回溯 `conversation.md`。
+
+* 优先看 summary 和 decision，而不是先读全量聊天记录。
+* 再看 events / checkpoints 还原最近几轮实际推进。
+* 对总结存疑时，再回溯 conversation 沉淀。
+
 #### 主线意义
-- 这题是“主线连续性”的核心。
-- 常见漂移是把当前 session 理解成新任务，忽略前面已经反复收敛的方向。
+
+* 这题是“主线连续性”的核心。
+* 常见漂移是把当前 session 理解成全新任务，忽略前面已经收敛的方向。
+
+---
 
 ### Q9. 项目需求讨论应该使用什么流程？
+
 #### 为什么问这题
+
 这题负责把“讨论”和“执行”分开，防止先写代码后补理由。
+
 #### 标准答案
-项目需求讨论现在应挂在 `appserverclient` 的 run/session 体系上做：先有项目级 baseline，同频当前主线和证据；再在 run 级别明确本轮需求方向；再从 baseline fork 多个角色 session 去做需求分析、方案评审、实现设计和验证拆分，最后把方向收敛成最小 task。run 级需求收敛至少要问清：背景与目标、必须做/应该做/可以做、明确不做项、影响模块与外部依赖、异常流与非功能约束、以及后续如何验收。
+
+项目需求讨论现在应挂在正式主线上做：先有 learning baseline，同频项目长期真相；再接收原始需求，通过 coach 做第一轮澄清，产出 `clarified_job_v1 + claims`；接着进入 verification，把猜测变成 evidence；证据回来后，再由 coach 二次修正，形成 `clarified_job_v2`；之后再进入 `demand_critic / solution_designer / risk_reviewer` 的需求博弈，最终形成 `corrected_job`，满足 planning gate 后才允许拆 task。run 级需求收敛至少要问清：背景与目标、必须做 / 应该做 / 可以做、明确不做项、影响模块与外部依赖、异常流与非功能约束、以及后续如何验收。
+
 #### 必查文件
-- docs/WORKFLOW.md
-- AGENTS.md
+
+* `docs/WORKFLOW.md`
+* `AGENTS.md`
+* `PROJECT_GUIDE.md`
+* correction 相关 skills
+
 #### 查找线索
-- 在 WORKFLOW 里找 run 方向收敛、role fork、task 拆分与 summary/evidence 回写。
-- 在 AGENTS 里看 Plan -> Confirm -> Execute 约束。
+
+* 在 `WORKFLOW` 里找 coach、verification、correction、planning 的先后关系。
+* 在 `AGENTS` 里看“先澄清、先证据、再执行”的门禁。
+* 在 `tools/main.py` 里看 `coach_round_v1 / verification_round / coach_round_v2 / correction_round`。
+
 #### 高质量追问模板
-- 这次需求真正要解决的业务问题是什么，为什么现在必须做？
-- 本轮 run 的必须做 / 应该做 / 可以做分别是什么，哪些明确不做？
-- 影响到哪些模块、数据、外部系统或角色，边界在哪里？
-- 如果不按用户原话里的实现方案做，是否有更简单、更低耦合的系统实现？
-- 后续怎么验收，哪些异常流、非功能约束和风险必须提前写清？
+
+* 这次需求真正要解决的业务问题是什么，为什么现在必须做？
+* 本轮 run 的必须做 / 应该做 / 可以做分别是什么，哪些明确不做？
+* 影响到哪些模块、数据、外部系统或角色，边界在哪里？
+* 如果不按用户原话里的实现方案做，是否有更简单、更低耦合的系统实现？
+* 后续怎么验收，哪些异常流、非功能约束和风险必须提前写清？
+
 #### 自我梳理输出骨架
-- `run_goal`: 这轮 run 真正要解决的问题
-- `scope`: 当前明确纳入范围的模块、流程、数据和角色
-- `non_goals`: 本轮明确不做的内容
-- `impacted_modules`: 受影响模块、外部系统或依赖
-- `risks`: 已知风险、异常流、潜在冲突
-- `non_functional_constraints`: 性能、稳定性、安全、审计、环境约束
-- `acceptance`: 后续如何判断这轮 run 可以进入 task 拆分
+
+* `run_goal`: 这轮 run 真正要解决的问题
+* `scope`: 当前明确纳入范围的模块、流程、数据和角色
+* `non_goals`: 本轮明确不做的内容
+* `impacted_modules`: 受影响模块、外部系统或依赖
+* `risks`: 已知风险、异常流、潜在冲突
+* `non_functional_constraints`: 性能、稳定性、安全、审计、环境约束
+* `acceptance`: 后续如何判断这轮 run 可以进入 task 拆分
+
 #### 主线意义
-- 这题负责守住“讨论先于执行”。
-- 常见漂移是把讨论代理和执行代理混成同一轮输出。
+
+* 这题负责守住“讨论先于执行”。
+* 常见漂移是跳过 coach / verification / correction，直接把原始需求推进成实现任务。
+
+---
 
 ### Q10. 项目实施流程是什么，需要哪些角色协作，如何保证角色独立思考，目前实现到了什么程度？
+
 #### 为什么问这题
-这题用来区分“多角色讨论能力”和“单一实现能力”，避免只靠一个视角拍脑袋出方案。
+
+这题不是让 agent 列角色，而是确认它是否真正区分了三件事：当前已经正式化的实施流程、当前只具备最小实现的角色能力、以及仍属于未来态 / 理想态的协作能力。若这三层混在一起，agent 就会把“希望中的多角色协作结构”误答成“当前已经稳定落地的实施能力”。
+
 #### 标准答案
-项目实施流程现在更适合理解成：项目级 baseline 学习一次建好后，围绕当前 run 的需求方向 fork 多个角色 session，各角色互不干扰地推进自己的最小 task，再把结论去噪收口回 baseline。当前更合理的角色结构是：run 主线程负责需求收敛、任务拆分和最终确认；task 下的 `dev/test/arch` 角色线程按需协作，其中 `test` 必须保持独立验证，`arch` 只在复杂任务时介入，独立性主要靠 session 隔离和 summary 回收，而不是靠旧讨论链文字约束。当前已经具备 baseline、current fork 和普通 turn 这类核心 session 能力，但“多角色 fork -> task summary -> run summary -> baseline 回灌”这条线还在继续强化。
+
+当前项目的实施流程，正式化部分已经收敛为：baseline 学习 -> coach / verification / correction -> task planning -> role execution -> defect triage -> repair / replan / discussion -> merge -> baseline refresh -> state / audit / resume。角色协作能力上，当前已正式化的是：
+
+* `run_manager`：当前 job 的项目经理与汇总者
+* `project_coach`：需求澄清与主线纠偏
+* `dev_worker`：实现与修复
+* `test_worker`：独立质量验证
+* `arch_reviewer`：架构与边界评估
+* `demand_critic / solution_designer / risk_reviewer`：需求博弈与路径选择
+* `defect_triage`：质量分流
+
+其中，`test_worker` 不是 `dev_worker` 的附庸，而是独立质量角色，它应从需求、功能、流程、数据/状态、非功能几个维度审视结果。角色独立性主要靠：session/thread 隔离、schema 化输出、merge 前的 defect triage、以及最终由 `run_manager` 去噪汇总。当前仍属于未来态或继续硬化中的，是：真实运行时下的长期稳定多角色 orchestration、subagents 真并行、以及更独立的 implementation-critic / review-mediator 角色。
+
 #### 必查文件
-- docs/WORKFLOW.md
-- AGENTS.md
+
+* `docs/WORKFLOW.md`
+* `AGENTS.md`
+* `tools/project_config.json`
+* role worker / correction / defect triage 相关 skills
+
 #### 查找线索
-- 看 WORKFLOW 里 baseline、fork session 和角色推进的职责边界。
-- 看工具文件名称和输出物，确认当前实现到什么程度。
+
+* 先看 `WORKFLOW`，确认当前 formal mainline 和角色链。
+* 再看 `tools/project_config.json`，确认正式注册了哪些 skills。
+* 再看 `tools/main.py`，确认 triage、repair、replan、discussion 的真实执行边界。
+
 #### 高质量追问模板
-- 这次 task 是不是只需要 `dev/test`，还是已经复杂到需要额外开启 `arch`？
-- 哪些判断应该由 run 主线程拍板，哪些应留给 `dev/test/arch` 独立结论后再回收？
-- `test` 需要独立覆盖哪些功能、流程、数据和非功能验证面？
-- 当前系统实现到了 session 隔离、task summary、run summary 的哪一层，哪些还只是目标态？
+
+* 这次 task 是否只需要 `dev/test`，还是已经复杂到需要额外 `arch`？
+* 哪些判断应该由 run 层拍板，哪些必须让角色独立结论后再回收？
+* `test` 需要独立覆盖哪些功能、流程、数据、非功能验证面？
+* 当前系统已经实现到了角色链的哪一层，哪些还只是目标态？
+
 #### 自我梳理输出骨架
-- `role_plan`: 本次是否只需要 `dev/test`，还是需要增加 `arch`
-- `role_responsibilities`: run-main / dev / test / arch 分别负责什么
-- `verification_axes`: 这次至少要覆盖哪些功能、流程、数据、非功能验证面
-- `current_capability_gap`: 当前仓库已经实现到哪一层，哪些仍是目标态
+
+* `role_plan`: 本次是否只需要 `dev/test`，还是需要增加 `arch`
+* `role_responsibilities`: run-main / coach / dev / test / arch / triage 各自负责什么
+* `verification_axes`: 这次至少要覆盖哪些验证面
+* `current_capability_gap`: 当前仓库已经实现到哪一层，哪些仍是目标态
+
 #### 主线意义
-- 这题防止把“多角色评审”说成已经完整实现。
-- 常见漂移是把角色分工说得很理想，但忽略当前还只是流程骨架。
+
+* 这题负责防止 agent 把“理想协作结构”误说成“当前实现程度”。
+* 只要回答里没有区分正式化流程、已实现角色能力、和未来态能力，就说明它还没有真正理解项目实施边界。
+
+---
 
 ### Q11. 项目中的核心对象、关键状态和交付单元分别是什么，它们的生命周期是怎样的？
+
 #### 为什么问这题
+
 这题负责统一名词系统，避免 agent 在 task、run、project 这些层级上混乱。
+
 #### 标准答案
-`project` 是最高层项目维度，负责项目级配置、baseline 学习和长期主线；`run` 是一次需求方向或执行周期，对应 run 级证据、需求边界和 session 推进；`task` 是从 run 中拆出来的最小执行单元；`PR` 是 Git 交付与审查单元。除此之外，还有 `runtime_state` 作为当前活动指针，`session_registry` 作为 baseline/current session 记录，`evidence` 作为仓库内记忆；其中 run 应承载 `run_goal / scope / non_goals / impacted_modules / acceptance` 这类方向级字段，task 应承载更细的实现边界、风险和验证信息。生命周期更接近：`PROJECT baseline -> RUN direction -> role fork sessions -> TASK execution -> Git PR -> baseline refresh`。
+
+`project` 是最高层项目维度，负责项目级配置、baseline 学习和长期主线；`job` 是一次进入系统的工作单；`run` 是一次需求方向或执行周期；`task` 是从 `corrected_job` 中拆出来的最小执行单元；`thread` 是一个会话运行单元；`claim` 是待验证判断；`evidence` 是支持或反驳 claim 的证据；`merge_result` 是项目级收敛结果；`baseline_snapshot` 是长期真相快照；`PR` 是 Git 交付单元。关键状态至少包括：`NEW / COACHED / VERIFIED / CORRECTED / PLANNED / EXECUTING / MERGED / DONE / BLOCKED...` 以及 defect 侧的 `DEFECT_REPAIRING / DEFECT_REPLANNING / DEFECT_DISCUSSING / DEFECT_BLOCKED / READY_TO_MERGE`。生命周期更接近：
+`PROJECT baseline -> RUN / JOB intake -> claims & evidence -> corrected job -> task plan -> role execution -> defect governance -> merge -> baseline refresh -> ship / gate / history`
+
 #### 必查文件
-- docs/ENTITIES.md
-- docs/WORKFLOW.md
-- AGENTS.md
+
+* `docs/ENTITIES.md`
+* `docs/WORKFLOW.md`
+* `tools/main.py`
+
 #### 查找线索
-- 先看 ENTITIES 的名词定义。
-- 再看 WORKFLOW 里的状态流转。
-- 最后用 AGENTS 理解这些概念如何形成硬规则。
+
+* 先看 `ENTITIES` 的名词定义。
+* 再看 `WORKFLOW` 里的状态流转。
+* 最后用 `tools/main.py` 看 Job / Thread / state / defect_status 实际如何落盘。
+
 #### 高质量追问模板
-- 这次信息属于 project、run、task 还是 thread summary，放错层会造成什么混乱？
-- 哪些需求边界应该属于 run，哪些实现边界、风险和验证细节应该属于 task？
-- 当前要沉淀的是 thread summary、task summary 还是 run summary，后续会被谁消费？
+
+* 这次信息属于 project、job、run、task 还是 thread summary，放错层会造成什么混乱？
+* 哪些边界应该属于 run，哪些验证与修复细节应该属于 task？
+* 当前更该沉淀的是 thread result、task summary 还是 run/merge summary？
+
 #### 自我梳理输出骨架
-- `object_layer`: 当前信息属于 `project / run / task / thread summary` 哪一层
-- `run_fields`: 应沉淀到 run 的边界与聚合字段
-- `task_fields`: 应沉淀到 task 的实现、风险和验证字段
-- `summary_target`: 当前更适合生成 `thread summary / task summary / run summary` 中的哪一个
+
+* `object_layer`: 当前信息属于哪一层
+* `run_fields`: 应沉淀到 run 的边界与聚合字段
+* `task_fields`: 应沉淀到 task 的实现、风险和验证字段
+* `summary_target`: 当前更适合生成什么层级的总结
+
 #### 主线意义
-- 这题负责名词统一。
-- 常见漂移是把 run 当需求方向、把 task 当 run、把 project 当 session。
+
+* 这题负责名词统一。
+* 很多漂移不是逻辑错，而是对象层级搞混了。
+
+---
 
 ### Q12. 我们在项目的准备工作做好后，我们一个需求讨论方向，从流程的哪一步开始？
+
 #### 为什么问这题
+
 这题确认“准备完成后做什么”，避免准备完成后还直接跳到写代码。
+
 #### 标准答案
-准备工作完成后，分两种情况。若目标项目已经完成首轮接入，则进入 `run(appserverclient)`，先确认或建立 `--learnbaseline`，再在 run 级别先做一轮需求收敛，至少明确背景目标、范围边界、不做项、影响模块、异常流、非功能和验收方式，然后再从 baseline fork 当前工作 session 和角色 session，把方向拆成最小 task 逐个推进。若目标项目尚未完成首轮接入，则第一步不是 `--learnbaseline`，而是 `python3 tools/appserverclient.py --init-project`：先以真实 init thread 的 `plan + xhigh` 模式启动 17 问理解、补证据和状态推进，确认初始化完成后才允许进入 baseline 主线。
+
+准备工作完成后，分两种情况。若目标项目已经完成首轮接入，则从**主运行流程**开始：接收 `raw_request`，进入 coach 澄清、verification、correction，满足 planning gate 后再拆 task。若目标项目尚未完成首轮接入，则第一步不是直接 baseline 学习或实现，而是先按 `scripts/bootstrap_experiment_project.py` 做 bootstrap：先生成 skeleton / runnable / runtime-bundle 骨架，补 owner docs，确认最小 core skills 和最小 gate 能跑，再进入正式主运行流程。也就是说，准备工作之后的第一步始终是：**先建立理解和边界，再进入执行**，而不是一准备好就写代码。
+
 #### 必查文件
-- docs/WORKFLOW.md
-- AGENTS.md
-- reports/<RUN_ID>/summary.md
+
+* `docs/WORKFLOW.md`
+* `AGENTS.md`
+* `scripts/bootstrap_experiment_project.py`
+* `templates/experiment_project/`
+* 当前 `reports/<RUN_ID>/summary.md`
+
 #### 查找线索
-- 看 WORKFLOW 里 `appserverclient --learnbaseline / --fork-current / --current-turn` 的主流程说明。
-- 看当前 run summary 中有没有对方向讨论的近期结论。
+
+* 看 `WORKFLOW` 里的正式主线入口。
+* 看 `bootstrap_experiment_project.py` 和 `templates/experiment_project/` 区分 skeleton / runnable / runtime-bundle。
+* 看当前 run summary 是否已经有方向收敛结果。
+
 #### 高质量追问模板
-- 在创建 task 之前，这轮 run 的背景目标、范围边界、不做项和验收条件是否已经清楚？
-- 还有哪些影响模块、依赖、异常流或非功能要求没有在 run 层说明白？
-- 如果现在直接进入实现，最可能漏掉的边界和回归面是什么？
+
+* 在创建 task 之前，这轮 run 的背景目标、范围边界、不做项和验收条件是否已经清楚？
+* 还有哪些影响模块、依赖、异常流或非功能要求没有在 run 层说明白？
+* 如果现在直接进入实现，最可能漏掉的边界和回归面是什么？
+
 #### 自我梳理输出骨架
-- `task_ready`: 当前是否已经满足创建 task 的前提
-- `missing_boundaries`: 仍未说清的边界、依赖、异常流、非功能要求
-- `first_task_candidate`: 最小可执行 task 候选是什么
-- `why_not_code_yet`: 如果还不能进实现，当前阻塞点是什么
+
+* `task_ready`: 当前是否已经满足创建 task 的前提
+* `missing_boundaries`: 仍未说清的边界、依赖、异常流、非功能要求
+* `first_task_candidate`: 最小可执行 task 候选是什么
+* `why_not_code_yet`: 如果还不能进实现，当前阻塞点是什么
+
 #### 标准化 Markdown 草稿模板
-当 AI 读完客户给的杂乱材料后，先输出一版标准化 Markdown 草稿，再进入 run 方向收敛与 task 拆分；这一步是协议层草稿，不是机器真相源。
+
+当 AI 读完杂乱输入后，先输出一版标准化 intake 草稿，再进入 run 方向收敛与 task 拆分；这一步是协议层草稿，不是机器真相源。
+
 ```md
 # Run Intake Draft
 
@@ -306,6 +506,7 @@
 
 ## 9. Role Plan
 - run-main：
+- coach：
 - dev：
 - test：
 - arch（如需要）：
@@ -320,96 +521,199 @@
 
 ## 12. Summary Target
 - 当前应先形成：
-  - thread summary / task summary / run summary
+  - clarified_job / corrected_job / task_plan
 - 暂不进入实现的原因：
 ```
+
 #### 主线意义
-- 这题负责接上岗后的下一步。
-- 常见漂移是把环境准备或 baseline 学习误当成“可以直接改代码”。
+
+* 这题负责接上岗后的下一步。
+* 常见漂移是把环境准备、bootstrap 或 baseline 学习误当成“已经可以直接改代码”。
+
+---
 
 ### Q13. 项目的分支与交付管理规则是什么，当前是否满足需求？
+
 #### 为什么问这题
+
 这题用于校准交付纪律，避免“本地能跑就行”而没有分支/PR 约束。
+
 #### 标准答案
-当前交付主线已经收敛成 `gitclient`：从当前工作面建分支、提交、push、创建 PR、合并或 auto merge、最后同步本地 `main`。它和 task 是解耦的：有 task 时优先用 task 作为提交说明，没有 task 也可以直接手动提交。当前规则重点不是复杂分支模型，而是保证每次交付都能对应回项目、run、task 和证据；回滚也由 `gitclient` 统一处理。若 PR 当前不可 clean merge，应明确返回状态并等待处理，而不是隐藏失败。
+
+当前交付层的原则仍然是：每次可交付改动都应能对应回项目、job/run、task 和证据。实验线当前的重心虽然放在状态机、gate、bootstrap 和运行主线上，但交付纪律并没有消失：验证、证据、文档、gate 通过后，再进入 Git/PR 交付层；若 PR 当前不可 clean merge，应明确返回状态，而不是隐藏失败。当前项目真正强调的不是复杂分支模型，而是**可审计、可回滚、可对齐证据的交付单元**。
+
 #### 必查文件
-- AGENTS.md
-- docs/WORKFLOW.md
+
+* `AGENTS.md`
+* `docs/WORKFLOW.md`
+* 交付层相关脚本或文档
+* `state/test_reports/gate_summary.json`
+
 #### 查找线索
-- 看 AGENTS 的 PR discipline。
-- 看 `tools/gitclient.py` 的提交、PR、合并、回滚和主线同步行为边界。
+
+* 看 `AGENTS` 的 PR discipline。
+* 看 `WORKFLOW` 里 ship/gate/交付边界。
+* 看当前是否已经把验证与文档更新纳入交付前提。
+
 #### 主线意义
-- 这题负责交付边界。
-- 常见漂移是只关注本地改动，不关注如何形成干净可审计的交付单元。
+
+* 这题负责交付边界。
+* 常见漂移是只关注本地改动，不关注如何形成干净、可回滚、可审计的交付单元。
+
+---
 
 ### Q14. 每次做完任务，你必须要做什么事情？
+
 #### 为什么问这题
+
 这题是执行闭环问题，用来确认 agent 知道“写完代码不是结束”。
+
 #### 标准答案
-每次做完任务，必须做验证、更新证据、同步 owner docs（如果流程/规则/工具行为变了），再通过 `gitclient` 做提交、PR、合并或回滚。最少要更新 `reports/<RUN_ID>/summary.md`、`decision.md`、`meta.json`，把 Why / What / Verify / Risk 写清楚。如果流程规则变了，还必须同步 `AGENTS.md`、`docs/WORKFLOW.md`、`docs/PROJECT_GUIDE.md`、`docs/FILE_INDEX.md`、`docs/TOOLS_METHOD_FLOW_MAP.md` 等主线文档。没有验证、证据和文档更新，就不算完成。
+
+每次做完任务，至少必须完成这些动作：
+
+1. 验证结果是否满足需求、功能、流程、数据/状态和非功能要求；
+2. 更新证据、events、checkpoints 和必要的 state；
+3. 如果主线、规则、文件映射、接入方式或验证方式改变了，更新 owner docs；
+4. 运行最小 smoke / gate，确认没有把实验线打坏；
+5. 若进入交付层，再做 Git/PR 相关动作。
+
+最少要把 Why / What / Verify / Risk 说清楚，把结果沉淀到 run evidence 和文档里。没有验证、没有证据、没有文档更新，就不算完成。
+
 #### 必查文件
-- AGENTS.md
-- docs/WORKFLOW.md
-- reports/<RUN_ID>/summary.md
-- reports/<RUN_ID>/decision.md
+
+* `AGENTS.md`
+* `docs/WORKFLOW.md`
+* `reports/<RUN_ID>/summary.md`
+* `reports/<RUN_ID>/decision.md`
+* `tests/run_gate.py`
+
 #### 查找线索
-- 看 AGENTS 的 evidence gate 和 docs freshness gate。
-- 看 WORKFLOW 的 ship 前提。
-- 看当前 run 证据文件长什么样。
+
+* 看 `AGENTS` 的 evidence gate 和 docs freshness gate。
+* 看 `WORKFLOW` 的 merge / baseline refresh / ship 前提。
+* 看 gate 文档与测试入口，确认最小验证怎么跑。
+
 #### 主线意义
-- 这题负责把“完成”定义清楚。
-- 常见漂移是把“代码写完”误当“任务完成”。
+
+* 这题负责把“完成”定义清楚。
+* 常见漂移是把“代码写完”误当“任务完成”。
+
+---
 
 ### Q15. 如果目标体验是高质量、低噪音、强自动化，当前最需要优先优化什么？
+
 #### 为什么问这题
+
 这题用来防止局部最优。项目是基建，就必须优先优化通用流程，而不是只修某一个具体命令。
+
 #### 标准答案
-当前最需要优先优化的，不是继续堆命令，而是把两条真正的底层能力收稳：第一，`appserverclient` 的项目级同频学习、baseline、fork、current session 和去噪回灌；第二，`gitclient` 的提交、PR、合并、回滚和主线同步。只要这两条底层稳定，其他流程就会自然压缩和解耦。之后再继续优化 `PROJECT_GUIDE`、文件索引、方法流图和多角色 baseline 刷新即可。
+
+当前最需要优先优化的，不是继续堆新功能，而是把已经成立的新主线在真实运行环境里继续收稳。优先级更像：
+
+1. 真实 app-server 下整条主线的长期稳定验证；
+2. 把现有状态机、defect 治理、resume、gate 保持一致，不让实验线文档与代码脱节；
+3. 逐步补齐 subagents、queue / event source、human gates 等尚未闭合能力；
+4. 继续把 bootstrap / runtime-bundle 做成更稳的可复制接入层。
+
+也就是说，当前最值钱的不是“再加命令”，而是把 baseline / session / role execution / quality governance / gate 这条底层结构继续做稳。
+
 #### 必查文件
-- docs/WORKFLOW.md
-- AGENTS.md
-- reports/<RUN_ID>/decision.md
+
+* `docs/WORKFLOW.md`
+* `AGENTS.md`
+* `reports/<RUN_ID>/decision.md`
+* `tests/run_gate.py`
+* `scripts/bootstrap_experiment_project.py`
+* `templates/experiment_project/`
+
 #### 查找线索
-- 看 WORKFLOW 的主路径是否简单清晰。
-- 看 AGENTS 的门禁是否支持自动化而不是阻碍自动化。
-- 看 `tools/appserverclient.py` 和 `tools/gitclient.py`，确认真正底层能力是否已经收稳。
-- 看当前 decision 是否已经把重心放在 baseline/session/git 这三条主能力上。
+
+* 看 `WORKFLOW` 的主路径是否简单清晰。
+* 看 `decision` 是否已经把重心放在收稳主线而不是堆功能。
+* 看 `run_gate` 和 bootstrap 是否已经成为正式入口。
+
 #### 主线意义
-- 这题负责产品视角。
-- 常见漂移是为了“爽”去堆功能，而不是收敛结构和减少噪音。
+
+* 这题负责产品视角。
+* 常见漂移是为了“看起来更强”去堆功能，而不是收敛结构、减少噪音和补稳闭环。
+
+---
 
 ### Q16. 这个项目中 AI/工具系统的正确打开方式是什么，当前用到了哪些能力，你能列出来吗？
+
 #### 为什么问这题
-这题是技能题，确认 agent 不是只知道项目流程，还知道 Codex CLI 这个执行器该怎么正确使用。
+
+这题不是让 agent 背命令，而是确认它是否真正理解项目中的 AI/工具系统分层。只知道命令名不代表知道“什么问题该交给哪一层解决”；如果把运行主线、验证层、接入层混在一起，agent 就会误用工具，或者把过渡态能力误说成已经正式化。
+
 #### 标准答案
-会。当前项目中，AI/工具系统的正确打开方式已经收敛成三层：`init` 是准备层，只做配置、结构、Codex/Git 前提和现场诊断；`appserverclient` 是主流程层，负责两类 thread：一类是未初始化项目的 `--init-project` init thread，先用 `plan + xhigh` 跑 17 问理解，再通过 `--update-init-project / --complete-init-project` 推进状态；其中只有显式 `-p` 才会重喂完整 prompt，`-new` 只负责重开 thread，单独的 `-t` 默认是同一 thread 的聊天微调；另一类是已初始化项目的 baseline/run/session 主线，包括 `--learnbaseline`、`--fork-current`、`--current-turn` 和 baseline 回灌；`gitclient` 是收尾层，负责提交、回滚、PR、合并和本地同步。关键不是背全部子命令，而是知道什么问题该交给哪一层解决，以及只有初始化理解和 baseline 这种重型同频才用 `plan`，日常 session 继续用 `default`。
+
+当前项目中的 AI/工具系统，正确打开方式不是先背命令，而是先分层。
+第一层是**运行主线层**：由 `orchestrator + app runtime + skills + schemas + state` 组成，负责 baseline、coach、verification、correction、planning、角色执行、defect triage、merge、baseline refresh、resume。
+第二层是**验证与发布层**：由 smoke、gate、integration real app smoke 组成，负责证明主线没坏。
+第三层是**接入层**：由 bootstrap、skeleton / runnable / runtime-bundle 组成，负责把第二个项目接进来。
+
+当前已经正式化的能力，是这三层的基本边界与实验线主线本身。当前仍属于边界或过渡态的，是：真实全链路长期运行、subagents 真执行、queue / event source、human gates 和更独立的 discussion 角色能力。正确打开方式的关键不是把所有脚本背全，而是先判断：这是运行主线问题、验证问题，还是接入问题；只有弄清这一层，才知道该用哪部分系统。
+
 #### 必查文件
-- AGENTS.md
-- docs/WORKFLOW.md
-- tools/appserverclient.py
-- tools/gitclient.py
+
+* `AGENTS.md`
+* `docs/WORKFLOW.md`
+* `tools/project_config.json`
+* `tools/main.py`
+* `tests/run_gate.py`
+* `scripts/bootstrap_experiment_project.py`
+* `templates/experiment_project/`
+
 #### 查找线索
-- 看 AGENTS 和 WORKFLOW，确认当前主流程分层。
-- 看 `appserverclient.py`，确认 baseline / fork / current-turn 的能力边界。
-- 看 `gitclient.py`，确认 commit / rollback / PR / merge / sync 的收尾能力。
+
+* 先看 `WORKFLOW`，确认运行主线是什么。
+* 再看 `tools/project_config.json`，确认 skills 和 policy。
+* 再看 `tools/main.py`，确认主入口状态机。
+* 再看 `run_gate`、`bootstrap_experiment_project.py` 和 `templates/experiment_project/`，确认验证层与接入层。
+
 #### 主线意义
-- 这题负责技能上岗。
-- 常见漂移是把 Codex CLI 的所有功能都当项目必须路径，或者反过来只会最基本的 chat 用法。
+
+* 这题负责“正确打开方式”的分层判断，不负责命令清单介绍。
+* 只要回答仍停留在“有哪些命令”，却没有说清运行主线、验证层、接入层三层边界，就说明 agent 还没有真正吃透项目中的 AI/工具系统分层。
+
+---
 
 ### Q17. 根据最新的 session，你现在做的东西是否偏离了我们现在最重要的任务，你是否认为我们偏离了主线，为什么，接下来我们应该怎么做？
+
 #### 为什么问这题
+
 这题是最终回拉题。它不问知识点，而是判断 agent 能不能把当前执行重新拉回最重要的方向。
+
 #### 标准答案
-当前最重要的任务不是继续扩散旧流程，而是把新主线打扎实：项目级 baseline 学习、run 级需求方向收敛、baseline fork 多角色 session 做最小 task、去噪回灌 baseline，以及 `gitclient` 的交付闭环。只要当前动作不能提升这条主线、不能让 `PROJECT_GUIDE` 更像通用学习协议、不能让 `appserverclient` 和 `gitclient` 更稳定，就有偏离风险。接下来应该优先做的，是继续把 `PROJECT_GUIDE`、`FILE_INDEX`、`TOOLS_METHOD_FLOW_MAP` 等文档收成通用学习底座，同时让 baseline/session/git 这三条底层能力真正可复用。
+
+当前最重要的任务，不是重新发明流程，也不是继续堆很多新层，而是把已经成立的实验线主线收稳，并把文档、代码、gate、bootstrap 持续保持一致。只要当前动作不能提升这条主线、不能让 `PROJECT_GUIDE` 更像通用学习协议、不能让运行主线 / defect 治理 / resume / gate / bootstrap 更稳定，就有偏离风险。当前并不算已经偏离主线，因为最近连续几轮工作确实都在围绕主线收口；但如果接下来继续大幅扩散概念、跳过真实验证、或者重新改写题库而不是更新答案，就很容易偏。接下来应该优先做的，是继续把：
+
+* `PROJECT_GUIDE`
+* `WORKFLOW`
+* `ENTITIES`
+* gate
+* bootstrap
+* 真实 app-server 验证
+  这些东西收成一致的基座资产，同时有选择地补齐剩余未闭合能力，而不是再随意开新主线。
+
 #### 必查文件
-- tools/project_config.json
-- reports/<RUN_ID>/summary.md
-- reports/<RUN_ID>/decision.md
-- docs/WORKFLOW.md
+
+* `tools/project_config.json`
+* `reports/<RUN_ID>/summary.md`
+* `reports/<RUN_ID>/decision.md`
+* `docs/WORKFLOW.md`
+* `tests/run_gate.py`
+* `scripts/bootstrap_experiment_project.py`
+* `templates/experiment_project/`
+
 #### 查找线索
-- 看当前 run 的 summary/decision，确认最近连续几轮都在收敛什么。
-- 看 WORKFLOW，确认最关键的瓶颈是不是 learn。
-- 用这题检查自己当前做的事，是否真的在强化主线。
+
+* 看当前 run 的 summary/decision，确认最近连续几轮都在收敛什么。
+* 看 `WORKFLOW` 和 `PROJECT_GUIDE` 是否已经同步。
+* 用这题检查自己当前做的事，是否真的在强化主线，而不是制造新的偏移。
+
 #### 主线意义
-- 这题就是主线回拉器。
-- 常见漂移是被单个实现细节拖住，忘了这轮迭代真正要交付的是更强的同频流程。
+
+* 这题就是主线回拉器。
+* 常见漂移是被单个实现细节、新想法或旧版流程拖住，忘了当前最重要的任务是把已经成立的新主线做稳、做实、做成可复制基座。

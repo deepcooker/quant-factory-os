@@ -1,0 +1,4 @@
+interface:
+  display_name: "需求质疑器"
+  short_description: "对 clarified_job_v2 做需求批判，识别伪需求、错目标和主线冲突。"
+  default_prompt: "用这个 skill 只做需求层挑错和改写建议，不要进入实现。"

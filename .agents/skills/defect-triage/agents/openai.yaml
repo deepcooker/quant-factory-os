@@ -1,0 +1,4 @@
+interface:
+  display_name: "缺陷分流"
+  short_description: "在测试结果返回后，对缺陷做分级、定范围并决定是否阻断 merge/baseline。"
+  default_prompt: "Use this skill to triage test-worker results and decide the next routing step."

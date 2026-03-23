@@ -2,6 +2,243 @@
 
 RUN_ID: `run-2026-03-11-vnext-release-baseline`
 
+## rebuild repo-local skills from latest orchestrator design
+- 本轮按根目录的最新实验设计，重建了 repo-local skills。
+- 已删除旧 skill 文件内容与旧骨架语义：
+  - `baseline-learn`
+  - `baseline-refresh`
+  - `fork-identity`
+  - `role-worker`
+  - `root-python-smoke`
+  - `session-coach`
+  - `task-referee`
+- 新的正式 repo-local skill 集现在是：
+  - [learn-baseline](/root/quant-factory-os/.agents/skills/learn-baseline/SKILL.md)
+  - [project-coach](/root/quant-factory-os/.agents/skills/project-coach/SKILL.md)
+  - [run-manager](/root/quant-factory-os/.agents/skills/run-manager/SKILL.md)
+  - [demand-critic](/root/quant-factory-os/.agents/skills/demand-critic/SKILL.md)
+  - [solution-designer](/root/quant-factory-os/.agents/skills/solution-designer/SKILL.md)
+  - [risk-reviewer](/root/quant-factory-os/.agents/skills/risk-reviewer/SKILL.md)
+  - [doc-evidence-worker](/root/quant-factory-os/.agents/skills/doc-evidence-worker/SKILL.md)
+  - [code-evidence-worker](/root/quant-factory-os/.agents/skills/code-evidence-worker/SKILL.md)
+  - [runtime-evidence-worker](/root/quant-factory-os/.agents/skills/runtime-evidence-worker/SKILL.md)
+  - [contradiction-checker](/root/quant-factory-os/.agents/skills/contradiction-checker/SKILL.md)
+  - [dev-worker](/root/quant-factory-os/.agents/skills/dev-worker/SKILL.md)
+  - [test-worker](/root/quant-factory-os/.agents/skills/test-worker/SKILL.md)
+  - [arch-reviewer](/root/quant-factory-os/.agents/skills/arch-reviewer/SKILL.md)
+- 根目录 [skills/](/root/quant-factory-os/skills) 已同步生成可视化镜像，便于页面直接查看。
+- 这轮只建骨架，不深写协议内容；每个 skill 当前都只有：
+  - 合法 `SKILL.md`
+  - 合法 `agents/openai.yaml`
+  - 最小中文展示层和用途说明
+- 真实验证已完成：
+  - 13 个 skill 全部通过官方 `quick_validate.py`
+  - `docs/FILE_INDEX.md` 已把旧 skill 索引切换到新的 13 个名字
+- 当前结论：
+  - 新 skill 集已经与根目录实验设计对齐
+  - 但它们仍是实验性骨架，后续要按 owner 的分步计划逐个补方法论、脚本和 appserver 交互方式
+- step1 继续核对后，已经确认：
+  - [project-coach](/root/quant-factory-os/skills/project-coach/SKILL.md)
+  - [run-manager](/root/quant-factory-os/skills/run-manager/SKILL.md)
+  - [doc-evidence-worker](/root/quant-factory-os/skills/doc-evidence-worker/SKILL.md)
+  三份正文与 [skill_step1.md](/root/quant-factory-os/skill_step1.md) 的语义一致。
+- 这轮没有改这三份正文方法论，只把它们从镜像目录同步写进了正式 repo-local 目录：
+  - [project-coach](/root/quant-factory-os/.agents/skills/project-coach/SKILL.md)
+  - [run-manager](/root/quant-factory-os/.agents/skills/run-manager/SKILL.md)
+  - [doc-evidence-worker](/root/quant-factory-os/.agents/skills/doc-evidence-worker/SKILL.md)
+- 两边 `agents/openai.yaml` 继续保持一致，镜像和正式 skill 现在对齐。
+- step2 继续核对后，已经确认：
+  - [code-evidence-worker](/root/quant-factory-os/skills/code-evidence-worker/SKILL.md)
+  的正文语义与 [skill_step2.md](/root/quant-factory-os/skill_step2.md) 一致。
+- 本轮只做了最小修正：
+  - 修掉 `code-evidence-worker` 里多余的 markdown code fence 结束标记
+  - 把根目录镜像版同步写入正式 repo-local 目录：
+    - [code-evidence-worker](/root/quant-factory-os/.agents/skills/code-evidence-worker/SKILL.md)
+  - 同时把两边的 `agents/openai.yaml` 对齐到更贴合正文语义的描述
+- 配置核对结果：
+  - 根目录 [project_config.json](/root/quant-factory-os/project_config.json) 与 step2 的字段设计一致
+  - `state/registry.json` 目前仓库里还不存在，因此这一步只确认了配置设计，不认定 registry 已落地
+- step3 重新核对后，已经确认：
+  - [runtime-evidence-worker](/root/quant-factory-os/skills/runtime-evidence-worker/SKILL.md)
+  - [demand-critic](/root/quant-factory-os/skills/demand-critic/SKILL.md)
+  - [solution-designer](/root/quant-factory-os/skills/solution-designer/SKILL.md)
+  的正文语义与 [skill_step3.md](/root/quant-factory-os/skill_step3.md) 一致。
+- 这轮只对这 3 份做了最小格式修正：
+  - 修掉多余的 markdown fence 结束标记
+  - 统一列表格式
+- 并已同步到正式 repo-local 目录：
+  - [runtime-evidence-worker](/root/quant-factory-os/.agents/skills/runtime-evidence-worker/SKILL.md)
+  - [demand-critic](/root/quant-factory-os/.agents/skills/demand-critic/SKILL.md)
+  - [solution-designer](/root/quant-factory-os/.agents/skills/solution-designer/SKILL.md)
+- 同时两边 yaml 已对齐成更贴合正文的展示说明。
+- `risk-reviewer` 重新贴正后，这轮也已完成：
+  - [risk-reviewer](/root/quant-factory-os/skills/risk-reviewer/SKILL.md)
+  - [risk-reviewer](/root/quant-factory-os/.agents/skills/risk-reviewer/SKILL.md)
+- 这份也只做了最小格式修正，没有改方法论正文。
+- 两边 yaml 也已同步成与正文更一致的说明。
+- step4 继续核对后，已经确认：
+  - [contradiction-checker](/root/quant-factory-os/skills/contradiction-checker/SKILL.md)
+  的正文语义与 [skill_step4.md](/root/quant-factory-os/skill_step4.md) 中对应段落一致。
+- 这轮已把它同步到正式 repo-local 目录：
+  - [contradiction-checker](/root/quant-factory-os/.agents/skills/contradiction-checker/SKILL.md)
+- 镜像与正式版的 `SKILL.md` / `agents/openai.yaml` 已重新对齐，并再次通过官方 validator。
+- [schemas](/root/quant-factory-os/schemas) 当前承载的是 role result schema 模板，不是运行产物；其中 `.ipynb_checkpoints` 属于噪音目录。
+
+## bootstrap appserverskillclient with root-python-smoke
+- 本轮新增了实验性客户端：
+  - [appserverskillclient.py](/root/quant-factory-os/tools/appserverskillclient.py)
+- 它当前只做最小一件事：
+  - 从 Python 里显式拼出 `Use $skill-name ...`
+  - 再通过 `codex exec` 调 repo-local skill
+- 这轮刻意不改：
+  - [appserverclient.py](/root/quant-factory-os/tools/appserverclient.py)
+- 第一次试点绑定的是：
+  - [root-python-smoke](/root/quant-factory-os/.agents/skills/root-python-smoke/SKILL.md)
+- 真实验证已经通过：
+  - `python3 -m py_compile tools/appserverskillclient.py`
+  - `python3 tools/appserverskillclient.py --skill root-python-smoke --prompt 'run the root smoke test'`
+- 真实返回结果显示：
+  - 显式 skill prompt 为 `Use $root-python-smoke run the root smoke test`
+  - skill 被成功触发
+  - `skill_test_one.py` 输出 `1`
+  - `skill_test_two.py` 输出 `2`
+  - smoke test passed
+- 这证明了当前最小链路已经成立：
+  - `Python client -> codex exec -> repo-local skill -> shell actions -> final answer`
+- 同时本轮最小文档已补：
+  - [docs/WORKFLOW.md](/root/quant-factory-os/docs/WORKFLOW.md)
+  - [docs/FILE_INDEX.md](/root/quant-factory-os/docs/FILE_INDEX.md)
+  现在都明确把 `appserverskillclient` 标成“实验性 skill 调用入口”，不是 formal mainline 的 session runtime。
+
+## localize six core protocol skills to Chinese
+- 本轮把 6 个协议层 skill 的展示层和正文做了最小中文化：
+  - [baseline-learn](/root/quant-factory-os/.agents/skills/baseline-learn/SKILL.md)
+  - [fork-identity](/root/quant-factory-os/.agents/skills/fork-identity/SKILL.md)
+  - [run-manager](/root/quant-factory-os/.agents/skills/run-manager/SKILL.md)
+  - [role-worker](/root/quant-factory-os/.agents/skills/role-worker/SKILL.md)
+  - [task-referee](/root/quant-factory-os/.agents/skills/task-referee/SKILL.md)
+  - [baseline-refresh](/root/quant-factory-os/.agents/skills/baseline-refresh/SKILL.md)
+- 中文化范围：
+  - `agents/openai.yaml` 的 `display_name / short_description / default_prompt`
+  - `SKILL.md` 正文的最小说明层
+- 保持不变：
+  - 内部 `name`
+  - 目录名
+- 这样做的目的是：
+  - 让 owner 在 `/skills` 里看得懂
+  - 同时保持 `$baseline-learn` 这类内部触发名稳定
+- 六个 skill 在中文化后继续全部通过官方 validator。
+
+## bootstrap six core protocol skills
+- 本轮按 owner 刚刚确认的主线分层，在 `.agents/skills/` 下建立了 6 个正式 repo-local skill 骨架：
+  - [baseline-learn](/root/quant-factory-os/.agents/skills/baseline-learn/SKILL.md)
+  - [fork-identity](/root/quant-factory-os/.agents/skills/fork-identity/SKILL.md)
+  - [run-manager](/root/quant-factory-os/.agents/skills/run-manager/SKILL.md)
+  - [role-worker](/root/quant-factory-os/.agents/skills/role-worker/SKILL.md)
+  - [task-referee](/root/quant-factory-os/.agents/skills/task-referee/SKILL.md)
+  - [baseline-refresh](/root/quant-factory-os/.agents/skills/baseline-refresh/SKILL.md)
+- 这轮只做骨架，不先写重逻辑。
+- 每个 skill 当前都具备：
+  - `SKILL.md`
+  - `agents/openai.yaml`
+  - 最小合法 `name/description` frontmatter
+- 已完成的真实验证：
+  - 6 个 skill 逐个通过官方 `quick_validate.py`
+- 同时 [FILE_INDEX.md](/root/quant-factory-os/docs/FILE_INDEX.md) 已补最小索引，方便你直接点开检查。
+
+## clarify root-python-smoke appserver skill invocation
+- 本轮没有改 `root-python-smoke` 的行为，只改了它的说明层。
+- 新增了 `Invocation Model` 段，明确：
+  - `root-python-smoke` 是被 Codex/appserver 调起的 skill
+  - 不是直接执行的 shell 命令
+  - `Use $root-python-smoke ...` 才是正确入口
+- shell 命令现在被清楚定义成：
+  - skill 触发后模型应执行的动作
+  - 而不是 skill 自己的外部使用方式
+- 改完后 validator 继续通过：
+  - `python3 /root/.codex/skills/.system/skill-creator/scripts/quick_validate.py .agents/skills/root-python-smoke`
+
+## standardize repo-local session-coach skill
+- 本轮先对比了 3 个系统 skills 的正式产物：
+  - `openai-docs`
+  - `skill-creator`
+  - `skill-installer`
+- 对比结果一致：
+  - 都有 `SKILL.md`
+  - 都使用 `name/description` frontmatter
+  - 都推荐配 `agents/openai.yaml`
+- 因此已把 `session-coach` 按官方 repo-local skill 方式正式落位到：
+  - [session-coach](/root/quant-factory-os/.agents/skills/session-coach/SKILL.md)
+- 当前正式 session-coach skill 已具备：
+  - `name: session-coach`
+  - `description: ...`
+  - [agents/openai.yaml](/root/quant-factory-os/.agents/skills/session-coach/agents/openai.yaml)
+- 真实验证已通过：
+  - `python3 /root/.codex/skills/.system/skill-creator/scripts/quick_validate.py .agents/skills/session-coach`
+  - `codex exec -C /root/quant-factory-os "Use $session-coach ..."`
+- `codex exec` 日志已明确出现：
+  - `Using session-coach for a baseline identity confirmation step`
+- 这说明：
+  - `session-coach` 现在已经不是仓库里的随手草稿
+  - 而是符合官方 repo-local 规则的可发现 skill
+- 旧的：
+  - [skills/session-coach/SKILL.md](/root/quant-factory-os/skills/session-coach/SKILL.md)
+  目前只保留为迁移前草稿参考，不再是正式落位。
+
+## remove obsolete init-project fixtures
+- 本轮已删除旧的 `fixtures/` 目录：
+  - `fixtures/init_project_fixture`
+  - `fixtures/init_project_real_material_fixture`
+- 这两套目录是旧的 `init-project` 测试夹具，不属于当前 formal mainline，也不属于 repo-local skills。
+- 当前正式主线和活代码已确认不再依赖它们；这轮检查到的残留引用只出现在：
+  - 历史 `reports/` evidence
+  - `project_all_files.txt`
+- 因此这次删除属于主线去噪，不影响当前 baseline / fork-current / session / git 主线。
+
+## repo-local skills smoke test hardening
+- 本轮先不把 `session-coach` 直接当成正式 skill 推出去，而是按官方 skill 规范做了一次最小 smoke test。
+- 新增了官方 repo-local 位置下的最小 skill：
+  - [root-python-smoke](/root/quant-factory-os/.agents/skills/root-python-smoke/SKILL.md)
+- 新增根目录 smoke 文件：
+  - [skill_test_one.py](/root/quant-factory-os/skill_test_one.py)
+  - [skill_test_two.py](/root/quant-factory-os/skill_test_two.py)
+- 已完成三层验证：
+  - `python3 /root/.codex/skills/.system/skill-creator/scripts/quick_validate.py .agents/skills/root-python-smoke`
+  - `python3 skill_test_one.py && python3 skill_test_two.py`
+  - `codex exec -C /root/quant-factory-os "Use $root-python-smoke ..."`
+- 最关键的真实结论：
+  - repo-local skill 的正式落位是 `.agents/skills/`
+  - 不是普通 repo-root `skills/` 目录
+  - `codex exec` 日志已明确出现 `Using root-python-smoke for this turn`
+- 本轮也顺手把 [FILE_INDEX.md](/root/quant-factory-os/docs/FILE_INDEX.md) 改成了这套正式口径：
+  - `.agents/skills/` 是官方 repo-local skill 入口
+  - `skills/session-coach/SKILL.md` 当前只是早期草稿，不是正式落位
+- 当前 `fixtures/` 目录没有参与这轮 smoke test；它是旧的 `init-project` fixture 资产，不是 skills 目录。
+
+## session-coach protocol / skill bootstrap
+- 本轮新增了一个极简的个人多窗口协作协议：
+  - [docs/SESSION_COACH_PROTOCOL.md](/root/quant-factory-os/docs/SESSION_COACH_PROTOCOL.md)
+- 它只服务于当前最真实的使用场景：
+  - 一个 `baseline` 窗口
+  - 一个 `fork-run` 窗口
+  - 一个幕后 `coach` 窗口
+- 协议内容只固定四类动作：
+  - 先确认身份
+  - 再给下一条问题或命令
+  - 再判断是否 `pass/retry`
+  - 最后给下一跳
+- 本轮同时新增了一个仓库内 skill 模板：
+  - [skills/session-coach/SKILL.md](/root/quant-factory-os/skills/session-coach/SKILL.md)
+- 当前决定是不做自动多窗口控制器，也不假装 skill 可以直接控制其他终端；先把“提问 / 验收 / 下一跳”的协议固定下来，再决定是否把这份模板安装到 `~/.codex/skills/`。
+- 为避免文件落地后仍挂在旧 cleanup task，本轮已把：
+  - `tools/project_config.json -> runtime_state.current_task_*`
+  - `TASKS/QUEUE.json`
+  切到新的：
+  - `task-session-coach-skill-bootstrap`
+- 相关最小入口也已补到：
+  - [docs/WORKFLOW.md](/root/quant-factory-os/docs/WORKFLOW.md)
+  - [docs/FILE_INDEX.md](/root/quant-factory-os/docs/FILE_INDEX.md)
+
 ## learnbaseline / init-project effort override and sandbox cleanup
 - foundation 与 `/root/a9quant-strategy` 的 `tools/appserverclient.py` 当前已保持完全一致。
 - 本轮给两条主线都补了最小参数面：
@@ -1641,3 +1878,30 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
   - `projects/`
   - `_SCHEMA.run_summary.json`
   - `.gitkeep`
+
+## tools experimental line init / sync refresh
+- 本轮把 [tools/init.py](/root/quant-factory-os/tools/init.py) 升级成当前实验线准备层入口，不再沿用旧 `RuntimeState / bootstrap_state` 叙事。
+- 新的 `tools/init.py` 当前会：
+  - 补齐并校验 [tools/project_config.template.json](/root/quant-factory-os/tools/project_config.template.json) 与 [tools/project_config.json](/root/quant-factory-os/tools/project_config.json)
+  - 检查 docs、TASKS、state、reports、artifacts、logs、appserver_log、`.agents/skills`、schemas、tests
+  - 输出 `INIT_STEP[...]`
+  - 输出 `APP_RUNTIME_STATE_START/END`
+  - 检查 `codex`、`app-server` 与 git 工作区
+- 真实验证已完成：
+  - `python3 tools/init.py`
+  - 返回 `needs_fix`
+  - 原因是 `WORKTREE_DIRTY`
+  - 说明脚本已正常运行，当前只是工作区脏
+- 本轮新增 [tools/project_config.template.json](/root/quant-factory-os/tools/project_config.template.json)，作为新实验线最小配置模板。
+- 本轮同时更新了 [tools/sync_tools.py](/root/quant-factory-os/tools/sync_tools.py)：
+  - 同步清单切到新的 runtime bundle
+  - 当前会同步 docs、schemas、skills、`tools/app.py`、`tools/main.py`、`tools/init.py`、`tools/project_config.template.json` 和 tests
+  - 默认不覆盖目标项目自己的 `tools/project_config.json`
+  - 已支持目录级复制
+- 真实验证已完成：
+  - `python3 tools/sync_tools.py --dry-run`
+  - 当前默认目标 `/root/a9quant-strategy` 可正确列出待同步文件
+- 主线文档也同步更新：
+  - [AGENTS.md](/root/quant-factory-os/AGENTS.md)
+  - [docs/WORKFLOW.md](/root/quant-factory-os/docs/WORKFLOW.md)
+  - [docs/FILE_INDEX.md](/root/quant-factory-os/docs/FILE_INDEX.md)

@@ -1,34 +1,38 @@
 {
   "version": 1,
   "project_id": "quant-factory-os",
-  "updated_at": "2026-03-18T10:27:06+00:00",
+  "updated_at": "2026-03-20T00:00:00+00:00",
   "items": [
     {
-      "queue_id": "queue-session-denoise-and-mainline-cleanup",
-      "title": "session denoise and mainline cleanup",
+      "queue_id": "queue-rebuild-repo-local-skills-from-latest-orchestrator-design",
+      "title": "rebuild repo-local skills from latest orchestrator design",
       "run_id": "run-2026-03-11-vnext-release-baseline",
-      "task_id": "task-session-denoise-and-mainline-cleanup",
-      "task_json_file": "TASKS/TASK-session-denoise-and-mainline-cleanup.json",
-      "task_md_file": "TASKS/TASK-session-denoise-and-mainline-cleanup.md",
+      "task_id": "task-rebuild-repo-local-skills-from-latest-orchestrator-design",
+      "task_json_file": "TASKS/TASK-rebuild-repo-local-skills-from-latest-orchestrator-design.json",
+      "task_md_file": "TASKS/TASK-rebuild-repo-local-skills-from-latest-orchestrator-design.md",
       "status": "active",
-      "picked_at": "2026-03-18T10:27:06+00:00",
-      "goal": "总结 foundation 已开始嵌入外部项目的当前状态，清理已完成 queue 噪音，并对主线文档做最小收口。",
+      "picked_at": "2026-03-20T00:00:00+00:00",
+      "goal": "删除当前 repo-local skill 集，按最新实验 orchestrator 设计重建新 skill 骨架。",
       "scope": [
-        "TASKS/QUEUE.json",
-        "tools/project_config.json",
-        "docs/WORKFLOW.md",
-        "docs/PROJECT_GUIDE.md",
+        ".agents/skills",
+        "skills",
         "reports/run-2026-03-11-vnext-release-baseline/summary.md",
-        "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+        "reports/run-2026-03-11-vnext-release-baseline/decision.md",
+        "tools/project_config.json"
       ],
       "acceptance": [
         {
-          "id": "verify",
-          "text": "Command(s) pass: make verify",
+          "id": "check-1",
+          "text": "The old repo-local skills are removed and replaced by new skeleton directories that match the latest root-level orchestrator skill names.",
           "status": "pending"
         },
         {
-          "id": "evidence",
+          "id": "check-2",
+          "text": "Each rebuilt skill contains a valid SKILL.md and agents/openai.yaml skeleton.",
+          "status": "pending"
+        },
+        {
+          "id": "check-3",
           "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
           "status": "pending"
         }

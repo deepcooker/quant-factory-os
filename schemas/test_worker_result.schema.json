@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TestWorkerResult",
+  "type": "object",
+  "required": [
+    "task_id",
+    "role",
+    "status",
+    "summary",
+    "requirement_findings",
+    "functional_findings",
+    "workflow_findings",
+    "data_state_findings",
+    "non_functional_findings",
+    "severity_assessment",
+    "scope_assessment",
+    "recommended_escalation",
+    "confirmed_failures",
+    "suspected_failures",
+    "untested_areas",
+    "artifacts",
+    "next_actions",
+    "requested_child_threads"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string",
+      "enum": ["test"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["done", "blocked", "partial"]
+    },
+    "summary": {
+      "type": "string"
+    },
+    "requirement_findings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "functional_findings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "workflow_findings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "data_state_findings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "non_functional_findings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "severity_assessment": {
+      "type": "object",
+      "required": ["highest_severity", "rationale"],
+      "properties": {
+        "highest_severity": {
+          "type": "string",
+          "enum": ["none", "minor", "major", "critical"]
+        },
+        "rationale": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "scope_assessment": {
+      "type": "object",
+      "required": ["scope", "rationale"],
+      "properties": {
+        "scope": {
+          "type": "string",
+          "enum": ["none", "local", "cross_task", "systemic"]
+        },
+        "rationale": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "recommended_escalation": {
+      "type": "object",
+      "required": ["route", "block_merge", "block_baseline_update", "reason"],
+      "properties": {
+        "route": {
+          "type": "string",
+          "enum": [
+            "proceed_merge",
+            "send_back_to_dev",
+            "send_to_run_manager",
+            "start_discussion_round"
+          ]
+        },
+        "block_merge": { "type": "boolean" },
+        "block_baseline_update": { "type": "boolean" },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "confirmed_failures": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "suspected_failures": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "untested_areas": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "next_actions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "requested_child_threads": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["role", "goal", "reason"],
+        "properties": {
+          "role": { "type": "string" },
+          "goal": { "type": "string" },
+          "reason": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

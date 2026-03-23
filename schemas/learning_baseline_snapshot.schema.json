@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LearningBaselineSnapshot",
+  "type": "object",
+  "required": [
+    "baseline_version",
+    "project_identity",
+    "core_truths",
+    "role_model",
+    "thread_model",
+    "constraints",
+    "terminology",
+    "candidate_truths",
+    "open_questions",
+    "missing_sources"
+  ],
+  "properties": {
+    "baseline_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "project_identity": {
+      "type": "string"
+    },
+    "core_truths": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement", "evidence_level", "source_refs"],
+        "properties": {
+          "id": { "type": "string" },
+          "statement": { "type": "string" },
+          "evidence_level": {
+            "type": "string",
+            "enum": [
+              "documented",
+              "code_verified",
+              "runtime_verified"
+            ]
+          },
+          "source_refs": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "role_model": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "thread_model": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "constraints": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "terminology": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "candidate_truths": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement", "evidence_level", "reason"],
+        "properties": {
+          "id": { "type": "string" },
+          "statement": { "type": "string" },
+          "evidence_level": {
+            "type": "string",
+            "enum": [
+              "inferred",
+              "unknown",
+              "documented",
+              "code_verified",
+              "runtime_verified"
+            ]
+          },
+          "reason": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "missing_sources": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

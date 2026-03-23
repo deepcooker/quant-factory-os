@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DiscussionResolution",
+  "type": "object",
+  "required": [
+    "job_id",
+    "status",
+    "participants",
+    "root_cause",
+    "decision",
+    "next_route",
+    "summary"
+  ],
+  "properties": {
+    "job_id": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["done", "blocked"]
+    },
+    "participants": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "root_cause": { "type": "string" },
+    "decision": { "type": "string" },
+    "next_route": {
+      "type": "string",
+      "enum": [
+        "send_back_to_dev",
+        "send_to_run_manager",
+        "rollback_to_correction_round",
+        "block_job"
+      ]
+    },
+    "summary": { "type": "string" },
+    "next_actions": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

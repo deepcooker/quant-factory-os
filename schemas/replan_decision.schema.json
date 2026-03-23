@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ReplanDecision",
+  "type": "object",
+  "required": [
+    "job_id",
+    "status",
+    "decision",
+    "reason",
+    "reopen_planning",
+    "revised_tasks"
+  ],
+  "properties": {
+    "job_id": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["done", "blocked"]
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "reopen_current_task",
+        "add_new_test_task",
+        "add_arch_review_task",
+        "revise_corrected_job",
+        "rollback_to_correction_round"
+      ]
+    },
+    "reason": { "type": "string" },
+    "reopen_planning": { "type": "boolean" },
+    "revised_tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["task_id", "role", "goal", "needs_thread", "priority", "depends_on"],
+        "properties": {
+          "task_id": { "type": "string" },
+          "role": { "type": "string" },
+          "goal": { "type": "string" },
+          "needs_thread": { "type": "boolean" },
+          "priority": { "type": "string" },
+          "depends_on": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

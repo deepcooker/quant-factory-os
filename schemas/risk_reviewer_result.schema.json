@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RiskReviewerResult",
+  "type": "object",
+  "required": [
+    "status",
+    "summary",
+    "open_questions"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["approved", "reframed", "blocked"]
+    },
+    "summary": {
+      "type": "string"
+    },
+    "open_questions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "risks": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "hard_risks": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "soft_risks": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": true
+}

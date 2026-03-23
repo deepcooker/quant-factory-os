@@ -1,0 +1,186 @@
+{
+  "task_id": "task-bootstrap-appserverskillclient-with-root-python-smoke",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "active",
+  "priority": "P1",
+  "title": "bootstrap appserverskillclient with root-python-smoke",
+  "goal": "add a minimal experimental appserverskillclient that can invoke a repo-local Codex skill explicitly, starting with the existing root-python-smoke skill",
+  "scope": [
+    "tools/appserverskillclient.py",
+    ".agents/skills/root-python-smoke",
+    "skills/root-python-smoke",
+    "docs/WORKFLOW.md",
+    "docs/FILE_INDEX.md",
+    "tools/project_config.json",
+    "TASKS/QUEUE.json",
+    "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "check-1",
+      "text": "Command(s) pass: python3 tools/appserverskillclient.py --skill root-python-smoke --prompt 'run the root smoke test'",
+      "status": "completed"
+    },
+    {
+      "id": "check-2",
+      "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+      "status": "completed"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-bootstrap-appserverskillclient-with-root-python-smoke.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "新增 tools/appserverskillclient.py，提供最小的 Python -> Codex repo-local skill 显式调用入口。",
+      "通过 root-python-smoke 做了第一次端到端试点，不修改 appserverclient 本体。",
+      "补充文档说明：appserverskillclient 是实验入口，不是 formal mainline 的 session runtime。"
+    ],
+    "decisions": [
+      "先不改 appserverclient；先用单独的 appserverskillclient 验证 Python 显式调用 repo-local skill 的模式。",
+      "第一例只接 root-python-smoke，证明调用链成立后再考虑把更重的协议层 skill 挂到 appserver 风格流程里。"
+    ],
+    "risks": [
+      "当前实现基于 codex exec 显式调用 skill，还没有接入 app-server thread/turn 生命周期。",
+      "codex exec stderr 里仍会出现 rollout/cache TTL 的权限日志噪音，但本次 smoke test 不影响成功返回。"
+    ],
+    "verification": [
+      "python3 -m py_compile tools/appserverskillclient.py",
+      "python3 tools/appserverskillclient.py --skill root-python-smoke --prompt 'run the root smoke test'"
+    ],
+    "next_steps": [
+      "下一轮可挑一个真正带协议价值的 skill（如 fork-identity 或 task-referee）接到 appserverskillclient 继续试点。",
+      "如继续推进，可再决定 appserverskillclient 后续是否改成 app-server transport，而不是 codex exec。"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": ""
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "pending_ack",
+      "close_escalation": false,
+      "notes": [],
+      "updated_at": ""
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-19T10:24:00+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-19T10:24:00+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}

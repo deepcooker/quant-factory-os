@@ -1,0 +1,4 @@
+interface:
+  display_name: "Demo Echo"
+  short_description: "最小 skill 联通测试，只返回固定 JSON。"
+  default_prompt: "Use this skill for minimal app-server skill connectivity testing only."

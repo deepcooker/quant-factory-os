@@ -1,0 +1,84 @@
+{
+  "suite": "smoke_suite",
+  "generated_at": 1774247661.970616,
+  "all_passed": true,
+  "results": [
+    {
+      "name": "smoke_happy_path",
+      "script": "tests/smoke_happy_path.py",
+      "pass": true,
+      "returncode": 0,
+      "duration_sec": 0.338,
+      "stdout": "SMOKE_HAPPY_PATH_OK\n",
+      "stderr": "",
+      "error": "",
+      "timestamp": 1774247660.2177148
+    },
+    {
+      "name": "smoke_major_defect_replan",
+      "script": "tests/smoke_major_defect_replan.py",
+      "pass": true,
+      "returncode": 0,
+      "duration_sec": 0.369,
+      "stdout": "Respawned child threads after replan: ['thread_5']\nSMOKE_MAJOR_DEFECT_REPLAN_OK\n",
+      "stderr": "",
+      "error": "",
+      "timestamp": 1774247660.5866823
+    },
+    {
+      "name": "smoke_resume_after_merged",
+      "script": "tests/smoke_resume_after_merged.py",
+      "pass": true,
+      "returncode": 0,
+      "duration_sec": 0.251,
+      "stdout": "SMOKE_RESUME_AFTER_MERGED_OK\n",
+      "stderr": "",
+      "error": "",
+      "timestamp": 1774247660.837343
+    },
+    {
+      "name": "smoke_send_back_to_dev_repair",
+      "script": "tests/smoke_send_back_to_dev_repair.py",
+      "pass": true,
+      "returncode": 0,
+      "duration_sec": 0.362,
+      "stdout": "SMOKE_SEND_BACK_TO_DEV_REPAIR_OK\n",
+      "stderr": "",
+      "error": "",
+      "timestamp": 1774247661.1991055
+    },
+    {
+      "name": "smoke_critical_discussion_block",
+      "script": "tests/smoke_critical_discussion_block.py",
+      "pass": true,
+      "returncode": 0,
+      "duration_sec": 0.321,
+      "stdout": "SMOKE_CRITICAL_DISCUSSION_BLOCK_OK\n",
+      "stderr": "",
+      "error": "",
+      "timestamp": 1774247661.520446
+    },
+    {
+      "name": "smoke_cycle_limit_block",
+      "script": "tests/smoke_cycle_limit_block.py",
+      "pass": true,
+      "returncode": 0,
+      "duration_sec": 0.373,
+      "stdout": "SMOKE_CYCLE_LIMIT_BLOCK_OK\n",
+      "stderr": "",
+      "error": "",
+      "timestamp": 1774247661.8932598
+    },
+    {
+      "name": "test_app_contract",
+      "script": "tests/test_app_contract.py",
+      "pass": true,
+      "returncode": 0,
+      "duration_sec": 0.077,
+      "stdout": "TEST_APP_CONTRACT_OK\n",
+      "stderr": "",
+      "error": "",
+      "timestamp": 1774247661.970597
+    }
+  ]
+}

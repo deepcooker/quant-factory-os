@@ -1,0 +1,31 @@
+{
+  "learning_baseline_thread_id": null,
+  "run_baseline_thread_id": null,
+  "threads": {},
+  "jobs": {
+    "job_f40cf621b7": {
+      "job_id": "job_f40cf621b7",
+      "raw_request": "请根据 PROJECT_GUIDE 和当前仓库状态，推进自动化线程系统的下一步实现。",
+      "source": "manual",
+      "clarified_job_v1": null,
+      "evidence_packs": null,
+      "clarified_job_v2": null,
+      "corrected_job": null,
+      "task_plan": null,
+      "defect_triage": null,
+      "final_summary": null,
+      "defect_status": "none",
+      "repair_cycle_count": 0,
+      "replan_cycle_count": 0,
+      "discussion_cycle_count": 0,
+      "discussion_required": false,
+      "status": "NEW"
+    }
+  },
+  "claims": {},
+  "baseline_snapshot": {
+    "core_truths": [],
+    "candidate_truths": [],
+    "open_questions": []
+  }
+}

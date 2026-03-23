@@ -1,0 +1,4 @@
+interface:
+  display_name: "项目教练"
+  short_description: "把原始需求压成 claims、澄清结论和可进入 run 规划的问题。"
+  default_prompt: "用这个 skill 先做需求澄清，不要直接进入实现。"
