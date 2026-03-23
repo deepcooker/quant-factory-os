@@ -1,0 +1,4 @@
+interface:
+  display_name: "方案设计器"
+  short_description: "为 clarified_job_v2 输出备选路径、取舍分析和推荐方案。"
+  default_prompt: "用这个 skill 做方案设计与比较，不要把方案直接写成 task plan。"

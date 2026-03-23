@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RunManagerTaskPlan",
+  "type": "object",
+  "required": [
+    "job_id",
+    "mode",
+    "tasks",
+    "notes",
+    "risks"
+  ],
+  "properties": {
+    "job_id": {
+      "type": "string"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["planning"]
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "task_id",
+          "role",
+          "goal",
+          "needs_thread",
+          "priority",
+          "depends_on"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "dev",
+              "test",
+              "arch_review",
+              "research",
+              "review"
+            ]
+          },
+          "goal": {
+            "type": "string"
+          },
+          "needs_thread": {
+            "type": "boolean"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "depends_on": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "risks": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

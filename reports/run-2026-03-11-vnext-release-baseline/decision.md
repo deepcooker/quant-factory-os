@@ -2,6 +2,180 @@
 
 RUN_ID: `run-2026-03-11-vnext-release-baseline`
 
+## rebuild repo-local skills from latest orchestrator design decision
+- 当前正式决定：
+  - 旧的 repo-local skill 集整体下线
+  - 不再沿用 `baseline-learn / baseline-refresh / fork-identity / role-worker / root-python-smoke / session-coach / task-referee` 这一套名字继续演化
+- 这一轮改以根目录最新实验设计为准，新的 skill 集固定为：
+  - `learn-baseline`
+  - `project-coach`
+  - `run-manager`
+  - `demand-critic`
+  - `solution-designer`
+  - `risk-reviewer`
+  - `doc-evidence-worker`
+  - `code-evidence-worker`
+  - `runtime-evidence-worker`
+  - `contradiction-checker`
+  - `dev-worker`
+  - `test-worker`
+  - `arch-reviewer`
+- 当前边界也明确固定：
+  - 这轮只重建 skill 骨架
+  - 不改 [appserverclient.py](/root/quant-factory-os/tools/appserverclient.py)
+  - 不把新 skill 直接接入 formal mainline
+  - 不在这一步深写最终协议内容
+- 当前接受的实现方式：
+  - `.agents/skills/` 作为正式 repo-local skill 目录
+  - `skills/` 作为可视化镜像目录
+  - 每个 skill 先具备合法 `SKILL.md + agents/openai.yaml`
+- 下一步决策：
+  - 按 owner 后续 10 余步实验顺序，逐个往这些新 skill 骨架里补协议与脚本
+  - `appserverskillclient` 与新 skill 的结构化交互接口，放到后续步骤单独设计，不在这一步硬连
+- step1 的补充决策：
+  - 先不扩散修改全部 13 个 skill
+  - 只核对 `skill_step1.md` 中最先贴进来的 3 个关键 skill
+  - 如果正文语义一致，则正式目录 `.agents/skills/` 直接采用镜像目录 `skills/` 中这 3 份内容
+- step2 的补充决策：
+  - 先只核对 `code-evidence-worker` 这一份 skill 与两个配置对象
+  - 如果 skill 正文语义一致，则正式目录 `.agents/skills/` 直接采用镜像目录 `skills/` 中这份内容
+  - `project_config.json` 只做一致性确认，不在这一步继续改
+  - `registry.json` 当前若未落地，就明确记成“设计已确认、文件未创建”，不伪造完成态
+- step3 的补充决策：
+  - 先同步已经贴正确的 3 个 skill：
+    - `runtime-evidence-worker`
+    - `demand-critic`
+    - `solution-designer`
+  - 在 owner 修正根目录版本后，再把 `risk-reviewer` 用同样规则同步
+  - 当前 4 个 step3 skill 已全部完成正式同步
+- step4 的补充决策：
+  - 当前先同步 `contradiction-checker` 这一份正式 skill
+  - `schemas/` 目录按模板层理解，不当作运行结果目录使用
+  - `.ipynb_checkpoints` 只记为噪音，不在这一步扩散清理
+
+## bootstrap appserverskillclient with root-python-smoke decision
+- 当前正式决定：
+  - 不先改 [appserverclient.py](/root/quant-factory-os/tools/appserverclient.py)
+  - 先单独增加一个实验性客户端：
+    - [appserverskillclient.py](/root/quant-factory-os/tools/appserverskillclient.py)
+- 当前实现边界固定为：
+  - 它不是新的 formal mainline
+  - 也不是 app-server thread/turn runtime
+  - 只是为了验证“Python 能不能显式调用 repo-local skill”
+- 第一例选择 [root-python-smoke](/root/quant-factory-os/.agents/skills/root-python-smoke/SKILL.md) 的原因：
+  - 它已有明确执行规则
+  - 结果简单可核对
+  - 不会把 run/task/session 生命周期也一起卷进来
+- 这轮已验证的事实：
+  - `appserverskillclient` 能显式拼出 `Use $root-python-smoke ...`
+  - `codex exec` 会成功发现并执行这个 repo-local skill
+  - Python 侧能拿回最终结果与最后一条消息
+- 因此当前可接受的结论是：
+  - “appserver 调 skills” 这条方向，最小原型已经成立
+  - 但现阶段仍停留在 `codex exec` 试点层，不应误写成已替代现有 `appserverclient` 主线
+- 下一步如果继续，不该马上大改主线；应先挑一个更接近真实协议层的 skill，继续扩展这个实验入口。
+
+## localize six core protocol skills to Chinese decision
+- 当前正式决定：
+  - 协议层 skill 的内部触发名保持英文稳定
+  - 展示层和正文说明全部改成中文，提升 owner 可读性
+- 因此这轮没有改：
+  - `name`
+  - 目录名
+- 这轮改的是：
+  - `agents/openai.yaml`
+  - `SKILL.md` 正文说明
+- 当前状态：
+  - 六个 skill 中文化后全部仍然合法
+  - 后续可继续逐个补更具体的方法论内容
+
+## bootstrap six core protocol skills decision
+- 当前正式决定：
+  - 先把 6 个协议层 skill 的 repo-local 骨架建出来，供 owner 审阅
+  - 本轮不直接把它们全部写成重内容，避免一口气做大、做偏
+- 这 6 个 skill 是：
+  - `baseline-learn`
+  - `fork-identity`
+  - `run-manager`
+  - `role-worker`
+  - `task-referee`
+  - `baseline-refresh`
+- 当前状态：
+  - 全部已经在 `.agents/skills/` 下落位
+  - 全部已有 `SKILL.md + agents/openai.yaml`
+  - 全部通过官方 validator
+- 下一轮再逐个补内容，而不是在一轮里把 6 个协议层混写。
+
+## clarify root-python-smoke appserver skill invocation decision
+- 当前正式决定：
+  - skill 文案必须明确区分：
+    - skill 是被 Codex/appserver 调起的能力包
+    - shell 命令只是 skill 触发后的执行动作
+- 因此这轮对 `root-python-smoke` 只做了最小 wording 修正：
+  - 增加 `Invocation Model`
+  - 明确入口是 `Use $root-python-smoke ...`
+- 当前不改它的执行步骤与 smoke test 逻辑；只收说明语义。
+
+## standardize repo-local session-coach skill decision
+- 当前正式决定：
+  - repo-local skill 一律按官方方式放在 `.agents/skills/<skill-name>/`
+  - 不再把普通 repo-root `skills/` 目录视为正式 skill 安装位置
+- `session-coach` 这轮已完成正式化：
+  - 迁移到 `.agents/skills/session-coach/`
+  - 补齐 `name/description` frontmatter
+  - 保留 `agents/openai.yaml` 作为 UI 元数据
+- 真实验证事实：
+  - validator 通过
+  - `$session-coach` 已被 `codex exec` 显式发现并使用
+- 因此现在可以确认：
+  - `session-coach` 已经是正式 repo-local skill
+  - 而不是仅停留在 `skills/session-coach/SKILL.md` 的草稿层
+- 后续清理方向：
+  - 旧的 `skills/session-coach/SKILL.md` 可视为迁移前草稿，后续可删除或归档，避免双轨混淆。
+
+## remove obsolete init-project fixtures decision
+- 当前正式决定：
+  - 删除旧的 `fixtures/` 目录，不再把它们保留在当前主线仓库中。
+- 原因：
+  - 它们属于旧的 `init-project` 测试夹具
+  - 不属于正式 mainline
+  - 也不是 repo-local skills 的一部分
+  - 当前活代码与主线流程不再依赖它们
+- 当前保留的事实：
+  - 历史 evidence 与 `project_all_files.txt` 里仍有引用，这是历史记录，不影响这次删除决策
+- 后续如还需要类似夹具：
+  - 应迁到独立测试仓，或按正式测试策略重新引入
+  - 不再长期堆在主线仓里
+
+## repo-local skills smoke test decision
+- 当前正式决定：
+  - repo-local Codex skills 在本仓应放到 `.agents/skills/`
+  - 不再把普通 repo-root `skills/` 目录当作正式 skill 安装位置
+- 因此这轮没有直接把 `session-coach` 当成正式 repo-local skill 发布，而是先做了一个最小 smoke test：
+  - [root-python-smoke](/root/quant-factory-os/.agents/skills/root-python-smoke/SKILL.md)
+- 这轮 smoke test 已验证：
+  - skill 结构通过官方 validator
+  - 根目录两个简单 Python 文件可运行
+  - `codex exec` 会显式发现并使用 `$root-python-smoke`
+- 后续决策：
+  - 如果要把 `session-coach` 正式化，应迁到 `.agents/skills/session-coach/`
+  - 并补齐官方要求的 `name/description` frontmatter 与最小元数据
+- 当前不动 `fixtures/`；它属于旧的 `init-project` fixture 资产，和 repo-local skills smoke test 无关。
+
+## session-coach protocol / skill decision
+- 当前正式决定：
+  - 不把“多窗口控制”误当成 skill 能直接解决的问题
+  - 先在仓库内固定一份极简的个人多窗口协作协议：
+    - [docs/SESSION_COACH_PROTOCOL.md](/root/quant-factory-os/docs/SESSION_COACH_PROTOCOL.md)
+  - 再提供一份可复用的 skill 模板：
+    - [skills/session-coach/SKILL.md](/root/quant-factory-os/skills/session-coach/SKILL.md)
+- 这次协议只服务于最小现实场景：
+  - `baseline`
+  - `fork-run`
+  - `coach`
+- 当前不做自动多窗口控制器，不把它塞进 `appserverclient`。
+- 先把“身份确认 -> 下一问/命令 -> pass/retry -> 下一跳”这条最小链固定下来，后续如需真正安装为本地 skill，再从仓库模板复制到 `~/.codex/skills/`。
+
 ## learnbaseline / init-project effort and sandbox decision
 - 当前正式决定：
   - `--learnbaseline` 默认 effort 保持 `low`
@@ -854,3 +1028,23 @@ RUN_ID: `run-2026-03-11-vnext-release-baseline`
   - `_SCHEMA.run_summary.json`
   - `.gitkeep`
 - 这样做的目的是让新 session 只面对当前主线 run 的证据面，而不是继续混读旧 run 历史。
+
+## tools experimental line init / sync decision
+- 当前正式决定：
+  - [tools/init.py](/root/quant-factory-os/tools/init.py) 继续保留，并升级为当前实验线准备层入口
+  - [tools/sync_tools.py](/root/quant-factory-os/tools/sync_tools.py) 继续保留，并升级为当前实验线同步层入口
+- `tools/init.py` 的边界固定为：
+  - 围绕 [tools/project_config.template.json](/root/quant-factory-os/tools/project_config.template.json) 与 [tools/project_config.json](/root/quant-factory-os/tools/project_config.json)
+  - 检查 docs / state / reports / artifacts / logs / skills / schemas / tests
+  - 检查 Codex CLI / app-server / git 工作区
+- `tools/sync_tools.py` 的边界固定为：
+  - 同步 docs、schemas、skills、runtime files、tests
+  - 不覆盖目标项目自己的 `tools/project_config.json`
+  - 目录按整棵复制处理
+- 当前真实验证结果：
+  - `python3 tools/init.py` 返回 `needs_fix: WORKTREE_DIRTY`
+  - 这是正常的工作区状态提示，不是脚本错误
+  - `python3 tools/sync_tools.py --dry-run` 可正确列出新的 runtime bundle 待同步清单
+- 因此主线口径同步更新：
+  - `tools/init.py` 不再只是历史兼容资产，而是当前准备层工具
+  - `tools/sync_tools.py` 不再只是历史兼容资产，而是当前同步层工具

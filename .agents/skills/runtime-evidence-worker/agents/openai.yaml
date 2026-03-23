@@ -1,0 +1,4 @@
+interface:
+  display_name: "运行证据工"
+  short_description: "围绕指定 claim 检索、提取并归纳日志、reports、artifacts 中的运行时证据。"
+  default_prompt: "用这个 skill 只围绕 claim 做运行时取证，不做项目级最终裁决。"

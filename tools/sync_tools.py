@@ -14,27 +14,28 @@ SYNC_TARGET_PROJECT_ROOTS = [
     "/root/a9quant-strategy",
 ]
 
-# 只同步 foundation tools 层和 prompts，不碰目标项目自己的 project_config.json。
+# 只同步当前新 runtime 所需的工具、schema、docs 与 repo-local skills，不覆盖目标项目自己的 project_config.json。
 SYNC_RELATIVE_PATHS = [
-    "docs/FOUNDATION_BRIDGE.md",
-    "tools/appserverclient.py",
-    "tools/codex_transport.py",
+    "AGENTS.md",
+    "docs/PROJECT_GUIDE.md",
+    "docs/WORKFLOW.md",
+    "docs/ENTITIES.md",
+    "docs/FILE_INDEX.md",
+    "core/schema_utils.py",
+    "schemas",
+    ".agents/skills",
+    "tools/app.py",
+    "tools/main.py",
     "tools/common_helpers.py",
-    "tools/evidence.py",
     "tools/gitclient.py",
     "tools/init.py",
-    "tools/project_config.py",
     "tools/project_config.template.json",
     "tools/result_schema.py",
-    "tools/slice.py",
     "tools/sync_tools.py",
-    "tools/taskclient.py",
     "tools/view.sh",
-    "tools/prompts/init_project_prompt.md",
-    "tools/prompts/learnbaseline_prompt.md",
-    "tools/prompts/refresh_baseline_prompt.md",
-    "tools/prompts/summarize_current_prompt.md",
-    "tools/prompts/summarize_role_prompt.md",
+    "tests/run_smoke_suite.py",
+    "tests/run_gate.py",
+    "tests/integration_real_app_smoke.py",
 ]
 
 
@@ -81,7 +82,12 @@ def sync_one(project_root: Path, dry_run: bool) -> dict[str, object]:
             copied.append(rel)
             continue
         dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dst)
+        if src.is_dir():
+            if dst.exists():
+                shutil.rmtree(dst)
+            shutil.copytree(src, dst)
+        else:
+            shutil.copy2(src, dst)
         copied.append(rel)
     return {
         "project_root": str(project_root),

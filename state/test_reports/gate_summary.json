@@ -1,0 +1,70 @@
+{
+  "gate": "experiment_line_gate",
+  "generated_at": 1774247661.9849422,
+  "cwd": "/root/quant-factory-os",
+  "python_version": "3.10.8 (main, Nov 24 2022, 14:13:03) [GCC 11.2.0]",
+  "platform": "Linux-5.15.0-94-generic-x86_64-with-glibc2.35",
+  "git_commit": "f68d8225d58c147e8067d550310963ab4e785f9d",
+  "run_real_app_server": false,
+  "py_compile_passed": true,
+  "smoke_suite_passed": true,
+  "integration_real_app_status": "skipped",
+  "all_passed": true,
+  "summary_text": "py_compile: PASS\nsmoke_suite: PASS\nintegration_real_app: SKIPPED\noverall: PASS",
+  "steps": {
+    "py_compile": {
+      "name": "py_compile",
+      "command": [
+        "/root/miniconda3/bin/python3",
+        "-m",
+        "py_compile",
+        "tools/main.py",
+        "tools/app.py",
+        "tools/project_config.py",
+        "core/schema_utils.py",
+        "tests/fakes/fake_app.py",
+        "tests/run_smoke_suite.py",
+        "tests/integration_real_app_smoke.py",
+        "tests/smoke_happy_path.py",
+        "tests/smoke_major_defect_replan.py",
+        "tests/smoke_resume_after_merged.py",
+        "tests/smoke_send_back_to_dev_repair.py",
+        "tests/smoke_critical_discussion_block.py",
+        "tests/smoke_cycle_limit_block.py",
+        "tests/test_app_contract.py"
+      ],
+      "returncode": 0,
+      "pass": true,
+      "duration_sec": 0.09,
+      "stdout": "",
+      "stderr": "",
+      "timestamp": 1774247659.8268175
+    },
+    "smoke_suite": {
+      "name": "smoke_suite",
+      "command": [
+        "/root/miniconda3/bin/python3",
+        "tests/run_smoke_suite.py"
+      ],
+      "returncode": 0,
+      "pass": true,
+      "duration_sec": 2.158,
+      "stdout": "smoke_happy_path                   PASS\nsmoke_major_defect_replan          PASS\nsmoke_resume_after_merged          PASS\nsmoke_send_back_to_dev_repair      PASS\nsmoke_critical_discussion_block    PASS\nsmoke_cycle_limit_block            PASS\ntest_app_contract                  PASS\n",
+      "stderr": "",
+      "timestamp": 1774247661.9848905
+    },
+    "integration_real_app": {
+      "name": "integration_real_app",
+      "command": [
+        "/root/miniconda3/bin/python3",
+        "tests/integration_real_app_smoke.py"
+      ],
+      "returncode": 0,
+      "pass": true,
+      "duration_sec": 0.0,
+      "stdout": "SKIPPED: set RUN_REAL_APP_SERVER=1 to run real app-server smoke\n",
+      "stderr": "",
+      "timestamp": 1774247661.9849331
+    }
+  }
+}

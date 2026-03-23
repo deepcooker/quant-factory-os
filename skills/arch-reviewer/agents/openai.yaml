@@ -1,0 +1,4 @@
+interface:
+  display_name: "架构评审器"
+  short_description: "承接架构审查、边界判断和设计评审。"
+  default_prompt: "用这个 skill 作为架构角色审查当前方案或改动。"

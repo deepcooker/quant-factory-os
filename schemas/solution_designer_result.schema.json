@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SolutionDesignerResult",
+  "type": "object",
+  "required": [
+    "status",
+    "summary",
+    "chosen_approach",
+    "open_questions",
+    "risks"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["approved", "reframed", "blocked"]
+    },
+    "summary": {
+      "type": "string"
+    },
+    "chosen_approach": {
+      "type": "string"
+    },
+    "open_questions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "risks": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": true
+}

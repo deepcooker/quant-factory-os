@@ -1,0 +1,4 @@
+interface:
+  display_name: "风险审查器"
+  short_description: "评估 clarified_job_v2 或候选方案中的硬风险、软风险与复杂度陷阱。"
+  default_prompt: "用这个 skill 做风险分层与执行建议，不要直接给实施方案。"

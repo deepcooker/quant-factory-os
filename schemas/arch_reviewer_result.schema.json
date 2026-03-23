@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ArchReviewerResult",
+  "type": "object",
+  "required": [
+    "task_id",
+    "role",
+    "status",
+    "decision",
+    "summary",
+    "hard_risks",
+    "soft_risks",
+    "recommended_actions"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string",
+      "enum": ["arch_review"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["done", "blocked", "partial"]
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["accept", "revise", "reject"]
+    },
+    "summary": {
+      "type": "string"
+    },
+    "hard_risks": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "soft_risks": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "recommended_actions": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

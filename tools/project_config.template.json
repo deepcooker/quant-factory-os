@@ -1,60 +1,72 @@
 {
-  "required": {
-    "project_id": "your-project-id",
-    "project_root": "/abs/path/to/your-project"
+  "project_id": "your-project-id",
+  "project_name": "Your Project",
+  "project_root": "/abs/path/to/your-project",
+  "environment": {
+    "mode": "dev",
+    "log_level": "info",
+    "timezone": "UTC"
   },
-  "git": {
-    "remote_url": "https://github.com/deepcooker/quant-factory-os.git",
-    "github_login": "deepcooker"
+  "docs": {
+    "project_guide": "docs/PROJECT_GUIDE.md",
+    "workflow": "docs/WORKFLOW.md",
+    "agents": "AGENTS.md",
+    "extra_docs": []
   },
-  "bootstrap_state": {
-    "is_inited": "N",
-    "initialized_at": "",
-    "initialized_by": "",
-    "bootstrap_source": ""
+  "skills": {},
+  "paths": {
+    "state_dir": "state",
+    "reports_dir": "reports",
+    "artifacts_dir": "artifacts",
+    "logs_dir": "logs"
   },
+  "baseline": {
+    "auto_init": true,
+    "auto_refresh": true,
+    "refresh_only_from_run_final_summary": true,
+    "allow_candidate_truths": true
+  },
+  "job_sources": {
+    "allow_manual": true,
+    "allow_queue_file": true,
+    "queue_file": "TASKS/QUEUE.json",
+    "allow_derived_jobs": true,
+    "allow_event_jobs": false
+  },
+  "thread_policy": {
+    "max_role_threads_per_job": 6,
+    "allow_subagents": true,
+    "subagents_only_for_small_parallelism": true,
+    "default_needs_thread_roles": [
+      "dev",
+      "test",
+      "arch_review"
+    ]
+  },
+  "verification_policy": {
+    "enable_doc_verification": true,
+    "enable_code_verification": true,
+    "enable_runtime_verification": false,
+    "enable_contradiction_check": true,
+    "minimum_evidence_for_run_planning": "documented_or_code_verified"
+  },
+  "state_policy": {
+    "auto_save": true,
+    "idempotent_resume": true,
+    "max_retries": 2,
+    "timeout_sec": 600
+  },
+  "human_gates": {
+    "require_approval_before_baseline_update": false,
+    "require_approval_for_high_risk_jobs": false
+  },
+  "demo_sessions": {},
   "runtime_state": {
-    "current_project_id": "your-project-id",
-    "current_run_id": "",
+    "current_job_id": "",
     "current_task_id": "",
-    "current_task_file": "",
-    "current_task_json_file": "",
+    "current_task_goal": "",
+    "current_task_role": "",
     "current_status": "",
     "current_updated_at": ""
-  },
-  "task_registry": {
-    "active_task_json_file": "",
-    "queue_json_file": "TASKS/QUEUE.json",
-    "task_md_is_legacy_view": true,
-    "queue_md_is_legacy_view": true
-  },
-  "session_registry": {
-    "init_project_session": {
-      "thread_id": "",
-      "thread_path": "",
-      "status": "",
-      "updated_at": "",
-      "source": "",
-      "model": "",
-      "effort": "",
-      "phase": "",
-      "prompt_file": "",
-      "prompt_updated_at": "",
-      "prompt_stage": "",
-      "session_execution_instruction": "",
-      "operator_notes": "",
-      "answered_questions": [],
-      "unclear_questions": [],
-      "customer_followups": [],
-      "document_priority_understanding": "",
-      "current_project_understanding": "",
-      "ready_for_doc_write": false
-    },
-    "learn_session_baseline": {},
-    "fork_current_session": {},
-    "current_summary": {
-      "baseline_refresh_input_type": "",
-      "baseline_refresh_input_ref": ""
-    }
   }
 }

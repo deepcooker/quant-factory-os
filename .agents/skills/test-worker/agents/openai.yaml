@@ -1,0 +1,4 @@
+interface:
+  display_name: "测试执行工"
+  short_description: "承接测试任务，输出结构化质量发现与升级建议。"
+  default_prompt: "用这个 skill 作为测试角色执行验证任务，并输出结构化质量发现与升级建议。"

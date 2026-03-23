@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RunManagerMergeResult",
+  "type": "object",
+  "required": [
+    "job_id",
+    "mode",
+    "accepted_findings",
+    "rejected_findings",
+    "risks",
+    "open_questions",
+    "final_summary",
+    "should_update_learning_baseline"
+  ],
+  "properties": {
+    "job_id": {
+      "type": "string"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["merge"]
+    },
+    "accepted_findings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "rejected_findings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "risks": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "final_summary": {
+      "type": "string"
+    },
+    "should_update_learning_baseline": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

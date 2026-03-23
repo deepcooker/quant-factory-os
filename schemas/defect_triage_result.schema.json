@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DefectTriageResult",
+  "type": "object",
+  "required": [
+    "job_id",
+    "role",
+    "status",
+    "summary",
+    "severity_assessment",
+    "scope_assessment",
+    "recommended_route",
+    "block_merge",
+    "block_baseline_update",
+    "participants",
+    "next_actions"
+  ],
+  "properties": {
+    "job_id": { "type": "string" },
+    "role": {
+      "type": "string",
+      "enum": ["defect_triage"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["done", "blocked"]
+    },
+    "summary": { "type": "string" },
+    "severity_assessment": {
+      "type": "object",
+      "required": ["highest_severity", "rationale"],
+      "properties": {
+        "highest_severity": {
+          "type": "string",
+          "enum": ["none", "minor", "major", "critical"]
+        },
+        "rationale": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "scope_assessment": {
+      "type": "object",
+      "required": ["scope", "rationale"],
+      "properties": {
+        "scope": {
+          "type": "string",
+          "enum": ["none", "local", "cross_task", "systemic"]
+        },
+        "rationale": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "recommended_route": {
+      "type": "string",
+      "enum": [
+        "proceed_merge",
+        "send_back_to_dev",
+        "send_to_run_manager",
+        "start_discussion_round"
+      ]
+    },
+    "block_merge": { "type": "boolean" },
+    "block_baseline_update": { "type": "boolean" },
+    "participants": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "target_task_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "key_findings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "next_actions": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

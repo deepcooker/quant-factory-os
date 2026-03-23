@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CorrectedJob",
+  "type": "object",
+  "required": [
+    "job_id",
+    "status",
+    "corrected_goal",
+    "chosen_approach",
+    "reasons",
+    "open_questions",
+    "risks",
+    "ready_for_task_planning"
+  ],
+  "properties": {
+    "job_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["approved", "reframed", "blocked"]
+    },
+    "corrected_goal": {
+      "type": "string"
+    },
+    "chosen_approach": {
+      "type": "string"
+    },
+    "reasons": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "risks": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "ready_for_task_planning": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

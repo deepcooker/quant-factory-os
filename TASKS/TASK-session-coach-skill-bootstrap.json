@@ -1,0 +1,178 @@
+{
+  "task_id": "task-session-coach-skill-bootstrap",
+  "run_id": "run-2026-03-11-vnext-release-baseline",
+  "project_id": "quant-factory-os",
+  "status": "active",
+  "priority": "P1",
+  "title": "session coach skill bootstrap",
+  "goal": "create a minimal reusable session-coach skill/protocol for baseline and fork-run multi-window guidance",
+  "scope": [
+    "docs/PROJECT_GUIDE.md",
+    "docs/WORKFLOW.md",
+    "docs/FILE_INDEX.md",
+    "docs/SESSION_COACH_PROTOCOL.md",
+    "skills/session-coach/SKILL.md"
+  ],
+  "non_goals": [],
+  "acceptance": [
+    {
+      "id": "verify",
+      "text": "Command(s) pass: make verify",
+      "status": "pending"
+    },
+    {
+      "id": "evidence",
+      "text": "reports/{RUN_ID}/summary.md and reports/{RUN_ID}/decision.md updated",
+      "status": "pending"
+    }
+  ],
+  "inputs": [],
+  "artifacts": {
+    "task_md_file": "TASKS/TASK-session-coach-skill-bootstrap.md",
+    "summary_file": "reports/run-2026-03-11-vnext-release-baseline/summary.md",
+    "decision_file": "reports/run-2026-03-11-vnext-release-baseline/decision.md"
+  },
+  "task_summary": {
+    "status": "completed",
+    "key_updates": [
+      "已新增 docs/SESSION_COACH_PROTOCOL.md，固化 baseline 与 fork-run 多窗口协作的最小教练协议。",
+      "已新增 skills/session-coach/SKILL.md，提供可复用的轻量 session coach skill 模板。",
+      "已把 runtime_state 与 QUEUE.json 当前 active task 指针切到 session-coach skill bootstrap，避免文档变更挂在旧 cleanup task 上。"
+    ],
+    "decisions": [
+      "当前不做自动多窗口控制器；先把个人多窗口的提问/验收/下一跳协议固定下来。"
+    ],
+    "risks": [],
+    "verification": [
+      "docs/SESSION_COACH_PROTOCOL.md 已落库。",
+      "skills/session-coach/SKILL.md 已落库。",
+      "docs/WORKFLOW.md 与 docs/FILE_INDEX.md 已补最小入口说明。"
+    ],
+    "next_steps": [
+      "下一轮如需真正安装 skill 到 ~/.codex/skills，可直接复用仓库内 skills/session-coach/SKILL.md 作为源模板。"
+    ],
+    "conflict_policy": {
+      "priority_order": [
+        "run-main",
+        "test",
+        "arch",
+        "dev"
+      ],
+      "merge_rule": "append_dedup",
+      "escalation_rule": "if conflict remains, escalate to run-main"
+    },
+    "gap_summary": {
+      "missing_roles": [],
+      "open_gaps": [],
+      "updated_at": ""
+    },
+    "escalation_policy": {
+      "must_escalate_if": [
+        "run-main summary missing",
+        "test_gate not passed",
+        "blocking issue remains"
+      ],
+      "can_resolve_in_task_if": [
+        "only dev/arch detail alignment",
+        "no blocking issue",
+        "test gate already passed"
+      ]
+    },
+    "escalation_summary": {
+      "needs_run_main": false,
+      "reasons": [],
+      "updated_at": ""
+    },
+    "run_main_resolution_policy": {
+      "must_confirm_if": [
+        "escalation_summary.needs_run_main"
+      ],
+      "can_close_if": [
+        "run-main summary exists",
+        "test_gate passed",
+        "no blocking issue remains"
+      ]
+    },
+    "run_main_resolution": {
+      "status": "pending_ack",
+      "close_escalation": false,
+      "notes": [],
+      "updated_at": ""
+    },
+    "role_summary_evidence": [],
+    "source_threads": [],
+    "updated_at": "2026-03-18T16:39:12+00:00"
+  },
+  "role_threads": {
+    "run-main": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "dev": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "test": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "planned"
+    },
+    "arch": {
+      "thread_id": "",
+      "thread_path": "",
+      "status": "optional"
+    }
+  },
+  "role_summaries": {
+    "run-main": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "dev": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "test": {
+      "status": "planned",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    },
+    "arch": {
+      "status": "optional",
+      "thread_id": "",
+      "thread_path": "",
+      "summary_text": "",
+      "summary_turn_id": "",
+      "updated_at": ""
+    }
+  },
+  "test_gate": {
+    "status": "pending",
+    "owner_role": "test",
+    "required_axes": [
+      "functional",
+      "flow",
+      "data",
+      "non_functional"
+    ],
+    "evidence": [],
+    "blocking_issues": [],
+    "updated_at": ""
+  },
+  "updated_at": "2026-03-18T16:39:12+00:00",
+  "risks": "",
+  "rollback_plan": ""
+}
